@@ -11,7 +11,8 @@ model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
-  role      String
+  role      String   @default("CUSTOMER")
+  vendors   Vendor[]
   createdAt DateTime @default(now())
 }
 
@@ -19,13 +20,34 @@ model Vendor {
   id        String   @id @default(uuid())
   name      String
   ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
+  store     Store?
   createdAt DateTime @default(now())
 }
 
-model Product {
-  id        String   @id @default(uuid())
+model Store {
+  id        String    @id @default(uuid())
   name      String
-  price     Float
-  vendorId  String
-  createdAt DateTime @default(now())
+  vendorId  String    @unique
+  vendor    Vendor    @relation(fields: [vendorId], references: [id])
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  name     String
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
 }
