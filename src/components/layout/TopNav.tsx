@@ -13,7 +13,3 @@ export default function TopNav() {
     </nav>
   );
 }
-EOFgit add .
-git commit -m "Create MARKA design system foundation"
-git push
-
