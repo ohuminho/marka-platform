@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id        String     @id @default(uuid())
+  wallet    Wallet?    @relation(fields: [walletId], references: [id])
   name      String
   email     String     @unique
   password  String
@@ -17,6 +18,7 @@ model User {
   profile   Profile?
   roles     UserRole[]
   createdAt DateTime   @default(now())
+  walletId  String?
 }
 
 model Vendor {
@@ -93,6 +95,7 @@ model Wallet {
   currency     String        @default("AOA")
   transactions Transaction[]
   createdAt    DateTime      @default(now())
+  users        User[]
 }
 
 model Transaction {
@@ -101,6 +104,8 @@ model Transaction {
   type      String
   amount    Float
   status    String   @default("PENDING")
+  reference String   @unique
+  metadata  String?
   wallet    Wallet   @relation(fields: [walletId], references: [id])
   createdAt DateTime @default(now())
 }
