@@ -1,13 +1,32 @@
+import Sidebar from "@/components/dashboard/Sidebar";
+import MetricCard from "@/components/dashboard/MetricCard";
+
 export default function Home() {
   return (
-    <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
-      <section className="text-center">
-        <h1 className="text-6xl font-bold tracking-tight">
-          MARKA
+    <main className="flex min-h-screen bg-black text-white">
+      <Sidebar />
+
+      <section className="flex-1 p-10">
+        <h1 className="text-4xl font-bold mb-8">
+          MARKA Command Center
         </h1>
-        <p className="mt-4 text-neutral-400 text-lg">
-          Digital Commerce & Super App Platform
-        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <MetricCard
+            title="Users"
+            value="0"
+          />
+
+          <MetricCard
+            title="Vendors"
+            value="0"
+          />
+
+          <MetricCard
+            title="Revenue"
+            value="$0"
+          />
+        </div>
       </section>
     </main>
   );
