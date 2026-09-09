@@ -1,7 +1,22 @@
+import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
+import AppShell from "@/frontend/shell/AppShell";
+import VendorOverview from "@/frontend/features/vendor/components/VendorOverview";
+
+
 export default function VendorPage() {
+
   return (
-    <h1 className="text-4xl">
-      MARKA Vendor Center
-    </h1>
+
+    <DynamicBackground>
+
+      <AppShell>
+
+        <VendorOverview />
+
+      </AppShell>
+
+    </DynamicBackground>
+
   );
+
 }
