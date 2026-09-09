@@ -82,3 +82,22 @@ model OrderItem {
   quantity  Int
   order     Order @relation(fields: [orderId], references: [id])
 }
+
+model Wallet {
+  id        String        @id @default(uuid())
+  userId    String        @unique
+  balance   Float         @default(0)
+  currency  String        @default("AOA")
+  transactions Transaction[]
+  createdAt DateTime      @default(now())
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  walletId String
+  type      String
+  amount    Float
+  status    String   @default("PENDING")
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  createdAt DateTime @default(now())
+}
