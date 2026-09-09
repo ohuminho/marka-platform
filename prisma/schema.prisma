@@ -8,12 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   name      String
-  email     String   @unique
-  role      String   @default("CUSTOMER")
+  email     String     @unique
+  role      String     @default("CUSTOMER")
   vendors   Vendor[]
-  createdAt DateTime @default(now())
+  profile   Profile?
+  roles     UserRole[]
+  createdAt DateTime   @default(now())
 }
 
 model Vendor {
@@ -41,30 +43,30 @@ model Category {
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   description String?
   price       Float
   storeId     String
-  store       Store    @relation(fields: [storeId], references: [id])
+  store       Store     @relation(fields: [storeId], references: [id])
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 }
 
 model Cart {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   userId    String
   items     CartItem[]
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
 }
 
 model CartItem {
-  id        String  @id @default(uuid())
+  id        String @id @default(uuid())
   cartId    String
   productId String
   quantity  Int
-  cart      Cart    @relation(fields: [cartId], references: [id])
+  cart      Cart   @relation(fields: [cartId], references: [id])
 }
 
 model Order {
@@ -80,24 +82,81 @@ model OrderItem {
   orderId   String
   productId String
   quantity  Int
-  order     Order @relation(fields: [orderId], references: [id])
+  order     Order  @relation(fields: [orderId], references: [id])
 }
 
 model Wallet {
-  id        String        @id @default(uuid())
-  userId    String        @unique
-  balance   Float         @default(0)
-  currency  String        @default("AOA")
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  balance      Float         @default(0)
+  currency     String        @default("AOA")
   transactions Transaction[]
-  createdAt DateTime      @default(now())
+  createdAt    DateTime      @default(now())
 }
 
 model Transaction {
   id        String   @id @default(uuid())
-  walletId String
+  walletId  String
   type      String
   amount    Float
   status    String   @default("PENDING")
   wallet    Wallet   @relation(fields: [walletId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  phone     String?
+  avatar    String?
+  country   String?
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id     String           @id @default(uuid())
+  action String           @unique
+  roles  RolePermission[]
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  metadata  String?
   createdAt DateTime @default(now())
 }
