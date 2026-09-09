@@ -18,23 +18,121 @@ export class ProductService {
 
 
     return prisma.product.create({
+      data: {
+        storeId,
+        name,
+        price,
+        description,
+        sku,
+        stock: 0,
+        status: "ACTIVE",
+      },
+    });
+
+  }
+
+
+
+  async getProductsByStore(
+    storeId: string
+  ) {
+
+    return prisma.product.findMany({
+      where: {
+        storeId,
+      },
+
+      include: {
+        category: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+  }
+
+
+
+  async getProduct(
+    productId: string
+  ) {
+
+    return prisma.product.findUnique({
+      where: {
+        id: productId,
+      },
+
+      include: {
+        category: true,
+        store: true,
+      },
+    });
+
+  }
+
+
+
+  async updateProduct(
+    productId: string,
+    data: {
+      name?: string;
+      description?: string;
+      price?: number;
+      image?: string;
+    }
+  ) {
+
+    return prisma.product.update({
+
+      where: {
+        id: productId,
+      },
+
+      data,
+
+    });
+
+  }
+
+
+
+  async updateStock(
+    productId: string,
+    quantity: number
+  ) {
+
+    return prisma.product.update({
+
+      where: {
+        id: productId,
+      },
 
       data: {
+        stock: {
+          increment: quantity,
+        },
+      },
 
-        storeId,
+    });
 
-        name,
+  }
 
-        price,
 
-        description,
 
-        sku,
+  async disableProduct(
+    productId: string
+  ) {
 
-        stock: 0,
+    return prisma.product.update({
 
-        status: "ACTIVE",
+      where: {
+        id: productId,
+      },
 
+      data: {
+        status: "DISABLED",
       },
 
     });
