@@ -1,7 +1,6 @@
 export interface Route {
   id: string;
-  origin: Location;
-  destination: Location;
+  origin: string;
+  destination: string;
   distance: number;
-  estimatedTime: number;
 }

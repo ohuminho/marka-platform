@@ -1,7 +1,6 @@
-export interface Tracking {
-  id: string;
+export interface TrackingPosition {
   entityId: string;
   latitude: number;
   longitude: number;
-  updatedAt: Date;
+  timestamp: Date;
 }
