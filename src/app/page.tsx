@@ -1,13 +1,10 @@
 import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
-import AppShell from "@/frontend/shell/AppShell";
-import ExecutiveDashboard from "@/frontend/features/dashboard/components/ExecutiveDashboard";
+import MarkaHero from "@/frontend/features/landing/components/MarkaHero";
 
 export default function Home() {
   return (
     <DynamicBackground>
-      <AppShell>
-        <ExecutiveDashboard />
-      </AppShell>
+      <MarkaHero />
     </DynamicBackground>
   );
 }
