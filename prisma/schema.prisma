@@ -19,6 +19,8 @@ model User {
   roles     UserRole[]
   createdAt DateTime   @default(now())
   walletId  String?
+  carts     Cart[]
+  orders    Order[]
 }
 
 model Vendor {
@@ -49,7 +51,11 @@ model Product {
   id          String    @id @default(uuid())
   name        String
   description String?
+  sku         String    @unique
+  image       String?
   price       Float
+  stock       Int       @default(0)
+  status      String    @default("ACTIVE")
   storeId     String
   store       Store     @relation(fields: [storeId], references: [id])
   categoryId  String?
@@ -60,6 +66,7 @@ model Product {
 model Cart {
   id        String     @id @default(uuid())
   userId    String
+  user      User       @relation(fields: [userId], references: [id])
   items     CartItem[]
   createdAt DateTime   @default(now())
 }
@@ -75,7 +82,9 @@ model CartItem {
 model Order {
   id        String      @id @default(uuid())
   userId    String
+  user      User        @relation(fields: [userId], references: [id])
   status    String      @default("PENDING")
+  total     Float       @default(0)
   items     OrderItem[]
   createdAt DateTime    @default(now())
 }
