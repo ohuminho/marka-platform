@@ -1,32 +1,60 @@
 import { prisma } from "@/database/client/prisma";
 
 export class AuthorizationService {
-  async userHasPermission(
+
+  async hasPermission(
     userId: string,
     permission: string
   ) {
-    const result = await prisma.userRole.findMany({
-      where: {
-        userId,
-      },
-      include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
+
+    const roles =
+      await prisma.userRole.findMany({
+        where: {
+          userId,
+        },
+
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: {
+                  permission: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    return result.some((userRole) =>
-      userRole.role.permissions.some(
-        (item) =>
-          item.permission.action === permission
-      )
+
+    return roles.some(
+      (userRole) =>
+        userRole.role.permissions.some(
+          (rolePermission) =>
+            rolePermission.permission.action === permission
+        )
     );
   }
+
+
+  async getRoles(
+    userId: string
+  ) {
+
+    const roles =
+      await prisma.userRole.findMany({
+        where: {
+          userId,
+        },
+        include: {
+          role: true,
+        },
+      });
+
+
+    return roles.map(
+      item => item.role.name
+    );
+  }
+
 }

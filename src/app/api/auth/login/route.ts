@@ -75,12 +75,18 @@ export async function POST(
   });
 
 
-  return Response.json({
-    token,
+  const response = Response.json({
     user: {
       id: user.id,
       name: user.name,
       role: user.role,
     },
   });
+
+  response.headers.append(
+    "Set-Cookie",
+    `marka_session=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`
+  );
+
+  return response;
 }

@@ -1,0 +1,20 @@
+export const DefaultPermissions = [
+
+  "USER_READ",
+  "USER_CREATE",
+
+  "PRODUCT_CREATE",
+  "PRODUCT_UPDATE",
+  "PRODUCT_DELETE",
+
+  "ORDER_READ",
+  "ORDER_MANAGE",
+
+  "WALLET_READ",
+  "WALLET_MANAGE",
+
+  "VENDOR_MANAGE",
+
+  "SYSTEM_ADMIN"
+
+];
