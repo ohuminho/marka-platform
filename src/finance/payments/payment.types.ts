@@ -1,7 +1,7 @@
 export interface Payment {
   id: string;
-  orderId: string;
+  payerId: string;
   amount: number;
   method: string;
-  status: "PENDING" | "PAID" | "FAILED";
+  status: "PENDING" | "SUCCESS" | "FAILED";
 }

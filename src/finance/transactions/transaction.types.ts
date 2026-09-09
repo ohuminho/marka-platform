@@ -1,13 +1,7 @@
-export type TransactionType =
-  | "PAYMENT"
-  | "REFUND"
-  | "TRANSFER"
-  | "COMMISSION";
-
 export interface Transaction {
   id: string;
   walletId: string;
-  type: TransactionType;
+  type: "CREDIT" | "DEBIT";
   amount: number;
   createdAt: Date;
 }
