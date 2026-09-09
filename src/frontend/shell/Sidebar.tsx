@@ -6,6 +6,7 @@ import { NavigationConfig } from "./navigation.config";
 
 export default function Sidebar() {
 
+
   const { user } = useAuth();
 
 
@@ -13,76 +14,167 @@ export default function Sidebar() {
     user?.role || "CUSTOMER";
 
 
-  const menu =
+  const sections =
     NavigationConfig[
       role as keyof typeof NavigationConfig
     ];
 
 
+
   return (
+
     <aside
+
       className="
-        w-72
+        w-80
         min-h-screen
         border-r
         border-white/10
-        bg-black/20
+        bg-black/30
         backdrop-blur-2xl
-        p-8
+        px-8
+        py-10
       "
+
     >
 
-      <div className="mb-12">
+
+      <div className="mb-14">
+
 
         <h1
+
           className="
             text-4xl
             font-semibold
-            tracking-wide
+            tracking-[0.15em]
           "
+
         >
+
           MARKA
+
         </h1>
 
 
         <p
+
           className="
-            text-xs
-            text-neutral-400
-            mt-2
+            mt-3
+            text-sm
+            text-white/50
           "
+
         >
+
           African Digital Economy
+
         </p>
+
 
       </div>
 
 
-      <nav className="space-y-3">
 
-        {menu.map((item) => (
 
-          <button
-            key={item}
-            className="
-              w-full
-              text-left
-              rounded-xl
-              px-4
-              py-3
-              text-neutral-300
-              hover:bg-white/10
-              transition
-            "
+      <nav className="space-y-10">
+
+
+        {sections.map((section) => (
+
+          <div
+
+            key={section.group}
+
           >
-            {item}
-          </button>
+
+            <p
+
+              className="
+                text-xs
+                uppercase
+                tracking-widest
+                text-white/40
+                mb-4
+              "
+
+            >
+
+              {section.group}
+
+            </p>
+
+
+
+            <div className="space-y-2">
+
+
+              {section.items.map((item) => (
+
+                <button
+
+                  key={item.route}
+
+                  className="
+                    w-full
+                    text-left
+                    rounded-2xl
+                    px-5
+                    py-4
+                    border
+                    border-transparent
+                    hover:border-white/10
+                    hover:bg-white/10
+                    transition-all
+                  "
+
+                >
+
+                  <p
+                    className="
+                      text-sm
+                      font-medium
+                    "
+                  >
+
+                    {item.title}
+
+                  </p>
+
+
+                  <p
+
+                    className="
+                      text-xs
+                      text-white/40
+                      mt-1
+                    "
+
+                  >
+
+                    {item.description}
+
+                  </p>
+
+
+                </button>
+
+              ))}
+
+
+            </div>
+
+
+          </div>
 
         ))}
+
 
       </nav>
 
 
     </aside>
+
   );
+
 }
