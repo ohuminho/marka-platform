@@ -1,7 +1,22 @@
+import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
+import AppShell from "@/frontend/shell/AppShell";
+import WalletDashboard from "@/frontend/features/wallet/components/WalletDashboard";
+
+
 export default function WalletPage() {
+
   return (
-    <h1 className="text-4xl">
-      MARKA Wallet
-    </h1>
+
+    <DynamicBackground>
+
+      <AppShell>
+
+        <WalletDashboard />
+
+      </AppShell>
+
+    </DynamicBackground>
+
   );
+
 }
