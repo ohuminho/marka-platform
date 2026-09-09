@@ -1,7 +1,5 @@
 export interface Verification {
-  id: string;
   entityId: string;
-  type: "USER" | "VENDOR" | "BUSINESS";
+  type: "IDENTITY" | "BUSINESS" | "DOCUMENT";
   verified: boolean;
-  verifiedAt?: Date;
 }

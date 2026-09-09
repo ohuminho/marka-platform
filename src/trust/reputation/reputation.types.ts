@@ -1,7 +1,6 @@
-export interface Reputation {
-  id: string;
+export interface ReputationScore {
   entityId: string;
+  entityType: "USER" | "VENDOR";
   score: number;
-  reviews: number;
-  level: "NEW" | "TRUSTED" | "PREMIUM";
+  level: string;
 }
