@@ -1,7 +1,24 @@
+import LoginForm from "@/frontend/features/auth/components/LoginForm";
+
+
 export default function LoginPage() {
+
   return (
-    <h1 className="text-4xl">
-      MARKA Login
-    </h1>
+
+    <main
+      className="
+        min-h-screen
+        flex
+        items-center
+        justify-center
+        bg-black
+      "
+    >
+
+      <LoginForm />
+
+    </main>
+
   );
+
 }

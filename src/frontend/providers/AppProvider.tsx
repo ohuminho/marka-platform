@@ -2,6 +2,14 @@
 
 import { AuthProvider } from "./auth/AuthProvider";
 
+import {
+  VendorProvider,
+} from "@/frontend/features/vendor/context/VendorProvider";
+
+import {
+  VendorIntelligenceProvider,
+} from "@/frontend/features/vendor/context/VendorIntelligenceProvider";
+
 
 export default function AppProvider({
   children,
@@ -10,9 +18,21 @@ export default function AppProvider({
 }) {
 
   return (
+
     <AuthProvider>
-      {children}
+
+      <VendorProvider>
+
+        <VendorIntelligenceProvider>
+
+          {children}
+
+        </VendorIntelligenceProvider>
+
+      </VendorProvider>
+
     </AuthProvider>
+
   );
 
 }
