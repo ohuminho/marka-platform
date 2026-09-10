@@ -1,4 +1,8 @@
 import {
+  prisma,
+} from "@/database/client/prisma";
+
+import {
   VendorDashboardMetrics,
 } from "./vendor.metrics.types";
 
@@ -11,24 +15,155 @@ export class VendorAnalyticsService {
   ): Promise<VendorDashboardMetrics> {
 
 
-    /*
-      Future data sources:
+    const vendor =
+      await prisma.vendor.findUnique({
 
-      Orders
-      Products
-      Customers
-      Payments
-      Store activity
+        where: {
+          id: vendorId,
+        },
 
-      Connected through Prisma
-    */
+        include: {
+
+          store: {
+
+            include: {
+
+              products: true,
+
+            },
+
+          },
+
+        },
+
+      });
+
+
+
+    if (!vendor) {
+
+      throw new Error(
+        "Vendor not found"
+      );
+
+    }
+
+
+
+    const products =
+      vendor.store?.products ?? [];
+
+
+
+    const totalProducts =
+      products.length;
+
+
+
+    const totalUnits =
+      products.reduce(
+        (total, product) =>
+          total + product.stock,
+        0
+      );
+
+
+
+    const inventoryValue =
+      products.reduce(
+        (total, product) =>
+          total +
+          (
+            product.price *
+            product.stock
+          ),
+        0
+      );
+
+
+
+    const lowStockProducts =
+      products.filter(
+        product =>
+          product.stock <= 5
+      ).length;
+
+
+
+    const orders =
+      await prisma.order.findMany({
+
+        where: {
+
+          items: {
+
+            some: {
+
+              productId: {
+
+                in: products.map(
+                  product => product.id
+                ),
+
+              },
+
+            },
+
+          },
+
+        },
+
+      });
+
+
+
+    const completedOrders =
+      orders.filter(
+        order =>
+          order.status === "COMPLETED"
+      ).length;
+
+
+
+    const cancelledOrders =
+      orders.filter(
+        order =>
+          order.status === "CANCELLED"
+      ).length;
+
+
+
+    const revenue =
+      orders.reduce(
+        (total, order) =>
+          total + order.total,
+        0
+      );
+
+
+
+    const averageOrderValue =
+      orders.length
+        ? revenue / orders.length
+        : 0;
+
+
+
+    const customers =
+      new Set(
+        orders.map(
+          order => order.userId
+        )
+      ).size;
+
 
 
     return {
 
+
       revenue: {
 
-        current: 0,
+        current: revenue,
 
         previous: 0,
 
@@ -41,47 +176,52 @@ export class VendorAnalyticsService {
 
       sales: {
 
-        totalOrders: 0,
+        totalOrders: orders.length,
 
-        completedOrders: 0,
+        completedOrders,
 
-        cancelledOrders: 0,
+        cancelledOrders,
 
-        averageOrderValue: 0,
+        averageOrderValue,
 
       },
 
 
       inventory: {
 
-        totalProducts: 0,
+        totalProducts,
 
-        totalUnits: 0,
+        totalUnits,
 
-        inventoryValue: 0,
+        inventoryValue,
 
-        lowStockProducts: 0,
+        lowStockProducts,
 
       },
 
 
       store: {
 
-        rating: 0,
+        rating:
+          vendor.store?.rating ?? 0,
 
         views: 0,
 
-        customers: 0,
+        customers,
 
-        verified: false,
+        verified:
+          vendor.verified,
 
       },
 
 
-      generatedAt: new Date(),
+      generatedAt:
+        new Date(),
+
 
     };
 
   }
+
 
 }
