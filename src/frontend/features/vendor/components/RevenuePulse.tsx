@@ -3,19 +3,16 @@
 import MetricCard from "@/design-system/components/data-display/MetricCard";
 
 import {
-  useVendorIntelligence,
-} from "../context/VendorIntelligenceProvider";
+  useVendorAnalytics,
+} from "../context/VendorAnalyticsProvider";
 
 
 export default function RevenuePulse() {
 
-
   const {
-    intelligence,
+    analytics,
     loading,
-  } =
-    useVendorIntelligence();
-
+  } = useVendorAnalytics();
 
 
   if (loading) {
@@ -29,9 +26,18 @@ export default function RevenuePulse() {
       ">
 
         <MetricCard
-          title="Business Intelligence"
-          value="Loading"
-          trend="Synchronizing store data"
+          title="Revenue"
+          value="Loading..."
+        />
+
+        <MetricCard
+          title="Orders"
+          value="Loading..."
+        />
+
+        <MetricCard
+          title="Growth"
+          value="Loading..."
         />
 
       </div>
@@ -39,7 +45,6 @@ export default function RevenuePulse() {
     );
 
   }
-
 
 
   return (
@@ -50,53 +55,25 @@ export default function RevenuePulse() {
       gap-6
     ">
 
-
       <MetricCard
-
-        title="Active Products"
-
-        value={
-          String(
-            intelligence?.catalogue.activeProducts ?? 0
-          )
-        }
-
-        trend="Live catalogue availability"
-
+        title="Revenue"
+        value={`${analytics?.revenue.current ?? 0} ${analytics?.revenue.currency ?? "AOA"}`}
+        trend="Business revenue performance"
       />
 
 
-
       <MetricCard
-
-        title="Inventory Units"
-
-        value={
-          String(
-            intelligence?.inventory.units ?? 0
-          )
-        }
-
-        trend="Current stock capacity"
-
+        title="Orders"
+        value={String(analytics?.sales.totalOrders ?? 0)}
+        trend="Customer transactions"
       />
 
 
-
       <MetricCard
-
-        title="Inventory Value"
-
-        value={
-          `${(
-            intelligence?.inventory.estimatedValue ?? 0
-          ).toLocaleString()} AOA`
-        }
-
-        trend="Estimated catalogue value"
-
+        title="Growth"
+        value={`${analytics?.revenue.growthPercentage ?? 0}%`}
+        trend="Store evolution"
       />
-
 
     </div>
 
