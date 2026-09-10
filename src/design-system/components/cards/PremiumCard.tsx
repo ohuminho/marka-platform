@@ -1,11 +1,27 @@
+import {
+  ReactNode,
+} from "react";
+
+
 export default function PremiumCard({
+
   children,
+
+  className = "",
+
 }: {
-  children: React.ReactNode;
+
+  children: ReactNode;
+
+  className?: string;
+
 }) {
+
+
   return (
+
     <section
-      className="
+      className={`
         rounded-3xl
         border
         border-white/10
@@ -13,9 +29,14 @@ export default function PremiumCard({
         backdrop-blur-2xl
         shadow-2xl
         p-8
-      "
+        ${className}
+      `}
     >
+
       {children}
+
     </section>
+
   );
+
 }

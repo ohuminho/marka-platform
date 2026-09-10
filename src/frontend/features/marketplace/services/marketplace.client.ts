@@ -24,3 +24,31 @@ export async function getMarketplaceProducts(): Promise<MarketplaceProduct[]> {
   return response.json();
 
 }
+
+
+
+export async function getMarketplaceProduct(
+
+  productId: string
+
+): Promise<MarketplaceProduct> {
+
+
+  const response =
+    await fetch(
+      `/api/marketplace/products/${productId}`
+    );
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      "Unable to load marketplace product"
+    );
+
+  }
+
+
+  return response.json();
+
+}
