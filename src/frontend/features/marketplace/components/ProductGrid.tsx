@@ -10,9 +10,7 @@ import {
 import ProductCard from "./ProductCard";
 
 
-import {
-  getMarketplaceProducts,
-} from "../services/marketplace.client";
+import MarketplaceSearch from "./MarketplaceSearch";
 
 
 import {
@@ -40,82 +38,137 @@ export default function ProductGrid() {
 
 
 
+  const [
+    search,
+    setSearch
+  ] =
+    useState("");
+
+
+
   useEffect(() => {
 
 
     async function loadProducts() {
 
 
-      try {
+      setLoading(true);
 
 
-        const data =
-          await getMarketplaceProducts();
+      const params =
+        new URLSearchParams();
 
 
-        setProducts(
-          data
+
+      if (search) {
+
+        params.set(
+          "search",
+          search
         );
-
-
-      } finally {
-
-        setLoading(false);
 
       }
 
+
+
+      const response =
+        await fetch(
+          `/api/marketplace/products?${params.toString()}`
+        );
+
+
+
+      const data =
+        await response.json();
+
+
+
+      setProducts(
+        data
+      );
+
+
+
+      setLoading(false);
+
+
     }
+
 
 
     loadProducts();
 
 
-  }, []);
-
-
-
-  if (loading) {
-
-    return (
-
-      <div className="
-        text-white/50
-      ">
-
-        Loading marketplace...
-
-      </div>
-
-    );
-
-  }
+  }, [
+    search,
+  ]);
 
 
 
   return (
 
-    <div className="
-      grid
-      gap-6
-      md:grid-cols-3
-    ">
+    <div>
+
+
+      <MarketplaceSearch
+
+        onSearch={
+          setSearch
+        }
+
+      />
+
 
 
       {
-        products.map(
-          product => (
+        loading
 
-            <ProductCard
+          ?
 
-              key={product.id}
+          <div className="
+            mt-10
+            text-white/50
+          ">
 
-              product={product}
+            Loading marketplace...
 
-            />
+          </div>
 
-          )
+          :
 
-        )
+          <div className="
+            mt-10
+            grid
+            gap-6
+            md:grid-cols-3
+          ">
+
+
+            {
+              products.map(
+                product => (
+
+                  <ProductCard
+
+                    key={
+                      product.id
+                    }
+
+                    product={
+                      product
+                    }
+
+                  />
+
+                )
+
+              )
+
+            }
+
+
+          </div>
+
       }
 
 
