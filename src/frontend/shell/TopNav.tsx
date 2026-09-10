@@ -1,4 +1,5 @@
 import NotificationButton from "./components/NotificationButton";
+import CartButton from "./components/CartButton";
 import UserMenu from "./components/UserMenu";
 
 
@@ -53,7 +54,9 @@ export default function TopNav() {
       >
 
         <input
+
           placeholder="Search MARKA..."
+
           className="
             w-72
             bg-white/5
@@ -64,13 +67,18 @@ export default function TopNav() {
             py-3
             outline-none
           "
+
         />
 
 
         <NotificationButton />
 
 
+        <CartButton />
+
+
         <UserMenu />
+
 
       </div>
 

@@ -50,6 +50,22 @@ export default function ProductDetails({
 
 
 
+  const [
+    adding,
+    setAdding
+  ] =
+    useState(false);
+
+
+
+  const [
+    message,
+    setMessage
+  ] =
+    useState("");
+
+
+
   useEffect(() => {
 
     async function loadProduct() {
@@ -80,6 +96,99 @@ export default function ProductDetails({
 
 
   }, [productId]);
+
+
+
+  async function addToCart() {
+
+
+    if (!product) return;
+
+
+
+    setAdding(true);
+
+    setMessage("");
+
+
+
+    try {
+
+
+      const response =
+        await fetch(
+          "/api/cart/items",
+          {
+
+            method: "POST",
+
+            headers: {
+
+              "Content-Type": "application/json",
+
+            },
+
+            body: JSON.stringify({
+
+              productId: product.id,
+
+              quantity: 1,
+
+            }),
+
+          }
+        );
+
+
+
+      const data =
+        await response.json();
+
+
+
+      if (!response.ok) {
+
+
+        throw new Error(
+          data.message ||
+          "Unable to add product"
+        );
+
+
+      }
+
+
+
+      setMessage(
+        "Added to cart successfully."
+      );
+
+
+
+    } catch (error) {
+
+
+      setMessage(
+
+        error instanceof Error
+
+          ? error.message
+
+          : "Unable to add product"
+
+      );
+
+
+    } finally {
+
+
+      setAdding(false);
+
+
+    }
+
+
+  }
 
 
 
@@ -164,6 +273,7 @@ export default function ProductDetails({
                 Product Image
 
               </span>
+
           }
 
 
@@ -235,27 +345,79 @@ export default function ProductDetails({
           ">
 
             <p>
-
               Store: {product.store.name}
-
             </p>
 
 
             <p>
-
               Stock: {product.stock}
-
             </p>
 
 
             <p>
-
               Status: {product.status}
-
             </p>
 
 
           </div>
+
+
+
+          <button
+
+            onClick={addToCart}
+
+            disabled={
+              adding
+            }
+
+            className="
+              mt-8
+              w-full
+              rounded-2xl
+              bg-white
+              px-6
+              py-4
+              font-semibold
+              text-black
+              transition
+              disabled:opacity-50
+            "
+
+          >
+
+            {
+              adding
+
+                ?
+
+                "Adding..."
+
+                :
+
+                "Add to Cart"
+            }
+
+
+          </button>
+
+
+
+          {
+            message && (
+
+              <p className="
+                mt-4
+                text-sm
+                text-white/60
+              ">
+
+                {message}
+
+              </p>
+
+            )
+          }
 
 
         </div>
