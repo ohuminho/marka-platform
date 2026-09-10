@@ -7,8 +7,8 @@ import {
 } from "@/frontend/features/vendor/context/VendorProvider";
 
 import {
-  VendorIntelligenceProvider,
-} from "@/frontend/features/vendor/context/VendorIntelligenceProvider";
+  VendorAnalyticsProvider,
+} from "@/frontend/features/vendor/context/VendorAnalyticsProvider";
 
 
 export default function AppProvider({
@@ -23,11 +23,11 @@ export default function AppProvider({
 
       <VendorProvider>
 
-        <VendorIntelligenceProvider>
+        <VendorAnalyticsProvider>
 
           {children}
 
-        </VendorIntelligenceProvider>
+        </VendorAnalyticsProvider>
 
       </VendorProvider>
 
