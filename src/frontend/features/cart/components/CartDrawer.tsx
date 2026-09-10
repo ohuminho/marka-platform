@@ -14,6 +14,8 @@ import {
 
 import {
   getCart,
+  updateCartItem,
+  removeCartItem,
 } from "../services/cart.client";
 
 
@@ -36,40 +38,96 @@ export default function CartDrawer() {
 
 
 
-  useEffect(() => {
+  async function loadCart() {
 
 
-    async function loadCart() {
+    try {
 
 
-      try {
+      const data =
+        await getCart();
 
 
-        const data =
-          await getCart();
+      setCart(
+        data
+      );
 
 
-        setCart(
-          data
-        );
+    } finally {
 
 
-      } finally {
-
-
-        setLoading(false);
-
-
-      }
+      setLoading(false);
 
 
     }
+
+
+  }
+
+
+
+  useEffect(() => {
 
 
     loadCart();
 
 
   }, []);
+
+
+
+  async function changeQuantity(
+
+    itemId: string,
+
+    quantity: number
+
+  ) {
+
+
+    if (quantity < 1) {
+
+      return;
+
+    }
+
+
+    await updateCartItem(
+
+      itemId,
+
+      quantity
+
+    );
+
+
+    await loadCart();
+
+
+  }
+
+
+
+
+
+  async function removeItem(
+
+    itemId: string
+
+  ) {
+
+
+    await removeCartItem(
+
+      itemId
+
+    );
+
+
+    await loadCart();
+
+
+  }
 
 
 
@@ -154,6 +212,7 @@ export default function CartDrawer() {
               item => (
 
                 <div
+
                   key={
                     item.id
                   }
@@ -165,26 +224,138 @@ export default function CartDrawer() {
                     bg-white/5
                     p-4
                   "
+
                 >
 
-                  <p className="
-                    font-medium
+                  <div className="
+                    flex
+                    justify-between
+                    gap-4
                   ">
 
-                    {item.product.name}
 
-                  </p>
+                    <div>
+
+                      <p className="
+                        font-medium
+                      ">
+
+                        {item.product.name}
+
+                      </p>
 
 
-                  <p className="
-                    mt-2
-                    text-sm
-                    text-white/50
+                      <p className="
+                        mt-2
+                        text-sm
+                        text-white/50
+                      ">
+
+                        {item.product.price} AOA
+
+                      </p>
+
+
+                    </div>
+
+
+
+                    <button
+
+                      onClick={() =>
+                        removeItem(
+                          item.id
+                        )
+                      }
+
+                      className="
+                        text-sm
+                        text-white/50
+                      "
+
+                    >
+
+                      Remove
+
+                    </button>
+
+
+                  </div>
+
+
+
+                  <div className="
+                    mt-4
+                    flex
+                    items-center
+                    gap-4
                   ">
 
-                    {item.quantity} x {item.product.price} AOA
 
-                  </p>
+                    <button
+
+                      onClick={() =>
+                        changeQuantity(
+
+                          item.id,
+
+                          item.quantity - 1
+
+                        )
+                      }
+
+                      className="
+                        h-8
+                        w-8
+                        rounded-full
+                        border
+                        border-white/10
+                      "
+
+                    >
+
+                      -
+
+                    </button>
+
+
+
+                    <span>
+
+                      {item.quantity}
+
+                    </span>
+
+
+
+                    <button
+
+                      onClick={() =>
+                        changeQuantity(
+
+                          item.id,
+
+                          item.quantity + 1
+
+                        )
+                      }
+
+                      className="
+                        h-8
+                        w-8
+                        rounded-full
+                        border
+                        border-white/10
+                      "
+
+                    >
+
+                      +
+
+                    </button>
+
+
+                  </div>
 
 
                 </div>

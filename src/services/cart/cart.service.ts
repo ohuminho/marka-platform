@@ -177,4 +177,60 @@ export class CartService {
 
 
 
+
+
+  async updateItem(
+
+    itemId: string,
+
+    quantity: number
+
+  ) {
+
+
+    return prisma.cartItem.update({
+
+      where: {
+
+        id: itemId,
+
+      },
+
+      data: {
+
+        quantity,
+
+      },
+
+    });
+
+
+  }
+
+
+
+
+
+  async removeItem(
+
+    itemId: string
+
+  ) {
+
+
+    return prisma.cartItem.delete({
+
+      where: {
+
+        id: itemId,
+
+      },
+
+    });
+
+
+  }
+
+
+
 }
