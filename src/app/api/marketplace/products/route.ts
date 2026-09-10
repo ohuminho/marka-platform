@@ -44,6 +44,13 @@ export async function GET(
 
 
 
+  const sortBy =
+    searchParams.get(
+      "sortBy"
+    ) || "latest";
+
+
+
   const service =
     new MarketplaceService();
 
@@ -57,6 +64,8 @@ export async function GET(
       categoryId,
 
       verifiedOnly,
+
+      sortBy,
 
     });
 

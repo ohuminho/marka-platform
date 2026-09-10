@@ -13,6 +13,9 @@ import ProductCard from "./ProductCard";
 import MarketplaceSearch from "./MarketplaceSearch";
 
 
+import MarketplaceFilters from "./MarketplaceFilters";
+
+
 import {
   MarketplaceProduct,
 } from "../types/marketplace.types";
@@ -46,6 +49,22 @@ export default function ProductGrid() {
 
 
 
+  const [
+    verifiedOnly,
+    setVerifiedOnly
+  ] =
+    useState(false);
+
+
+
+  const [
+    sortBy,
+    setSortBy
+  ] =
+    useState("latest");
+
+
+
   useEffect(() => {
 
 
@@ -53,6 +72,7 @@ export default function ProductGrid() {
 
 
       setLoading(true);
+
 
 
       const params =
@@ -68,6 +88,24 @@ export default function ProductGrid() {
         );
 
       }
+
+
+
+      if (verifiedOnly) {
+
+        params.set(
+          "verifiedOnly",
+          "true"
+        );
+
+      }
+
+
+
+      params.set(
+        "sortBy",
+        sortBy
+      );
 
 
 
@@ -100,7 +138,13 @@ export default function ProductGrid() {
 
 
   }, [
+
     search,
+
+    verifiedOnly,
+
+    sortBy,
+
   ]);
 
 
@@ -114,6 +158,28 @@ export default function ProductGrid() {
 
         onSearch={
           setSearch
+        }
+
+      />
+
+
+
+      <MarketplaceFilters
+
+        verifiedOnly={
+          verifiedOnly
+        }
+
+        onVerifiedChange={
+          setVerifiedOnly
+        }
+
+        sortBy={
+          sortBy
+        }
+
+        onSortChange={
+          setSortBy
         }
 
       />
@@ -134,7 +200,9 @@ export default function ProductGrid() {
 
           </div>
 
+
           :
+
 
           <div className="
             mt-10

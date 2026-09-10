@@ -2,6 +2,10 @@ import {
   prisma,
 } from "@/database/client/prisma";
 
+import {
+  Prisma,
+} from "@prisma/client";
+
 
 
 interface MarketplaceQuery {
@@ -11,6 +15,8 @@ interface MarketplaceQuery {
   categoryId?: string;
 
   verifiedOnly?: boolean;
+
+  sortBy?: string;
 
 }
 
@@ -25,6 +31,49 @@ export class MarketplaceService {
     query?: MarketplaceQuery
 
   ) {
+
+
+
+    let orderBy:
+      Prisma.ProductOrderByWithRelationInput =
+    {
+
+      createdAt: "desc",
+
+    };
+
+
+
+    if (
+      query?.sortBy === "price_asc"
+    ) {
+
+
+      orderBy = {
+
+        price: "asc",
+
+      };
+
+
+    }
+
+
+
+    if (
+      query?.sortBy === "price_desc"
+    ) {
+
+
+      orderBy = {
+
+        price: "desc",
+
+      };
+
+
+    }
+
 
 
     return prisma.product.findMany({
@@ -47,7 +96,6 @@ export class MarketplaceService {
 
 
         categoryId:
-
           query?.categoryId || undefined,
 
 
@@ -65,6 +113,7 @@ export class MarketplaceService {
             }
 
           : undefined,
+
 
 
         status: "ACTIVE",
@@ -92,11 +141,7 @@ export class MarketplaceService {
       },
 
 
-      orderBy: {
-
-        createdAt: "desc",
-
-      },
+      orderBy,
 
 
     });
