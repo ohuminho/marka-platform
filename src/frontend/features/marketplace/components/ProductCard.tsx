@@ -3,6 +3,10 @@ import {
 } from "../types/marketplace.types";
 
 
+import VendorTrustBadge from "./VendorTrustBadge";
+
+
+
 export default function ProductCard({
 
   product,
@@ -35,24 +39,35 @@ export default function ProductCard({
         justify-center
       ">
 
+
         {
           product.image
             ?
+
             <img
+
               src={product.image}
+
               alt={product.name}
+
               className="
                 h-full
                 w-full
                 rounded-xl
                 object-cover
               "
+
             />
+
             :
+
             <span className="text-white/40">
+
               Product
+
             </span>
         }
+
 
       </div>
 
@@ -83,6 +98,26 @@ export default function ProductCard({
 
 
       <div className="
+        mt-3
+      ">
+
+        <VendorTrustBadge
+
+          verified={
+            product.store.verified
+          }
+
+          rating={
+            product.store.rating
+          }
+
+        />
+
+      </div>
+
+
+
+      <div className="
         mt-5
         flex
         justify-between
@@ -98,6 +133,7 @@ export default function ProductCard({
           {product.price} AOA
 
         </span>
+
 
 
         <span className="

@@ -10,6 +10,9 @@ import {
 import PremiumCard from "@/design-system/components/cards/PremiumCard";
 
 
+import VendorTrustBadge from "./VendorTrustBadge";
+
+
 import {
   getMarketplaceProduct,
 } from "../services/marketplace.client";
@@ -49,12 +52,9 @@ export default function ProductDetails({
 
   useEffect(() => {
 
-
     async function loadProduct() {
 
-
       try {
-
 
         const data =
           await getMarketplaceProduct(
@@ -87,9 +87,7 @@ export default function ProductDetails({
 
     return (
 
-      <div className="
-        text-white/50
-      ">
+      <div className="text-white/50">
 
         Loading product...
 
@@ -105,9 +103,7 @@ export default function ProductDetails({
 
     return (
 
-      <div className="
-        text-white/50
-      ">
+      <div className="text-white/50">
 
         Product not found.
 
@@ -121,9 +117,7 @@ export default function ProductDetails({
 
   return (
 
-    <PremiumCard className="
-      p-8
-    ">
+    <PremiumCard>
 
 
       <div className="
@@ -145,7 +139,9 @@ export default function ProductDetails({
 
           {
             product.image
+
               ?
+
               <img
 
                 src={product.image}
@@ -160,7 +156,9 @@ export default function ProductDetails({
                 "
 
               />
+
               :
+
               <span className="text-white/40">
 
                 Product Image
@@ -187,12 +185,32 @@ export default function ProductDetails({
 
 
 
+          <div className="mt-4">
+
+            <VendorTrustBadge
+
+              verified={
+                product.store.verified
+              }
+
+              rating={
+                product.store.rating
+              }
+
+            />
+
+          </div>
+
+
+
           <p className="
-            mt-4
+            mt-6
             text-white/50
           ">
 
-            {product.description ?? "No description available."}
+            {product.description ??
+              "No description available."
+            }
 
           </p>
 
@@ -215,7 +233,6 @@ export default function ProductDetails({
             space-y-3
             text-sm
           ">
-
 
             <p>
 

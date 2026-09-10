@@ -14,13 +14,19 @@ export interface MarketplaceProduct {
 
   status: string;
 
+
   store: {
 
     id: string;
 
     name: string;
 
+    rating?: number;
+
+    verified?: boolean;
+
   };
+
 
   category?: {
 
@@ -29,5 +35,6 @@ export interface MarketplaceProduct {
     name: string;
 
   } | null;
+
 
 }
