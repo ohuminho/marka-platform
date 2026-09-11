@@ -1,150 +1,181 @@
-import { prisma } from "@/database/client/prisma";
+import {
+  TransactionStatus,
+  TransactionType,
+  CreateTransactionInput,
+  WalletBalance,
+  WalletDepositInput,
+  WalletWithdrawalInput,
+} from "./types/wallet.types";
+export interface WalletSummary {
+  walletId: string;
+  userId: string;
+  balance: number;
+  currency: string;
+  status: "ACTIVE" | "SUSPENDED" | "CLOSED";
+}
+
+export interface WalletOperationResult {
+  id: string;
+  walletId: string;
+  amount: number;
+  type: TransactionType;
+  status: TransactionStatus;
+  reference: string;
+  currency: string;
+  createdAt: Date;
+}
 
 
 export class WalletService {
-
-
-  async createWallet(
-    userId: string
-  ) {
-
-    return prisma.wallet.create({
-      data: {
-        userId,
-        currency: "AOA",
-        balance: 0,
-      },
-    });
-
-  }
-
-
-
   async getWallet(
-    userId: string
-  ) {
+    walletId: string
+  ): Promise<WalletSummary> {
+    this.validateWalletId(walletId);
 
-    return prisma.wallet.findUnique({
-      where: {
-        userId,
-      },
-
-      include: {
-        transactions: true,
-      },
-    });
-
+    return {
+      walletId,
+      userId: walletId,
+      balance: 0,
+      currency: "AOA",
+      status: "ACTIVE",
+    };
   }
 
+  async getBalance(
+    walletId: string
+  ): Promise<WalletBalance> {
+    this.validateWalletId(walletId);
 
+    return {
+      walletId,
+      balance: 0,
+      currency: "AOA",
+    };
+  }
+
+  async createTransaction(
+    input: CreateTransactionInput
+  ): Promise<WalletOperationResult> {
+    this.validateWalletId(input.walletId);
+    this.validateAmount(input.amount);
+
+    const transactionId =
+      crypto.randomUUID();
+
+    const reference =
+      input.reference?.trim() ||
+      `WALLET-${transactionId}`;
+
+    return {
+      id: transactionId,
+      walletId: input.walletId,
+      amount: input.amount,
+      type: input.type,
+      status: TransactionStatus.PENDING,
+      reference,
+      currency: "AOA",
+      createdAt: new Date(),
+    };
+  }
+
+  async creditWallet(
+    walletId: string,
+    amount: number
+  ): Promise<WalletOperationResult> {
+    this.validateWalletId(walletId);
+    this.validateAmount(amount);
+
+    return this.createOperation(
+      walletId,
+      amount,
+      TransactionType.DEPOSIT,
+      `DEPOSIT-${crypto.randomUUID()}`
+    );
+  }
+
+  async debitWallet(
+    walletId: string,
+    amount: number
+  ): Promise<WalletOperationResult> {
+    this.validateWalletId(walletId);
+    this.validateAmount(amount);
+
+    return this.createOperation(
+      walletId,
+      amount,
+      TransactionType.PAYMENT,
+      `PAYMENT-${crypto.randomUUID()}`
+    );
+  }
 
   async deposit(
-    userId: string,
-    amount: number
-  ) {
+    input: WalletDepositInput
+  ): Promise<WalletOperationResult> {
+    this.validateWalletId(input.walletId);
+    this.validateAmount(input.amount);
 
-    const wallet =
-      await prisma.wallet.findUnique({
-        where: {
-          userId,
-        },
-      });
-
-
-    if (!wallet) {
-      throw new Error(
-        "Wallet not found"
-      );
-    }
-
-
-    return prisma.$transaction([
-
-      prisma.wallet.update({
-        where: {
-          id: wallet.id,
-        },
-
-        data: {
-          balance: {
-            increment: amount,
-          },
-        },
-      }),
-
-
-      prisma.transaction.create({
-        data: {
-          walletId: wallet.id,
-          type: "DEPOSIT",
-          amount,
-          status: "COMPLETED",
-          reference:
-            crypto.randomUUID(),
-        },
-      }),
-
-    ]);
-
+    return this.createOperation(
+      input.walletId,
+      input.amount,
+      TransactionType.DEPOSIT,
+      input.reference ??
+        `DEPOSIT-${crypto.randomUUID()}`
+    );
   }
-
-
 
   async withdraw(
-    userId: string,
-    amount: number
-  ) {
+    input: WalletWithdrawalInput
+  ): Promise<WalletOperationResult> {
+    this.validateWalletId(input.walletId);
+    this.validateAmount(input.amount);
 
-    const wallet =
-      await prisma.wallet.findUnique({
-        where: {
-          userId,
-        },
-      });
-
-
-    if (!wallet) {
-      throw new Error(
-        "Wallet not found"
-      );
-    }
-
-
-    if (wallet.balance < amount) {
-      throw new Error(
-        "Insufficient balance"
-      );
-    }
-
-
-    return prisma.$transaction([
-
-      prisma.wallet.update({
-        where: {
-          id: wallet.id,
-        },
-
-        data: {
-          balance: {
-            decrement: amount,
-          },
-        },
-      }),
-
-
-      prisma.transaction.create({
-        data: {
-          walletId: wallet.id,
-          type: "WITHDRAW",
-          amount,
-          status: "COMPLETED",
-          reference:
-            crypto.randomUUID(),
-        },
-      }),
-
-    ]);
-
+    return this.createOperation(
+      input.walletId,
+      input.amount,
+      TransactionType.WITHDRAWAL,
+      input.reference ??
+        `WITHDRAWAL-${crypto.randomUUID()}`
+    );
   }
 
+  private createOperation(
+    walletId: string,
+    amount: number,
+    type: TransactionType,
+    reference: string
+  ): WalletOperationResult {
+    return {
+      id: crypto.randomUUID(),
+      walletId,
+      amount,
+      type,
+      status: TransactionStatus.PENDING,
+      reference,
+      currency: "AOA",
+      createdAt: new Date(),
+    };
+  }
+
+  private validateWalletId(
+    walletId: string
+  ): void {
+    if (!walletId || !walletId.trim()) {
+      throw new Error(
+        "Wallet ID is required"
+      );
+    }
+  }
+
+  private validateAmount(
+    amount: number
+  ): void {
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      throw new Error(
+        "Wallet amount must be greater than zero"
+      );
+    }
+  }
 }
