@@ -2,68 +2,20 @@ import { cookies } from "next/headers";
 
 import { prisma } from "@/database/client/prisma";
 
-import { TokenService } from "@/core/authentication/token.service";
-
+import { AuthConfig } from "@/core/authentication/auth.config";
+import { SessionService } from "@/core/auth/sessions/session.service";
 
 export async function GET() {
-
-
-  const cookieStore =
-    await cookies();
-
-
-  const token =
-    cookieStore.get(
-      "marka_session"
-    )?.value;
-
-
-
-  if (!token) {
-
-    return Response.json(
-      {
-        user: null,
-      },
-      {
-        status: 401,
-      }
-    );
-
-  }
-
-
-
   try {
+    const cookieStore =
+      await cookies();
 
+    const token =
+      cookieStore.get(
+        AuthConfig.cookies.name
+      )?.value;
 
-    const tokenService =
-      new TokenService();
-
-
-    const payload =
-      tokenService.verify(
-        token
-      ) as {
-        userId: string;
-        role: string;
-      };
-
-
-
-    const session =
-      await prisma.session.findUnique({
-
-        where: {
-          token,
-        },
-
-      });
-
-
-
-    if (!session) {
-
+    if (!token) {
       return Response.json(
         {
           user: null,
@@ -72,23 +24,52 @@ export async function GET() {
           status: 401,
         }
       );
-
     }
 
+    const sessionService =
+      new SessionService();
 
+    const session =
+      await sessionService.validate(token);
+
+    if (!session) {
+      return Response.json(
+        {
+          user: null,
+        },
+        {
+          status: 401,
+        }
+      );
+    }
 
     const user =
       await prisma.user.findUnique({
-
         where: {
-          id: payload.userId,
+          id: session.userId,
         },
-
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          emailVerifiedAt: true,
+          profile: {
+            select: {
+              displayName: true,
+              phone: true,
+              avatarUrl: true,
+              countryCode: true,
+              locale: true,
+              timezone: true,
+            },
+          },
+        },
       });
 
-
-
     if (!user) {
+      await sessionService.revoke(token);
 
       return Response.json(
         {
@@ -98,29 +79,33 @@ export async function GET() {
           status: 401,
         }
       );
-
     }
 
+    if (
+      user.status === "SUSPENDED" ||
+      user.status === "LOCKED" ||
+      user.status === "DELETED"
+    ) {
+      await sessionService.revoke(token);
 
+      return Response.json(
+        {
+          user: null,
+        },
+        {
+          status: 401,
+        }
+      );
+    }
 
     return Response.json({
-
-      user: {
-
-        id: user.id,
-
-        name: user.name,
-
-        role: user.role,
-
-      },
-
+      user,
     });
-
-
-
-  } catch {
-
+  } catch (error) {
+    console.error(
+      "[AUTH_ME_ERROR]",
+      error
+    );
 
     return Response.json(
       {
@@ -130,8 +115,5 @@ export async function GET() {
         status: 401,
       }
     );
-
-
   }
-
 }

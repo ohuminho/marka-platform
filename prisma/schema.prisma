@@ -3,159 +3,427 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  SUSPENDED
+  LOCKED
+  DELETED
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum OrganizationType {
+  PLATFORM
+  BUSINESS
+  VENDOR
+  PARTNER
+  INTERNAL
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  REMOVED
+}
+
+enum RoleStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VendorStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  CLOSED
+}
+
+enum StoreStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+  ARCHIVED
+  OUT_OF_STOCK
+}
+
+enum CartStatus {
+  ACTIVE
+  CHECKED_OUT
+  ABANDONED
+  EXPIRED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum AccountType {
+  CUSTOMER_WALLET
+  VENDOR_PAYABLE
+  PLATFORM_REVENUE
+  PLATFORM_EXPENSE
+  COMMISSION
+  CLEARING
+  ESCROW
+  SETTLEMENT
+  SYSTEM
+}
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum LedgerStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum TransactionStatus {
+  CREATED
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+  REFUNDED
+}
+
+enum TransactionDirection {
+  CREDIT
+  DEBIT
+}
+
+enum TransactionType {
+  DEPOSIT
+  PAYMENT
+  WITHDRAWAL
+  REFUND
+  TRANSFER
+  COMMISSION
+  SETTLEMENT
+  ADJUSTMENT
+  HOLD
+  RELEASE
+}
+
+enum TransactionActorType {
+  CUSTOMER
+  VENDOR
+  DRIVER
+  COURIER
+  PARTNER
+  MARKA
+  SYSTEM
+  ADMIN
+}
+
+enum LedgerEntryDirection {
+  DEBIT
+  CREDIT
+}
+
+enum WalletStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum SettlementStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  RECONCILED
+}
+
+enum CommissionStatus {
+  PENDING
+  ACCRUED
+  SETTLED
+  REVERSED
+}
+
+enum ReconciliationStatus {
+  PENDING
+  IN_PROGRESS
+  MATCHED
+  MISMATCH
+  RESOLVED
+}
+
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+  ADMIN
+  SERVICE
+  WEBHOOK
+}
+
+enum SecurityEventSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RiskSignalStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum DomainEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum AutomationRuleStatus {
+  ACTIVE
+  INACTIVE
+  DISABLED
+}
+
+enum AutomationExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+model Tenant {
+  id            String         @id @default(uuid())
+  key           String         @unique
+  name          String
+  status        TenantStatus   @default(ACTIVE)
+  organizations Organization[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Organization {
+  id       String             @id @default(uuid())
+  tenantId String
+  name     String
+  slug     String             @unique
+  type     OrganizationType
+  status   OrganizationStatus @default(ACTIVE)
+
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id])
+  memberships     OrganizationMembership[]
+  roles           Role[]                   @relation("OrganizationRoles")
+  userRoles       UserRole[]               @relation("OrganizationUserRoles")
+  vendors         Vendor[]
+  accounts        Account[]
+  ledgers         Ledger[]
+  auditLogs       AuditLog[]
+  securityEvents  SecurityEvent[]
+  riskSignals     RiskSignal[]
+  automationRules AutomationRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([type])
 }
 
 model User {
-  id        String     @id @default(uuid())
-  wallet    Wallet?    @relation(fields: [walletId], references: [id])
-  name      String
-  email     String     @unique
-  password  String
-  role      String     @default("CUSTOMER")
-  vendors   Vendor[]
-  profile   Profile?
-  roles     UserRole[]
-  createdAt DateTime   @default(now())
-  walletId  String?
-  carts     Cart[]
-  orders    Order[]
-}
+  id              String     @id @default(uuid())
+  name            String
+  email           String     @unique
+  emailNormalized String     @unique
+  password        String     @map("password_hash")
+  role            String     @default("CUSTOMER")
+  status          UserStatus @default(PENDING_VERIFICATION)
 
-model Vendor {
-  id           String   @id @default(uuid())
-  name         String
-  businessType String?
-  phone        String?
-  country      String?
-  verified     Boolean  @default(false)
-  status       String   @default("ACTIVE")
-  ownerId      String
-  owner        User     @relation(fields: [ownerId], references: [id])
-  store        Store?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+  lastLoginAt     DateTime?
 
-model Store {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  logo        String?
-  banner      String?
-  location    String?
-  rating      Float     @default(0)
-  status      String    @default("ACTIVE")
-  vendorId    String    @unique
-  vendor      Vendor    @relation(fields: [vendorId], references: [id])
-  products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
+  profile                 Profile?
+  sessions                Session[]
+  emailVerificationTokens EmailVerificationToken[]
+  memberships             OrganizationMembership[]
+  roles                   UserRole[]
 
-model Category {
-  id       String    @id @default(uuid())
-  name     String
-  products Product[]
-}
+  vendors  Vendor[]  @relation("VendorOwner")
+  wallet   Wallet?
+  accounts Account[] @relation("UserAccountOwner")
+  carts    Cart[]
+  orders   Order[]   @relation("OrderCustomer")
 
-model Product {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  sku         String    @unique
-  image       String?
-  price       Float
-  stock       Int       @default(0)
-  status      String    @default("ACTIVE")
-  storeId     String
-  store       Store     @relation(fields: [storeId], references: [id])
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  cartItems   CartItem[]
-  createdAt   DateTime  @default(now())
-}
+  auditLogs      AuditLog[]      @relation("AuditActor")
+  securityEvents SecurityEvent[] @relation("SecurityActor")
+  riskSignals    RiskSignal[]    @relation("RiskSubject")
+  transactions   Transaction[]   @relation("TransactionActor")
 
-model Cart {
-  id        String     @id @default(uuid())
-  userId    String
-  user      User       @relation(fields: [userId], references: [id])
-  items     CartItem[]
-  createdAt DateTime   @default(now())
-}
-
-model CartItem {
-  id        String  @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int
-
-  cart      Cart    @relation(fields: [cartId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
-}
-
-model Order {
-  id        String      @id @default(uuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id])
-  status    String      @default("PENDING")
-  total     Float       @default(0)
-  items     OrderItem[]
-  createdAt DateTime    @default(now())
-}
-
-model OrderItem {
-  id        String @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int
-  order     Order  @relation(fields: [orderId], references: [id])
-}
-
-model Wallet {
-  id           String        @id @default(uuid())
-  userId       String        @unique
-  balance      Float         @default(0)
-  currency     String        @default("AOA")
-  transactions Transaction[]
-  createdAt    DateTime      @default(now())
-  users        User[]
-}
-
-model Transaction {
-  id        String   @id @default(uuid())
-  walletId  String
-  type      String
-  amount    Float
-  status    String   @default("PENDING")
-  reference String   @unique
-  metadata  String?
-  wallet    Wallet   @relation(fields: [walletId], references: [id])
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Profile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  phone     String?
-  avatar    String?
-  country   String?
-  user      User     @relation(fields: [userId], references: [id])
+  id     String @id @default(uuid())
+  userId String @unique
+
+  displayName String?
+  phone       String?
+  avatarUrl   String?
+  countryCode String?
+  locale      String?
+  timezone    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  verifiedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  ipAddress  String?
+  userAgent  String?
+  lastSeenAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid())
+  organizationId String
+  userId         String
+  status         MembershipStatus @default(ACTIVE)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([status])
 }
 
 model Role {
-  id          String           @id @default(uuid())
-  name        String           @unique
-  permissions RolePermission[]
-  users       UserRole[]
+  id             String     @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  status         RoleStatus @default(ACTIVE)
+
+  organization Organization     @relation("OrganizationRoles", fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  RolePermission[]
+  users        UserRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([status])
 }
 
 model Permission {
   id     String           @id @default(uuid())
   action String           @unique
   roles  RolePermission[]
+
+  createdAt DateTime @default(now())
 }
 
 model RolePermission {
@@ -163,31 +431,651 @@ model RolePermission {
   roleId       String
   permissionId String
 
-  role       Role       @relation(fields: [roleId], references: [id])
-  permission Permission @relation(fields: [permissionId], references: [id])
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
 }
 
 model UserRole {
-  id     String @id @default(uuid())
-  userId String
-  roleId String
+  id             String @id @default(uuid())
+  userId         String
+  roleId         String
+  organizationId String
 
-  user User @relation(fields: [userId], references: [id])
-  role Role @relation(fields: [roleId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  organization Organization @relation("OrganizationUserRoles", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId, organizationId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([organizationId])
 }
 
-model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
+model Vendor {
+  id             String @id @default(uuid())
+  organizationId String
+  ownerId        String
+
+  name         String
+  businessType String?
+  phone        String?
+  country      String?
+  verified     Boolean      @default(false)
+  status       VendorStatus @default(PENDING)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  owner        User         @relation("VendorOwner", fields: [ownerId], references: [id])
+  store        Store?
+  accounts     Account[]    @relation("VendorAccountOwner")
+  settlements  Settlement[]
+  commissions  Commission[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Store {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  logo        String?
+  banner      String?
+  location    String?
+  rating      Decimal     @default(0) @db.Decimal(5, 2)
+  status      StoreStatus @default(ACTIVE)
+
+  vendorId String @unique
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  products Product[]
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  status      String  @default("ACTIVE")
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  sku         String        @unique
+  image       String?
+  price       Decimal       @db.Decimal(20, 4)
+  currency    String        @default("AOA") @db.Char(3)
+  stock       Int           @default(0)
+  status      ProductStatus @default(DRAFT)
+
+  storeId    String
+  categoryId String?
+
+  store      Store       @relation(fields: [storeId], references: [id])
+  category   Category?   @relation(fields: [categoryId], references: [id])
+  inventory  Inventory?
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Inventory {
+  id             String @id @default(uuid())
+  productId      String @unique
+  quantityOnHand Int    @default(0)
+  reserved       Int    @default(0)
+  reorderLevel   Int    @default(0)
+  version        Int    @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([quantityOnHand])
+}
+
+model Cart {
+  id       String     @id @default(uuid())
+  userId   String
+  status   CartStatus @default(ACTIVE)
+  currency String     @default("AOA") @db.Char(3)
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+model CartItem {
+  id        String @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([productId])
+}
+
+model Order {
+  id       String      @id @default(uuid())
+  userId   String
+  status   OrderStatus @default(PENDING)
+  total    Decimal     @default(0) @db.Decimal(20, 4)
+  currency String      @default("AOA") @db.Char(3)
+
+  customer     User          @relation("OrderCustomer", fields: [userId], references: [id])
+  items        OrderItem[]
+  payments     Payment[]
+  transactions Transaction[]
+  commissions  Commission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  storeId   String?
+  vendorId  String?
+
+  quantity  Int
+  unitPrice Decimal @db.Decimal(20, 4)
+  subtotal  Decimal @db.Decimal(20, 4)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([vendorId])
+  @@index([storeId])
+}
+
+model Account {
+  id             String  @id @default(uuid())
+  organizationId String
+  userId         String?
+  vendorId       String?
+
+  type             AccountType
+  code             String        @unique
+  currency         String        @default("AOA") @db.Char(3)
+  status           AccountStatus @default(ACTIVE)
+  balanceMinor     BigInt        @default(0)
+  heldBalanceMinor BigInt        @default(0)
+  version          Int           @default(0)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation("UserAccountOwner", fields: [userId], references: [id])
+  vendor       Vendor?      @relation("VendorAccountOwner", fields: [vendorId], references: [id])
+  wallet       Wallet?
+
+  ledgerEntries           LedgerEntry[]
+  sourceTransactions      Transaction[] @relation("TransactionSourceAccount")
+  destinationTransactions Transaction[] @relation("TransactionDestinationAccount")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([vendorId])
+  @@index([type])
+  @@index([status])
+}
+
+model Wallet {
+  id        String       @id @default(uuid())
+  userId    String       @unique
+  accountId String       @unique
+  currency  String       @default("AOA") @db.Char(3)
+  status    WalletStatus @default(ACTIVE)
+
+  balanceMinor     BigInt @default(0)
+  heldBalanceMinor BigInt @default(0)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Ledger {
+  id             String       @id @default(uuid())
+  organizationId String
+  code           String       @unique
+  name           String
+  currency       String       @default("AOA") @db.Char(3)
+  status         LedgerStatus @default(ACTIVE)
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  entries      LedgerEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([currency])
+  @@index([status])
+}
+
+model LedgerEntry {
+  id            String               @id @default(uuid())
+  ledgerId      String
+  transactionId String
+  accountId     String
+  direction     LedgerEntryDirection
+  amountMinor   BigInt
+  currency      String               @db.Char(3)
+  sequence      Int
+  metadata      Json?
+
+  ledger      Ledger      @relation(fields: [ledgerId], references: [id])
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  account     Account     @relation(fields: [accountId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([transactionId, sequence])
+  @@index([ledgerId, createdAt])
+  @@index([accountId, createdAt])
+  @@index([transactionId])
+}
+
+model Transaction {
+  id             String               @id @default(uuid())
+  idempotencyKey String               @unique
+  type           TransactionType
+  direction      TransactionDirection
+  status         TransactionStatus    @default(CREATED)
+  amountMinor    BigInt
+  currency       String               @db.Char(3)
+
+  actorUserId String?
+  actorType   TransactionActorType
+
+  sourceAccountId      String?
+  destinationAccountId String?
+
+  reference     String  @unique
+  referenceType String?
+
+  orderId  String?
+  vendorId String?
+
+  context  String?
+  metadata Json?
+
+  actorUser          User?    @relation("TransactionActor", fields: [actorUserId], references: [id])
+  sourceAccount      Account? @relation("TransactionSourceAccount", fields: [sourceAccountId], references: [id])
+  destinationAccount Account? @relation("TransactionDestinationAccount", fields: [destinationAccountId], references: [id])
+
+  order  Order?  @relation(fields: [orderId], references: [id])
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+
+  ledgerEntries LedgerEntry[]
+  payment       Payment?
+  refund        Refund?
+  settlement    Settlement?
+  commission    Commission?
+
+  processingStartedAt DateTime?
+  completedAt         DateTime?
+  failedAt            DateTime?
+  reversedAt          DateTime?
+  refundedAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([actorUserId])
+  @@index([sourceAccountId])
+  @@index([destinationAccountId])
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  transactionId String        @unique
+  orderId       String?
+  amountMinor   BigInt
+  currency      String        @db.Char(3)
+  status        PaymentStatus @default(CREATED)
+
+  provider          String?
+  providerPaymentId String?
+  idempotencyKey    String  @unique
+  metadata          Json?
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  order       Order?      @relation(fields: [orderId], references: [id])
+
+  refunds Refund[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+  @@index([provider])
+  @@index([providerPaymentId])
+}
+
+model Refund {
+  id            String       @id @default(uuid())
+  paymentId     String
+  transactionId String       @unique
+  amountMinor   BigInt
+  currency      String       @db.Char(3)
+  status        RefundStatus @default(PENDING)
+  reason        String?
+  metadata      Json?
+
+  payment     Payment     @relation(fields: [paymentId], references: [id])
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([paymentId])
+  @@index([status])
+}
+
+model Settlement {
+  id                String           @id @default(uuid())
+  vendorId          String
+  transactionId     String?          @unique
+  amountMinor       BigInt
+  currency          String           @db.Char(3)
+  status            SettlementStatus @default(PENDING)
+  periodStart       DateTime
+  periodEnd         DateTime
+  providerReference String?
+  metadata          Json?
+
+  vendor      Vendor       @relation(fields: [vendorId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+}
+
+model Commission {
+  id            String  @id @default(uuid())
+  orderId       String
+  vendorId      String
+  transactionId String? @unique
+
+  amountMinor BigInt
+  currency    String           @db.Char(3)
+  rateBps     Int
+  status      CommissionStatus @default(PENDING)
+  metadata    Json?
+
+  order       Order        @relation(fields: [orderId], references: [id])
+  vendor      Vendor       @relation(fields: [vendorId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([status])
+}
+
+model Reconciliation {
+  id          String               @id @default(uuid())
+  provider    String
+  periodStart DateTime
+  periodEnd   DateTime
+  status      ReconciliationStatus @default(PENDING)
+
+  expectedMinor   BigInt
+  actualMinor     BigInt
+  differenceMinor BigInt
+
+  currency  String  @db.Char(3)
+  reference String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+}
+
+model IdempotencyRecord {
+  id          String            @id @default(uuid())
+  key         String            @unique
+  scope       String
+  userId      String?
+  requestHash String
+  status      IdempotencyStatus @default(IN_PROGRESS)
+
+  responseStatus Int?
+  responseBody   Json?
+
+  resourceType String?
+  resourceId   String?
+
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scope])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  action    String
-  metadata  String?
+  id             String         @id @default(uuid())
+  actorUserId    String?
+  actorType      AuditActorType @default(SYSTEM)
+  organizationId String?
+
+  action     String
+  entityType String?
+  entityId   String?
+
+  correlationId String?
+  requestId     String?
+  ipAddress     String?
+  userAgent     String?
+  metadata      Json?
+
+  actor        User?         @relation("AuditActor", fields: [actorUserId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
   createdAt DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([organizationId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([correlationId])
+  @@index([createdAt])
+}
+
+model SecurityEvent {
+  id             String  @id @default(uuid())
+  actorUserId    String?
+  organizationId String?
+
+  type          String
+  severity      SecurityEventSeverity @default(INFO)
+  ipAddress     String?
+  userAgent     String?
+  correlationId String?
+  metadata      Json?
+
+  actor        User?         @relation("SecurityActor", fields: [actorUserId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([organizationId])
+  @@index([type])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+model RiskSignal {
+  id             String  @id @default(uuid())
+  userId         String?
+  organizationId String?
+
+  type       String
+  score      Int              @default(0)
+  status     RiskSignalStatus @default(OPEN)
+  source     String
+  entityType String?
+  entityId   String?
+  reason     String?
+  metadata   Json?
+
+  subject      User?         @relation("RiskSubject", fields: [userId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([type])
+  @@index([status])
+  @@index([score])
+  @@index([createdAt])
+}
+
+model AutomationRule {
+  id             String               @id @default(uuid())
+  organizationId String?
+  key            String               @unique
+  name           String
+  trigger        String
+  conditions     Json
+  actions        Json
+  priority       Int                  @default(100)
+  status         AutomationRuleStatus @default(ACTIVE)
+  version        Int                  @default(1)
+
+  organization Organization?         @relation(fields: [organizationId], references: [id])
+  executions   AutomationExecution[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([trigger])
+  @@index([status])
+  @@index([priority])
+}
+
+model AutomationExecution {
+  id             String                    @id @default(uuid())
+  ruleId         String
+  idempotencyKey String                    @unique
+  status         AutomationExecutionStatus @default(PENDING)
+
+  input        Json?
+  output       Json?
+  errorMessage String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([ruleId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DomainEvent {
+  id            String            @id @default(uuid())
+  eventKey      String            @unique
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  status        DomainEventStatus @default(PENDING)
+
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now())
+  processedAt DateTime?
+  lastError   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([aggregateType, aggregateId])
+  @@index([eventType])
+  @@index([status, availableAt])
+  @@index([createdAt])
 }

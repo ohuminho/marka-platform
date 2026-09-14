@@ -9,10 +9,11 @@ export class AuditService {
     return prisma.auditLog.create({
       data: {
         action,
-        userId,
-        metadata: metadata
-          ? JSON.stringify(metadata)
-          : undefined,
+        actorUserId: userId,
+        actorType: userId
+          ? "USER"
+          : "SYSTEM",
+        metadata: metadata ?? undefined,
       },
     });
   }
