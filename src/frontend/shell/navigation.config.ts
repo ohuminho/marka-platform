@@ -1,154 +1,116 @@
+// FILE: /workspaces/marka-platform/src/frontend/shell/navigation.config.ts
+
+export type NavigationItem = {
+  title: string;
+  route: string;
+  description: string;
+};
+
+export type NavigationSection = {
+  group: string;
+  items: NavigationItem[];
+};
+
 export const NavigationConfig = {
-
-
   CUSTOMER: [
-
     {
       group: "Experience",
-
       items: [
-
         {
           title: "Overview",
-          route: "/",
-          description:
-            "Your MARKA experience",
+          route: "/app",
+          description: "Your MARKA command experience",
         },
-
         {
           title: "Marketplace",
-          route: "/marketplace",
-          description:
-            "Discover products and stores",
+          route: "/app/marketplace",
+          description: "Discover products, services and stores",
         },
-
         {
           title: "Wallet",
-          route: "/wallet",
-          description:
-            "Manage your digital finance",
+          route: "/app/wallet",
+          description: "Manage your digital finance",
         },
-
+      ],
+    },
+    {
+      group: "Activity",
+      items: [
         {
           title: "Orders",
-          route: "/orders",
-          description:
-            "Track your purchases",
+          route: "/app/orders",
+          description: "Track purchases and transactions",
         },
-
       ],
-
     },
-
   ],
-
-
 
   VENDOR: [
-
     {
       group: "Business",
-
       items: [
-
         {
           title: "Command Center",
-          route: "/vendor",
-          description:
-            "Business intelligence",
+          route: "/app/vendor",
+          description: "Your business command center",
         },
-
         {
           title: "Products",
-          route: "/vendor/products",
-          description:
-            "Manage your catalogue",
+          route: "/app/vendor/products",
+          description: "Manage your catalogue",
         },
-
         {
           title: "Sales",
-          route: "/vendor/sales",
-          description:
-            "Monitor transactions",
+          route: "/app/vendor/sales",
+          description: "Monitor commercial activity",
         },
-
         {
           title: "Analytics",
-          route: "/vendor/analytics",
-          description:
-            "Business insights",
+          route: "/app/vendor/analytics",
+          description: "Business intelligence and insights",
         },
-
       ],
-
     },
-
   ],
-
-
 
   ADMIN: [
-
     {
       group: "Administration",
-
       items: [
-
         {
           title: "Overview",
-          route: "/admin",
-          description:
-            "Platform overview",
+          route: "/app/admin",
+          description: "Platform overview",
         },
-
         {
           title: "Users",
-          route: "/admin/users",
-          description:
-            "Manage users",
+          route: "/app/admin/users",
+          description: "Manage the MARKA community",
         },
-
         {
           title: "Reports",
-          route: "/admin/reports",
-          description:
-            "Platform intelligence",
+          route: "/app/admin/reports",
+          description: "Platform intelligence",
         },
-
         {
           title: "System",
-          route: "/admin/system",
-          description:
-            "System management",
+          route: "/app/admin/system",
+          description: "System management",
         },
-
       ],
-
     },
-
   ],
-
-
 
   SUPER_ADMIN: [
-
     {
       group: "Control Center",
-
       items: [
-
         {
           title: "Everything",
-          route: "/super-admin",
-          description:
-            "Global platform control",
+          route: "/app/super-admin",
+          description: "Global platform control",
         },
-
       ],
-
     },
-
   ],
-
-
-};
+} satisfies Record<string, NavigationSection[]>;
