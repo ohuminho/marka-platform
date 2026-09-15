@@ -693,6 +693,7 @@ model FinancialInstrument {
   organization Organization @relation(fields: [organizationId], references: [id])
   user         User?        @relation("UserFinancialInstruments", fields: [userId], references: [id])
   vendor       Vendor?      @relation("VendorFinancialInstruments", fields: [vendorId], references: [id])
+  settlements  Settlement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -905,24 +906,27 @@ model Refund {
 }
 
 model Settlement {
-  id                String           @id @default(uuid())
-  vendorId          String
-  transactionId     String?          @unique
-  amountMinor       BigInt
-  currency          String           @db.Char(3)
-  status            SettlementStatus @default(PENDING)
-  periodStart       DateTime
-  periodEnd         DateTime
-  providerReference String?
-  metadata          Json?
+  id                    String           @id @default(uuid())
+  vendorId              String
+  financialInstrumentId String
+  transactionId         String?          @unique
+  amountMinor           BigInt
+  currency              String           @db.Char(3)
+  status                SettlementStatus @default(PENDING)
+  periodStart           DateTime
+  periodEnd             DateTime
+  providerReference     String?
+  metadata              Json?
 
-  vendor      Vendor       @relation(fields: [vendorId], references: [id])
-  transaction Transaction? @relation(fields: [transactionId], references: [id])
+  vendor              Vendor              @relation(fields: [vendorId], references: [id])
+  financialInstrument FinancialInstrument @relation(fields: [financialInstrumentId], references: [id])
+  transaction         Transaction?        @relation(fields: [transactionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([vendorId])
+  @@index([financialInstrumentId])
   @@index([status])
   @@index([periodStart, periodEnd])
 }
