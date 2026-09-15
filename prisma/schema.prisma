@@ -248,6 +248,81 @@ enum SecurityEventSeverity {
   CRITICAL
 }
 
+enum MobilityDriverStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  INACTIVE
+}
+
+enum MobilityVerificationStatus {
+  PENDING
+  IN_REVIEW
+  VERIFIED
+  REJECTED
+  EXPIRED
+  SUSPENDED
+}
+
+enum MobilityVehicleStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  RETIRED
+}
+
+enum MobilityVehicleType {
+  CAR
+  MOTORCYCLE
+  VAN
+  MINIBUS
+  BUS
+  COACH
+  TRUCK
+  OTHER
+}
+
+enum MobilityAvailabilityStatus {
+  OFFLINE
+  AVAILABLE
+  BUSY
+  ON_TRIP
+  PAUSED
+  SUSPENDED
+}
+
+enum MobilityLocationSource {
+  GPS
+  NETWORK
+  MANUAL
+  SYSTEM
+}
+
+enum MobilityRideStatus {
+  REQUESTED
+  SEARCHING
+  MATCHED
+  DRIVER_ASSIGNED
+  DRIVER_ARRIVING
+  DRIVER_ARRIVED
+  TRIP_STARTED
+  TRIP_IN_PROGRESS
+  TRIP_COMPLETED
+  CANCELLED
+  EXPIRED
+  NO_DRIVER_FOUND
+  FAILED
+  DISPUTED
+}
+
+enum MobilityRideStopType {
+  PICKUP
+  STOP
+  DROPOFF
+}
+
 enum RiskSignalStatus {
   OPEN
   REVIEWED
@@ -274,6 +349,243 @@ enum AutomationExecutionStatus {
   SUCCEEDED
   FAILED
   SKIPPED
+}
+
+model MobilityDriver {
+  id             String               @id @default(uuid())
+  organizationId String
+  userId         String               @unique
+  status         MobilityDriverStatus @default(PENDING)
+
+  licenseNumber String?
+  countryCode   String?
+  displayName   String?
+  metadata      Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation("MobilityDriverUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  verifications MobilityDriverVerification[]
+  vehicles      MobilityDriverVehicle[]
+  availability  MobilityDriverAvailability?
+  location      MobilityLocation?
+  ridesAsDriver MobilityRide[]               @relation("MobilityRideDriver")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model MobilityDriverVerification {
+  id       String                     @id @default(uuid())
+  driverId String
+  status   MobilityVerificationStatus @default(PENDING)
+
+  documentType    String
+  documentRef     String?
+  documentExpiry  DateTime?
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  rejectionReason String?
+  metadata        Json?
+
+  driver MobilityDriver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([driverId])
+  @@index([status])
+  @@index([documentExpiry])
+}
+
+model MobilityVehicle {
+  id             String                @id @default(uuid())
+  organizationId String
+  status         MobilityVehicleStatus @default(PENDING)
+  type           MobilityVehicleType
+
+  registrationNumber String?
+  make               String?
+  model              String?
+  year               Int?
+  color              String?
+  capacity           Int?
+  countryCode        String?
+  metadata           Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  drivers         MobilityDriverVehicle[]
+  verifications   MobilityVehicleVerification[]
+  currentLocation MobilityLocation?
+
+  rides MobilityRide[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([type])
+  @@index([registrationNumber])
+}
+
+model MobilityDriverVehicle {
+  id        String @id @default(uuid())
+  driverId  String
+  vehicleId String
+
+  isPrimary   Boolean   @default(false)
+  activeFrom  DateTime  @default(now())
+  activeUntil DateTime?
+
+  driver  MobilityDriver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle MobilityVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([driverId, vehicleId])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([isPrimary])
+}
+
+model MobilityVehicleVerification {
+  id        String                     @id @default(uuid())
+  vehicleId String
+  status    MobilityVerificationStatus @default(PENDING)
+
+  documentType    String
+  documentRef     String?
+  documentExpiry  DateTime?
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  rejectionReason String?
+  metadata        Json?
+
+  vehicle MobilityVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vehicleId])
+  @@index([status])
+  @@index([documentExpiry])
+}
+
+model MobilityDriverAvailability {
+  id       String                     @id @default(uuid())
+  driverId String                     @unique
+  status   MobilityAvailabilityStatus @default(OFFLINE)
+
+  lastOnlineAt  DateTime?
+  lastOfflineAt DateTime?
+  metadata      Json?
+
+  driver MobilityDriver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model MobilityLocation {
+  id        String  @id @default(uuid())
+  driverId  String? @unique
+  vehicleId String? @unique
+
+  latitude   Decimal                @db.Decimal(10, 7)
+  longitude  Decimal                @db.Decimal(10, 7)
+  accuracyM  Decimal?               @db.Decimal(10, 2)
+  heading    Decimal?               @db.Decimal(6, 2)
+  speedKph   Decimal?               @db.Decimal(10, 2)
+  source     MobilityLocationSource @default(GPS)
+  recordedAt DateTime
+
+  driver  MobilityDriver?  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle MobilityVehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recordedAt])
+}
+
+model MobilityRide {
+  id             String             @id @default(uuid())
+  organizationId String
+  riderId        String
+  driverId       String?
+  vehicleId      String?
+  status         MobilityRideStatus @default(REQUESTED)
+
+  reference   String @unique
+  serviceType String
+  currency    String @default("AOA") @db.Char(3)
+
+  pickupLatitude  Decimal @db.Decimal(10, 7)
+  pickupLongitude Decimal @db.Decimal(10, 7)
+  pickupAddress   String?
+
+  dropoffLatitude  Decimal @db.Decimal(10, 7)
+  dropoffLongitude Decimal @db.Decimal(10, 7)
+  dropoffAddress   String?
+
+  requestedAt      DateTime  @default(now())
+  matchedAt        DateTime?
+  driverAssignedAt DateTime?
+  driverArrivedAt  DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+
+  cancellationReason String?
+  metadata           Json?
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  rider        User             @relation("MobilityRideRider", fields: [riderId], references: [id])
+  driver       MobilityDriver?  @relation("MobilityRideDriver", fields: [driverId], references: [id])
+  vehicle      MobilityVehicle? @relation(fields: [vehicleId], references: [id])
+
+  stops MobilityRideStop[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([riderId])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+model MobilityRideStop {
+  id       String               @id @default(uuid())
+  rideId   String
+  sequence Int
+  type     MobilityRideStopType
+
+  latitude  Decimal @db.Decimal(10, 7)
+  longitude Decimal @db.Decimal(10, 7)
+  address   String?
+
+  arrivedAt  DateTime?
+  departedAt DateTime?
+
+  ride MobilityRide @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rideId, sequence])
+  @@index([rideId])
+  @@index([type])
 }
 
 model Tenant {
@@ -312,6 +624,9 @@ model Organization {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   financialInstruments FinancialInstrument[]
+  mobilityDrivers      MobilityDriver[]
+  mobilityVehicles     MobilityVehicle[]
+  mobilityRides        MobilityRide[]
 
   @@index([tenantId])
   @@index([status])
@@ -348,6 +663,9 @@ model User {
   securityEvents SecurityEvent[] @relation("SecurityActor")
   riskSignals    RiskSignal[]    @relation("RiskSubject")
   transactions   Transaction[]   @relation("TransactionActor")
+
+  mobilityDriver MobilityDriver? @relation("MobilityDriverUser")
+  mobilityRides  MobilityRide[]  @relation("MobilityRideRider")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
