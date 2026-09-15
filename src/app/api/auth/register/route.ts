@@ -1,157 +1,189 @@
-import { createHash, randomBytes } from "node:crypto";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { prisma } from "@/database/client/prisma";
 import { PasswordService } from "@/core/authentication/password.service";
-import { AuthConfig } from "@/core/authentication/auth.config";
+import { VerificationService } from "@/core/auth/verification/verification.service";
+
+const registerSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name must contain at least 2 characters.")
+    .max(120, "Name is too long."),
+
+  email: z
+    .string()
+    .trim()
+    .email("Invalid email address.")
+    .max(320, "Email address is too long."),
+
+  password: z
+    .string()
+    .min(12, "Password must contain at least 12 characters.")
+    .max(128, "Password is too long."),
+});
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function hashVerificationToken(token: string): string {
-  return createHash("sha256")
-    .update(token)
-    .digest("hex");
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const parsed = registerSchema.safeParse(body);
 
-    const name =
-      typeof body.name === "string"
-        ? body.name.trim()
-        : "";
-
-    const email =
-      typeof body.email === "string"
-        ? normalizeEmail(body.email)
-        : "";
-
-    const password =
-      typeof body.password === "string"
-        ? body.password
-        : "";
-
-    if (!name || name.length < 2) {
-      return Response.json(
+    if (!parsed.success) {
+      return NextResponse.json(
         {
-          message: "A valid name is required.",
+          message: "Invalid registration data.",
+          errors: parsed.error.flatten().fieldErrors,
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
-    if (
-      !email ||
-      !email.includes("@") ||
-      email.length > 254
-    ) {
-      return Response.json(
-        {
-          message: "A valid email address is required.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
+    const name = parsed.data.name.trim();
+    const email = normalizeEmail(parsed.data.email);
+    const password = parsed.data.password;
 
-    if (
-      password.length <
-      AuthConfig.password.minimumLength
-    ) {
-      return Response.json(
-        {
-          message: `Password must contain at least ${AuthConfig.password.minimumLength} characters.`,
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const existingUser =
-      await prisma.user.findUnique({
-        where: {
-          emailNormalized: email,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        emailNormalized: email,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (existingUser) {
-      return Response.json(
+      return NextResponse.json(
         {
-          message: "Unable to create this account.",
+          message:
+            "An account with this email already exists.",
+          code: "EMAIL_ALREADY_REGISTERED",
         },
-        {
-          status: 409,
-        }
+        { status: 409 }
       );
     }
 
-    const passwordService =
-      new PasswordService();
+    const passwordService = new PasswordService();
+    const verificationService =
+      new VerificationService();
 
     const passwordHash =
       await passwordService.hash(password);
 
-    const verificationToken =
-      randomBytes(48).toString("base64url");
-
-    const tokenHash =
-      hashVerificationToken(
-        verificationToken
-      );
-
-    const expiresAt = new Date(
-      Date.now() + 24 * 60 * 60 * 1000
-    );
-
-    const user = await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
-        const createdUser =
-          await tx.user.create({
-            data: {
-              name,
-              email,
-              emailNormalized: email,
-              password: passwordHash,
-              role: "CUSTOMER",
-              status: "PENDING_VERIFICATION",
-
-              profile: {
-                create: {
-                  displayName: name,
-                },
-              },
-
-              emailVerificationTokens: {
-                create: {
-                  tokenHash,
-                  expiresAt,
-                },
-              },
+        const organization =
+          await tx.organization.findUnique({
+            where: {
+              slug: "marka-platform",
+            },
+            select: {
+              id: true,
+              status: true,
             },
           });
 
-        return createdUser;
+        if (
+          !organization ||
+          organization.status !== "ACTIVE"
+        ) {
+          throw new Error(
+            "MARKA platform organization is not available."
+          );
+        }
+
+        const customerRole =
+          await tx.role.findUnique({
+            where: {
+              organizationId_name: {
+                organizationId: organization.id,
+                name: "CUSTOMER",
+              },
+            },
+            select: {
+              id: true,
+              status: true,
+            },
+          });
+
+        if (
+          !customerRole ||
+          customerRole.status !== "ACTIVE"
+        ) {
+          throw new Error(
+            "MARKA CUSTOMER role is not available."
+          );
+        }
+
+        const user = await tx.user.create({
+          data: {
+            name,
+            email,
+            emailNormalized: email,
+            password: passwordHash,
+            role: "CUSTOMER",
+            status: "PENDING_VERIFICATION",
+          },
+        });
+
+        await tx.profile.create({
+          data: {
+            userId: user.id,
+            displayName: name,
+          },
+        });
+
+        await tx.organizationMembership.create({
+          data: {
+            organizationId: organization.id,
+            userId: user.id,
+            status: "ACTIVE",
+          },
+        });
+
+        await tx.userRole.create({
+          data: {
+            userId: user.id,
+            roleId: customerRole.id,
+            organizationId: organization.id,
+          },
+        });
+
+        const tokenData =
+          await verificationService.createToken(
+            user.id,
+            tx
+          );
+
+        return {
+          user,
+          token: tokenData.token,
+          expiresAt: tokenData.expiresAt,
+        };
       }
     );
 
-    return Response.json(
+    console.info(
+      "[AUTH_VERIFICATION_PENDING]",
       {
-        id: user.id,
-        email: user.email,
-        status: user.status,
-      },
-      {
-        status: 201,
+        userId: result.user.id,
+        email: result.user.email,
+        expiresAt:
+          result.expiresAt.toISOString(),
       }
+    );
+
+    return NextResponse.json(
+      {
+        id: result.user.id,
+        email: result.user.email,
+        status: result.user.status,
+      },
+      { status: 201 }
     );
   } catch (error) {
     console.error(
@@ -159,14 +191,12 @@ export async function POST(request: Request) {
       error
     );
 
-    return Response.json(
+    return NextResponse.json(
       {
         message:
-          "Unable to create the account.",
+          "Unable to complete registration.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

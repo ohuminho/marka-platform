@@ -1,478 +1,484 @@
-import {
-  CreateTransactionInput,
-  Money,
-  Transaction,
-  TransactionDirection,
-  TransactionFilter,
-  TransactionRepository,
-  TransactionResult,
-  TransactionReversalInput,
-  TransactionRefundInput,
-  TransactionStatus,
-  TransactionStatusTransition,
-} from "./types/transaction.types";
+import { Prisma, TransactionActorType, TransactionDirection, TransactionStatus, TransactionType } from "@prisma/client";
+
+import { prisma } from "@/database/client/prisma";
+import { FinancialAuditService } from "@/core/audit/financial-audit.service";
+import { IdempotencyService } from "@/core/idempotency/idempotency.service";
+
+export interface CreateTransactionInput {
+  organizationId: string;
+  idempotencyKey: string;
+
+  type: TransactionType;
+  direction: TransactionDirection;
+
+  amountMinor: bigint;
+  currency: string;
+
+  actorUserId?: string;
+  actorType?: TransactionActorType;
+
+  sourceAccountId: string;
+  destinationAccountId: string;
+
+  reference?: string;
+  referenceType?: string;
+  orderId?: string;
+  vendorId?: string;
+  context?: string;
+
+  metadata?: Record<string, unknown>;
+
+  ipAddress?: string;
+  userAgent?: string;
+  correlationId?: string;
+  requestId?: string;
+}
+
+export interface TransactionResult {
+  id: string;
+  reference: string;
+  status: TransactionStatus;
+  type: TransactionType;
+  direction: TransactionDirection;
+  amountMinor: string;
+  currency: string;
+  sourceAccountId: string;
+  destinationAccountId: string;
+  completedAt: Date | null;
+}
+
+const DEFAULT_LEDGER_CODE = "MARKA-OPERATING";
 
 export class TransactionService {
-  constructor(
-    private readonly repository: TransactionRepository
-  ) {}
+  private readonly idempotencyService = new IdempotencyService();
+  private readonly financialAuditService = new FinancialAuditService();
 
-  async createTransaction(
-    input: CreateTransactionInput
-  ): Promise<TransactionResult> {
-    this.validateCreateTransactionInput(input);
+  async create(input: CreateTransactionInput): Promise<TransactionResult> {
+    this.validateInput(input);
 
-    const existing =
-      await this.repository.findByIdempotencyKey(
-        input.idempotencyKey
-      );
-
-    if (existing) {
-      return {
-        transaction: existing,
-        idempotent: true,
-      };
-    }
-
-    const transaction: Transaction = {
-      id: crypto.randomUUID(),
-      idempotencyKey: input.idempotencyKey,
+    const requestBody = {
+      organizationId: input.organizationId,
       type: input.type,
       direction: input.direction,
-      status: TransactionStatus.CREATED,
-      amount: {
-        amount: input.amount.amount,
-        currency: input.amount.currency.toUpperCase(),
-      },
-      actorId: input.actorId,
-      actorType: input.actorType,
+      amountMinor: input.amountMinor.toString(),
+      currency: input.currency,
+      actorUserId: input.actorUserId ?? null,
+      actorType: input.actorType ?? "SYSTEM",
       sourceAccountId: input.sourceAccountId,
-      destinationAccountId:
-        input.destinationAccountId,
-      reference: {
-        reference: input.reference.reference,
-        type: input.reference.type,
+      destinationAccountId: input.destinationAccountId,
+      reference: input.reference ?? null,
+      referenceType: input.referenceType ?? null,
+      orderId: input.orderId ?? null,
+      vendorId: input.vendorId ?? null,
+      context: input.context ?? null,
+      metadata: input.metadata ?? null,
+    };
+
+    const result = await this.idempotencyService.execute(
+      {
+        key: input.idempotencyKey,
+        scope: `financial.transaction.create:${input.organizationId}`,
+        userId: input.actorUserId,
+        requestBody,
       },
-      context: input.context,
-      metadata: input.metadata,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      async () => {
+        const transaction = await prisma.$transaction(
+          async (database) => {
+            const [sourceAccount, destinationAccount, organization] =
+              await Promise.all([
+                database.account.findUnique({
+                  where: { id: input.sourceAccountId },
+                  select: {
+                    id: true,
+                    organizationId: true,
+                    currency: true,
+                    status: true,
+                    balanceMinor: true,
+                    version: true,
+                  },
+                }),
 
-    const created =
-      await this.repository.create(transaction);
+                database.account.findUnique({
+                  where: { id: input.destinationAccountId },
+                  select: {
+                    id: true,
+                    organizationId: true,
+                    currency: true,
+                    status: true,
+                    balanceMinor: true,
+                    version: true,
+                  },
+                }),
 
-    return {
-      transaction: created,
-      idempotent: false,
-    };
+                database.organization.findUnique({
+                  where: { id: input.organizationId },
+                  select: {
+                    id: true,
+                    status: true,
+                  },
+                }),
+              ]);
+
+            if (!organization || organization.status !== "ACTIVE") {
+              throw new Error("Organization is not active.");
+            }
+
+            if (!sourceAccount) {
+              throw new Error("Source account not found.");
+            }
+
+            if (!destinationAccount) {
+              throw new Error("Destination account not found.");
+            }
+
+            if (sourceAccount.id === destinationAccount.id) {
+              throw new Error(
+                "Source and destination accounts must be different."
+              );
+            }
+
+            if (
+              sourceAccount.organizationId !== input.organizationId ||
+              destinationAccount.organizationId !== input.organizationId
+            ) {
+              throw new Error(
+                "Both accounts must belong to the transaction organization."
+              );
+            }
+
+            if (
+              sourceAccount.status !== "ACTIVE" ||
+              destinationAccount.status !== "ACTIVE"
+            ) {
+              throw new Error("Both accounts must be active.");
+            }
+
+            if (
+              sourceAccount.currency !== input.currency ||
+              destinationAccount.currency !== input.currency
+            ) {
+              throw new Error(
+                "Transaction currency must match both accounts."
+              );
+            }
+
+            if (sourceAccount.balanceMinor < input.amountMinor) {
+              throw new Error("Insufficient account balance.");
+            }
+
+            const ledger = await database.ledger.upsert({
+              where: {
+                code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}`,
+              },
+              update: {},
+              create: {
+                organizationId: input.organizationId,
+                code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}`,
+                name: "MARKA Operating Ledger",
+                currency: input.currency,
+                status: "ACTIVE",
+              },
+            });
+
+            if (
+              ledger.status !== "ACTIVE" ||
+              ledger.currency !== input.currency
+            ) {
+              throw new Error("Operating ledger is not available.");
+            }
+
+            const reference =
+              input.reference?.trim() ||
+              `TXN-${crypto.randomUUID().replace(/-/g, "").toUpperCase()}`;
+
+            const createdAt = new Date();
+
+            const transaction = await database.transaction.create({
+              data: {
+                idempotencyKey: input.idempotencyKey,
+                type: input.type,
+                direction: input.direction,
+                status: "PROCESSING",
+
+                amountMinor: input.amountMinor,
+                currency: input.currency,
+
+                actorUserId: input.actorUserId,
+                actorType: input.actorType ?? "SYSTEM",
+
+                sourceAccountId: input.sourceAccountId,
+                destinationAccountId: input.destinationAccountId,
+
+                reference,
+                referenceType: input.referenceType,
+                orderId: input.orderId,
+                vendorId: input.vendorId,
+                context: input.context,
+
+                metadata: input.metadata
+                  ? (input.metadata as Prisma.InputJsonValue)
+                  : undefined,
+
+                processingStartedAt: createdAt,
+              },
+            });
+
+            const sourceUpdate =
+              await database.account.updateMany({
+                where: {
+                  id: sourceAccount.id,
+                  version: sourceAccount.version,
+                  status: "ACTIVE",
+                  balanceMinor: {
+                    gte: input.amountMinor,
+                  },
+                },
+                data: {
+                  balanceMinor: {
+                    decrement: input.amountMinor,
+                  },
+                  version: {
+                    increment: 1,
+                  },
+                },
+              });
+
+            if (sourceUpdate.count !== 1) {
+              throw new Error(
+                "Source account changed during transaction. Please retry."
+              );
+            }
+
+            const destinationUpdate =
+              await database.account.updateMany({
+                where: {
+                  id: destinationAccount.id,
+                  version: destinationAccount.version,
+                  status: "ACTIVE",
+                },
+                data: {
+                  balanceMinor: {
+                    increment: input.amountMinor,
+                  },
+                  version: {
+                    increment: 1,
+                  },
+                },
+              });
+
+            if (destinationUpdate.count !== 1) {
+              throw new Error(
+                "Destination account changed during transaction. Please retry."
+              );
+            }
+
+            await database.ledgerEntry.createMany({
+              data: [
+                {
+                  ledgerId: ledger.id,
+                  transactionId: transaction.id,
+                  accountId: sourceAccount.id,
+                  direction: "DEBIT",
+                  amountMinor: input.amountMinor,
+                  currency: input.currency,
+                  sequence: 1,
+                  metadata: {
+                    role: "SOURCE",
+                  } as Prisma.InputJsonValue,
+                },
+                {
+                  ledgerId: ledger.id,
+                  transactionId: transaction.id,
+                  accountId: destinationAccount.id,
+                  direction: "CREDIT",
+                  amountMinor: input.amountMinor,
+                  currency: input.currency,
+                  sequence: 2,
+                  metadata: {
+                    role: "DESTINATION",
+                  } as Prisma.InputJsonValue,
+                },
+              ],
+            });
+
+            const completedAt = new Date();
+
+            const completed =
+              await database.transaction.update({
+                where: {
+                  id: transaction.id,
+                },
+                data: {
+                  status: "COMPLETED",
+                  completedAt,
+                },
+              });
+
+            await database.auditLog.create({
+              data: {
+                organizationId: input.organizationId,
+                actorUserId: input.actorUserId,
+                actorType: input.actorUserId ? "USER" : "SYSTEM",
+                action: "FINANCIAL_TRANSACTION_COMPLETED",
+                entityType: "TRANSACTION",
+                entityId: completed.id,
+                correlationId: input.correlationId,
+                requestId: input.requestId,
+                ipAddress: input.ipAddress,
+                userAgent: input.userAgent,
+                metadata: {
+                  transactionId: completed.id,
+                  reference: completed.reference,
+                  type: completed.type,
+                  direction: completed.direction,
+                  amountMinor: input.amountMinor.toString(),
+                  currency: input.currency,
+                  sourceAccountId: input.sourceAccountId,
+                  destinationAccountId: input.destinationAccountId,
+                  orderId: input.orderId ?? null,
+                  vendorId: input.vendorId ?? null,
+                } as Prisma.InputJsonValue,
+              },
+            });
+
+            return completed;
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 5000,
+            timeout: 10000,
+          }
+        );
+
+        return {
+          responseStatus: 201,
+          responseBody: this.toResult(transaction),
+          resourceType: "TRANSACTION",
+          resourceId: transaction.id,
+        };
+      }
+    );
+
+    return result.responseBody as TransactionResult;
   }
 
-  async getTransactionById(
+  async getById(
+    organizationId: string,
     transactionId: string
-  ): Promise<Transaction | null> {
-    if (!transactionId.trim()) {
-      throw new Error("Transaction ID is required");
-    }
-
-    return this.repository.findById(transactionId);
-  }
-
-  async getTransactionByReference(
-    reference: string
-  ): Promise<Transaction | null> {
-    if (!reference.trim()) {
-      throw new Error(
-        "Transaction reference is required"
-      );
-    }
-
-    return this.repository.findByReference(reference);
-  }
-
-  async listTransactions(
-    filter: TransactionFilter
-  ): Promise<Transaction[]> {
-    const normalizedFilter: TransactionFilter = {
-      ...filter,
-      limit: Math.min(
-        Math.max(filter.limit ?? 50, 1),
-        100
-      ),
-      offset: Math.max(filter.offset ?? 0, 0),
-    };
-
-    return this.repository.list(normalizedFilter);
-  }
-
-  async transitionStatus(
-    input: TransactionStatusTransition
-  ): Promise<Transaction> {
-    const transaction =
-      await this.repository.findById(
-        input.transactionId
-      );
+  ): Promise<TransactionResult | null> {
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        id: transactionId,
+        OR: [
+          {
+            sourceAccount: {
+              organizationId,
+            },
+          },
+          {
+            destinationAccount: {
+              organizationId,
+            },
+          },
+        ],
+      },
+    });
 
     if (!transaction) {
-      throw new Error("Transaction not found");
+      return null;
     }
 
-    if (transaction.status === input.status) {
-      return transaction;
-    }
-
-    this.assertValidTransition(
-      transaction.status,
-      input.status
-    );
-
-    const now = new Date();
-
-    const updated: Transaction = {
-      ...transaction,
-      status: input.status,
-      updatedAt: now,
-      ...(input.status === TransactionStatus.COMPLETED && {
-        completedAt: now,
-      }),
-      ...(input.status === TransactionStatus.FAILED && {
-        failedAt: now,
-      }),
-      ...(input.status === TransactionStatus.CANCELLED && {
-        cancelledAt: now,
-      }),
-      ...(input.status === TransactionStatus.REVERSED && {
-        reversedAt: now,
-      }),
-      ...(input.status === TransactionStatus.REFUNDED && {
-        refundedAt: now,
-      }),
-    };
-
-    return this.repository.update(updated);
+    return this.toResult(transaction);
   }
 
-  async reverseTransaction(
-    input: TransactionReversalInput
-  ): Promise<TransactionResult> {
-    if (!input.transactionId.trim()) {
-      throw new Error("Transaction ID is required");
+  async getByReference(
+    organizationId: string,
+    reference: string
+  ): Promise<TransactionResult | null> {
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        reference,
+        OR: [
+          {
+            sourceAccount: {
+              organizationId,
+            },
+          },
+          {
+            destinationAccount: {
+              organizationId,
+            },
+          },
+        ],
+      },
+    });
+
+    if (!transaction) {
+      return null;
+    }
+
+    return this.toResult(transaction);
+  }
+
+  private validateInput(input: CreateTransactionInput): void {
+    if (!input.organizationId.trim()) {
+      throw new Error("Organization is required.");
     }
 
     if (!input.idempotencyKey.trim()) {
-      throw new Error("Idempotency key is required");
+      throw new Error("Idempotency key is required.");
     }
 
-    if (!input.reason.trim()) {
-      throw new Error("Reversal reason is required");
+    if (input.amountMinor <= BigInt(0)) {
+      throw new Error("Transaction amount must be greater than zero.");
     }
 
-    const existing =
-      await this.repository.findByIdempotencyKey(
-        input.idempotencyKey
-      );
-
-    if (existing) {
-      return {
-        transaction: existing,
-        idempotent: true,
-      };
-    }
-
-    const original =
-      await this.repository.findById(
-        input.transactionId
-      );
-
-    if (!original) {
-      throw new Error(
-        "Original transaction not found"
-      );
-    }
-
-    if (
-      original.status !==
-      TransactionStatus.COMPLETED
-    ) {
-      throw new Error(
-        "Only completed transactions can be reversed"
-      );
-    }
-
-    const reversalDirection =
-      original.direction ===
-      TransactionDirection.CREDIT
-        ? TransactionDirection.DEBIT
-        : TransactionDirection.CREDIT;
-
-    const reversal: Transaction = {
-      id: crypto.randomUUID(),
-      idempotencyKey: input.idempotencyKey,
-      type: original.type,
-      direction: reversalDirection,
-      status: TransactionStatus.CREATED,
-      amount: {
-        ...original.amount,
-      },
-      actorId: input.actorId,
-      actorType: input.actorType,
-      sourceAccountId:
-        original.destinationAccountId ??
-        original.sourceAccountId,
-      destinationAccountId:
-        original.sourceAccountId,
-      reference: {
-        reference: `REVERSAL-${original.id}`,
-        type: "TRANSACTION_REVERSAL",
-      },
-      context: original.context,
-      metadata: {
-        ...original.metadata,
-        reversalOf: original.id,
-        reason: input.reason,
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const created =
-      await this.repository.create(reversal);
-
-    return {
-      transaction: created,
-      idempotent: false,
-    };
-  }
-
-  async refundTransaction(
-    input: TransactionRefundInput
-  ): Promise<TransactionResult> {
-    if (!input.transactionId.trim()) {
-      throw new Error("Transaction ID is required");
-    }
-
-    if (!input.idempotencyKey.trim()) {
-      throw new Error("Idempotency key is required");
-    }
-
-    if (!input.reason.trim()) {
-      throw new Error("Refund reason is required");
-    }
-
-    const existing =
-      await this.repository.findByIdempotencyKey(
-        input.idempotencyKey
-      );
-
-    if (existing) {
-      return {
-        transaction: existing,
-        idempotent: true,
-      };
-    }
-
-    const original =
-      await this.repository.findById(
-        input.transactionId
-      );
-
-    if (!original) {
-      throw new Error(
-        "Original transaction not found"
-      );
-    }
-
-    if (
-      original.status !==
-      TransactionStatus.COMPLETED
-    ) {
-      throw new Error(
-        "Only completed transactions can be refunded"
-      );
-    }
-
-    const refundAmount =
-      input.amount ?? original.amount;
-
-    this.validateRefundAmount(
-      original.amount,
-      refundAmount
-    );
-
-    const refundDirection =
-      original.direction ===
-      TransactionDirection.CREDIT
-        ? TransactionDirection.DEBIT
-        : TransactionDirection.CREDIT;
-
-    const refund: Transaction = {
-      id: crypto.randomUUID(),
-      idempotencyKey: input.idempotencyKey,
-      type: original.type,
-      direction: refundDirection,
-      status: TransactionStatus.CREATED,
-      amount: {
-        ...refundAmount,
-      },
-      actorId: input.actorId,
-      actorType: input.actorType,
-      sourceAccountId:
-        original.destinationAccountId ??
-        original.sourceAccountId,
-      destinationAccountId:
-        original.sourceAccountId,
-      reference: {
-        reference:
-          `REFUND-${original.id}-${crypto.randomUUID()}`,
-        type: "TRANSACTION_REFUND",
-      },
-      context: original.context,
-      metadata: {
-        ...original.metadata,
-        refundOf: original.id,
-        reason: input.reason,
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const created =
-      await this.repository.create(refund);
-
-    return {
-      transaction: created,
-      idempotent: false,
-    };
-  }
-
-  private validateCreateTransactionInput(
-    input: CreateTransactionInput
-  ): void {
-    if (!input.idempotencyKey.trim()) {
-      throw new Error(
-        "Idempotency key is required"
-      );
+    if (!/^[A-Z]{3}$/.test(input.currency)) {
+      throw new Error("Currency must be a valid ISO 4217 code.");
     }
 
     if (!input.sourceAccountId.trim()) {
-      throw new Error(
-        "Source account is required"
-      );
+      throw new Error("Source account is required.");
     }
 
-    if (
-      input.destinationAccountId &&
-      !input.destinationAccountId.trim()
-    ) {
-      throw new Error(
-        "Destination account cannot be empty"
-      );
-    }
-
-    if (
-      !input.reference.reference.trim()
-    ) {
-      throw new Error(
-        "Transaction reference is required"
-      );
-    }
-
-    this.validateMoney(input.amount);
-  }
-
-  private validateMoney(
-    money: Money
-  ): void {
-    if (!Number.isSafeInteger(money.amount)) {
-      throw new Error(
-        "Transaction amount must be an integer represented in minor units"
-      );
-    }
-
-    if (money.amount <= 0) {
-      throw new Error(
-        "Transaction amount must be greater than zero"
-      );
-    }
-
-    if (
-      !money.currency ||
-      money.currency.trim().length !== 3
-    ) {
-      throw new Error(
-        "Currency must be a valid ISO 4217 three-letter code"
-      );
+    if (!input.destinationAccountId.trim()) {
+      throw new Error("Destination account is required.");
     }
   }
 
-  private validateRefundAmount(
-    original: Money,
-    refund: Money
-  ): void {
-    this.validateMoney(refund);
-
-    if (
-      original.currency.toUpperCase() !==
-      refund.currency.toUpperCase()
-    ) {
-      throw new Error(
-        "Refund currency must match the original transaction currency"
-      );
+  private toResult(transaction: {
+    id: string;
+    reference: string;
+    status: TransactionStatus;
+    type: TransactionType;
+    direction: TransactionDirection;
+    amountMinor: bigint;
+    currency: string;
+    sourceAccountId: string | null;
+    destinationAccountId: string | null;
+    completedAt: Date | null;
+  }): TransactionResult {
+    if (!transaction.sourceAccountId) {
+      throw new Error("Transaction source account is missing.");
     }
 
-    if (refund.amount > original.amount) {
-      throw new Error(
-        "Refund amount cannot exceed the original transaction amount"
-      );
+    if (!transaction.destinationAccountId) {
+      throw new Error("Transaction destination account is missing.");
     }
-  }
 
-  private assertValidTransition(
-    current: TransactionStatus,
-    next: TransactionStatus
-  ): void {
-    const allowedTransitions: Record<
-      TransactionStatus,
-      TransactionStatus[]
-    > = {
-      [TransactionStatus.CREATED]: [
-        TransactionStatus.PENDING,
-        TransactionStatus.CANCELLED,
-      ],
-
-      [TransactionStatus.PENDING]: [
-        TransactionStatus.PROCESSING,
-        TransactionStatus.COMPLETED,
-        TransactionStatus.FAILED,
-        TransactionStatus.CANCELLED,
-      ],
-
-      [TransactionStatus.PROCESSING]: [
-        TransactionStatus.COMPLETED,
-        TransactionStatus.FAILED,
-        TransactionStatus.CANCELLED,
-      ],
-
-      [TransactionStatus.COMPLETED]: [
-        TransactionStatus.REVERSED,
-        TransactionStatus.REFUNDED,
-      ],
-
-      [TransactionStatus.FAILED]: [],
-
-      [TransactionStatus.CANCELLED]: [],
-
-      [TransactionStatus.REVERSED]: [],
-
-      [TransactionStatus.REFUNDED]: [],
+    return {
+      id: transaction.id,
+      reference: transaction.reference,
+      status: transaction.status,
+      type: transaction.type,
+      direction: transaction.direction,
+      amountMinor: transaction.amountMinor.toString(),
+      currency: transaction.currency,
+      sourceAccountId: transaction.sourceAccountId,
+      destinationAccountId: transaction.destinationAccountId,
+      completedAt: transaction.completedAt,
     };
-
-    if (
-      !allowedTransitions[current].includes(next)
-    ) {
-      throw new Error(
-        `Invalid transaction status transition: ${current} -> ${next}`
-      );
-    }
   }
 }
+
+export const transactionService = new TransactionService();

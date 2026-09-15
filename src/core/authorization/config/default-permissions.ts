@@ -1,20 +1,30 @@
-export const DefaultPermissions = [
+import {
+  Permissions,
+  type PermissionAction,
+} from "../permissions.catalog";
 
-  "USER_READ",
-  "USER_CREATE",
+export const DefaultPermissions: PermissionAction[] = [
+  Permissions.USER_READ,
+  Permissions.USER_CREATE,
+  Permissions.USER_UPDATE,
 
-  "PRODUCT_CREATE",
-  "PRODUCT_UPDATE",
-  "PRODUCT_DELETE",
+  Permissions.VENDOR_CREATE,
+  Permissions.VENDOR_UPDATE,
+  Permissions.VENDOR_MANAGE,
 
-  "ORDER_READ",
-  "ORDER_MANAGE",
+  Permissions.PRODUCT_CREATE,
+  Permissions.PRODUCT_UPDATE,
+  Permissions.PRODUCT_DELETE,
 
-  "WALLET_READ",
-  "WALLET_MANAGE",
+  Permissions.ORDER_READ,
+  Permissions.ORDER_CREATE,
+  Permissions.ORDER_MANAGE,
 
-  "VENDOR_MANAGE",
+  Permissions.PAYMENT_PROCESS,
 
-  "SYSTEM_ADMIN"
+  Permissions.WALLET_READ,
+  Permissions.WALLET_MANAGE,
 
+  Permissions.ADMIN_ACCESS,
+  Permissions.SYSTEM_ADMIN,
 ];

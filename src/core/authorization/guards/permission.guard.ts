@@ -1,21 +1,17 @@
 import { AuthorizationService } from "../authorization.service";
 
 export class PermissionGuard {
-
-  private authorization =
-    new AuthorizationService();
-
+  private readonly authorization = new AuthorizationService();
 
   async canActivate(
     userId: string,
-    permission: string
-  ) {
-
+    permission: string,
+    organizationId?: string
+  ): Promise<boolean> {
     return this.authorization.hasPermission(
       userId,
-      permission
+      permission,
+      organizationId
     );
-
   }
-
 }

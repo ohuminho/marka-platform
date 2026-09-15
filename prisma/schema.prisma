@@ -86,6 +86,30 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum FinancialInstrumentType {
+  BANK_ACCOUNT
+  CARD
+  MOBILE_MONEY
+  PSP_ACCOUNT
+  OTHER
+}
+
+enum FinancialInstrumentStatus {
+  PENDING
+  ACTIVE
+  VERIFICATION_REQUIRED
+  SUSPENDED
+  BLOCKED
+  EXPIRED
+  REMOVED
+}
+
+enum FinancialInstrumentOwnerType {
+  USER
+  VENDOR
+  ORGANIZATION
+}
+
 enum AccountType {
   CUSTOMER_WALLET
   VENDOR_PAYABLE
@@ -285,8 +309,9 @@ model Organization {
   riskSignals     RiskSignal[]
   automationRules AutomationRule[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  financialInstruments FinancialInstrument[]
 
   @@index([tenantId])
   @@index([status])
@@ -312,11 +337,12 @@ model User {
   memberships             OrganizationMembership[]
   roles                   UserRole[]
 
-  vendors  Vendor[]  @relation("VendorOwner")
-  wallet   Wallet?
-  accounts Account[] @relation("UserAccountOwner")
-  carts    Cart[]
-  orders   Order[]   @relation("OrderCustomer")
+  vendors              Vendor[]              @relation("VendorOwner")
+  wallet               Wallet?
+  accounts             Account[]             @relation("UserAccountOwner")
+  financialInstruments FinancialInstrument[] @relation("UserFinancialInstruments")
+  carts                Cart[]
+  orders               Order[]               @relation("OrderCustomer")
 
   auditLogs      AuditLog[]      @relation("AuditActor")
   securityEvents SecurityEvent[] @relation("SecurityActor")
@@ -470,12 +496,13 @@ model Vendor {
   verified     Boolean      @default(false)
   status       VendorStatus @default(PENDING)
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-  owner        User         @relation("VendorOwner", fields: [ownerId], references: [id])
-  store        Store?
-  accounts     Account[]    @relation("VendorAccountOwner")
-  settlements  Settlement[]
-  commissions  Commission[]
+  organization         Organization          @relation(fields: [organizationId], references: [id])
+  owner                User                  @relation("VendorOwner", fields: [ownerId], references: [id])
+  store                Store?
+  accounts             Account[]             @relation("VendorAccountOwner")
+  financialInstruments FinancialInstrument[] @relation("VendorFinancialInstruments")
+  settlements          Settlement[]
+  commissions          Commission[]
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -638,6 +665,46 @@ model OrderItem {
   @@index([productId])
   @@index([vendorId])
   @@index([storeId])
+}
+
+model FinancialInstrument {
+  id             String  @id @default(uuid())
+  organizationId String
+  userId         String?
+  vendorId       String?
+
+  type      FinancialInstrumentType
+  status    FinancialInstrumentStatus    @default(PENDING)
+  ownerType FinancialInstrumentOwnerType
+
+  provider    String
+  providerRef String
+  displayName String?
+  maskedValue String?
+  currency    String  @default("AOA") @db.Char(3)
+
+  isDefault  Boolean   @default(false)
+  verifiedAt DateTime?
+  expiresAt  DateTime?
+
+  capabilities Json?
+  metadata     Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation("UserFinancialInstruments", fields: [userId], references: [id])
+  vendor       Vendor?      @relation("VendorFinancialInstruments", fields: [vendorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerRef])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([vendorId])
+  @@index([type])
+  @@index([status])
+  @@index([ownerType])
+  @@index([isDefault])
 }
 
 model Account {

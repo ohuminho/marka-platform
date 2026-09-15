@@ -3,6 +3,7 @@ import {
   randomBytes,
 } from "node:crypto";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/database/client/prisma";
 
 const VERIFICATION_TOKEN_BYTES = 48;
@@ -13,6 +14,10 @@ export interface VerificationTokenResult {
   expiresAt: Date;
 }
 
+type DatabaseClient =
+  | typeof prisma
+  | Prisma.TransactionClient;
+
 export class VerificationService {
   private hashToken(token: string): string {
     return createHash("sha256")
@@ -21,7 +26,8 @@ export class VerificationService {
   }
 
   async createToken(
-    userId: string
+    userId: string,
+    database: DatabaseClient = prisma
   ): Promise<VerificationTokenResult> {
     const token = randomBytes(
       VERIFICATION_TOKEN_BYTES
@@ -37,7 +43,7 @@ export class VerificationService {
           1000
     );
 
-    await prisma.emailVerificationToken.create({
+    await database.emailVerificationToken.create({
       data: {
         userId,
         tokenHash,
@@ -55,16 +61,14 @@ export class VerificationService {
     const tokenHash = this.hashToken(token);
 
     const verificationToken =
-      await prisma.emailVerificationToken.findUnique(
-        {
-          where: {
-            tokenHash,
-          },
-          include: {
-            user: true,
-          },
-        }
-      );
+      await prisma.emailVerificationToken.findUnique({
+        where: {
+          tokenHash,
+        },
+        include: {
+          user: true,
+        },
+      });
 
     if (!verificationToken) {
       return null;
@@ -85,20 +89,18 @@ export class VerificationService {
       await prisma.$transaction(
         async (tx) => {
           const updatedToken =
-            await tx.emailVerificationToken.updateMany(
-              {
-                where: {
-                  id: verificationToken.id,
-                  verifiedAt: null,
-                  expiresAt: {
-                    gt: new Date(),
-                  },
+            await tx.emailVerificationToken.updateMany({
+              where: {
+                id: verificationToken.id,
+                verifiedAt: null,
+                expiresAt: {
+                  gt: new Date(),
                 },
-                data: {
-                  verifiedAt: new Date(),
-                },
-              }
-            );
+              },
+              data: {
+                verifiedAt: new Date(),
+              },
+            });
 
           if (updatedToken.count !== 1) {
             return null;
@@ -129,37 +131,33 @@ export class VerificationService {
   async invalidateActiveTokens(
     userId: string
   ): Promise<void> {
-    await prisma.emailVerificationToken.updateMany(
-      {
-        where: {
-          userId,
-          verifiedAt: null,
-        },
-        data: {
-          verifiedAt: new Date(),
-        },
-      }
-    );
+    await prisma.emailVerificationToken.updateMany({
+      where: {
+        userId,
+        verifiedAt: null,
+      },
+      data: {
+        verifiedAt: new Date(),
+      },
+    });
   }
 
   async hasPendingVerification(
     userId: string
   ): Promise<boolean> {
     const token =
-      await prisma.emailVerificationToken.findFirst(
-        {
-          where: {
-            userId,
-            verifiedAt: null,
-            expiresAt: {
-              gt: new Date(),
-            },
+      await prisma.emailVerificationToken.findFirst({
+        where: {
+          userId,
+          verifiedAt: null,
+          expiresAt: {
+            gt: new Date(),
           },
-          select: {
-            id: true,
-          },
-        }
-      );
+        },
+        select: {
+          id: true,
+        },
+      });
 
     return Boolean(token);
   }

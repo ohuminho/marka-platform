@@ -1,246 +1,271 @@
-import {
-  NextResponse,
-} from "next/server";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { z } from "zod";
 
+import { SessionService } from "@/core/auth/sessions/session.service";
+import { prisma } from "@/database/client/prisma";
+import { CartService } from "@/services/cart/cart.service";
 
-import {
-  cookies,
-} from "next/headers";
+const quantitySchema = z.object({
+  quantity: z
+    .number()
+    .int()
+    .min(1, "Quantity must be at least 1."),
+});
 
-
-import {
-  TokenService,
-} from "@/core/authentication/token.service";
-
-
-import {
-  CartService,
-} from "@/services/cart/cart.service";
-
-
-
-async function getUserId() {
-
-
-  const cookieStore =
-    await cookies();
-
-
+async function getAuthenticatedUser() {
+  const cookieStore = await cookies();
 
   const token =
-    cookieStore.get(
-      "marka_session"
-    )?.value;
-
-
+    cookieStore.get("marka_session")?.value;
 
   if (!token) {
-
-    throw new Error(
-      "Unauthorized"
-    );
-
+    return {
+      token: null,
+      user: null,
+      status: 401,
+      code: "AUTHENTICATION_REQUIRED",
+    } as const;
   }
 
+  const sessionService = new SessionService();
 
+  const session =
+    await sessionService.validate(token);
 
-  const tokenService =
-    new TokenService();
+  if (!session) {
+    return {
+      token,
+      user: null,
+      status: 401,
+      code: "INVALID_SESSION",
+    } as const;
+  }
 
+  const user = await prisma.user.findUnique({
+    where: {
+      id: session.userId,
+    },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
 
+  if (!user) {
+    await sessionService.revoke(token);
 
-  const payload =
-    tokenService.verify(
-      token
-    ) as {
+    return {
+      token,
+      user: null,
+      status: 401,
+      code: "USER_NOT_FOUND",
+    } as const;
+  }
 
-      userId: string;
+  if (user.status !== "ACTIVE") {
+    await sessionService.revoke(token);
 
-    };
+    return {
+      token,
+      user: null,
+      status: 403,
+      code: "USER_NOT_ACTIVE",
+    } as const;
+  }
 
-
-
-  return payload.userId;
-
-
+  return {
+    token,
+    user,
+    status: 200,
+    code: null,
+  } as const;
 }
 
-
-
-
-
 export async function PATCH(
-
   request: Request,
-
   context: {
     params: Promise<{
       id: string;
     }>;
   }
-
 ) {
-
-
   try {
+    const auth =
+      await getAuthenticatedUser();
 
-
-    await getUserId();
-
-
-
-    const {
-      id,
-    } =
-      await context.params;
-
-
-
-    const body =
-      await request.json();
-
-
-
-    const quantity =
-      Number(
-        body.quantity
-      );
-
-
-
-    if (
-      !quantity ||
-      quantity < 1
-    ) {
-
-
+    if (!auth.user) {
       return NextResponse.json(
-
         {
           message:
-            "Invalid quantity",
+            auth.code ===
+            "USER_NOT_ACTIVE"
+              ? "User account is not active."
+              : "Authentication required.",
+          code: auth.code,
         },
-
-        {
-          status: 400,
-        }
-
+        { status: auth.status }
       );
-
-
     }
 
+    const { id } =
+      await context.params;
 
+    const body = await request.json();
 
-    const cartService =
-      new CartService();
+    const parsed =
+      quantitySchema.safeParse(body);
 
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          message: "Invalid quantity.",
+          code: "INVALID_QUANTITY",
+          errors:
+            parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
 
+    const cartService = new CartService();
 
     const item =
       await cartService.updateItem(
-
+        auth.user.id,
         id,
-
-        quantity
-
+        parsed.data.quantity
       );
 
+    return NextResponse.json(item);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to update cart item.";
 
+    if (
+      message ===
+      "Cart item not found."
+    ) {
+      return NextResponse.json(
+        {
+          message,
+          code: "CART_ITEM_NOT_FOUND",
+        },
+        { status: 404 }
+      );
+    }
 
-    return NextResponse.json(
-      item
+    if (
+      message === "Product unavailable."
+    ) {
+      return NextResponse.json(
+        {
+          message,
+          code: "PRODUCT_UNAVAILABLE",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      message === "Insufficient stock."
+    ) {
+      return NextResponse.json(
+        {
+          message,
+          code: "INSUFFICIENT_STOCK",
+        },
+        { status: 409 }
+      );
+    }
+
+    console.error(
+      "[CART_UPDATE_ITEM_ERROR]",
+      error
     );
 
-
-
-  } catch {
-
-
     return NextResponse.json(
-
       {
         message:
-          "Unauthorized",
+          "Unable to update cart item.",
+        code: "CART_ITEM_UPDATE_FAILED",
       },
-
-      {
-        status: 401,
-      }
-
+      { status: 500 }
     );
-
   }
-
-
 }
 
-
-
-
-
 export async function DELETE(
-
   request: Request,
-
   context: {
     params: Promise<{
       id: string;
     }>;
   }
-
 ) {
-
-
   try {
+    const auth =
+      await getAuthenticatedUser();
 
+    if (!auth.user) {
+      return NextResponse.json(
+        {
+          message:
+            auth.code ===
+            "USER_NOT_ACTIVE"
+              ? "User account is not active."
+              : "Authentication required.",
+          code: auth.code,
+        },
+        { status: auth.status }
+      );
+    }
 
-    await getUserId();
-
-
-
-    const {
-      id,
-    } =
+    const { id } =
       await context.params;
 
-
-
-    const cartService =
-      new CartService();
-
-
+    const cartService = new CartService();
 
     const item =
       await cartService.removeItem(
+        auth.user.id,
         id
       );
 
+    return NextResponse.json(item);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to remove cart item.";
 
+    if (
+      message ===
+      "Cart item not found."
+    ) {
+      return NextResponse.json(
+        {
+          message,
+          code: "CART_ITEM_NOT_FOUND",
+        },
+        { status: 404 }
+      );
+    }
 
-    return NextResponse.json(
-      item
+    console.error(
+      "[CART_REMOVE_ITEM_ERROR]",
+      error
     );
 
-
-
-  } catch {
-
-
     return NextResponse.json(
-
       {
         message:
-          "Unauthorized",
+          "Unable to remove cart item.",
+        code: "CART_ITEM_REMOVE_FAILED",
       },
-
-      {
-        status: 401,
-      }
-
+      { status: 500 }
     );
-
   }
-
-
 }
