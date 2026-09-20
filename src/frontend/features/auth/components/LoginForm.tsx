@@ -10,18 +10,30 @@ import {
 type AuthMode = "login" | "register";
 
 export default function LoginForm() {
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [mode, setMode] =
+    useState<AuthMode>("login");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
   const [confirmPassword, setConfirmPassword] =
     useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] =
+    useState(false);
 
-  const isRegistering = mode === "register";
+  const [resending, setResending] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [showResend, setShowResend] =
+    useState(false);
+
+  const isRegistering =
+    mode === "register";
 
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
@@ -29,10 +41,13 @@ export default function LoginForm() {
     event.preventDefault();
 
     setMessage("");
+    setShowResend(false);
 
     if (isRegistering) {
       if (password !== confirmPassword) {
-        setMessage("Passwords do not match.");
+        setMessage(
+          "Passwords do not match."
+        );
         return;
       }
 
@@ -68,19 +83,85 @@ export default function LoginForm() {
       window.location.href =
         "/app/dashboard";
     } catch (error) {
-      setMessage(
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "Unable to complete the request."
-      );
+          : "Unable to complete the request.";
+
+      setMessage(errorMessage);
+
+      if (
+        errorMessage
+          .toLowerCase()
+          .includes("verification")
+      ) {
+        setShowResend(true);
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  function switchMode(nextMode: AuthMode) {
+  async function handleResendVerification() {
+    if (!email.trim()) {
+      setMessage(
+        "Enter your email address first."
+      );
+      return;
+    }
+
+    setResending(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/auth/resend-verification",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            email,
+          }),
+        }
+      );
+
+      const data =
+        await response
+          .json()
+          .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data?.message === "string"
+            ? data.message
+            : "Unable to resend verification email."
+        );
+      }
+
+      setMessage(
+        "A new verification email has been sent. Please check your inbox."
+      );
+      setShowResend(false);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to resend verification email."
+      );
+    } finally {
+      setResending(false);
+    }
+  }
+
+  function switchMode(
+    nextMode: AuthMode
+  ) {
     setMode(nextMode);
     setMessage("");
+    setShowResend(false);
   }
 
   return (
@@ -98,7 +179,9 @@ export default function LoginForm() {
       <div className="mb-8 flex rounded-2xl border border-white/10 bg-white/[0.04] p-1">
         <button
           type="button"
-          onClick={() => switchMode("login")}
+          onClick={() =>
+            switchMode("login")
+          }
           className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
             mode === "login"
               ? "bg-white text-black"
@@ -110,7 +193,9 @@ export default function LoginForm() {
 
         <button
           type="button"
-          onClick={() => switchMode("register")}
+          onClick={() =>
+            switchMode("register")
+          }
           className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
             mode === "register"
               ? "bg-white text-black"
@@ -185,8 +270,8 @@ export default function LoginForm() {
 
         {isRegistering && (
           <p className="px-1 text-xs leading-5 text-white/40">
-            Your password must contain at least
-            12 characters.
+            Your password must contain at
+            least 12 characters.
           </p>
         )}
 
@@ -198,7 +283,9 @@ export default function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={
+            loading || resending
+          }
           className="w-full rounded-2xl bg-white py-4 font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading
@@ -210,6 +297,24 @@ export default function LoginForm() {
               : "Enter MARKA"}
         </button>
       </form>
+
+      {!isRegistering &&
+        showResend && (
+          <button
+            type="button"
+            onClick={
+              handleResendVerification
+            }
+            disabled={
+              loading || resending
+            }
+            className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 text-sm font-medium text-white/70 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {resending
+              ? "Sending verification email..."
+              : "Resend verification email"}
+          </button>
+        )}
 
       <p className="mt-8 text-center text-xs leading-5 text-white/30">
         By continuing, you agree to use MARKA
