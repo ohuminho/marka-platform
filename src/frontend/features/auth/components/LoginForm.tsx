@@ -2,152 +2,219 @@
 
 import { useState } from "react";
 
-import { login } from "../services/auth.client";
+import {
+  login,
+  register,
+} from "../services/auth.client";
 
+type AuthMode = "login" | "register";
 
 export default function LoginForm() {
+  const [mode, setMode] = useState<AuthMode>("login");
 
-
-  const [email,setEmail] =
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] =
     useState("");
 
-  const [password,setPassword] =
-    useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-
-  const [loading,setLoading] =
-    useState(false);
-
-
+  const isRegistering = mode === "register";
 
   async function handleSubmit(
-    event: React.FormEvent
+    event: React.FormEvent<HTMLFormElement>
   ) {
-
     event.preventDefault();
+
+    setMessage("");
+
+    if (isRegistering) {
+      if (password !== confirmPassword) {
+        setMessage("Passwords do not match.");
+        return;
+      }
+
+      if (password.length < 12) {
+        setMessage(
+          "Password must contain at least 12 characters."
+        );
+        return;
+      }
+    }
 
     setLoading(true);
 
-
     try {
+      if (isRegistering) {
+        await register(
+          name,
+          email,
+          password
+        );
 
-      await login(
-        email,
-        password
-      );
+        setMessage(
+          "Account created. Check your email to verify your account."
+        );
 
+        setPassword("");
+        setConfirmPassword("");
+        return;
+      }
+
+      await login(email, password);
 
       window.location.href =
         "/app/dashboard";
-
-
-    } catch {
-
-      alert(
-        "Invalid credentials"
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to complete the request."
       );
-
+    } finally {
+      setLoading(false);
     }
-
-
-    setLoading(false);
-
   }
 
-
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setMessage("");
+  }
 
   return (
+    <div className="w-full max-w-md px-6">
+      <div className="mb-10 text-center">
+        <div className="mb-3 text-3xl font-semibold tracking-[0.28em] text-white">
+          MARKA
+        </div>
 
-    <form
+        <p className="text-sm tracking-wide text-white/45">
+          Global Digital Economy
+        </p>
+      </div>
 
-      onSubmit={handleSubmit}
+      <div className="mb-8 flex rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+        <button
+          type="button"
+          onClick={() => switchMode("login")}
+          className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
+            mode === "login"
+              ? "bg-white text-black"
+              : "text-white/55 hover:text-white"
+          }`}
+        >
+          Sign in
+        </button>
 
-      className="
-        space-y-6
-        w-full
-        max-w-md
-      "
+        <button
+          type="button"
+          onClick={() => switchMode("register")}
+          className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
+            mode === "register"
+              ? "bg-white text-black"
+              : "text-white/55 hover:text-white"
+          }`}
+        >
+          Create account
+        </button>
+      </div>
 
-    >
-
-      <input
-
-        type="email"
-
-        placeholder="Email"
-
-        value={email}
-
-        onChange={(e)=>
-          setEmail(e.target.value)
-        }
-
-        className="
-          w-full
-          rounded-2xl
-          border
-          border-white/10
-          bg-white/5
-          px-6
-          py-4
-          outline-none
-        "
-
-      />
-
-
-      <input
-
-        type="password"
-
-        placeholder="Password"
-
-        value={password}
-
-        onChange={(e)=>
-          setPassword(e.target.value)
-        }
-
-        className="
-          w-full
-          rounded-2xl
-          border
-          border-white/10
-          bg-white/5
-          px-6
-          py-4
-          outline-none
-        "
-
-      />
-
-
-      <button
-
-        disabled={loading}
-
-        className="
-          w-full
-          rounded-2xl
-          bg-white
-          text-black
-          py-4
-          font-medium
-        "
-
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
       >
+        {isRegistering && (
+          <input
+            type="text"
+            placeholder="Full name"
+            value={name}
+            onChange={(event) =>
+              setName(event.target.value)
+            }
+            required
+            autoComplete="name"
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+          />
+        )}
 
-        {loading
-          ? "Authenticating..."
-          : "Enter MARKA"
-        }
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(event) =>
+            setEmail(event.target.value)
+          }
+          required
+          autoComplete="email"
+          className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+        />
 
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(event) =>
+            setPassword(event.target.value)
+          }
+          required
+          autoComplete={
+            isRegistering
+              ? "new-password"
+              : "current-password"
+          }
+          className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+        />
 
-      </button>
+        {isRegistering && (
+          <input
+            type="password"
+            placeholder="Confirm password"
+            value={confirmPassword}
+            onChange={(event) =>
+              setConfirmPassword(
+                event.target.value
+              )
+            }
+            required
+            autoComplete="new-password"
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+          />
+        )}
 
+        {isRegistering && (
+          <p className="px-1 text-xs leading-5 text-white/40">
+            Your password must contain at least
+            12 characters.
+          </p>
+        )}
 
-    </form>
+        {message && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm leading-5 text-white/70">
+            {message}
+          </div>
+        )}
 
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-2xl bg-white py-4 font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading
+            ? isRegistering
+              ? "Creating account..."
+              : "Authenticating..."
+            : isRegistering
+              ? "Create MARKA account"
+              : "Enter MARKA"}
+        </button>
+      </form>
+
+      <p className="mt-8 text-center text-xs leading-5 text-white/30">
+        By continuing, you agree to use MARKA
+        responsibly and securely.
+      </p>
+    </div>
   );
-
 }
