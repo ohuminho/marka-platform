@@ -1,63 +1,55 @@
-export interface AuthRegistrationResponse {
-  id: string;
-  email: string;
-  status: string;
-}
-
 export async function login(
   email: string,
   password: string
 ) {
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email,
-      password,
-    }),
-  });
-
-  const data = await response.json().catch(() => null);
+  const response =
+    await fetch(
+      "/api/auth/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      }
+    );
 
   if (!response.ok) {
     throw new Error(
-      typeof data?.message === "string"
-        ? data.message
-        : "Authentication failed."
+      "Authentication failed"
     );
   }
 
-  return data;
-}
-
-export async function register(
-  name: string,
+  return response.json();
+}export async function login(
   email: string,
   password: string
-): Promise<AuthRegistrationResponse> {
-  const response = await fetch("/api/auth/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name,
-      email,
-      password,
-    }),
-  });
-
-  const data = await response.json().catch(() => null);
+) {
+  const response =
+    await fetch(
+      "/api/auth/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      }
+    );
 
   if (!response.ok) {
     throw new Error(
-      typeof data?.message === "string"
-        ? data.message
-        : "Registration failed."
+      "Authentication failed"
     );
   }
 
-  return data as AuthRegistrationResponse;
+  return response.json();
 }
