@@ -1,26 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-type VerificationState =
-  | "verifying"
-  | "success"
-  | "error";
+type VerificationState = "verifying" | "success" | "error";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
 
   const [state, setState] =
     useState<VerificationState>("verifying");
 
-  const [message, setMessage] =
-    useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const token =
-      searchParams.get("token");
+    const token = searchParams.get("token");
 
     if (!token) {
       setState("error");
@@ -39,8 +34,7 @@ export default function VerifyEmailPage() {
           {
             method: "POST",
             headers: {
-              "Content-Type":
-                "application/json",
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               token,
@@ -49,9 +43,7 @@ export default function VerifyEmailPage() {
         );
 
         const data =
-          await response
-            .json()
-            .catch(() => null);
+          await response.json().catch(() => null);
 
         if (cancelled) return;
 
@@ -109,8 +101,8 @@ export default function VerifyEmailPage() {
               </h1>
 
               <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/50">
-                Please wait while we securely
-                verify your MARKA account.
+                Please wait while we securely verify your
+                MARKA account.
               </p>
             </>
           )}
@@ -163,5 +155,43 @@ export default function VerifyEmailPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function VerifyEmailLoading() {
+  return (
+    <main className="min-h-screen bg-black px-6 py-16 text-white">
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-xl items-center justify-center">
+        <section className="w-full rounded-[32px] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl shadow-black/40 sm:p-12">
+          <div className="mb-8">
+            <div className="text-3xl font-semibold tracking-[0.28em] text-white">
+              MARKA
+            </div>
+
+            <p className="mt-3 text-xs uppercase tracking-[0.22em] text-white/35">
+              Global Digital Economy
+            </p>
+          </div>
+
+          <div className="mx-auto mb-6 h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-white" />
+
+          <h1 className="text-2xl font-semibold">
+            Loading verification
+          </h1>
+
+          <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/50">
+            Please wait while MARKA prepares your verification.
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerifyEmailLoading />}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
