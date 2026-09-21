@@ -178,7 +178,6 @@ export class PaymentService {
 
                 const paymentData: Prisma.PaymentUncheckedCreateInput =
                   {
-                    transactionId: null,
                     orderId: order.id,
                     amountMinor,
                     currency:
