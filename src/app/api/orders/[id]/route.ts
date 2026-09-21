@@ -1,23 +1,9 @@
-import {
-  NextResponse,
-} from "next/server";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
-
-import {
-  cookies,
-} from "next/headers";
-
-
-import {
-  TokenService,
-} from "@/core/authentication/token.service";
-
-
-import {
-  OrderService,
-} from "@/services/orders/order.service";
-
-
+import { AuthConfig } from "@/core/authentication/auth.config";
+import { SessionService } from "@/core/auth/sessions/session.service";
+import { OrderService } from "@/services/orders/order.service";
 
 export async function GET(
   request: Request,
@@ -29,93 +15,71 @@ export async function GET(
     }>;
   }
 ) {
+  try {
+    const cookieStore = await cookies();
 
-
-  const cookieStore =
-    await cookies();
-
-
-
-  const token =
-    cookieStore.get(
-      "marka_session"
+    const token = cookieStore.get(
+      AuthConfig.cookies.name
     )?.value;
 
+    if (!token) {
+      return NextResponse.json(
+        {
+          message: "Authentication required.",
+          code: "AUTHENTICATION_REQUIRED",
+        },
+        { status: 401 }
+      );
+    }
 
+    const sessionService = new SessionService();
 
-  if (!token) {
+    const session = await sessionService.validate(token);
 
+    if (!session) {
+      return NextResponse.json(
+        {
+          message: "Invalid or expired session.",
+          code: "INVALID_SESSION",
+        },
+        { status: 401 }
+      );
+    }
 
-    return NextResponse.json(
+    const { id } = await params;
 
-      {
-        message: "Unauthorized",
-      },
+    const orderId = id.trim();
 
-      {
-        status: 401,
-      }
+    if (!orderId) {
+      return NextResponse.json(
+        {
+          message: "Order id is required.",
+          code: "ORDER_ID_REQUIRED",
+        },
+        { status: 400 }
+      );
+    }
 
-    );
-
-  }
-
-
-
-  try {
-
-
-    const tokenService =
-      new TokenService();
-
-
-
-    tokenService.verify(
-      token
-    );
-
-
-
-    const {
-      id,
-    } = await params;
-
-
-
-    const orderService =
-      new OrderService();
-
-
+    const orderService = new OrderService();
 
     const order =
       await orderService.getOrderById(
-        id
+        orderId
       );
 
-
-
-    return NextResponse.json(
-      order
+    return NextResponse.json(order);
+  } catch (error) {
+    console.error(
+      "[ORDER_GET_ERROR]",
+      error
     );
 
-
-
-  } catch {
-
-
     return NextResponse.json(
-
       {
-        message: "Unable to load order",
+        message: "Unable to load order.",
+        code: "ORDER_LOAD_FAILED",
       },
-
-      {
-        status: 401,
-      }
-
+      { status: 500 }
     );
-
   }
-
-
 }
