@@ -32,14 +32,19 @@ export async function GET(
       );
     }
 
-    const sessionService = new SessionService();
+    const sessionService =
+      new SessionService();
 
-    const session = await sessionService.validate(token);
+    const session =
+      await sessionService.validate(
+        token
+      );
 
     if (!session) {
       return NextResponse.json(
         {
-          message: "Invalid or expired session.",
+          message:
+            "Invalid or expired session.",
           code: "INVALID_SESSION",
         },
         { status: 401 }
@@ -53,18 +58,21 @@ export async function GET(
     if (!orderId) {
       return NextResponse.json(
         {
-          message: "Order id is required.",
+          message:
+            "Order id is required.",
           code: "ORDER_ID_REQUIRED",
         },
         { status: 400 }
       );
     }
 
-    const orderService = new OrderService();
+    const orderService =
+      new OrderService();
 
     const order =
       await orderService.getOrderById(
-        orderId
+        orderId,
+        session.userId
       );
 
     return NextResponse.json(order);
@@ -74,9 +82,25 @@ export async function GET(
       error
     );
 
+    if (
+      error instanceof Error &&
+      error.message ===
+        "Order not found."
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            "Order not found.",
+          code: "ORDER_NOT_FOUND",
+        },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       {
-        message: "Unable to load order.",
+        message:
+          "Unable to load order.",
         code: "ORDER_LOAD_FAILED",
       },
       { status: 500 }
