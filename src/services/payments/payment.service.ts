@@ -1,5 +1,6 @@
 import {
   PaymentStatus,
+  Prisma,
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
@@ -91,12 +92,14 @@ export class PaymentService {
     const organizationId =
       membership.organizationId;
 
+    const normalizedProvider =
+      input.provider?.trim().toUpperCase();
+
     const requestBody = {
       userId: input.userId,
       orderId: input.orderId,
       provider:
-        input.provider?.trim().toUpperCase() ??
-        null,
+        normalizedProvider ?? null,
       metadata:
         input.metadata ?? null,
     };
@@ -176,7 +179,6 @@ export class PaymentService {
                 const created =
                   await database.payment.create({
                     data: {
-                      transactionId: null,
                       orderId: order.id,
                       amountMinor,
                       currency:
@@ -184,15 +186,15 @@ export class PaymentService {
                       status:
                         PaymentStatus.CREATED,
                       provider:
-                        input.provider
-                          ?.trim()
-                          .toUpperCase(),
-                      providerPaymentId:
-                        null,
+                        normalizedProvider,
                       idempotencyKey:
                         input.idempotencyKey,
                       metadata:
-                        input.metadata ?? undefined,
+                        input.metadata
+                          ? this.toJsonValue(
+                              input.metadata
+                            )
+                          : undefined,
                     },
                   });
 
@@ -203,8 +205,10 @@ export class PaymentService {
           await this.financialAuditService.recordPayment(
             {
               organizationId,
-              actorUserId: input.userId,
-              paymentId: payment.id,
+              actorUserId:
+                input.userId,
+              paymentId:
+                payment.id,
               action:
                 "PAYMENT_INTENT_CREATED",
               correlationId:
@@ -301,7 +305,7 @@ export class PaymentService {
     }
 
     const providerName =
-      input.provider ??
+      input.provider?.trim().toUpperCase() ??
       payment.provider;
 
     if (!providerName) {
@@ -316,7 +320,7 @@ export class PaymentService {
       );
 
     const providerPaymentId =
-      input.providerPaymentId ??
+      input.providerPaymentId?.trim() ??
       payment.providerPaymentId;
 
     if (!providerPaymentId) {
@@ -423,6 +427,17 @@ export class PaymentService {
               );
           }
 
+          const nextMetadata =
+            providerResult.rawResponse
+              ? this.mergeJsonMetadata(
+                  payment.metadata,
+                  {
+                    providerResponse:
+                      providerResult.rawResponse,
+                  }
+                )
+              : undefined;
+
           const updated =
             await prisma.payment.update({
               where: {
@@ -435,20 +450,7 @@ export class PaymentService {
                   providerResult.providerPaymentId,
                 status: nextStatus,
                 metadata:
-                  providerResult.rawResponse
-                    ? {
-                        ...(payment.metadata &&
-                        typeof payment.metadata ===
-                          "object" &&
-                        !Array.isArray(
-                          payment.metadata
-                        )
-                          ? payment.metadata
-                          : {}),
-                        providerResponse:
-                          providerResult.rawResponse,
-                      }
-                    : undefined,
+                  nextMetadata,
               },
             });
 
@@ -594,10 +596,7 @@ export class PaymentService {
       fractionPart = "",
     ] = normalized.split(".");
 
-    const fraction =
-      fractionPart.padEnd(2, "0");
-
-    if (fraction.length > 2) {
+    if (fractionPart.length > 2) {
       const extraDigits =
         fractionPart.slice(2);
 
@@ -613,12 +612,46 @@ export class PaymentService {
       }
     }
 
+    const fraction =
+      fractionPart.padEnd(
+        2,
+        "0"
+      );
+
     return BigInt(
       `${wholePart}${fraction.slice(
         0,
         2
       )}`
     );
+  }
+
+  private toJsonValue(
+    value: unknown
+  ): Prisma.InputJsonValue {
+    return JSON.parse(
+      JSON.stringify(value)
+    ) as Prisma.InputJsonValue;
+  }
+
+  private mergeJsonMetadata(
+    current: Prisma.JsonValue | null,
+    additional: Record<
+      string,
+      unknown
+    >
+  ): Prisma.InputJsonValue {
+    const base =
+      current !== null &&
+      typeof current === "object" &&
+      !Array.isArray(current)
+        ? current
+        : {};
+
+    return this.toJsonValue({
+      ...base,
+      ...additional,
+    });
   }
 
   private toResult(
