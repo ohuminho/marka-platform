@@ -1,111 +1,62 @@
-import {
-  NextResponse,
-} from "next/server";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
-
-import {
-  cookies,
-} from "next/headers";
-
-
-import {
-  TokenService,
-} from "@/core/authentication/token.service";
-
-
-import {
-  OrderService,
-} from "@/services/orders/order.service";
-
-
+import { AuthConfig } from "@/core/authentication/auth.config";
+import { SessionService } from "@/core/auth/sessions/session.service";
+import { OrderService } from "@/services/orders/order.service";
 
 export async function GET() {
+  try {
+    const cookieStore = await cookies();
 
-
-  const cookieStore =
-    await cookies();
-
-
-
-  const token =
-    cookieStore.get(
-      "marka_session"
+    const token = cookieStore.get(
+      AuthConfig.cookies.name
     )?.value;
 
+    if (!token) {
+      return NextResponse.json(
+        {
+          message: "Authentication required.",
+          code: "AUTHENTICATION_REQUIRED",
+        },
+        { status: 401 }
+      );
+    }
 
+    const sessionService = new SessionService();
 
-  if (!token) {
+    const session = await sessionService.validate(token);
 
+    if (!session) {
+      return NextResponse.json(
+        {
+          message: "Invalid or expired session.",
+          code: "INVALID_SESSION",
+        },
+        { status: 401 }
+      );
+    }
 
-    return NextResponse.json(
-
-      {
-        message: "Unauthorized",
-      },
-
-      {
-        status: 401,
-      }
-
-    );
-
-  }
-
-
-
-  try {
-
-
-    const tokenService =
-      new TokenService();
-
-
-
-    const payload =
-      tokenService.verify(
-        token
-      ) as {
-
-        userId: string;
-
-      };
-
-
-
-    const orderService =
-      new OrderService();
-
-
+    const orderService = new OrderService();
 
     const orders =
       await orderService.getUserOrders(
-        payload.userId
+        session.userId
       );
 
-
-
-    return NextResponse.json(
-      orders
+    return NextResponse.json(orders);
+  } catch (error) {
+    console.error(
+      "[ORDERS_GET_ERROR]",
+      error
     );
 
-
-
-  } catch {
-
-
     return NextResponse.json(
-
       {
-        message: "Unable to load orders",
+        message: "Unable to load orders.",
+        code: "ORDERS_LOAD_FAILED",
       },
-
-      {
-        status: 401,
-      }
-
+      { status: 500 }
     );
-
   }
-
-
 }
