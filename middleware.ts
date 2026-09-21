@@ -1,111 +1,22 @@
-import {
-  NextResponse,
-} from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-import type {
-  NextRequest,
-} from "next/server";
+import { AuthConfig } from "@/core/authentication/auth.config";
 
-import {
-  EdgeTokenService,
-} from "@/core/authentication/edge-token.service";
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get(
+    AuthConfig.cookies.name
+  )?.value;
 
-
-
-export async function middleware(
-  request: NextRequest
-) {
-
-
-  const token =
-    request.cookies.get(
-      "marka_session"
-    )?.value;
-
-
-
-  const pathname =
-    request.nextUrl.pathname;
-
-
-
-  const isPrivateRoute =
-    pathname.startsWith(
-      "/app"
-    );
-
-
-
-  if (
-    isPrivateRoute &&
-    !token
-  ) {
-
+  if (!token) {
     return NextResponse.redirect(
-      new URL(
-        "/auth/login",
-        request.url
-      )
+      new URL("/auth/login", request.url)
     );
-
   }
-
-
-
-  if (
-    isPrivateRoute &&
-    token
-  ) {
-
-    try {
-
-
-      const service =
-        new EdgeTokenService();
-
-
-
-      await service.verify(
-        token
-      );
-
-
-
-    } catch {
-
-
-      const response =
-        NextResponse.redirect(
-          new URL(
-            "/auth/login",
-            request.url
-          )
-        );
-
-
-      response.cookies.delete(
-        "marka_session"
-      );
-
-
-      return response;
-
-    }
-
-  }
-
-
 
   return NextResponse.next();
-
 }
 
-
-
 export const config = {
-
-  matcher: [
-    "/app/:path*",
-  ],
-
+  matcher: ["/app/:path*"],
 };
