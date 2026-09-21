@@ -88,13 +88,20 @@ export default function LoginForm() {
           ? error.message
           : "Unable to complete the request.";
 
+      const normalizedErrorMessage =
+        errorMessage.toLowerCase();
+
       setMessage(errorMessage);
 
-      if (
-        errorMessage
-          .toLowerCase()
-          .includes("verification")
-      ) {
+      const requiresEmailVerification =
+        normalizedErrorMessage.includes(
+          "verification"
+        ) ||
+        normalizedErrorMessage.includes(
+          "verify your email"
+        );
+
+      if (requiresEmailVerification) {
         setShowResend(true);
       }
     } finally {
