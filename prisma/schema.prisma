@@ -1178,7 +1178,7 @@ model Transaction {
 
 model Payment {
   id            String        @id @default(uuid())
-  transactionId String        @unique
+  transactionId String?       @unique
   orderId       String?
   amountMinor   BigInt
   currency      String        @db.Char(3)
@@ -1189,7 +1189,7 @@ model Payment {
   idempotencyKey    String  @unique
   metadata          Json?
 
-  transaction Transaction @relation(fields: [transactionId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
   order       Order?      @relation(fields: [orderId], references: [id])
 
   refunds Refund[]
