@@ -9,9 +9,7 @@ import {
 } from "./types/order.types";
 
 export class OrderService {
-  async createOrder(
-    input: CreateOrderInput
-  ) {
+  async createOrder(input: CreateOrderInput) {
     if (!input.userId.trim()) {
       throw new Error("User is required.");
     }
@@ -337,24 +335,6 @@ export class OrderService {
       );
     }
 
-    const allowedStatuses =
-      new Set<OrderStatus>([
-        OrderStatus.PENDING,
-        OrderStatus.CONFIRMED,
-        OrderStatus.PROCESSING,
-        OrderStatus.SHIPPED,
-        OrderStatus.DELIVERED,
-        OrderStatus.CANCELLED,
-      ]);
-
-    if (
-      !allowedStatuses.has(status)
-    ) {
-      throw new Error(
-        `Unsupported order status: ${status}.`
-      );
-    }
-
     const existingOrder =
       await prisma.order.findUnique({
         where: {
@@ -372,16 +352,77 @@ export class OrderService {
       );
     }
 
-    const prismaStatus =
-      status as unknown as PrismaOrderStatus;
+    /*
+     * OrderStatus in the domain layer intentionally contains
+     * PAID for compatibility with the commerce service contract.
+     *
+     * Prisma's OrderStatus does not contain PAID.
+     * Payment state belongs to PaymentStatus and financial
+     * processing belongs to TransactionStatus.
+     *
+     * Therefore PAID is not accepted as an Order status update.
+     */
 
+    switch (status) {
+      case OrderStatus.PENDING:
+        return this.persistOrderStatus(
+          orderId,
+          PrismaOrderStatus.PENDING
+        );
+
+      case OrderStatus.CONFIRMED:
+        return this.persistOrderStatus(
+          orderId,
+          PrismaOrderStatus.CONFIRMED
+        );
+
+      case OrderStatus.PROCESSING:
+        return this.persistOrderStatus(
+          orderId,
+          PrismaOrderStatus.PROCESSING
+        );
+
+      case OrderStatus.SHIPPED:
+        return this.persistOrderStatus(
+          orderId,
+          PrismaOrderStatus.SHIPPED
+        );
+
+      case OrderStatus.DELIVERED:
+        return this.persistOrderStatus(
+          orderId,
+          PrismaOrderStatus.DELIVERED
+        );
+
+      case OrderStatus.CANCELLED:
+        return this.persistOrderStatus(
+          orderId,
+          PrismaOrderStatus.CANCELLED
+        );
+
+      case OrderStatus.PAID:
+        throw new Error(
+          "PAID is a payment state and cannot be assigned as an Order status."
+        );
+
+      default:
+        throw new Error(
+          `Unsupported order status: ${status}.`
+        );
+    }
+  }
+
+  private async persistOrderStatus(
+    orderId: string,
+    status: PrismaOrderStatus
+  ) {
     const updatedOrder =
       await prisma.order.update({
         where: {
           id: orderId,
         },
         data: {
-          status: prismaStatus,
+          status,
         },
         select: {
           id: true,
