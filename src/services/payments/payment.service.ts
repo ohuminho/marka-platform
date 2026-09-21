@@ -176,26 +176,32 @@ export class PaymentService {
                     order.currency
                   );
 
+                const paymentData: Prisma.PaymentUncheckedCreateInput =
+                  {
+                    transactionId: null,
+                    orderId: order.id,
+                    amountMinor,
+                    currency:
+                      order.currency,
+                    status:
+                      PaymentStatus.CREATED,
+                    provider:
+                      normalizedProvider,
+                    providerPaymentId:
+                      null,
+                    idempotencyKey:
+                      input.idempotencyKey,
+                    metadata:
+                      input.metadata
+                        ? this.toJsonValue(
+                            input.metadata
+                          )
+                        : undefined,
+                  };
+
                 const created =
                   await database.payment.create({
-                    data: {
-                      orderId: order.id,
-                      amountMinor,
-                      currency:
-                        order.currency,
-                      status:
-                        PaymentStatus.CREATED,
-                      provider:
-                        normalizedProvider,
-                      idempotencyKey:
-                        input.idempotencyKey,
-                      metadata:
-                        input.metadata
-                          ? this.toJsonValue(
-                              input.metadata
-                            )
-                          : undefined,
-                    },
+                    data: paymentData,
                   });
 
                 return created;
