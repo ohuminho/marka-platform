@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/database/client/prisma";
 import { PasswordService } from "@/core/authentication/password.service";
 import { VerificationService } from "@/core/auth/verification/verification.service";
+import { verificationDeliveryService } from "@/core/auth/verification/verification-delivery.service";
 
 const registerSchema = z.object({
   name: z
@@ -176,6 +177,33 @@ export async function POST(request: Request) {
           result.expiresAt.toISOString(),
       }
     );
+
+    try {
+      await verificationDeliveryService.sendVerificationEmail({
+        email: result.user.email,
+        name: result.user.name,
+        token: result.token,
+        expiresAt: result.expiresAt,
+      });
+    } catch (error) {
+      console.error(
+        "[AUTH_VERIFICATION_DELIVERY_ERROR]",
+        {
+          userId: result.user.id,
+          email: result.user.email,
+          error,
+        }
+      );
+
+      return NextResponse.json(
+        {
+          message:
+            "Your account was created, but the verification email could not be sent. Please request a new verification email.",
+          code: "VERIFICATION_EMAIL_DELIVERY_FAILED",
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json(
       {
