@@ -178,7 +178,8 @@ export class PaymentService {
 
                 const paymentData: Prisma.PaymentUncheckedCreateInput =
                   {
-                    orderId: order.id,
+                    orderId:
+                      order.id,
                     amountMinor,
                     currency:
                       order.currency,
@@ -186,8 +187,6 @@ export class PaymentService {
                       PaymentStatus.CREATED,
                     provider:
                       normalizedProvider,
-                    providerPaymentId:
-                      null,
                     idempotencyKey:
                       input.idempotencyKey,
                     metadata:
@@ -453,7 +452,8 @@ export class PaymentService {
                   provider.name,
                 providerPaymentId:
                   providerResult.providerPaymentId,
-                status: nextStatus,
+                status:
+                  nextStatus,
                 metadata:
                   nextMetadata,
               },
@@ -601,7 +601,9 @@ export class PaymentService {
       fractionPart = "",
     ] = normalized.split(".");
 
-    if (fractionPart.length > 2) {
+    if (
+      fractionPart.length > 2
+    ) {
       const extraDigits =
         fractionPart.slice(2);
 
@@ -640,7 +642,9 @@ export class PaymentService {
   }
 
   private mergeJsonMetadata(
-    current: Prisma.JsonValue | null,
+    current:
+      | Prisma.JsonValue
+      | null,
     additional: Record<
       string,
       unknown
@@ -662,12 +666,18 @@ export class PaymentService {
   private toResult(
     payment: {
       id: string;
-      orderId: string | null;
-      transactionId: string | null;
+      orderId:
+        | string
+        | null;
+      transactionId:
+        | string
+        | null;
       amountMinor: bigint;
       currency: string;
       status: PaymentStatus;
-      provider: string | null;
+      provider:
+        | string
+        | null;
       providerPaymentId:
         | string
         | null;
@@ -677,7 +687,8 @@ export class PaymentService {
     }
   ): PaymentResult {
     return {
-      id: payment.id,
+      id:
+        payment.id,
       orderId:
         payment.orderId,
       transactionId:
