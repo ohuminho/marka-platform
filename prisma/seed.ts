@@ -17,6 +17,7 @@ const permissions = [
   "ORDER_CREATE",
   "ORDER_MANAGE",
   "PAYMENT_PROCESS",
+  "SETTLEMENT_PAYOUT_EXECUTE",
   "ADMIN_ACCESS",
 ];
 
@@ -53,75 +54,89 @@ async function main() {
     },
   });
 
-  const organization = await prisma.organization.upsert({
-    where: {
-      slug: "marka-platform",
-    },
-    update: {
-      name: "MARKA Platform",
-      tenantId: tenant.id,
-      type: OrganizationType.PLATFORM,
-    },
-    create: {
-      tenantId: tenant.id,
-      name: "MARKA Platform",
-      slug: "marka-platform",
-      type: OrganizationType.PLATFORM,
-    },
-  });
-
-  const permissionRecords = new Map<
-    string,
-    { id: string }
-  >();
-
-  for (const action of permissions) {
-    const permission = await prisma.permission.upsert({
+  const organization =
+    await prisma.organization.upsert({
       where: {
-        action,
+        slug: "marka-platform",
       },
-      update: {},
+      update: {
+        name: "MARKA Platform",
+        tenantId: tenant.id,
+        type: OrganizationType.PLATFORM,
+      },
       create: {
-        action,
-      },
-      select: {
-        id: true,
+        tenantId: tenant.id,
+        name: "MARKA Platform",
+        slug: "marka-platform",
+        type: OrganizationType.PLATFORM,
       },
     });
 
-    permissionRecords.set(action, permission);
+  const permissionRecords =
+    new Map<string, { id: string }>();
+
+  for (const action of permissions) {
+    const permission =
+      await prisma.permission.upsert({
+        where: {
+          action,
+        },
+        update: {},
+        create: {
+          action,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    permissionRecords.set(
+      action,
+      permission
+    );
   }
 
   for (const roleDefinition of roles) {
-    const role = await prisma.role.upsert({
-      where: {
-        organizationId_name: {
-          organizationId: organization.id,
-          name: roleDefinition.name,
+    const role =
+      await prisma.role.upsert({
+        where: {
+          organizationId_name: {
+            organizationId:
+              organization.id,
+            name:
+              roleDefinition.name,
+          },
         },
-      },
-      update: {
-        description: roleDefinition.description,
-        status: RoleStatus.ACTIVE,
-      },
-      create: {
-        organizationId: organization.id,
-        name: roleDefinition.name,
-        description: roleDefinition.description,
-        status: RoleStatus.ACTIVE,
-      },
-      select: {
-        id: true,
-      },
-    });
+        update: {
+          description:
+            roleDefinition.description,
+          status:
+            RoleStatus.ACTIVE,
+        },
+        create: {
+          organizationId:
+            organization.id,
+          name:
+            roleDefinition.name,
+          description:
+            roleDefinition.description,
+          status:
+            RoleStatus.ACTIVE,
+        },
+        select: {
+          id: true,
+        },
+      });
 
     const rolePermissions =
-      roleDefinition.name === "CUSTOMER"
+      roleDefinition.name ===
+      "CUSTOMER"
         ? [
             "USER_READ",
             "ORDER_CREATE",
           ]
-        : roleDefinition.name === "VENDOR"
+        : roleDefinition.name ===
+            "VENDOR"
           ? [
               "USER_READ",
               "USER_UPDATE",
@@ -132,15 +147,20 @@ async function main() {
               "PRODUCT_DELETE",
               "ORDER_MANAGE",
             ]
-          : roleDefinition.name === "ADMIN"
+          : roleDefinition.name ===
+              "ADMIN"
             ? permissions.filter(
                 (permission) =>
-                  permission !== "ADMIN_ACCESS"
+                  permission !==
+                  "ADMIN_ACCESS"
               )
             : permissions;
 
     for (const action of rolePermissions) {
-      const permission = permissionRecords.get(action);
+      const permission =
+        permissionRecords.get(
+          action
+        );
 
       if (!permission) {
         continue;
@@ -150,13 +170,15 @@ async function main() {
         where: {
           roleId_permissionId: {
             roleId: role.id,
-            permissionId: permission.id,
+            permissionId:
+              permission.id,
           },
         },
         update: {},
         create: {
           roleId: role.id,
-          permissionId: permission.id,
+          permissionId:
+            permission.id,
         },
       });
     }
