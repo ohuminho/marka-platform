@@ -26,6 +26,7 @@ export const DefaultPermissions: PermissionAction[] = [
   Permissions.WALLET_MANAGE,
 
   Permissions.SETTLEMENT_PAYOUT_EXECUTE,
+  Permissions.SETTLEMENT_RECONCILIATION_EXECUTE,
 
   Permissions.ADMIN_ACCESS,
   Permissions.SYSTEM_ADMIN,
