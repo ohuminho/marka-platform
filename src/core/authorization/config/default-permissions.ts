@@ -27,11 +27,8 @@ export const DefaultPermissions: PermissionAction[] = [
 
   Permissions.SETTLEMENT_PAYOUT_EXECUTE,
   Permissions.SETTLEMENT_RECONCILIATION_EXECUTE,
+  Permissions.SETTLEMENT_RECONCILIATION_RESOLVE,
 
   Permissions.ADMIN_ACCESS,
   Permissions.SYSTEM_ADMIN,
-
-  Permissions.SETTLEMENT_PAYOUT_EXECUTE,
-Permissions.SETTLEMENT_RECONCILIATION_EXECUTE,
-Permissions.SETTLEMENT_RECONCILIATION_RESOLVE,
 ];
