@@ -1239,6 +1239,7 @@ model Settlement {
   vendor              Vendor              @relation(fields: [vendorId], references: [id])
   financialInstrument FinancialInstrument @relation(fields: [financialInstrumentId], references: [id])
   transaction         Transaction?        @relation(fields: [transactionId], references: [id])
+  reconciliation      Reconciliation?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1274,11 +1275,12 @@ model Commission {
 }
 
 model Reconciliation {
-  id          String               @id @default(uuid())
-  provider    String
-  periodStart DateTime
-  periodEnd   DateTime
-  status      ReconciliationStatus @default(PENDING)
+  id           String               @id @default(uuid())
+  settlementId String?              @unique
+  provider     String
+  periodStart  DateTime
+  periodEnd    DateTime
+  status       ReconciliationStatus @default(PENDING)
 
   expectedMinor   BigInt
   actualMinor     BigInt
@@ -1287,6 +1289,8 @@ model Reconciliation {
   currency  String  @db.Char(3)
   reference String?
   metadata  Json?
+
+  settlement Settlement? @relation(fields: [settlementId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
