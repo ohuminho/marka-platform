@@ -26,7 +26,6 @@ import {
 
 import {
   transactionService,
-  type FinancialTransactionClient,
 } from "@/services/transactions/transaction.service";
 
 import {
@@ -73,8 +72,12 @@ interface SettlementContext {
     amountMinor: bigint;
     currency: string;
     status: SettlementStatus;
+    periodStart: Date;
+    periodEnd: Date;
     providerReference: string | null;
     metadata: Prisma.JsonValue | null;
+    createdAt: Date;
+    updatedAt: Date;
   };
 
   financialInstrument: {
@@ -115,13 +118,6 @@ export class SettlementPayoutService {
           requestBody,
         },
         async () => {
-          /*
-           * First make sure the internal settlement funding exists.
-           *
-           * This uses a deterministic idempotency key so retrying the
-           * external payout operation cannot create a second internal
-           * funding transaction.
-           */
           await settlementService.process({
             organizationId:
               input.organizationId,
@@ -549,8 +545,12 @@ export class SettlementPayoutService {
           amountMinor: true,
           currency: true,
           status: true,
+          periodStart: true,
+          periodEnd: true,
           providerReference: true,
           metadata: true,
+          createdAt: true,
+          updatedAt: true,
         },
       });
 
