@@ -1,5 +1,3 @@
-// FILE: /workspaces/marka-platform/src/services/settlements/settlement.service.ts
-
 import {
   Prisma,
   SettlementStatus,
@@ -120,12 +118,15 @@ export class SettlementService {
         const settlement = await prisma.$transaction(async (tx) => {
           const [organization, vendor, instrument] = await Promise.all([
             tx.organization.findUnique({
-              where: { id: input.organizationId },
+              where: {
+                id: input.organizationId,
+              },
               select: {
                 id: true,
                 status: true,
               },
             }),
+
             tx.vendor.findFirst({
               where: {
                 id: input.vendorId,
@@ -138,6 +139,7 @@ export class SettlementService {
                 verified: true,
               },
             }),
+
             tx.financialInstrument.findUnique({
               where: {
                 id: input.financialInstrumentId,
@@ -329,7 +331,8 @@ export class SettlementService {
             input.organizationId,
             settlement.vendorId,
             settlement.currency,
-            settlement.amountMinor
+            settlement.amountMinor,
+            settlement.id
           );
 
           transaction = await transactionService.create({
@@ -578,7 +581,8 @@ export class SettlementService {
     organizationId: string,
     vendorId: string,
     currency: string,
-    amountMinor: bigint
+    amountMinor: bigint,
+    settlementId: string
   ): Promise<{
     vendorPayable: AccountResult;
     settlement: AccountResult;
@@ -609,11 +613,13 @@ export class SettlementService {
     }
 
     const availableBalance = BigInt(vendorPayable.balanceMinor);
+
     const pendingOtherSettlements =
       await this.getPendingOtherSettlementAmount(
         organizationId,
         vendorId,
-        currency
+        currency,
+        settlementId
       );
 
     if (availableBalance < amountMinor + pendingOtherSettlements) {
@@ -631,10 +637,14 @@ export class SettlementService {
   private async getPendingOtherSettlementAmount(
     organizationId: string,
     vendorId: string,
-    currency: string
+    currency: string,
+    settlementId: string
   ): Promise<bigint> {
     const pending = await prisma.settlement.aggregate({
       where: {
+        id: {
+          not: settlementId,
+        },
         vendorId,
         currency,
         status: {
