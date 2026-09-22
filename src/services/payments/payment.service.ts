@@ -1,6 +1,7 @@
 import {
   PaymentStatus,
   Prisma,
+  TransactionActorType,
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
