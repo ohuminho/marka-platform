@@ -1,3 +1,5 @@
+import { OrderStatus as PrismaOrderStatus } from "@prisma/client";
+
 import { prisma } from "@/database/client/prisma";
 
 import {
@@ -18,15 +20,22 @@ export class OrderService {
       throw new Error("Cart is required.");
     }
 
-    if (!Array.isArray(input.items) || input.items.length === 0) {
-      throw new Error("Order must contain at least one item.");
+    if (
+      !Array.isArray(input.items) ||
+      input.items.length === 0
+    ) {
+      throw new Error(
+        "Order must contain at least one item."
+      );
     }
 
     if (
       !Number.isFinite(input.total) ||
       input.total <= 0
     ) {
-      throw new Error("Order total must be greater than zero.");
+      throw new Error(
+        "Order total must be greater than zero."
+      );
     }
 
     const productIds = [
@@ -84,7 +93,9 @@ export class OrderService {
       }
 
       const product =
-        productsById.get(item.productId);
+        productsById.get(
+          item.productId
+        );
 
       if (!product) {
         throw new Error(
@@ -105,16 +116,17 @@ export class OrderService {
     const order =
       await prisma.$transaction(
         async (database) => {
-          const createdOrder =
-            await database.order.create({
-              data: {
-                userId: input.userId,
-                status: "PENDING",
-                total: input.total,
-                currency: "AOA",
-                items: {
-                  create:
-                    input.items.map((item) => {
+          return database.order.create({
+            data: {
+              userId: input.userId,
+              status:
+                PrismaOrderStatus.PENDING,
+              total: input.total,
+              currency: "AOA",
+              items: {
+                create:
+                  input.items.map(
+                    (item) => {
                       const product =
                         productsById.get(
                           item.productId
@@ -144,15 +156,14 @@ export class OrderService {
                           item.price,
                         subtotal,
                       };
-                    }),
-                },
+                    }
+                  ),
               },
-              include: {
-                items: true,
-              },
-            });
-
-          return createdOrder;
+            },
+            include: {
+              items: true,
+            },
+          });
         }
       );
 
@@ -161,25 +172,28 @@ export class OrderService {
       userId: order.userId,
       status:
         order.status as OrderStatus,
-      total: Number(order.total),
-      currency: order.currency,
-      items: order.items.map(
-        (item) => ({
-          id: item.id,
-          productId:
-            item.productId,
-          storeId:
-            item.storeId,
-          vendorId:
-            item.vendorId,
-          quantity:
-            item.quantity,
-          unitPrice:
-            Number(item.unitPrice),
-          subtotal:
-            Number(item.subtotal),
-        })
-      ),
+      total:
+        Number(order.total),
+      currency:
+        order.currency,
+      items:
+        order.items.map(
+          (item) => ({
+            id: item.id,
+            productId:
+              item.productId,
+            storeId:
+              item.storeId,
+            vendorId:
+              item.vendorId,
+            quantity:
+              item.quantity,
+            unitPrice:
+              Number(item.unitPrice),
+            subtotal:
+              Number(item.subtotal),
+          })
+        ),
       createdAt:
         order.createdAt,
     };
@@ -189,7 +203,9 @@ export class OrderService {
     userId: string
   ): Promise<OrderSummary[]> {
     if (!userId.trim()) {
-      throw new Error("User is required.");
+      throw new Error(
+        "User is required."
+      );
     }
 
     const orders =
@@ -212,7 +228,8 @@ export class OrderService {
     return orders.map(
       (order) => ({
         id: order.id,
-        userId: order.userId,
+        userId:
+          order.userId,
         status:
           order.status as OrderStatus,
         total:
@@ -257,7 +274,8 @@ export class OrderService {
 
     return {
       id: order.id,
-      userId: order.userId,
+      userId:
+        order.userId,
       status:
         order.status as OrderStatus,
       total:
@@ -293,7 +311,9 @@ export class OrderService {
             transactionId:
               payment.transactionId,
             amount:
-              Number(payment.amountMinor),
+              Number(
+                payment.amountMinor
+              ),
             currency:
               payment.currency,
             status:
@@ -327,7 +347,9 @@ export class OrderService {
         OrderStatus.CANCELLED,
       ]);
 
-    if (!allowedStatuses.has(status)) {
+    if (
+      !allowedStatuses.has(status)
+    ) {
       throw new Error(
         `Unsupported order status: ${status}.`
       );
@@ -350,13 +372,16 @@ export class OrderService {
       );
     }
 
+    const prismaStatus =
+      status as unknown as PrismaOrderStatus;
+
     const updatedOrder =
       await prisma.order.update({
         where: {
           id: orderId,
         },
         data: {
-          status,
+          status: prismaStatus,
         },
         select: {
           id: true,
