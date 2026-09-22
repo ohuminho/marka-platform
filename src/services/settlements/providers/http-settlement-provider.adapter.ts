@@ -16,7 +16,12 @@ interface ProviderResponse {
   providerPayoutId?: unknown;
   payoutId?: unknown;
   id?: unknown;
+
   status?: unknown;
+
+  amountMinor?: unknown;
+  currency?: unknown;
+
   rawResponse?: unknown;
   data?: unknown;
   message?: unknown;
@@ -31,7 +36,8 @@ export class HttpSettlementProviderAdapter
   private readonly config: SettlementProviderConfig;
 
   constructor(
-    config: SettlementProviderConfig = getSettlementProviderConfig()
+    config: SettlementProviderConfig =
+      getSettlementProviderConfig()
   ) {
     if (!config.enabled) {
       throw new Error(
@@ -292,10 +298,22 @@ export class HttpSettlementProviderAdapter
         response
       );
 
+    const amountMinor =
+      this.extractAmountMinor(
+        response
+      );
+
+    const currency =
+      this.extractCurrency(
+        response
+      );
+
     return {
       provider: this.name,
       providerPayoutId,
       status,
+      amountMinor,
+      currency,
       rawResponse:
         this.sanitizeResponse(
           response
@@ -309,12 +327,22 @@ export class HttpSettlementProviderAdapter
   ): SettlementProviderGetPayoutStatusResult {
     const providerPayoutId =
       this.extractProviderPayoutId(
-        response
-      ) ||
-      fallbackProviderPayoutId;
+        response,
+        fallbackProviderPayoutId
+      );
 
     const status =
       this.extractStatus(
+        response
+      );
+
+    const amountMinor =
+      this.extractAmountMinor(
+        response
+      );
+
+    const currency =
+      this.extractCurrency(
         response
       );
 
@@ -322,6 +350,8 @@ export class HttpSettlementProviderAdapter
       provider: this.name,
       providerPayoutId,
       status,
+      amountMinor,
+      currency,
       rawResponse:
         this.sanitizeResponse(
           response
@@ -330,12 +360,14 @@ export class HttpSettlementProviderAdapter
   }
 
   private extractProviderPayoutId(
-    response: ProviderResponse
+    response: ProviderResponse,
+    fallback?: string
   ): string {
     const candidates = [
       response.providerPayoutId,
       response.payoutId,
       response.id,
+      fallback,
     ];
 
     for (const candidate of candidates) {
@@ -351,6 +383,111 @@ export class HttpSettlementProviderAdapter
     throw new Error(
       "Settlement provider response does not contain a payout identifier."
     );
+  }
+
+  private extractAmountMinor(
+    response: ProviderResponse
+  ): bigint | undefined {
+    const candidates = [
+      response.amountMinor,
+      this.extractNestedAmountMinor(
+        response.data
+      ),
+    ];
+
+    for (const candidate of candidates) {
+      if (
+        typeof candidate ===
+        "string"
+      ) {
+        if (
+          /^-?\d+$/.test(
+            candidate.trim()
+          )
+        ) {
+          return BigInt(
+            candidate.trim()
+          );
+        }
+      }
+
+      if (
+        typeof candidate ===
+        "number" &&
+        Number.isSafeInteger(candidate)
+      ) {
+        return BigInt(candidate);
+      }
+    }
+
+    return undefined;
+  }
+
+  private extractNestedAmountMinor(
+    value: unknown
+  ): unknown {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      return undefined;
+    }
+
+    const object =
+      value as Record<
+        string,
+        unknown
+      >;
+
+    return object.amountMinor;
+  }
+
+  private extractCurrency(
+    response: ProviderResponse
+  ): string | undefined {
+    const candidates = [
+      response.currency,
+      this.extractNestedCurrency(
+        response.data
+      ),
+    ];
+
+    for (const candidate of candidates) {
+      if (
+        typeof candidate ===
+          "string" &&
+        /^[A-Za-z]{3}$/.test(
+          candidate.trim()
+        )
+      ) {
+        return candidate
+          .trim()
+          .toUpperCase();
+      }
+    }
+
+    return undefined;
+  }
+
+  private extractNestedCurrency(
+    value: unknown
+  ): unknown {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      return undefined;
+    }
+
+    const object =
+      value as Record<
+        string,
+        unknown
+      >;
+
+    return object.currency;
   }
 
   private extractStatus(
