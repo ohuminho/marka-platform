@@ -1,10 +1,21 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { AuthConfig } from "@/core/authentication/auth.config";
-import { SessionService } from "@/core/auth/sessions/session.service";
-import { AuthorizationService } from "@/core/authorization/authorization.service";
-import { Permissions } from "@/core/authorization/permissions.catalog";
+import {
+  AuthConfig,
+} from "@/core/authentication/auth.config";
+
+import {
+  SessionService,
+} from "@/core/auth/sessions/session.service";
+
+import {
+  AuthorizationService,
+} from "@/core/authorization/authorization.service";
+
+import {
+  Permissions,
+} from "@/core/authorization/permissions.catalog";
 
 import {
   settlementReconciliationService,
@@ -55,8 +66,11 @@ export async function POST(
       );
     }
 
+    const sessionService =
+      new SessionService();
+
     const session =
-      await new SessionService().validate(
+      await sessionService.validate(
         token
       );
 
@@ -137,7 +151,7 @@ export async function POST(
     const authorized =
       await authorization.hasPermission(
         session.userId,
-        Permissions.SETTLEMENT_PAYOUT_EXECUTE,
+        Permissions.SETTLEMENT_RECONCILIATION_EXECUTE,
         organizationId
       );
 
@@ -180,7 +194,9 @@ export async function POST(
 
     return NextResponse.json(
       result,
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error(
@@ -212,10 +228,10 @@ export async function POST(
         "Only a completed settlement"
       ) ||
       message.includes(
-        "provider state is not completed"
+        "not completed"
       ) ||
       message.includes(
-        "has no provider reference"
+        "no provider reference"
       )
     ) {
       return NextResponse.json(
@@ -225,6 +241,21 @@ export async function POST(
             "SETTLEMENT_NOT_RECONCILABLE",
         },
         { status: 409 }
+      );
+    }
+
+    if (
+      message.includes(
+        "does not contain the amount and currency"
+      )
+    ) {
+      return NextResponse.json(
+        {
+          message,
+          code:
+            "PROVIDER_RECONCILIATION_DATA_MISSING",
+        },
+        { status: 502 }
       );
     }
 
