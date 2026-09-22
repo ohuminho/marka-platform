@@ -68,9 +68,7 @@ export class HttpSettlementProviderAdapter
       }
     );
 
-    return this.toCreateResult(
-      response
-    );
+    return this.toCreateResult(response);
   }
 
   async getPayoutStatus(
@@ -244,16 +242,35 @@ export class HttpSettlementProviderAdapter
 
   private buildProviderError(
     statusCode: number,
-    response: ProviderResponse
+    response: unknown
   ): string {
-    const message =
-      typeof response.message ===
-      "string"
-        ? response.message
-        : typeof response.error ===
-          "string"
-          ? response.error
-          : undefined;
+    let message: string | undefined;
+
+    if (
+      response !== null &&
+      typeof response === "object" &&
+      !Array.isArray(response)
+    ) {
+      const providerResponse =
+        response as Record<
+          string,
+          unknown
+        >;
+
+      if (
+        typeof providerResponse.message ===
+        "string"
+      ) {
+        message =
+          providerResponse.message;
+      } else if (
+        typeof providerResponse.error ===
+        "string"
+      ) {
+        message =
+          providerResponse.error;
+      }
+    }
 
     if (message) {
       return `Settlement provider request failed with HTTP ${statusCode}: ${message}`;
@@ -573,4 +590,4 @@ export class HttpSettlementProviderAdapter
       );
     }
   }
-  }
+}
