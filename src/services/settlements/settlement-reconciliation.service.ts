@@ -5,20 +5,20 @@ import {
 } from "@prisma/client";
 
 import {
-  FinancialAuditService,
-} from "@/core/audit/financial-audit.service";
+  prisma,
+} from "@/database/client/prisma";
 
 import {
   IdempotencyService,
 } from "@/core/idempotency/idempotency.service";
 
 import {
-  prisma,
-} from "@/database/client/prisma";
+  FinancialAuditService,
+} from "@/core/audit/financial-audit.service";
 
 import {
-  settlementPayoutService,
-} from "./settlement-payout.service";
+  settlementProviderRegistry,
+} from "./providers/settlement-provider.registry";
 
 export interface ReconcileSettlementInput {
   organizationId: string;
@@ -33,7 +33,7 @@ export interface ReconcileSettlementInput {
   idempotencyKey: string;
 }
 
-export interface SettlementReconciliationResult {
+export interface ReconciliationResult {
   id: string;
   settlementId: string | null;
   provider: string;
@@ -49,6 +49,29 @@ export interface SettlementReconciliationResult {
   updatedAt: Date;
 }
 
+interface SettlementReconciliationContext {
+  settlement: {
+    id: string;
+    vendorId: string;
+    financialInstrumentId: string;
+    transactionId: string | null;
+    amountMinor: bigint;
+    currency: string;
+    status: SettlementStatus;
+    periodStart: Date;
+    periodEnd: Date;
+    providerReference: string | null;
+  };
+
+  financialInstrument: {
+    id: string;
+    provider: string;
+    providerRef: string;
+    status: string;
+    currency: string;
+  };
+}
+
 export class SettlementReconciliationService {
   private readonly idempotencyService =
     new IdempotencyService();
@@ -58,7 +81,7 @@ export class SettlementReconciliationService {
 
   async reconcile(
     input: ReconcileSettlementInput
-  ): Promise<SettlementReconciliationResult> {
+  ): Promise<ReconciliationResult> {
     this.validateInput(input);
 
     const requestBody = {
@@ -71,7 +94,8 @@ export class SettlementReconciliationService {
     const result =
       await this.idempotencyService.execute(
         {
-          key: input.idempotencyKey,
+          key:
+            input.idempotencyKey,
           scope:
             `financial.settlement.reconciliation:${input.organizationId}`,
           userId:
@@ -79,53 +103,46 @@ export class SettlementReconciliationService {
           requestBody,
         },
         async () => {
-          const settlement =
-            await prisma.settlement.findFirst({
-              where: {
-                id: input.settlementId,
-                vendor: {
-                  organizationId:
-                    input.organizationId,
-                },
-              },
-              select: {
-                id: true,
-                vendorId: true,
-                financialInstrumentId: true,
-                transactionId: true,
-                amountMinor: true,
-                currency: true,
-                status: true,
-                periodStart: true,
-                periodEnd: true,
-                providerReference: true,
-              },
-            });
+          const context =
+            await this.getContext(
+              input.organizationId,
+              input.settlementId
+            );
 
-          if (!settlement) {
+          if (
+            context.settlement.status !==
+              SettlementStatus.COMPLETED &&
+            context.settlement.status !==
+              SettlementStatus.RECONCILED
+          ) {
             throw new Error(
-              "Settlement not found."
+              "Only a completed settlement can be reconciled."
             );
           }
 
           if (
-            settlement.status ===
-              SettlementStatus.RECONCILED
+            !context.settlement.providerReference
           ) {
-            const existing =
-              await prisma.reconciliation.findUnique({
+            throw new Error(
+              "Settlement has no provider reference for reconciliation."
+            );
+          }
+
+          const existing =
+            await prisma.reconciliation.findUnique(
+              {
                 where: {
                   settlementId:
-                    settlement.id,
+                    context.settlement.id,
                 },
-              });
+              }
+            );
 
-            if (!existing) {
-              throw new Error(
-                "Settlement is reconciled but its reconciliation record is missing."
-              );
-            }
-
+          if (
+            existing &&
+            existing.status ===
+              ReconciliationStatus.MATCHED
+          ) {
             return {
               responseStatus: 200,
               responseBody:
@@ -137,83 +154,105 @@ export class SettlementReconciliationService {
             };
           }
 
-          if (
-            settlement.status !==
-            SettlementStatus.COMPLETED
-          ) {
-            throw new Error(
-              "Only a completed settlement can be reconciled."
+          const provider =
+            settlementProviderRegistry.get(
+              context.financialInstrument.provider
             );
-          }
 
-          if (
-            !settlement.providerReference
-          ) {
-            throw new Error(
-              "Settlement has no provider reference."
-            );
-          }
-
-          /*
-           * Ask the payout engine to synchronize
-           * the external provider state first.
-           *
-           * No database transaction is held while
-           * the external provider is contacted.
-           */
-          const synchronized =
-            await settlementPayoutService.sync({
-              organizationId:
-                input.organizationId,
-              settlementId:
-                input.settlementId,
-              actorUserId:
-                input.actorUserId,
-              correlationId:
-                input.correlationId,
-              requestId:
-                input.requestId,
-              ipAddress:
-                input.ipAddress,
-              userAgent:
-                input.userAgent,
-              idempotencyKey:
-                `settlement-reconciliation-sync:${settlement.id}`,
-            });
-
-          if (
-            synchronized.status !==
-            SettlementStatus.COMPLETED
-          ) {
-            throw new Error(
-              "Settlement provider state is not completed."
-            );
-          }
-
-          const reconciliation =
-            await this.persistMatchedReconciliation(
-              input,
+          const providerResult =
+            await provider.getPayoutStatus(
               {
                 settlementId:
-                  settlement.id,
-                provider:
-                  await this.getProviderName(
-                    settlement.financialInstrumentId,
-                    input.organizationId,
-                    settlement.vendorId
-                  ),
-                periodStart:
-                  settlement.periodStart,
-                periodEnd:
-                  settlement.periodEnd,
-                expectedMinor:
-                  settlement.amountMinor,
-                actualMinor:
-                  settlement.amountMinor,
+                  context.settlement.id,
+                providerPayoutId:
+                  context.settlement
+                    .providerReference,
+                amountMinor:
+                  context.settlement
+                    .amountMinor,
                 currency:
-                  settlement.currency,
+                  context.settlement
+                    .currency,
+                metadata: {
+                  reconciliation: true,
+                },
+              }
+            );
+
+          if (
+            providerResult.status !==
+            "COMPLETED"
+          ) {
+            throw new Error(
+              `External settlement payout is not completed. Current provider status: ${providerResult.status}.`
+            );
+          }
+
+          if (
+            providerResult.amountMinor ===
+              undefined ||
+            providerResult.currency ===
+              undefined
+          ) {
+            throw new Error(
+              "Settlement provider response does not contain the amount and currency required for reconciliation."
+            );
+          }
+
+          const actualMinor =
+            providerResult.amountMinor;
+
+          const actualCurrency =
+            providerResult.currency
+              .trim()
+              .toUpperCase();
+
+          const expectedMinor =
+            context.settlement
+              .amountMinor;
+
+          const expectedCurrency =
+            context.settlement
+              .currency
+              .trim()
+              .toUpperCase();
+
+          const differenceMinor =
+            actualMinor -
+            expectedMinor;
+
+          const matched =
+            actualMinor ===
+              expectedMinor &&
+            actualCurrency ===
+              expectedCurrency &&
+            providerResult
+              .providerPayoutId ===
+              context.settlement
+                .providerReference;
+
+          const reconciliation =
+            await this.persistReconciliation(
+              input,
+              context,
+              {
+                provider:
+                  providerResult.provider,
+                actualMinor,
+                actualCurrency,
+                expectedMinor,
+                expectedCurrency,
+                differenceMinor,
                 reference:
-                  settlement.providerReference,
+                  providerResult
+                    .providerPayoutId,
+                status:
+                  matched
+                    ? ReconciliationStatus.MATCHED
+                    : ReconciliationStatus.MISMATCH,
+                rawResponse:
+                  providerResult.rawResponse ??
+                  null,
               }
             );
 
@@ -229,13 +268,13 @@ export class SettlementReconciliationService {
         }
       );
 
-    return result.responseBody as SettlementReconciliationResult;
+    return result.responseBody as ReconciliationResult;
   }
 
   async getBySettlementId(
     organizationId: string,
     settlementId: string
-  ): Promise<SettlementReconciliationResult | null> {
+  ): Promise<ReconciliationResult | null> {
     this.validateOrganizationId(
       organizationId
     );
@@ -247,245 +286,472 @@ export class SettlementReconciliationService {
     }
 
     const reconciliation =
-      await prisma.reconciliation.findFirst({
-        where: {
-          settlementId,
-          settlement: {
-            vendor: {
-              organizationId,
+      await prisma.reconciliation.findFirst(
+        {
+          where: {
+            settlementId,
+            settlement: {
+              vendor: {
+                organizationId,
+              },
             },
           },
-        },
-      });
+        }
+      );
 
     return reconciliation
       ? this.toResult(reconciliation)
       : null;
   }
 
-  private async persistMatchedReconciliation(
-    input: ReconcileSettlementInput,
-    data: {
-      settlementId: string;
-      provider: string;
-      periodStart: Date;
-      periodEnd: Date;
-      expectedMinor: bigint;
-      actualMinor: bigint;
-      currency: string;
-      reference: string;
-    }
-  ): Promise<SettlementReconciliationResult> {
-    const reconciliation =
-      await prisma.$transaction(
-        async (tx) => {
-          const settlement =
-            await tx.settlement.findFirst({
-              where: {
-                id: data.settlementId,
-                vendor: {
-                  organizationId:
-                    input.organizationId,
-                },
-              },
-              select: {
-                id: true,
-                status: true,
-                amountMinor: true,
-                currency: true,
-                providerReference: true,
-              },
-            });
-
-          if (!settlement) {
-            throw new Error(
-              "Settlement not found."
-            );
-          }
-
-          if (
-            settlement.status !==
-            SettlementStatus.COMPLETED
-          ) {
-            throw new Error(
-              "Settlement must remain completed during reconciliation."
-            );
-          }
-
-          if (
-            settlement.amountMinor !==
-            data.expectedMinor
-          ) {
-            throw new Error(
-              "Settlement amount changed during reconciliation."
-            );
-          }
-
-          if (
-            settlement.currency !==
-            data.currency
-          ) {
-            throw new Error(
-              "Settlement currency changed during reconciliation."
-            );
-          }
-
-          const existing =
-            await tx.reconciliation.findUnique({
-              where: {
-                settlementId:
-                  data.settlementId,
-              },
-            });
-
-          if (existing) {
-            return existing;
-          }
-
-          const differenceMinor =
-            data.actualMinor -
-            data.expectedMinor;
-
-          const status =
-            differenceMinor === BigInt(0)
-              ? ReconciliationStatus.MATCHED
-              : ReconciliationStatus.MISMATCH;
-
-          const created =
-            await tx.reconciliation.create({
-              data: {
-                settlementId:
-                  data.settlementId,
-                provider:
-                  data.provider,
-                periodStart:
-                  data.periodStart,
-                periodEnd:
-                  data.periodEnd,
-                status,
-                expectedMinor:
-                  data.expectedMinor,
-                actualMinor:
-                  data.actualMinor,
-                differenceMinor,
-                currency:
-                  data.currency,
-                reference:
-                  data.reference,
-                metadata:
-                  {
-                    settlementId:
-                      data.settlementId,
-                    providerReference:
-                      data.reference,
-                    reconciliationType:
-                      "SETTLEMENT",
-                  } as Prisma.InputJsonValue,
-              },
-            });
-
-          if (
-            status ===
-            ReconciliationStatus.MATCHED
-          ) {
-            await tx.settlement.update({
-              where: {
-                id: data.settlementId,
-              },
-              data: {
-                status:
-                  SettlementStatus.RECONCILED,
-              },
-            });
-          }
-
-          await tx.auditLog.create({
-            data: {
-              organizationId:
-                input.organizationId,
-              actorUserId:
-                input.actorUserId,
-              actorType:
-                input.actorUserId
-                  ? "USER"
-                  : "SYSTEM",
-              action:
-                status ===
-                ReconciliationStatus.MATCHED
-                  ? "SETTLEMENT_RECONCILED"
-                  : "SETTLEMENT_RECONCILIATION_MISMATCH",
-              entityType:
-                "RECONCILIATION",
-              entityId:
-                created.id,
-              correlationId:
-                input.correlationId,
-              requestId:
-                input.requestId,
-              ipAddress:
-                input.ipAddress,
-              userAgent:
-                input.userAgent,
-              metadata:
-                {
-                  settlementId:
-                    data.settlementId,
-                  provider:
-                    data.provider,
-                  expectedMinor:
-                    data.expectedMinor.toString(),
-                  actualMinor:
-                    data.actualMinor.toString(),
-                  differenceMinor:
-                    differenceMinor.toString(),
-                  currency:
-                    data.currency,
-                  reference:
-                    data.reference,
-                  status,
-                } as Prisma.InputJsonValue,
-            },
-          });
-
-          return created;
-        },
+  private async getContext(
+    organizationId: string,
+    settlementId: string
+  ): Promise<SettlementReconciliationContext> {
+    const settlement =
+      await prisma.settlement.findFirst(
         {
-          isolationLevel:
-            Prisma.TransactionIsolationLevel.Serializable,
-          maxWait: 5000,
-          timeout: 10000,
+          where: {
+            id: settlementId,
+            vendor: {
+              organizationId,
+            },
+          },
+          select: {
+            id: true,
+            vendorId: true,
+            financialInstrumentId: true,
+            transactionId: true,
+            amountMinor: true,
+            currency: true,
+            status: true,
+            periodStart: true,
+            periodEnd: true,
+            providerReference: true,
+          },
         }
       );
 
-    return this.toResult(
-      reconciliation
-    );
-  }
+    if (!settlement) {
+      throw new Error(
+        "Settlement not found."
+      );
+    }
 
-  private async getProviderName(
-    financialInstrumentId: string,
-    organizationId: string,
-    vendorId: string
-  ): Promise<string> {
-    const instrument =
-      await prisma.financialInstrument.findFirst({
-        where: {
-          id: financialInstrumentId,
-          organizationId,
-          vendorId,
-        },
-        select: {
-          provider: true,
-        },
-      });
+    const financialInstrument =
+      await prisma.financialInstrument.findFirst(
+        {
+          where: {
+            id:
+              settlement.financialInstrumentId,
+            organizationId,
+            vendorId:
+              settlement.vendorId,
+          },
+          select: {
+            id: true,
+            provider: true,
+            providerRef: true,
+            status: true,
+            currency: true,
+          },
+        }
+      );
 
-    if (!instrument) {
+    if (!financialInstrument) {
       throw new Error(
         "Settlement financial instrument not found."
       );
     }
 
-    return instrument.provider;
+    if (
+      financialInstrument.status !==
+      "ACTIVE"
+    ) {
+      throw new Error(
+        "Settlement financial instrument is not active."
+      );
+    }
+
+    if (
+      financialInstrument.currency !==
+      settlement.currency
+    ) {
+      throw new Error(
+        "Settlement financial instrument currency does not match the settlement currency."
+      );
+    }
+
+    return {
+      settlement,
+      financialInstrument,
+    };
+  }
+
+  private async persistReconciliation(
+    input: ReconcileSettlementInput,
+    context: SettlementReconciliationContext,
+    data: {
+      provider: string;
+      actualMinor: bigint;
+      actualCurrency: string;
+      expectedMinor: bigint;
+      expectedCurrency: string;
+      differenceMinor: bigint;
+      reference: string;
+      status: ReconciliationStatus;
+      rawResponse: Record<
+        string,
+        unknown
+      > | null;
+    }
+  ): Promise<ReconciliationResult> {
+    const result =
+      await this.runWithSerializationRetry(
+        async () =>
+          prisma.$transaction(
+            async (tx) => {
+              const current =
+                await tx.settlement.findFirst(
+                  {
+                    where: {
+                      id:
+                        context.settlement
+                          .id,
+                      vendor: {
+                        organizationId:
+                          input.organizationId,
+                      },
+                    },
+                    select: {
+                      id: true,
+                      status: true,
+                      amountMinor: true,
+                      currency: true,
+                      periodStart: true,
+                      periodEnd: true,
+                      providerReference:
+                        true,
+                    },
+                  }
+                );
+
+              if (!current) {
+                throw new Error(
+                  "Settlement not found."
+                );
+              }
+
+              if (
+                current.status !==
+                  SettlementStatus.COMPLETED &&
+                current.status !==
+                  SettlementStatus.RECONCILED
+              ) {
+                throw new Error(
+                  "Settlement is no longer eligible for reconciliation."
+                );
+              }
+
+              if (
+                current.amountMinor !==
+                data.expectedMinor ||
+                current.currency !==
+                data.expectedCurrency
+              ) {
+                throw new Error(
+                  "Settlement changed while reconciliation was being processed."
+                );
+              }
+
+              const existing =
+                await tx.reconciliation.findUnique(
+                  {
+                    where: {
+                      settlementId:
+                        current.id,
+                    },
+                  }
+                );
+
+              if (
+                existing &&
+                existing.status ===
+                  ReconciliationStatus.MATCHED
+              ) {
+                return existing;
+              }
+
+              const reconciliation =
+                existing
+                  ? await tx.reconciliation.update(
+                      {
+                        where: {
+                          id:
+                            existing.id,
+                        },
+                        data: {
+                          provider:
+                            data.provider,
+                          periodStart:
+                            current.periodStart,
+                          periodEnd:
+                            current.periodEnd,
+                          status:
+                            data.status,
+                          expectedMinor:
+                            data.expectedMinor,
+                          actualMinor:
+                            data.actualMinor,
+                          differenceMinor:
+                            data.differenceMinor,
+                          currency:
+                            data.actualCurrency,
+                          reference:
+                            data.reference,
+                          metadata:
+                            {
+                              settlementId:
+                                current.id,
+                              expectedCurrency:
+                                data.expectedCurrency,
+                              actualCurrency:
+                                data.actualCurrency,
+                              rawResponse:
+                                data.rawResponse,
+                              reconciledAt:
+                                new Date().toISOString(),
+                            } as Prisma.InputJsonValue,
+                        },
+                      }
+                    )
+                  : await tx.reconciliation.create(
+                      {
+                        data: {
+                          settlementId:
+                            current.id,
+                          provider:
+                            data.provider,
+                          periodStart:
+                            current.periodStart,
+                          periodEnd:
+                            current.periodEnd,
+                          status:
+                            data.status,
+                          expectedMinor:
+                            data.expectedMinor,
+                          actualMinor:
+                            data.actualMinor,
+                          differenceMinor:
+                            data.differenceMinor,
+                          currency:
+                            data.actualCurrency,
+                          reference:
+                            data.reference,
+                          metadata:
+                            {
+                              settlementId:
+                                current.id,
+                              expectedCurrency:
+                                data.expectedCurrency,
+                              actualCurrency:
+                                data.actualCurrency,
+                              rawResponse:
+                                data.rawResponse,
+                              reconciledAt:
+                                new Date().toISOString(),
+                            } as Prisma.InputJsonValue,
+                        },
+                      }
+                    );
+
+              if (
+                data.status ===
+                ReconciliationStatus.MATCHED
+              ) {
+                await tx.settlement.update(
+                  {
+                    where: {
+                      id:
+                        current.id,
+                    },
+                    data: {
+                      status:
+                        SettlementStatus.RECONCILED,
+                    },
+                  }
+                );
+              }
+
+              await tx.auditLog.create(
+                {
+                  data: {
+                    organizationId:
+                      input.organizationId,
+                    actorUserId:
+                      input.actorUserId,
+                    actorType:
+                      input.actorUserId
+                        ? "USER"
+                        : "SYSTEM",
+                    action:
+                      data.status ===
+                      ReconciliationStatus.MATCHED
+                        ? "SETTLEMENT_RECONCILED"
+                        : "SETTLEMENT_RECONCILIATION_MISMATCH",
+                    entityType:
+                      "RECONCILIATION",
+                    entityId:
+                      reconciliation.id,
+                    correlationId:
+                      input.correlationId,
+                    requestId:
+                      input.requestId,
+                    ipAddress:
+                      input.ipAddress,
+                    userAgent:
+                      input.userAgent,
+                    metadata:
+                      {
+                        settlementId:
+                          current.id,
+                        provider:
+                          data.provider,
+                        expectedMinor:
+                          data.expectedMinor.toString(),
+                        actualMinor:
+                          data.actualMinor.toString(),
+                        differenceMinor:
+                          data.differenceMinor.toString(),
+                        expectedCurrency:
+                          data.expectedCurrency,
+                        actualCurrency:
+                          data.actualCurrency,
+                        providerReference:
+                          data.reference,
+                        status:
+                          data.status,
+                      } as Prisma.InputJsonValue,
+                  },
+                }
+              );
+
+              return reconciliation;
+            },
+            {
+              isolationLevel:
+                Prisma.TransactionIsolationLevel.Serializable,
+              maxWait: 5000,
+              timeout: 10000,
+            }
+          )
+      );
+
+    return this.toResult(result);
+  }
+
+  private async runWithSerializationRetry<T>(
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const maxRetries = 3;
+
+    for (
+      let attempt = 1;
+      attempt <= maxRetries;
+      attempt += 1
+    ) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (
+          this.isSerializationConflict(
+            error
+          ) &&
+          attempt < maxRetries
+        ) {
+          await this.sleep(
+            100 * attempt
+          );
+
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new Error(
+      "Settlement reconciliation failed after retries."
+    );
+  }
+
+  private isSerializationConflict(
+    error: unknown
+  ): boolean {
+    return (
+      error instanceof
+        Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2034"
+    );
+  }
+
+  private async sleep(
+    milliseconds: number
+  ): Promise<void> {
+    await new Promise<void>(
+      (resolve) =>
+        setTimeout(
+          resolve,
+          milliseconds
+        )
+    );
+  }
+
+  private toResult(
+    reconciliation: {
+      id: string;
+      settlementId: string | null;
+      provider: string;
+      periodStart: Date;
+      periodEnd: Date;
+      status: ReconciliationStatus;
+      expectedMinor: bigint;
+      actualMinor: bigint;
+      differenceMinor: bigint;
+      currency: string;
+      reference: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }
+  ): ReconciliationResult {
+    return {
+      id:
+        reconciliation.id,
+      settlementId:
+        reconciliation.settlementId,
+      provider:
+        reconciliation.provider,
+      periodStart:
+        reconciliation.periodStart,
+      periodEnd:
+        reconciliation.periodEnd,
+      status:
+        reconciliation.status,
+      expectedMinor:
+        reconciliation.expectedMinor.toString(),
+      actualMinor:
+        reconciliation.actualMinor.toString(),
+      differenceMinor:
+        reconciliation.differenceMinor.toString(),
+      currency:
+        reconciliation.currency,
+      reference:
+        reconciliation.reference,
+      createdAt:
+        reconciliation.createdAt,
+      updatedAt:
+        reconciliation.updatedAt,
+    };
   }
 
   private validateInput(
@@ -516,53 +782,6 @@ export class SettlementReconciliationService {
         "Organization ID is required."
       );
     }
-  }
-
-  private toResult(
-    reconciliation: {
-      id: string;
-      settlementId: string | null;
-      provider: string;
-      periodStart: Date;
-      periodEnd: Date;
-      status: ReconciliationStatus;
-      expectedMinor: bigint;
-      actualMinor: bigint;
-      differenceMinor: bigint;
-      currency: string;
-      reference: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-    }
-  ): SettlementReconciliationResult {
-    return {
-      id:
-        reconciliation.id,
-      settlementId:
-        reconciliation.settlementId,
-      provider:
-        reconciliation.provider,
-      periodStart:
-        reconciliation.periodStart,
-      periodEnd:
-        reconciliation.periodEnd,
-      status:
-        reconciliation.status,
-      expectedMinor:
-        reconciliation.expectedMinor.toString(),
-      actualMinor:
-        reconciliation.actualMinor.toString(),
-      differenceMinor:
-        reconciliation.differenceMinor.toString(),
-      currency:
-        reconciliation.currency,
-      reference:
-        reconciliation.reference,
-      createdAt:
-        reconciliation.createdAt,
-      updatedAt:
-        reconciliation.updatedAt,
-    };
   }
 }
 
