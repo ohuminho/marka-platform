@@ -1,7 +1,12 @@
-import { Prisma, TransactionActorType, TransactionDirection, TransactionStatus, TransactionType } from "@prisma/client";
+import {
+  Prisma,
+  TransactionActorType,
+  TransactionDirection,
+  TransactionStatus,
+  TransactionType,
+} from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
-import { FinancialAuditService } from "@/core/audit/financial-audit.service";
 import { IdempotencyService } from "@/core/idempotency/idempotency.service";
 
 export interface CreateTransactionInput {
@@ -47,11 +52,12 @@ export interface TransactionResult {
   completedAt: Date | null;
 }
 
+export type FinancialTransactionClient = Prisma.TransactionClient;
+
 const DEFAULT_LEDGER_CODE = "MARKA-OPERATING";
 
 export class TransactionService {
   private readonly idempotencyService = new IdempotencyService();
-  private readonly financialAuditService = new FinancialAuditService();
 
   async create(input: CreateTransactionInput): Promise<TransactionResult> {
     this.validateInput(input);
@@ -83,266 +89,8 @@ export class TransactionService {
       },
       async () => {
         const transaction = await prisma.$transaction(
-          async (database) => {
-            const [sourceAccount, destinationAccount, organization] =
-              await Promise.all([
-                database.account.findUnique({
-                  where: { id: input.sourceAccountId },
-                  select: {
-                    id: true,
-                    organizationId: true,
-                    currency: true,
-                    status: true,
-                    balanceMinor: true,
-                    version: true,
-                  },
-                }),
-
-                database.account.findUnique({
-                  where: { id: input.destinationAccountId },
-                  select: {
-                    id: true,
-                    organizationId: true,
-                    currency: true,
-                    status: true,
-                    balanceMinor: true,
-                    version: true,
-                  },
-                }),
-
-                database.organization.findUnique({
-                  where: { id: input.organizationId },
-                  select: {
-                    id: true,
-                    status: true,
-                  },
-                }),
-              ]);
-
-            if (!organization || organization.status !== "ACTIVE") {
-              throw new Error("Organization is not active.");
-            }
-
-            if (!sourceAccount) {
-              throw new Error("Source account not found.");
-            }
-
-            if (!destinationAccount) {
-              throw new Error("Destination account not found.");
-            }
-
-            if (sourceAccount.id === destinationAccount.id) {
-              throw new Error(
-                "Source and destination accounts must be different."
-              );
-            }
-
-            if (
-              sourceAccount.organizationId !== input.organizationId ||
-              destinationAccount.organizationId !== input.organizationId
-            ) {
-              throw new Error(
-                "Both accounts must belong to the transaction organization."
-              );
-            }
-
-            if (
-              sourceAccount.status !== "ACTIVE" ||
-              destinationAccount.status !== "ACTIVE"
-            ) {
-              throw new Error("Both accounts must be active.");
-            }
-
-            if (
-              sourceAccount.currency !== input.currency ||
-              destinationAccount.currency !== input.currency
-            ) {
-              throw new Error(
-                "Transaction currency must match both accounts."
-              );
-            }
-
-            if (sourceAccount.balanceMinor < input.amountMinor) {
-              throw new Error("Insufficient account balance.");
-            }
-
-            const ledger = await database.ledger.upsert({
-              where: {
-                code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}`,
-              },
-              update: {},
-              create: {
-                organizationId: input.organizationId,
-                code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}`,
-                name: "MARKA Operating Ledger",
-                currency: input.currency,
-                status: "ACTIVE",
-              },
-            });
-
-            if (
-              ledger.status !== "ACTIVE" ||
-              ledger.currency !== input.currency
-            ) {
-              throw new Error("Operating ledger is not available.");
-            }
-
-            const reference =
-              input.reference?.trim() ||
-              `TXN-${crypto.randomUUID().replace(/-/g, "").toUpperCase()}`;
-
-            const createdAt = new Date();
-
-            const transaction = await database.transaction.create({
-              data: {
-                idempotencyKey: input.idempotencyKey,
-                type: input.type,
-                direction: input.direction,
-                status: "PROCESSING",
-
-                amountMinor: input.amountMinor,
-                currency: input.currency,
-
-                actorUserId: input.actorUserId,
-                actorType: input.actorType ?? "SYSTEM",
-
-                sourceAccountId: input.sourceAccountId,
-                destinationAccountId: input.destinationAccountId,
-
-                reference,
-                referenceType: input.referenceType,
-                orderId: input.orderId,
-                vendorId: input.vendorId,
-                context: input.context,
-
-                metadata: input.metadata
-                  ? (input.metadata as Prisma.InputJsonValue)
-                  : undefined,
-
-                processingStartedAt: createdAt,
-              },
-            });
-
-            const sourceUpdate =
-              await database.account.updateMany({
-                where: {
-                  id: sourceAccount.id,
-                  version: sourceAccount.version,
-                  status: "ACTIVE",
-                  balanceMinor: {
-                    gte: input.amountMinor,
-                  },
-                },
-                data: {
-                  balanceMinor: {
-                    decrement: input.amountMinor,
-                  },
-                  version: {
-                    increment: 1,
-                  },
-                },
-              });
-
-            if (sourceUpdate.count !== 1) {
-              throw new Error(
-                "Source account changed during transaction. Please retry."
-              );
-            }
-
-            const destinationUpdate =
-              await database.account.updateMany({
-                where: {
-                  id: destinationAccount.id,
-                  version: destinationAccount.version,
-                  status: "ACTIVE",
-                },
-                data: {
-                  balanceMinor: {
-                    increment: input.amountMinor,
-                  },
-                  version: {
-                    increment: 1,
-                  },
-                },
-              });
-
-            if (destinationUpdate.count !== 1) {
-              throw new Error(
-                "Destination account changed during transaction. Please retry."
-              );
-            }
-
-            await database.ledgerEntry.createMany({
-              data: [
-                {
-                  ledgerId: ledger.id,
-                  transactionId: transaction.id,
-                  accountId: sourceAccount.id,
-                  direction: "DEBIT",
-                  amountMinor: input.amountMinor,
-                  currency: input.currency,
-                  sequence: 1,
-                  metadata: {
-                    role: "SOURCE",
-                  } as Prisma.InputJsonValue,
-                },
-                {
-                  ledgerId: ledger.id,
-                  transactionId: transaction.id,
-                  accountId: destinationAccount.id,
-                  direction: "CREDIT",
-                  amountMinor: input.amountMinor,
-                  currency: input.currency,
-                  sequence: 2,
-                  metadata: {
-                    role: "DESTINATION",
-                  } as Prisma.InputJsonValue,
-                },
-              ],
-            });
-
-            const completedAt = new Date();
-
-            const completed =
-              await database.transaction.update({
-                where: {
-                  id: transaction.id,
-                },
-                data: {
-                  status: "COMPLETED",
-                  completedAt,
-                },
-              });
-
-            await database.auditLog.create({
-              data: {
-                organizationId: input.organizationId,
-                actorUserId: input.actorUserId,
-                actorType: input.actorUserId ? "USER" : "SYSTEM",
-                action: "FINANCIAL_TRANSACTION_COMPLETED",
-                entityType: "TRANSACTION",
-                entityId: completed.id,
-                correlationId: input.correlationId,
-                requestId: input.requestId,
-                ipAddress: input.ipAddress,
-                userAgent: input.userAgent,
-                metadata: {
-                  transactionId: completed.id,
-                  reference: completed.reference,
-                  type: completed.type,
-                  direction: completed.direction,
-                  amountMinor: input.amountMinor.toString(),
-                  currency: input.currency,
-                  sourceAccountId: input.sourceAccountId,
-                  destinationAccountId: input.destinationAccountId,
-                  orderId: input.orderId ?? null,
-                  vendorId: input.vendorId ?? null,
-                } as Prisma.InputJsonValue,
-              },
-            });
-
-            return completed;
-          },
+          async (database) =>
+            this.createWithinTransaction(database, input),
           {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
             maxWait: 5000,
@@ -360,6 +108,299 @@ export class TransactionService {
     );
 
     return result.responseBody as TransactionResult;
+  }
+
+  /**
+   * Executes the financial transaction inside an already-open Prisma transaction.
+   *
+   * This method intentionally does not open another transaction.
+   * It is used by higher-level financial operations such as Settlement,
+   * where the settlement state update and the money movement must commit
+   * or rollback as one atomic unit.
+   */
+  async createWithinTransaction(
+    database: FinancialTransactionClient,
+    input: CreateTransactionInput
+  ) {
+    this.validateInput(input);
+
+    const existingTransaction = await database.transaction.findUnique({
+      where: {
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
+
+    if (existingTransaction) {
+      if (existingTransaction.status === TransactionStatus.COMPLETED) {
+        return existingTransaction;
+      }
+
+      throw new Error(
+        `Transaction with idempotency key "${input.idempotencyKey}" already exists with status ${existingTransaction.status}.`
+      );
+    }
+
+    const [sourceAccount, destinationAccount, organization] =
+      await Promise.all([
+        database.account.findUnique({
+          where: {
+            id: input.sourceAccountId,
+          },
+          select: {
+            id: true,
+            organizationId: true,
+            currency: true,
+            status: true,
+            balanceMinor: true,
+            version: true,
+          },
+        }),
+
+        database.account.findUnique({
+          where: {
+            id: input.destinationAccountId,
+          },
+          select: {
+            id: true,
+            organizationId: true,
+            currency: true,
+            status: true,
+            balanceMinor: true,
+            version: true,
+          },
+        }),
+
+        database.organization.findUnique({
+          where: {
+            id: input.organizationId,
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        }),
+      ]);
+
+    if (!organization || organization.status !== "ACTIVE") {
+      throw new Error("Organization is not active.");
+    }
+
+    if (!sourceAccount) {
+      throw new Error("Source account not found.");
+    }
+
+    if (!destinationAccount) {
+      throw new Error("Destination account not found.");
+    }
+
+    if (sourceAccount.id === destinationAccount.id) {
+      throw new Error(
+        "Source and destination accounts must be different."
+      );
+    }
+
+    if (
+      sourceAccount.organizationId !== input.organizationId ||
+      destinationAccount.organizationId !== input.organizationId
+    ) {
+      throw new Error(
+        "Both accounts must belong to the transaction organization."
+      );
+    }
+
+    if (
+      sourceAccount.status !== "ACTIVE" ||
+      destinationAccount.status !== "ACTIVE"
+    ) {
+      throw new Error("Both accounts must be active.");
+    }
+
+    if (
+      sourceAccount.currency !== input.currency ||
+      destinationAccount.currency !== input.currency
+    ) {
+      throw new Error(
+        "Transaction currency must match both accounts."
+      );
+    }
+
+    if (sourceAccount.balanceMinor < input.amountMinor) {
+      throw new Error("Insufficient account balance.");
+    }
+
+    const ledger = await database.ledger.upsert({
+      where: {
+        code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}`,
+      },
+      update: {},
+      create: {
+        organizationId: input.organizationId,
+        code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}`,
+        name: "MARKA Operating Ledger",
+        currency: input.currency,
+        status: "ACTIVE",
+      },
+    });
+
+    if (
+      ledger.status !== "ACTIVE" ||
+      ledger.currency !== input.currency
+    ) {
+      throw new Error("Operating ledger is not available.");
+    }
+
+    const reference =
+      input.reference?.trim() ||
+      `TXN-${crypto.randomUUID().replace(/-/g, "").toUpperCase()}`;
+
+    const createdAt = new Date();
+
+    const transaction = await database.transaction.create({
+      data: {
+        idempotencyKey: input.idempotencyKey,
+        type: input.type,
+        direction: input.direction,
+        status: TransactionStatus.PROCESSING,
+
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+
+        actorUserId: input.actorUserId,
+        actorType: input.actorType ?? TransactionActorType.SYSTEM,
+
+        sourceAccountId: input.sourceAccountId,
+        destinationAccountId: input.destinationAccountId,
+
+        reference,
+        referenceType: input.referenceType,
+        orderId: input.orderId,
+        vendorId: input.vendorId,
+        context: input.context,
+
+        metadata: input.metadata
+          ? (input.metadata as Prisma.InputJsonValue)
+          : undefined,
+
+        processingStartedAt: createdAt,
+      },
+    });
+
+    const sourceUpdate = await database.account.updateMany({
+      where: {
+        id: sourceAccount.id,
+        version: sourceAccount.version,
+        status: "ACTIVE",
+        balanceMinor: {
+          gte: input.amountMinor,
+        },
+      },
+      data: {
+        balanceMinor: {
+          decrement: input.amountMinor,
+        },
+        version: {
+          increment: 1,
+        },
+      },
+    });
+
+    if (sourceUpdate.count !== 1) {
+      throw new Error(
+        "Source account changed during transaction. Please retry."
+      );
+    }
+
+    const destinationUpdate = await database.account.updateMany({
+      where: {
+        id: destinationAccount.id,
+        version: destinationAccount.version,
+        status: "ACTIVE",
+      },
+      data: {
+        balanceMinor: {
+          increment: input.amountMinor,
+        },
+        version: {
+          increment: 1,
+        },
+      },
+    });
+
+    if (destinationUpdate.count !== 1) {
+      throw new Error(
+        "Destination account changed during transaction. Please retry."
+      );
+    }
+
+    await database.ledgerEntry.createMany({
+      data: [
+        {
+          ledgerId: ledger.id,
+          transactionId: transaction.id,
+          accountId: sourceAccount.id,
+          direction: "DEBIT",
+          amountMinor: input.amountMinor,
+          currency: input.currency,
+          sequence: 1,
+          metadata: {
+            role: "SOURCE",
+          } as Prisma.InputJsonValue,
+        },
+        {
+          ledgerId: ledger.id,
+          transactionId: transaction.id,
+          accountId: destinationAccount.id,
+          direction: "CREDIT",
+          amountMinor: input.amountMinor,
+          currency: input.currency,
+          sequence: 2,
+          metadata: {
+            role: "DESTINATION",
+          } as Prisma.InputJsonValue,
+        },
+      ],
+    });
+
+    const completedAt = new Date();
+
+    const completed = await database.transaction.update({
+      where: {
+        id: transaction.id,
+      },
+      data: {
+        status: TransactionStatus.COMPLETED,
+        completedAt,
+      },
+    });
+
+    await database.auditLog.create({
+      data: {
+        organizationId: input.organizationId,
+        actorUserId: input.actorUserId,
+        actorType: input.actorUserId ? "USER" : "SYSTEM",
+        action: "FINANCIAL_TRANSACTION_COMPLETED",
+        entityType: "TRANSACTION",
+        entityId: completed.id,
+        correlationId: input.correlationId,
+        requestId: input.requestId,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        metadata: {
+          transactionId: completed.id,
+          reference: completed.reference,
+          type: completed.type,
+          direction: completed.direction,
+          amountMinor: input.amountMinor.toString(),
+          currency: input.currency,
+          sourceAccountId: input.sourceAccountId,
+          destinationAccountId: input.destinationAccountId,
+          orderId: input.orderId ?? null,
+          vendorId: input.vendorId ?? null,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    return completed;
   }
 
   async getById(
