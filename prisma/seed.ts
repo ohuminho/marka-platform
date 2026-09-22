@@ -18,6 +18,7 @@ const permissions = [
   "ORDER_MANAGE",
   "PAYMENT_PROCESS",
   "SETTLEMENT_PAYOUT_EXECUTE",
+  "SETTLEMENT_RECONCILIATION_EXECUTE",
   "ADMIN_ACCESS",
 ];
 
@@ -41,18 +42,19 @@ const roles = [
 ];
 
 async function main() {
-  const tenant = await prisma.tenant.upsert({
-    where: {
-      key: "marka",
-    },
-    update: {
-      name: "MARKA Platform",
-    },
-    create: {
-      key: "marka",
-      name: "MARKA Platform",
-    },
-  });
+  const tenant =
+    await prisma.tenant.upsert({
+      where: {
+        key: "marka",
+      },
+      update: {
+        name: "MARKA Platform",
+      },
+      create: {
+        key: "marka",
+        name: "MARKA Platform",
+      },
+    });
 
   const organization =
     await prisma.organization.upsert({
@@ -73,7 +75,10 @@ async function main() {
     });
 
   const permissionRecords =
-    new Map<string, { id: string }>();
+    new Map<
+      string,
+      { id: string }
+    >();
 
   for (const action of permissions) {
     const permission =
