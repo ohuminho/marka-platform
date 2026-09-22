@@ -21,6 +21,10 @@ export interface SettlementProviderCreatePayoutResult {
   provider: string;
   providerPayoutId: string;
   status: SettlementProviderPayoutStatus;
+
+  amountMinor?: bigint;
+  currency?: string;
+
   rawResponse?: Record<string, unknown>;
 }
 
@@ -37,6 +41,10 @@ export interface SettlementProviderGetPayoutStatusResult {
   provider: string;
   providerPayoutId: string;
   status: SettlementProviderPayoutStatus;
+
+  amountMinor?: bigint;
+  currency?: string;
+
   rawResponse?: Record<string, unknown>;
 }
 
@@ -50,4 +58,4 @@ export interface SettlementProviderAdapter {
   getPayoutStatus(
     input: SettlementProviderGetPayoutStatusInput
   ): Promise<SettlementProviderGetPayoutStatusResult>;
-  }
+}
