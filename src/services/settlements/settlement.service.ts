@@ -3,6 +3,7 @@ import {
   SettlementStatus,
   TransactionActorType,
   TransactionDirection,
+  TransactionStatus,
   TransactionType,
 } from "@prisma/client";
 
@@ -10,11 +11,8 @@ import { FinancialAuditService } from "@/core/audit/financial-audit.service";
 import { IdempotencyService } from "@/core/idempotency/idempotency.service";
 import { prisma } from "@/database/client/prisma";
 import {
-  accountService,
-  type AccountResult,
-} from "@/services/accounts/account.service";
-import {
   transactionService,
+  type FinancialTransactionClient,
   type TransactionResult,
 } from "@/services/transactions/transaction.service";
 
@@ -115,128 +113,133 @@ export class SettlementService {
         requestBody,
       },
       async () => {
-        const settlement = await prisma.$transaction(async (tx) => {
-          const [organization, vendor, instrument] = await Promise.all([
-            tx.organization.findUnique({
-              where: {
-                id: input.organizationId,
+        const settlement = await prisma.$transaction(
+          async (tx) => {
+            const [organization, vendor, instrument] = await Promise.all([
+              tx.organization.findUnique({
+                where: {
+                  id: input.organizationId,
+                },
+                select: {
+                  id: true,
+                  status: true,
+                },
+              }),
+
+              tx.vendor.findFirst({
+                where: {
+                  id: input.vendorId,
+                  organizationId: input.organizationId,
+                },
+                select: {
+                  id: true,
+                  organizationId: true,
+                  status: true,
+                  verified: true,
+                },
+              }),
+
+              tx.financialInstrument.findUnique({
+                where: {
+                  id: input.financialInstrumentId,
+                },
+                select: {
+                  id: true,
+                  organizationId: true,
+                  vendorId: true,
+                  ownerType: true,
+                  status: true,
+                  currency: true,
+                  verifiedAt: true,
+                  expiresAt: true,
+                },
+              }),
+            ]);
+
+            if (!organization || organization.status !== "ACTIVE") {
+              throw new Error("Organization is not active.");
+            }
+
+            if (!vendor) {
+              throw new Error(
+                "Vendor not found in the specified organization."
+              );
+            }
+
+            if (vendor.status !== "ACTIVE" || !vendor.verified) {
+              throw new Error(
+                "Vendor must be active and verified before settlement."
+              );
+            }
+
+            if (!instrument) {
+              throw new Error("Financial instrument not found.");
+            }
+
+            if (instrument.organizationId !== input.organizationId) {
+              throw new Error(
+                "Financial instrument does not belong to the settlement organization."
+              );
+            }
+
+            if (instrument.vendorId !== input.vendorId) {
+              throw new Error(
+                "Financial instrument does not belong to the settlement vendor."
+              );
+            }
+
+            if (instrument.ownerType !== "VENDOR") {
+              throw new Error(
+                "Settlement requires a vendor-owned financial instrument."
+              );
+            }
+
+            if (instrument.status !== "ACTIVE") {
+              throw new Error(
+                "Financial instrument must be active before settlement."
+              );
+            }
+
+            if (!instrument.verifiedAt) {
+              throw new Error(
+                "Financial instrument must be verified before settlement."
+              );
+            }
+
+            if (
+              instrument.expiresAt &&
+              instrument.expiresAt.getTime() <= Date.now()
+            ) {
+              throw new Error("Financial instrument has expired.");
+            }
+
+            if (instrument.currency !== currency) {
+              throw new Error(
+                "Settlement currency must match the financial instrument currency."
+              );
+            }
+
+            return tx.settlement.create({
+              data: {
+                vendorId: input.vendorId,
+                financialInstrumentId: input.financialInstrumentId,
+                amountMinor: input.amountMinor,
+                currency,
+                status: SettlementStatus.PENDING,
+                periodStart: input.periodStart,
+                periodEnd: input.periodEnd,
+                metadata: input.metadata
+                  ? (input.metadata as Prisma.InputJsonValue)
+                  : undefined,
               },
-              select: {
-                id: true,
-                status: true,
-              },
-            }),
-
-            tx.vendor.findFirst({
-              where: {
-                id: input.vendorId,
-                organizationId: input.organizationId,
-              },
-              select: {
-                id: true,
-                organizationId: true,
-                status: true,
-                verified: true,
-              },
-            }),
-
-            tx.financialInstrument.findUnique({
-              where: {
-                id: input.financialInstrumentId,
-              },
-              select: {
-                id: true,
-                organizationId: true,
-                vendorId: true,
-                ownerType: true,
-                status: true,
-                currency: true,
-                verifiedAt: true,
-                expiresAt: true,
-              },
-            }),
-          ]);
-
-          if (!organization || organization.status !== "ACTIVE") {
-            throw new Error("Organization is not active.");
+            });
+          },
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 5000,
+            timeout: 10000,
           }
-
-          if (!vendor) {
-            throw new Error(
-              "Vendor not found in the specified organization."
-            );
-          }
-
-          if (vendor.status !== "ACTIVE" || !vendor.verified) {
-            throw new Error(
-              "Vendor must be active and verified before settlement."
-            );
-          }
-
-          if (!instrument) {
-            throw new Error("Financial instrument not found.");
-          }
-
-          if (instrument.organizationId !== input.organizationId) {
-            throw new Error(
-              "Financial instrument does not belong to the settlement organization."
-            );
-          }
-
-          if (instrument.vendorId !== input.vendorId) {
-            throw new Error(
-              "Financial instrument does not belong to the settlement vendor."
-            );
-          }
-
-          if (instrument.ownerType !== "VENDOR") {
-            throw new Error(
-              "Settlement requires a vendor-owned financial instrument."
-            );
-          }
-
-          if (instrument.status !== "ACTIVE") {
-            throw new Error(
-              "Financial instrument must be active before settlement."
-            );
-          }
-
-          if (!instrument.verifiedAt) {
-            throw new Error(
-              "Financial instrument must be verified before settlement."
-            );
-          }
-
-          if (
-            instrument.expiresAt &&
-            instrument.expiresAt.getTime() <= Date.now()
-          ) {
-            throw new Error("Financial instrument has expired.");
-          }
-
-          if (instrument.currency !== currency) {
-            throw new Error(
-              "Settlement currency must match the financial instrument currency."
-            );
-          }
-
-          return tx.settlement.create({
-            data: {
-              vendorId: input.vendorId,
-              financialInstrumentId: input.financialInstrumentId,
-              amountMinor: input.amountMinor,
-              currency,
-              status: SettlementStatus.PENDING,
-              periodStart: input.periodStart,
-              periodEnd: input.periodEnd,
-              metadata: input.metadata
-                ? (input.metadata as Prisma.InputJsonValue)
-                : undefined,
-            },
-          });
-        });
-
-        const responseBody = this.toResult(settlement);
+        );
 
         await this.financialAuditService.recordSettlement({
           organizationId: input.organizationId,
@@ -259,7 +262,7 @@ export class SettlementService {
 
         return {
           responseStatus: 201,
-          responseBody,
+          responseBody: this.toResult(settlement),
           resourceType: "SETTLEMENT",
           resourceId: settlement.id,
         };
@@ -287,159 +290,182 @@ export class SettlementService {
         requestBody,
       },
       async () => {
-        const settlement = await prisma.$transaction(async (tx) => {
-          const current = await tx.settlement.findFirst({
-            where: {
-              id: input.settlementId,
-              vendor: {
-                organizationId: input.organizationId,
-              },
-            },
-          });
+        const settlement = await this.processWithRetry(input);
 
-          if (!current) {
-            throw new Error("Settlement not found.");
-          }
-
-          if (
-            current.status === SettlementStatus.COMPLETED ||
-            current.status === SettlementStatus.RECONCILED
-          ) {
-            return current;
-          }
-
-          if (current.status === SettlementStatus.FAILED) {
-            throw new Error(
-              "A failed settlement cannot be processed again without a new settlement operation."
-            );
-          }
-
-          return tx.settlement.update({
-            where: {
-              id: current.id,
-            },
-            data: {
-              status: SettlementStatus.PROCESSING,
-            },
-          });
-        });
-
-        let transaction: TransactionResult | null = null;
-
-        try {
-          const accounts = await this.getSettlementAccounts(
-            input.organizationId,
-            settlement.vendorId,
-            settlement.currency,
-            settlement.amountMinor,
-            settlement.id
-          );
-
-          transaction = await transactionService.create({
-            organizationId: input.organizationId,
-            idempotencyKey: `settlement-transfer:${settlement.id}`,
-            type: TransactionType.SETTLEMENT,
-            direction: TransactionDirection.DEBIT,
-            amountMinor: settlement.amountMinor,
-            currency: settlement.currency,
-            actorUserId: input.actorUserId,
-            actorType: TransactionActorType.SYSTEM,
-            sourceAccountId: accounts.vendorPayable.id,
-            destinationAccountId: accounts.settlement.id,
-            reference: `SETTLEMENT-${settlement.id}`,
-            referenceType: "SETTLEMENT",
-            vendorId: settlement.vendorId,
-            context: "VENDOR_SETTLEMENT_FUNDING",
-            metadata: {
-              settlementId: settlement.id,
-              financialInstrumentId: settlement.financialInstrumentId,
-              stage: "INTERNAL_FUNDING",
-            },
-            correlationId: input.correlationId,
-            requestId: input.requestId,
-            ipAddress: input.ipAddress,
-            userAgent: input.userAgent,
-          });
-
-          const updated = await prisma.settlement.update({
-            where: {
-              id: settlement.id,
-            },
-            data: {
-              status: SettlementStatus.PROCESSING,
-              transactionId: transaction.id,
-            },
-          });
-
-          await this.financialAuditService.recordSettlement({
-            organizationId: input.organizationId,
-            actorUserId: input.actorUserId,
-            action: "SETTLEMENT_FUNDED",
-            settlementId: settlement.id,
-            correlationId: input.correlationId,
-            requestId: input.requestId,
-            ipAddress: input.ipAddress,
-            userAgent: input.userAgent,
-            metadata: {
-              transactionId: transaction.id,
-              vendorId: settlement.vendorId,
-              financialInstrumentId: settlement.financialInstrumentId,
-              amountMinor: settlement.amountMinor.toString(),
-              currency: settlement.currency,
-              stage: "INTERNAL_FUNDING",
-            },
-          });
-
-          return {
-            responseStatus: 200,
-            responseBody: this.toResult(updated),
-            resourceType: "SETTLEMENT",
-            resourceId: updated.id,
-          };
-        } catch (error) {
-          await prisma.settlement.update({
-            where: {
-              id: settlement.id,
-            },
-            data: {
-              status: SettlementStatus.FAILED,
-              metadata: {
-                ...(this.asRecord(settlement.metadata) ?? {}),
-                processingFailure: {
-                  message:
-                    error instanceof Error
-                      ? error.message
-                      : "Unknown settlement processing failure.",
-                  occurredAt: new Date().toISOString(),
-                },
-              },
-            },
-          });
-
-          await this.financialAuditService.recordSettlement({
-            organizationId: input.organizationId,
-            actorUserId: input.actorUserId,
-            action: "SETTLEMENT_FAILED",
-            settlementId: settlement.id,
-            correlationId: input.correlationId,
-            requestId: input.requestId,
-            ipAddress: input.ipAddress,
-            userAgent: input.userAgent,
-            metadata: {
-              transactionId: transaction?.id ?? null,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Unknown settlement processing failure.",
-            },
-          });
-
-          throw error;
-        }
+        return {
+          responseStatus: 200,
+          responseBody: this.toResult(settlement),
+          resourceType: "SETTLEMENT",
+          resourceId: settlement.id,
+        };
       }
     );
 
     return result.responseBody as SettlementResult;
+  }
+
+  private async processWithRetry(
+    input: ProcessSettlementInput
+  ) {
+    const maxRetries = 3;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+      try {
+        return await prisma.$transaction(
+          async (tx) => this.processWithinTransaction(tx, input),
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 5000,
+            timeout: 10000,
+          }
+        );
+      } catch (error) {
+        if (
+          this.isSerializationConflict(error) &&
+          attempt < maxRetries
+        ) {
+          await this.sleep(100 * attempt);
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new Error("Settlement processing failed after retries.");
+  }
+
+  private async processWithinTransaction(
+    tx: FinancialTransactionClient,
+    input: ProcessSettlementInput
+  ) {
+    const current = await tx.settlement.findFirst({
+      where: {
+        id: input.settlementId,
+        vendor: {
+          organizationId: input.organizationId,
+        },
+      },
+    });
+
+    if (!current) {
+      throw new Error("Settlement not found.");
+    }
+
+    if (
+      current.status === SettlementStatus.COMPLETED ||
+      current.status === SettlementStatus.RECONCILED
+    ) {
+      return current;
+    }
+
+    if (current.status === SettlementStatus.FAILED) {
+      throw new Error(
+        "A failed settlement cannot be processed again without a new settlement operation."
+      );
+    }
+
+    if (current.status === SettlementStatus.PROCESSING) {
+      if (current.transactionId) {
+        return current;
+      }
+
+      throw new Error(
+        "Settlement is already processing but has no funding transaction."
+      );
+    }
+
+    if (current.status !== SettlementStatus.PENDING) {
+      throw new Error(
+        `Settlement cannot be processed from status ${current.status}.`
+      );
+    }
+
+    if (current.transactionId) {
+      throw new Error(
+        "Pending settlement already has a funding transaction."
+      );
+    }
+
+    const accounts = await this.getSettlementAccountsWithinTransaction(
+      tx,
+      input.organizationId,
+      current.vendorId,
+      current.currency,
+      current.amountMinor,
+      current.id
+    );
+
+    const transaction = await transactionService.createWithinTransaction(
+      tx,
+      {
+        organizationId: input.organizationId,
+        idempotencyKey: `settlement-transfer:${current.id}`,
+        type: TransactionType.SETTLEMENT,
+        direction: TransactionDirection.DEBIT,
+        amountMinor: current.amountMinor,
+        currency: current.currency,
+        actorUserId: input.actorUserId,
+        actorType: TransactionActorType.SYSTEM,
+        sourceAccountId: accounts.vendorPayable.id,
+        destinationAccountId: accounts.settlement.id,
+        reference: `SETTLEMENT-${current.id}`,
+        referenceType: "SETTLEMENT",
+        vendorId: current.vendorId,
+        context: "VENDOR_SETTLEMENT_FUNDING",
+        metadata: {
+          settlementId: current.id,
+          financialInstrumentId: current.financialInstrumentId,
+          stage: "INTERNAL_FUNDING",
+        },
+        correlationId: input.correlationId,
+        requestId: input.requestId,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+      }
+    );
+
+    if (transaction.status !== TransactionStatus.COMPLETED) {
+      throw new Error(
+        "Settlement funding transaction did not complete."
+      );
+    }
+
+    const updated = await tx.settlement.update({
+      where: {
+        id: current.id,
+      },
+      data: {
+        status: SettlementStatus.PROCESSING,
+        transactionId: transaction.id,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        organizationId: input.organizationId,
+        actorUserId: input.actorUserId,
+        actorType: input.actorUserId ? "USER" : "SYSTEM",
+        action: "SETTLEMENT_FUNDED",
+        entityType: "SETTLEMENT",
+        entityId: current.id,
+        correlationId: input.correlationId,
+        requestId: input.requestId,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        metadata: {
+          settlementId: current.id,
+          transactionId: transaction.id,
+          vendorId: current.vendorId,
+          financialInstrumentId: current.financialInstrumentId,
+          amountMinor: current.amountMinor.toString(),
+          currency: current.currency,
+          stage: "INTERNAL_FUNDING",
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    return updated;
   }
 
   async complete(
@@ -461,65 +487,130 @@ export class SettlementService {
         requestBody,
       },
       async () => {
-        const settlement = await prisma.settlement.findFirst({
-          where: {
-            id: input.settlementId,
-            vendor: {
-              organizationId: input.organizationId,
-            },
+        const settlement = await prisma.$transaction(
+          async (tx) => {
+            const current = await tx.settlement.findFirst({
+              where: {
+                id: input.settlementId,
+                vendor: {
+                  organizationId: input.organizationId,
+                },
+              },
+            });
+
+            if (!current) {
+              throw new Error("Settlement not found.");
+            }
+
+            if (current.status === SettlementStatus.RECONCILED) {
+              return current;
+            }
+
+            if (current.status !== SettlementStatus.PROCESSING) {
+              throw new Error(
+                "Only a processing settlement can be completed."
+              );
+            }
+
+            if (!current.transactionId) {
+              throw new Error(
+                "Settlement cannot be completed without a funding transaction."
+              );
+            }
+
+            const transaction = await tx.transaction.findUnique({
+              where: {
+                id: current.transactionId,
+              },
+              select: {
+                id: true,
+                status: true,
+                type: true,
+                amountMinor: true,
+                currency: true,
+                sourceAccountId: true,
+                destinationAccountId: true,
+              },
+            });
+
+            if (!transaction) {
+              throw new Error(
+                "Settlement funding transaction was not found."
+              );
+            }
+
+            if (transaction.status !== TransactionStatus.COMPLETED) {
+              throw new Error(
+                "Settlement funding transaction is not completed."
+              );
+            }
+
+            if (transaction.type !== TransactionType.SETTLEMENT) {
+              throw new Error(
+                "Settlement funding transaction has an invalid type."
+              );
+            }
+
+            if (transaction.amountMinor !== current.amountMinor) {
+              throw new Error(
+                "Settlement amount does not match the funding transaction."
+              );
+            }
+
+            if (transaction.currency !== current.currency) {
+              throw new Error(
+                "Settlement currency does not match the funding transaction."
+              );
+            }
+
+            const updated = await tx.settlement.update({
+              where: {
+                id: current.id,
+              },
+              data: {
+                status: SettlementStatus.COMPLETED,
+                providerReference: input.providerReference.trim(),
+              },
+            });
+
+            await tx.auditLog.create({
+              data: {
+                organizationId: input.organizationId,
+                actorUserId: input.actorUserId,
+                actorType: input.actorUserId ? "USER" : "SYSTEM",
+                action: "SETTLEMENT_COMPLETED",
+                entityType: "SETTLEMENT",
+                entityId: current.id,
+                correlationId: input.correlationId,
+                requestId: input.requestId,
+                ipAddress: input.ipAddress,
+                userAgent: input.userAgent,
+                metadata: {
+                  settlementId: current.id,
+                  providerReference: input.providerReference.trim(),
+                  transactionId: current.transactionId,
+                  financialInstrumentId:
+                    current.financialInstrumentId,
+                  amountMinor: current.amountMinor.toString(),
+                  currency: current.currency,
+                } as Prisma.InputJsonValue,
+              },
+            });
+
+            return updated;
           },
-        });
-
-        if (!settlement) {
-          throw new Error("Settlement not found.");
-        }
-
-        if (settlement.status === SettlementStatus.RECONCILED) {
-          return {
-            responseStatus: 200,
-            responseBody: this.toResult(settlement),
-            resourceType: "SETTLEMENT",
-            resourceId: settlement.id,
-          };
-        }
-
-        if (settlement.status !== SettlementStatus.PROCESSING) {
-          throw new Error(
-            "Only a processing settlement can be completed."
-          );
-        }
-
-        const updated = await prisma.settlement.update({
-          where: {
-            id: settlement.id,
-          },
-          data: {
-            status: SettlementStatus.COMPLETED,
-            providerReference: input.providerReference.trim(),
-          },
-        });
-
-        await this.financialAuditService.recordSettlement({
-          organizationId: input.organizationId,
-          actorUserId: input.actorUserId,
-          action: "SETTLEMENT_COMPLETED",
-          settlementId: settlement.id,
-          correlationId: input.correlationId,
-          requestId: input.requestId,
-          ipAddress: input.ipAddress,
-          userAgent: input.userAgent,
-          metadata: {
-            providerReference: input.providerReference.trim(),
-            transactionId: settlement.transactionId,
-            financialInstrumentId: settlement.financialInstrumentId,
-          },
-        });
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 5000,
+            timeout: 10000,
+          }
+        );
 
         return {
           responseStatus: 200,
-          responseBody: this.toResult(updated),
+          responseBody: this.toResult(settlement),
           resourceType: "SETTLEMENT",
-          resourceId: updated.id,
+          resourceId: settlement.id,
         };
       }
     );
@@ -554,7 +645,11 @@ export class SettlementService {
   ): Promise<SettlementResult[]> {
     this.validateOrganizationId(options.organizationId);
 
-    const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+    const limit = Math.min(
+      Math.max(options.limit ?? 50, 1),
+      100
+    );
+
     const offset = Math.max(options.offset ?? 0, 0);
 
     const settlements = await prisma.settlement.findMany({
@@ -577,22 +672,57 @@ export class SettlementService {
     );
   }
 
-  private async getSettlementAccounts(
+  private async getSettlementAccountsWithinTransaction(
+    tx: FinancialTransactionClient,
     organizationId: string,
     vendorId: string,
     currency: string,
     amountMinor: bigint,
     settlementId: string
   ): Promise<{
-    vendorPayable: AccountResult;
-    settlement: AccountResult;
+    vendorPayable: {
+      id: string;
+      balanceMinor: bigint;
+    };
+    settlement: {
+      id: string;
+    };
   }> {
-    const vendorPayable =
-      await accountService.getVendorPayableAccount(
-        organizationId,
-        vendorId,
-        currency
-      );
+    const [vendorPayable, settlementAccount] = await Promise.all([
+      tx.account.findFirst({
+        where: {
+          organizationId,
+          vendorId,
+          type: "VENDOR_PAYABLE",
+          currency,
+          status: "ACTIVE",
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          balanceMinor: true,
+        },
+      }),
+
+      tx.account.findFirst({
+        where: {
+          organizationId,
+          type: "SETTLEMENT",
+          currency,
+          status: "ACTIVE",
+          userId: null,
+          vendorId: null,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+        },
+      }),
+    ]);
 
     if (!vendorPayable) {
       throw new Error(
@@ -600,29 +730,25 @@ export class SettlementService {
       );
     }
 
-    const settlementAccount =
-      await accountService.getSettlementAccount(
-        organizationId,
-        currency
-      );
-
     if (!settlementAccount) {
       throw new Error(
         "Settlement account not found for the settlement currency."
       );
     }
 
-    const availableBalance = BigInt(vendorPayable.balanceMinor);
-
     const pendingOtherSettlements =
-      await this.getPendingOtherSettlementAmount(
+      await this.getPendingOtherSettlementAmountWithinTransaction(
+        tx,
         organizationId,
         vendorId,
         currency,
         settlementId
       );
 
-    if (availableBalance < amountMinor + pendingOtherSettlements) {
+    if (
+      vendorPayable.balanceMinor <
+      amountMinor + pendingOtherSettlements
+    ) {
       throw new Error(
         "Vendor payable account does not have sufficient available funds for this settlement."
       );
@@ -634,13 +760,14 @@ export class SettlementService {
     };
   }
 
-  private async getPendingOtherSettlementAmount(
+  private async getPendingOtherSettlementAmountWithinTransaction(
+    tx: FinancialTransactionClient,
     organizationId: string,
     vendorId: string,
     currency: string,
     settlementId: string
   ): Promise<bigint> {
-    const pending = await prisma.settlement.aggregate({
+    const pending = await tx.settlement.aggregate({
       where: {
         id: {
           not: settlementId,
@@ -665,7 +792,9 @@ export class SettlementService {
     return pending._sum.amountMinor ?? BigInt(0);
   }
 
-  private validateCreateInput(input: CreateSettlementInput): void {
+  private validateCreateInput(
+    input: CreateSettlementInput
+  ): void {
     this.validateOrganizationId(input.organizationId);
 
     if (!input.vendorId.trim()) {
@@ -677,7 +806,9 @@ export class SettlementService {
     }
 
     if (input.amountMinor <= BigInt(0)) {
-      throw new Error("Settlement amount must be greater than zero.");
+      throw new Error(
+        "Settlement amount must be greater than zero."
+      );
     }
 
     if (Number.isNaN(input.periodStart.getTime())) {
@@ -699,7 +830,9 @@ export class SettlementService {
     }
   }
 
-  private validateProcessInput(input: ProcessSettlementInput): void {
+  private validateProcessInput(
+    input: ProcessSettlementInput
+  ): void {
     this.validateOrganizationId(input.organizationId);
 
     if (!input.settlementId.trim()) {
@@ -711,7 +844,9 @@ export class SettlementService {
     }
   }
 
-  private validateCompleteInput(input: CompleteSettlementInput): void {
+  private validateCompleteInput(
+    input: CompleteSettlementInput
+  ): void {
     this.validateOrganizationId(input.organizationId);
 
     if (!input.settlementId.trim()) {
@@ -727,7 +862,9 @@ export class SettlementService {
     }
   }
 
-  private validateOrganizationId(organizationId: string): void {
+  private validateOrganizationId(
+    organizationId: string
+  ): void {
     if (!organizationId.trim()) {
       throw new Error("Organization ID is required.");
     }
@@ -737,10 +874,28 @@ export class SettlementService {
     const normalized = currency.trim().toUpperCase();
 
     if (!/^[A-Z]{3}$/.test(normalized)) {
-      throw new Error("Currency must be a valid 3-letter ISO code.");
+      throw new Error(
+        "Currency must be a valid 3-letter ISO code."
+      );
     }
 
     return normalized;
+  }
+
+  private isSerializationConflict(error: unknown): boolean {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError
+    ) {
+      return error.code === "P2034";
+    }
+
+    return false;
+  }
+
+  private async sleep(milliseconds: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, milliseconds);
+    });
   }
 
   private toResult(settlement: {
@@ -771,18 +926,6 @@ export class SettlementService {
       createdAt: settlement.createdAt,
       updatedAt: settlement.updatedAt,
     };
-  }
-
-  private asRecord(value: unknown): Record<string, unknown> | null {
-    if (
-      value !== null &&
-      typeof value === "object" &&
-      !Array.isArray(value)
-    ) {
-      return value as Record<string, unknown>;
-    }
-
-    return null;
   }
 }
 
