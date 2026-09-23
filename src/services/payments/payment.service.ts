@@ -734,4 +734,354 @@ export class PaymentService {
                       userAgent:
                         input.userAgent,
                       correlationId:
-         
+                        input.correlationId,
+                      requestId:
+                        input.requestId,
+                    }
+                  );
+
+                /*
+                 * Link the payment to the captured financial
+                 * transaction before invoking the allocation
+                 * service. The allocation service deliberately
+                 * requires payment.transactionId to identify
+                 * the completed source transaction.
+                 */
+                const linkedPayment =
+                  await database.payment.update({
+                    where: {
+                      id:
+                        currentPayment.id,
+                    },
+                    data: {
+                      transactionId:
+                        externalTransaction.id,
+                    },
+                  });
+
+                await financialAllocationService.allocatePaymentWithinTransaction(
+                  database,
+                  {
+                    organizationId,
+                    paymentId:
+                      linkedPayment.id,
+                    clearingAccountId:
+                      clearingAccount.id,
+                    actorUserId:
+                      input.userId,
+                    correlationId:
+                      input.correlationId,
+                    requestId:
+                      input.requestId,
+                    ipAddress:
+                      input.ipAddress,
+                    userAgent:
+                      input.userAgent,
+                  }
+                );
+
+                const updatedPayment =
+                  await database.payment.update({
+                    where: {
+                      id:
+                        currentPayment.id,
+                    },
+                    data: {
+                      provider:
+                        provider.name,
+                      providerPaymentId:
+                        providerResult.providerPaymentId,
+                      status:
+                        PaymentStatus.COMPLETED,
+                      metadata:
+                        nextMetadata,
+                    },
+                  });
+
+                return {
+                  payment:
+                    updatedPayment,
+                  transaction:
+                    externalTransaction,
+                };
+              },
+              {
+                isolationLevel:
+                  Prisma.TransactionIsolationLevel.Serializable,
+                maxWait: 5000,
+                timeout: 10000,
+              }
+            );
+
+          await this.financialAuditService.recordPayment(
+            {
+              organizationId,
+              actorUserId:
+                input.userId,
+              paymentId:
+                completed.payment.id,
+              action:
+                "PAYMENT_FINANCIAL_CAPTURE_COMPLETED",
+              correlationId:
+                input.correlationId,
+              requestId:
+                input.requestId,
+              ipAddress:
+                input.ipAddress,
+              userAgent:
+                input.userAgent,
+              metadata: {
+                paymentId:
+                  completed.payment.id,
+                transactionId:
+                  completed.transaction.id,
+                clearingAccountId:
+                  clearingAccount.id,
+                amountMinor:
+                  completed.payment.amountMinor.toString(),
+                currency:
+                  completed.payment.currency,
+                provider:
+                  provider.name,
+                providerPaymentId:
+                  providerResult.providerPaymentId,
+              },
+            }
+          );
+
+          return {
+            responseStatus: 200,
+            responseBody:
+              this.toResult(
+                completed.payment
+              ),
+            resourceType:
+              "PAYMENT",
+            resourceId:
+              completed.payment.id,
+          };
+        }
+      );
+
+    return result.responseBody as PaymentResult;
+  }
+
+  async getPayment(
+    userId: string,
+    paymentId: string
+  ): Promise<PaymentResult | null> {
+    if (!userId.trim()) {
+      throw new Error(
+        "User is required."
+      );
+    }
+
+    if (!paymentId.trim()) {
+      throw new Error(
+        "Payment id is required."
+      );
+    }
+
+    const payment =
+      await prisma.payment.findFirst({
+        where: {
+          id: paymentId,
+          order: {
+            userId,
+          },
+        },
+      });
+
+    if (!payment) {
+      return null;
+    }
+
+    return this.toResult(
+      payment
+    );
+  }
+
+  private validateCreateInput(
+    input: CreatePaymentInput
+  ): void {
+    if (!input.userId.trim()) {
+      throw new Error(
+        "User is required."
+      );
+    }
+
+    if (!input.orderId.trim()) {
+      throw new Error(
+        "Order id is required."
+      );
+    }
+
+    if (
+      !input.idempotencyKey.trim()
+    ) {
+      throw new Error(
+        "Idempotency key is required."
+      );
+    }
+  }
+
+  private validateConfirmInput(
+    input: ConfirmPaymentInput
+  ): void {
+    if (!input.userId.trim()) {
+      throw new Error(
+        "User is required."
+      );
+    }
+
+    if (!input.paymentId.trim()) {
+      throw new Error(
+        "Payment id is required."
+      );
+    }
+
+    if (
+      !input.idempotencyKey.trim()
+    ) {
+      throw new Error(
+        "Idempotency key is required."
+      );
+    }
+  }
+
+  private toMinorUnits(
+    amount: string,
+    currency: string
+  ): bigint {
+    const normalized =
+      amount.trim();
+
+    if (
+      !/^\d+(\.\d+)?$/.test(
+        normalized
+      )
+    ) {
+      throw new Error(
+        "Invalid monetary amount."
+      );
+    }
+
+    const [
+      wholePart,
+      fractionPart = "",
+    ] = normalized.split(".");
+
+    if (
+      fractionPart.length > 2
+    ) {
+      const extraDigits =
+        fractionPart.slice(2);
+
+      if (
+        extraDigits.replace(
+          /0/g,
+          ""
+        ).length > 0
+      ) {
+        throw new Error(
+          `Currency ${currency} does not support more than two decimal places for payment capture.`
+        );
+      }
+    }
+
+    const fraction =
+      fractionPart.padEnd(
+        2,
+        "0"
+      );
+
+    return BigInt(
+      `${wholePart}${fraction.slice(
+        0,
+        2
+      )}`
+    );
+  }
+
+  private toJsonValue(
+    value: unknown
+  ): Prisma.InputJsonValue {
+    return JSON.parse(
+      JSON.stringify(value)
+    ) as Prisma.InputJsonValue;
+  }
+
+  private mergeJsonMetadata(
+    current:
+      | Prisma.JsonValue
+      | null,
+    additional: Record<
+      string,
+      unknown
+    >
+  ): Prisma.InputJsonValue {
+    const base =
+      current !== null &&
+      typeof current === "object" &&
+      !Array.isArray(current)
+        ? current
+        : {};
+
+    return this.toJsonValue({
+      ...base,
+      ...additional,
+    });
+  }
+
+  private toResult(
+    payment: {
+      id: string;
+      orderId:
+        | string
+        | null;
+      transactionId:
+        | string
+        | null;
+      amountMinor: bigint;
+      currency: string;
+      status: PaymentStatus;
+      provider:
+        | string
+        | null;
+      providerPaymentId:
+        | string
+        | null;
+      idempotencyKey: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }
+  ): PaymentResult {
+    return {
+      id:
+        payment.id,
+      orderId:
+        payment.orderId,
+      transactionId:
+        payment.transactionId,
+      amountMinor:
+        payment.amountMinor.toString(),
+      currency:
+        payment.currency,
+      status:
+        payment.status,
+      provider:
+        payment.provider,
+      providerPaymentId:
+        payment.providerPaymentId,
+      idempotencyKey:
+        payment.idempotencyKey,
+      createdAt:
+        payment.createdAt,
+      updatedAt:
+        payment.updatedAt,
+    };
+  }
+}
+
+export const paymentService =
+  new PaymentService();
