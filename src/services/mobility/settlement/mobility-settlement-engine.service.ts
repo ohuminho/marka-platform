@@ -293,6 +293,15 @@ export class MobilitySettlementEngineService {
         }
       );
 
+    const responseBody =
+      result.responseBody;
+
+    if (!responseBody) {
+      throw new Error(
+        "Mobility settlement creation did not return a response body."
+      );
+    }
+
     await this.financialAuditService.record({
       organizationId:
         input.organizationId,
@@ -307,7 +316,7 @@ export class MobilitySettlementEngineService {
         "MOBILITY_SETTLEMENT",
 
       entityId:
-        result.responseBody.id,
+        responseBody.id,
 
       correlationId:
         input.correlationId,
@@ -326,14 +335,14 @@ export class MobilitySettlementEngineService {
           input.paymentId,
 
         settlementId:
-          result.responseBody.id,
+          responseBody.id,
 
         source:
           "MOBILITY_SETTLEMENT_ENGINE",
       },
     });
 
-    return result.responseBody as MobilitySettlementResult;
+    return responseBody;
   }
 
   async completeSettlement(
@@ -584,6 +593,15 @@ export class MobilitySettlementEngineService {
         }
       );
 
+    const responseBody =
+      result.responseBody;
+
+    if (!responseBody) {
+      throw new Error(
+        "Mobility settlement cancellation did not return a response body."
+      );
+    }
+
     await this.financialAuditService.record({
       organizationId:
         input.organizationId,
@@ -598,7 +616,7 @@ export class MobilitySettlementEngineService {
         "MOBILITY_SETTLEMENT",
 
       entityId:
-        result.responseBody.id,
+        responseBody.id,
 
       correlationId:
         input.correlationId,
@@ -624,7 +642,7 @@ export class MobilitySettlementEngineService {
       },
     });
 
-    return result.responseBody as MobilitySettlementResult;
+    return responseBody;
   }
 
   async getByPayment(
