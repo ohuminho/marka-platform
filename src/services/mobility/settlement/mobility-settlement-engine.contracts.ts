@@ -1,0 +1,81 @@
+import type {
+  MobilitySettlementResult,
+} from "@/services/mobility/settlement/mobility-settlement-engine.types";
+
+export interface CreateMobilitySettlementInput {
+  organizationId: string;
+  paymentId: string;
+
+  actorUserId?: string;
+  correlationId?: string;
+  requestId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+
+  idempotencyKey: string;
+
+  metadata?: Record<string, unknown>;
+}
+
+export interface CompleteMobilitySettlementInput {
+  organizationId: string;
+  paymentId: string;
+
+  actorUserId?: string;
+  correlationId?: string;
+  requestId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+
+  idempotencyKey: string;
+
+  /**
+   * Required for DIGITAL settlement.
+   *
+   * This represents the confirmed digital proceeds
+   * available for driver settlement.
+   */
+  availableDigitalProceedsMinor?: bigint;
+
+  /**
+   * External/internal source reference proving
+   * the digital proceeds event.
+   */
+  sourceReference?: string;
+
+  metadata?: Record<string, unknown>;
+}
+
+export interface CancelMobilitySettlementInput {
+  organizationId: string;
+  paymentId: string;
+
+  reason: string;
+
+  actorUserId?: string;
+  correlationId?: string;
+  requestId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+
+  idempotencyKey: string;
+}
+
+export interface MobilitySettlementEngineResult {
+  settlement: MobilitySettlementResult;
+
+  paymentStatus:
+    | "PENDING"
+    | "AUTHORIZED"
+    | "COLLECTED"
+    | "SETTLED"
+    | "FAILED"
+    | "CANCELLED"
+    | "REFUNDED"
+    | "DISPUTED";
+
+  cashObligationCreatedMinor: string;
+  cashObligationSettledMinor: string;
+
+  driverNetAmountMinor: string;
+}
