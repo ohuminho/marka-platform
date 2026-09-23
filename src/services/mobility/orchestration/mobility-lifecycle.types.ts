@@ -16,4 +16,35 @@ export type MobilityOrchestrationStep =
   | "TRIP_STARTED"
   | "TRIP_IN_PROGRESS"
   | "TRIP_COMPLETED"
-  | "PAY
+  | "PAYMENT_INITIALIZED"
+  | "FINANCIAL_FINALIZED"
+  | "CANCELLED"
+  | "FAILED"
+  | "RECOVERY_REQUIRED";
+
+export type MobilitySafetyMode =
+  | "STANDARD"
+  | "TRUSTED"
+  | "CHILD";
+
+export type MobilityLifecycleAction =
+  | "REQUEST"
+  | "SAFETY_PRECHECK"
+  | "SEARCH"
+  | "DISPATCH"
+  | "ACCEPT"
+  | "DRIVER_ARRIVING"
+  | "DRIVER_ARRIVED"
+  | "START_TRIP"
+  | "BEGIN_TRIP_PROGRESS"
+  | "COMPLETE"
+  | "CANCEL"
+  | "RETRY_RECOVERY";
+
+export type MobilityLifecycleFailureClass =
+  | "BUSINESS"
+  | "CONCURRENCY"
+  | "VALIDATION"
+  | "DEPENDENCY"
+  | "TRANSIENT"
+  | "UNKNOWN";
