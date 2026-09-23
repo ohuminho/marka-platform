@@ -10,22 +10,17 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
-
-import {
-  IdempotencyService,
-} from "@/core/idempotency/idempotency.service";
+import { IdempotencyService } from "@/core/idempotency/idempotency.service";
 
 import {
   transactionService,
   type FinancialTransactionClient,
 } from "@/services/transactions/transaction.service";
 
-import {
-  splitService,
-} from "@/services/finance/split/split.service";
-
+import { splitService } from "@/services/finance/split/split.service";
 import {
   commissionPolicyService,
+  type CommissionPolicy,
 } from "@/services/finance/commission/commission-policy.service";
 
 export interface AllocatePaymentInput {
@@ -71,10 +66,8 @@ export interface FinancialAllocationResult {
   grossAmountMinor: string;
   vendorAmountMinor: string;
   commissionAmountMinor: string;
-
   policyKey: string;
   policyVersion: number;
-
   allocations: FinancialAllocationItem[];
 }
 
@@ -82,6 +75,41 @@ interface VendorAllocationAccumulator {
   vendorId: string;
   grossAmountMinor: bigint;
   itemIds: string[];
+}
+
+interface PaymentForAllocation {
+  id: string;
+  orderId: string | null;
+  transactionId: string | null;
+  amountMinor: bigint;
+  currency: string;
+  status: string;
+  order: {
+    id: string;
+    userId: string;
+    total: Prisma.Decimal;
+    currency: string;
+    items: Array<{
+      id: string;
+      vendorId: string | null;
+      subtotal: Prisma.Decimal;
+    }>;
+  } | null;
+}
+
+interface ExistingCommission {
+  vendorId: string;
+  amountMinor: bigint;
+  currency: string;
+  rateBps: number;
+  status: CommissionStatus;
+  transactionId: string | null;
+  transaction: {
+    id: string;
+    status: TransactionStatus;
+    amountMinor: bigint;
+    currency: string;
+  } | null;
 }
 
 export class FinancialAllocationService {
@@ -94,24 +122,19 @@ export class FinancialAllocationService {
     this.validateAllocateInput(input);
 
     const requestBody = {
-      organizationId:
-        input.organizationId,
-      paymentId:
-        input.paymentId,
+      organizationId: input.organizationId,
+      paymentId: input.paymentId,
       clearingAccountId:
-        input.clearingAccountId ??
-        null,
+        input.clearingAccountId ?? null,
     };
 
     const result =
       await this.idempotencyService.execute(
         {
-          key:
-            input.idempotencyKey,
+          key: input.idempotencyKey,
           scope:
             `financial.payment-allocation:${input.organizationId}`,
-          userId:
-            input.actorUserId,
+          userId: input.actorUserId,
           requestBody,
         },
         async () => {
@@ -122,13 +145,11 @@ export class FinancialAllocationService {
                   input.clearingAccountId
                     ? await database.account.findUnique({
                         where: {
-                          id:
-                            input.clearingAccountId,
+                          id: input.clearingAccountId,
                         },
                         select: {
                           id: true,
-                          organizationId:
-                            true,
+                          organizationId: true,
                           type: true,
                           currency: true,
                           status: true,
@@ -148,13 +169,11 @@ export class FinancialAllocationService {
                           vendorId: null,
                         },
                         orderBy: {
-                          createdAt:
-                            "asc",
+                          createdAt: "asc",
                         },
                         select: {
                           id: true,
-                          organizationId:
-                            true,
+                          organizationId: true,
                           type: true,
                           currency: true,
                           status: true,
@@ -169,32 +188,10 @@ export class FinancialAllocationService {
                   );
                 }
 
-                if (
-                  clearingAccount.organizationId !==
+                this.validateClearingAccount(
+                  clearingAccount,
                   input.organizationId
-                ) {
-                  throw new Error(
-                    "Clearing account does not belong to the specified organization."
-                  );
-                }
-
-                if (
-                  clearingAccount.type !==
-                  AccountType.CLEARING
-                ) {
-                  throw new Error(
-                    "Specified account is not a clearing account."
-                  );
-                }
-
-                if (
-                  clearingAccount.status !==
-                  AccountStatus.ACTIVE
-                ) {
-                  throw new Error(
-                    "Clearing account is not active."
-                  );
-                }
+                );
 
                 return this.allocatePaymentWithinTransaction(
                   database,
@@ -221,18 +218,14 @@ export class FinancialAllocationService {
               {
                 isolationLevel:
                   Prisma.TransactionIsolationLevel.Serializable,
-                maxWait:
-                  5000,
-                timeout:
-                  10000,
+                maxWait: 5000,
+                timeout: 10000,
               }
             );
 
           return {
-            responseStatus:
-              200,
-            responseBody:
-              allocation,
+            responseStatus: 200,
+            responseBody: allocation,
             resourceType:
               "PAYMENT_FINANCIAL_ALLOCATION",
             resourceId:
@@ -255,38 +248,29 @@ export class FinancialAllocationService {
     const payment =
       await database.payment.findUnique({
         where: {
-          id:
-            input.paymentId,
+          id: input.paymentId,
         },
         select: {
           id: true,
           orderId: true,
-          transactionId:
-            true,
-          amountMinor:
-            true,
-          currency:
-            true,
-          status:
-            true,
+          transactionId: true,
+          amountMinor: true,
+          currency: true,
+          status: true,
           order: {
             select: {
               id: true,
               userId: true,
               total: true,
-              currency:
-                true,
+              currency: true,
               items: {
                 select: {
                   id: true,
-                  vendorId:
-                    true,
-                  subtotal:
-                    true,
+                  vendorId: true,
+                  subtotal: true,
                 },
                 orderBy: {
-                  createdAt:
-                    "asc",
+                  createdAt: "asc",
                 },
               },
             },
@@ -316,14 +300,10 @@ export class FinancialAllocationService {
     }
 
     if (
-      payment.status !==
-        "CREATED" &&
-      payment.status !==
-        "PENDING" &&
-      payment.status !==
-        "PROCESSING" &&
-      payment.status !==
-        "COMPLETED"
+      payment.status !== "CREATED" &&
+      payment.status !== "PENDING" &&
+      payment.status !== "PROCESSING" &&
+      payment.status !== "COMPLETED"
     ) {
       throw new Error(
         `Payment cannot be financially allocated from status ${payment.status}.`
@@ -339,22 +319,17 @@ export class FinancialAllocationService {
     const externalTransaction =
       await database.transaction.findUnique({
         where: {
-          id:
-            payment.transactionId,
+          id: payment.transactionId,
         },
         select: {
           id: true,
           type: true,
           status: true,
           direction: true,
-          amountMinor:
-            true,
-          currency:
-            true,
-          sourceAccountId:
-            true,
-          destinationAccountId:
-            true,
+          amountMinor: true,
+          currency: true,
+          sourceAccountId: true,
+          destinationAccountId: true,
         },
       });
 
@@ -436,6 +411,42 @@ export class FinancialAllocationService {
       );
     }
 
+    const clearingAccount =
+      await database.account.findUnique({
+        where: {
+          id: input.clearingAccountId,
+        },
+        select: {
+          id: true,
+          organizationId: true,
+          type: true,
+          currency: true,
+          status: true,
+          userId: true,
+          vendorId: true,
+        },
+      });
+
+    if (!clearingAccount) {
+      throw new Error(
+        "Clearing account not found."
+      );
+    }
+
+    this.validateClearingAccount(
+      clearingAccount,
+      input.organizationId
+    );
+
+    if (
+      clearingAccount.currency !==
+      payment.currency
+    ) {
+      throw new Error(
+        "Clearing account currency does not match the payment."
+      );
+    }
+
     const policy =
       commissionPolicyService.getMarketplacePolicy();
 
@@ -457,88 +468,25 @@ export class FinancialAllocationService {
             select: {
               id: true,
               status: true,
-              amountMinor:
-                true,
-              currency:
-                true,
+              amountMinor: true,
+              currency: true,
             },
           },
         },
         orderBy: {
-          createdAt:
-            "asc",
+          createdAt: "asc",
         },
       });
 
     if (
-      existingCommissions.length >
-      0
+      existingCommissions.length > 0
     ) {
       return this.buildExistingAllocationResult(
+        database,
         payment,
         vendorAllocations,
         existingCommissions,
         policy
-      );
-    }
-
-    const clearingAccount =
-      await database.account.findUnique({
-        where: {
-          id:
-            input.clearingAccountId,
-        },
-        select: {
-          id: true,
-          organizationId:
-            true,
-          type: true,
-          currency: true,
-          status: true,
-          userId: true,
-          vendorId: true,
-        },
-      });
-
-    if (!clearingAccount) {
-      throw new Error(
-        "Clearing account not found."
-      );
-    }
-
-    if (
-      clearingAccount.organizationId !==
-      input.organizationId
-    ) {
-      throw new Error(
-        "Clearing account does not belong to the specified organization."
-      );
-    }
-
-    if (
-      clearingAccount.type !==
-      AccountType.CLEARING
-    ) {
-      throw new Error(
-        "Allocation source account must be a clearing account."
-      );
-    }
-
-    if (
-      clearingAccount.status !==
-      AccountStatus.ACTIVE
-    ) {
-      throw new Error(
-        "Clearing account must be active."
-      );
-    }
-
-    if (
-      clearingAccount.currency !==
-      payment.currency
-    ) {
-      throw new Error(
-        "Clearing account currency does not match the payment."
       );
     }
 
@@ -590,8 +538,7 @@ export class FinancialAllocationService {
 
       if (
         !vendor ||
-        vendor.status !==
-          "ACTIVE"
+        vendor.status !== "ACTIVE"
       ) {
         throw new Error(
           `Vendor "${vendorId}" is not active for financial allocation.`
@@ -928,7 +875,7 @@ export class FinancialAllocationService {
         actorType:
           input.actorUserId
             ? "USER"
-            : "SERVICE",
+            : "SYSTEM",
         action:
           "FINANCIAL_PAYMENT_ALLOCATED",
         entityType:
@@ -1007,10 +954,8 @@ export class FinancialAllocationService {
         update: {},
         create: {
           organizationId,
-          userId:
-            null,
-          vendorId:
-            null,
+          userId: null,
+          vendorId: null,
           type:
             AccountType.PLATFORM_REVENUE,
           code,
@@ -1021,8 +966,7 @@ export class FinancialAllocationService {
             BigInt(0),
           heldBalanceMinor:
             BigInt(0),
-          version:
-            0,
+          version: 0,
         },
       });
 
@@ -1063,10 +1007,8 @@ export class FinancialAllocationService {
     }
 
     if (
-      account.userId !==
-        null ||
-      account.vendorId !==
-        null
+      account.userId !== null ||
+      account.vendorId !== null
     ) {
       throw new Error(
         "Platform revenue account cannot belong to a user or vendor."
@@ -1093,8 +1035,7 @@ export class FinancialAllocationService {
         update: {},
         create: {
           organizationId,
-          userId:
-            null,
+          userId: null,
           vendorId,
           type:
             AccountType.VENDOR_PAYABLE,
@@ -1106,8 +1047,7 @@ export class FinancialAllocationService {
             BigInt(0),
           heldBalanceMinor:
             BigInt(0),
-          version:
-            0,
+          version: 0,
         },
       });
 
@@ -1162,18 +1102,13 @@ export class FinancialAllocationService {
   private buildVendorAllocations(
     items: Array<{
       id: string;
-      vendorId:
-        | string
-        | null;
+      vendorId: string | null;
       subtotal: Prisma.Decimal;
     }>,
     paymentAmountMinor: bigint,
     currency: string
   ): VendorAllocationAccumulator[] {
-    if (
-      items.length ===
-      0
-    ) {
+    if (items.length === 0) {
       throw new Error(
         "Order contains no financial items."
       );
@@ -1221,6 +1156,7 @@ export class FinancialAllocationService {
       if (current) {
         current.grossAmountMinor +=
           itemAmountMinor;
+
         current.itemIds.push(
           item.id
         );
@@ -1254,43 +1190,19 @@ export class FinancialAllocationService {
     );
   }
 
-  private buildExistingAllocationResult(
-    payment: {
-      id: string;
-      amountMinor: bigint;
-      currency: string;
-      order: {
-        id: string;
-        items: Array<{
-          id: string;
-          vendorId:
-            | string
-            | null;
-          subtotal: Prisma.Decimal;
-        }>;
-      };
-    },
+  private async buildExistingAllocationResult(
+    database: FinancialTransactionClient,
+    payment: PaymentForAllocation,
     vendorAllocations: VendorAllocationAccumulator[],
-    commissions: Array<{
-      vendorId: string;
-      amountMinor: bigint;
-      currency: string;
-      rateBps: number;
-      status: CommissionStatus;
-      transactionId: string | null;
-      transaction: {
-        id: string;
-        status: TransactionStatus;
-        amountMinor: bigint;
-        currency: string;
-      } | null;
-    }>,
-    policy: {
-      key: string;
-      version: number;
-      rateBps: number;
+    commissions: ExistingCommission[],
+    policy: CommissionPolicy
+  ): Promise<FinancialAllocationResult> {
+    if (!payment.order) {
+      throw new Error(
+        "Payment order is required."
+      );
     }
-  ): FinancialAllocationResult {
+
     if (
       commissions.length !==
       vendorAllocations.length
@@ -1301,14 +1213,24 @@ export class FinancialAllocationService {
     }
 
     const byVendor =
-      new Map(
-        commissions.map(
-          (commission) => [
-            commission.vendorId,
-            commission,
-          ]
+      new Map<string, ExistingCommission>();
+
+    for (const commission of commissions) {
+      if (
+        byVendor.has(
+          commission.vendorId
         )
+      ) {
+        throw new Error(
+          "Multiple commission records exist for the same vendor."
+        );
+      }
+
+      byVendor.set(
+        commission.vendorId,
+        commission
       );
+    }
 
     let totalVendorAmountMinor =
       BigInt(0);
@@ -1344,11 +1266,60 @@ export class FinancialAllocationService {
       }
 
       if (
+        commission.rateBps !==
+        policy.rateBps
+      ) {
+        throw new Error(
+          "Existing commission rate does not match the active marketplace policy."
+        );
+      }
+
+      if (
         commission.status !==
         CommissionStatus.ACCRUED
       ) {
         throw new Error(
           "Existing commission is not in the accrued state."
+        );
+      }
+
+      const expectedSplit =
+        splitService.calculateVendorCommission(
+          {
+            amountMinor:
+              vendorAllocation.grossAmountMinor,
+            currency:
+              payment.currency,
+            vendorRateBps:
+              policy.vendorRateBps,
+            markaRateBps:
+              policy.rateBps,
+          }
+        );
+
+      splitService.validateComplete(
+        expectedSplit
+      );
+
+      const expectedCommission =
+        expectedSplit.allocations.find(
+          (allocation) =>
+            allocation.role ===
+            "PLATFORM_REVENUE"
+        );
+
+      if (!expectedCommission) {
+        throw new Error(
+          "Existing financial split does not contain a platform revenue allocation."
+        );
+      }
+
+      if (
+        commission.amountMinor !==
+        expectedCommission.amountMinor
+      ) {
+        throw new Error(
+          "Existing commission amount does not match the marketplace policy."
         );
       }
 
@@ -1373,6 +1344,15 @@ export class FinancialAllocationService {
             "Existing commission transaction amount does not match the commission."
           );
         }
+
+        if (
+          commission.transaction.currency !==
+          commission.currency
+        ) {
+          throw new Error(
+            "Existing commission transaction currency does not match the commission."
+          );
+        }
       }
 
       const vendorAmountMinor =
@@ -1388,23 +1368,24 @@ export class FinancialAllocationService {
         );
       }
 
+      const vendorTransactionId =
+        await this.findExistingVendorTransactionId(
+          database,
+          payment.id,
+          vendorAllocation.vendorId
+        );
+
+      if (!vendorTransactionId) {
+        throw new Error(
+          "Existing vendor allocation transaction could not be found."
+        );
+      }
+
       totalVendorAmountMinor +=
         vendorAmountMinor;
 
       totalCommissionAmountMinor +=
         commission.amountMinor;
-
-      const vendorTransaction =
-        this.findExistingVendorTransactionId(
-          payment,
-          vendorAllocation.vendorId
-        );
-
-      if (!vendorTransaction) {
-        throw new Error(
-          "Existing vendor allocation transaction could not be found."
-        );
-      }
 
       allocations.push({
         vendorId:
@@ -1417,8 +1398,7 @@ export class FinancialAllocationService {
           commission.amountMinor.toString(),
         commissionRateBps:
           commission.rateBps,
-        vendorTransactionId:
-          vendorTransaction,
+        vendorTransactionId,
         commissionTransactionId:
           commission.transactionId,
       });
@@ -1453,38 +1433,67 @@ export class FinancialAllocationService {
         policy.version,
       allocations,
     };
-      }
+  }
+
+  private async findExistingVendorTransactionId(
+    database: FinancialTransactionClient,
+    paymentId: string,
+    vendorId: string
+  ): Promise<string | null> {
+    const transaction =
+      await database.transaction.findUnique({
+        where: {
+          reference:
+            `PAYMENT-VENDOR-${paymentId}-${vendorId}`,
+        },
+        select: {
+          id: true,
+          status: true,
+          type: true,
+          direction: true,
+          amountMinor: true,
+          currency: true,
+        },
+      });
+
+    if (!transaction) {
+      return null;
+    }
+
+    if (
+      transaction.status !==
+      TransactionStatus.COMPLETED
+    ) {
+      throw new Error(
+        "Existing vendor allocation transaction is not completed."
+      );
+    }
+
+    if (
+      transaction.type !==
+      TransactionType.PAYMENT
+    ) {
+      throw new Error(
+        "Existing vendor allocation transaction has an invalid type."
+      );
+    }
+
+    if (
+      transaction.direction !==
+      TransactionDirection.DEBIT
+    ) {
+      throw new Error(
+        "Existing vendor allocation transaction has an invalid direction."
+      );
+    }
+
+    return transaction.id;
+  }
+
   private toMinorUnits(
     amount: string,
     currency: string
-  ): bigin
-  
-private async findExistingVendorTransactionId(
-  database: FinancialTransactionClient,
-  paymentId: string,
-  vendorId: string
-): Promise<string | null> {
-  const transaction =
-    await database.transaction.findFirst({
-      where: {
-        orderId: {
-          not: null,
-        },
-        vendorId,
-        reference:
-          `PAYMENT-VENDOR-${paymentId}-${vendorId}`,
-        type:
-          TransactionType.PAYMENT,
-        status:
-          TransactionStatus.COMPLETED,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-  return transaction?.id ?? null;
-      } {
+  ): bigint {
     const normalized =
       amount.trim();
 
@@ -1505,8 +1514,7 @@ private async findExistingVendorTransactionId(
       normalized.split(".");
 
     if (
-      fractionPart.length >
-      2
+      fractionPart.length > 2
     ) {
       const extraDigits =
         fractionPart.slice(2);
@@ -1515,8 +1523,7 @@ private async findExistingVendorTransactionId(
         extraDigits.replace(
           /0/g,
           ""
-        ).length >
-        0
+        ).length > 0
       ) {
         throw new Error(
           `Currency ${currency} contains more than two non-zero decimal places.`
@@ -1544,6 +1551,55 @@ private async findExistingVendorTransactionId(
     return JSON.parse(
       JSON.stringify(value)
     ) as Prisma.InputJsonValue;
+  }
+
+  private validateClearingAccount(
+    account: {
+      id: string;
+      organizationId: string;
+      type: AccountType;
+      currency: string;
+      status: AccountStatus;
+      userId: string | null;
+      vendorId: string | null;
+    },
+    organizationId: string
+  ): void {
+    if (
+      account.organizationId !==
+      organizationId
+    ) {
+      throw new Error(
+        "Clearing account does not belong to the specified organization."
+      );
+    }
+
+    if (
+      account.type !==
+      AccountType.CLEARING
+    ) {
+      throw new Error(
+        "Specified account is not a clearing account."
+      );
+    }
+
+    if (
+      account.status !==
+      AccountStatus.ACTIVE
+    ) {
+      throw new Error(
+        "Clearing account is not active."
+      );
+    }
+
+    if (
+      account.userId !== null ||
+      account.vendorId !== null
+    ) {
+      throw new Error(
+        "Clearing account cannot belong to a user or vendor."
+      );
+    }
   }
 
   private validateAllocateInput(
