@@ -1797,11 +1797,15 @@ export class MobilitySafetyService {
     });
   }
 
-  private isVehicleVerified(
-    verifications: Array<{
+  private isVehicleVerified<
+    T extends {
+      documentType: string;
+      createdAt: Date;
       status: string;
       documentExpiry: Date | null;
-    }>
+    }
+  >(
+    verifications: T[]
   ): boolean {
     const latest =
       this.latestVerificationByDocument(
