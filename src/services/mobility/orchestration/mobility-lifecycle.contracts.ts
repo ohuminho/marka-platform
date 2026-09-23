@@ -36,43 +36,74 @@ export interface InitializeMobilityLifecycleInput {
   ipAddress?: string;
   userAgent?: string;
 
+  safetyMode?: MobilitySafetyMode;
+
   metadata?: Record<string, unknown>;
 }
 
 export interface MobilityLifecycleActionInput
   extends MobilityLifecycleContext {
   action: MobilityLifecycleAction;
+
+  reason?: string;
+}
+
+export interface MobilityLifecycleInitializeFinancialsInput
+  extends MobilityLifecycleContext {
+  action: "INITIALIZE_FINANCIALS";
+
+  estimatedFareMinor: bigint;
+
+  finalFareMinor?: bigint;
+
+  paymentMethod:
+    | "CASH"
+    | "DIGITAL";
+
+  pricingSnapshot?: Record<string, unknown>;
 }
 
 export interface MobilityLifecycleCompleteInput
   extends MobilityLifecycleContext {
   action: "COMPLETE";
 
+  estimatedFareMinor: bigint;
+
   finalFareMinor: bigint;
 
-  paymentMethod: "CASH" | "DIGITAL";
-
-  estimatedFareMinor?: bigint;
+  paymentMethod:
+    | "CASH"
+    | "DIGITAL";
 
   availableDigitalProceedsMinor?: bigint;
 
   sourceReference?: string;
 
   paymentIdempotencyKey: string;
+
   settlementIdempotencyKey: string;
+
   settlementCompletionIdempotencyKey: string;
 
   pricingSnapshot?: Record<string, unknown>;
 }
 
+export type MobilityLifecycleExecuteInput =
+  | MobilityLifecycleActionInput
+  | MobilityLifecycleInitializeFinancialsInput
+  | MobilityLifecycleCompleteInput;
+
 export interface MobilityLifecycleResult {
   orchestrationId: string;
+
   rideId: string;
 
   status: string;
+
   currentStep: string;
 
   version: number;
+
   attemptCount: number;
 
   action: MobilityLifecycleAction;
