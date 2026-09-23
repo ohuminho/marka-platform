@@ -839,9 +839,15 @@ export class TransactionService {
             },
             select: {
               id: true,
+              reference: true,
               status: true,
+              type: true,
+              direction: true,
               amountMinor: true,
               currency: true,
+              sourceAccountId: true,
+              destinationAccountId: true,
+              completedAt: true,
             },
           });
 
