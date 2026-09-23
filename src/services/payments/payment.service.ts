@@ -6,29 +6,17 @@ import {
 
 import { prisma } from "@/database/client/prisma";
 
-import {
-  FinancialAuditService,
-} from "@/core/audit/financial-audit.service";
+import { FinancialAuditService } from "@/core/audit/financial-audit.service";
 
-import {
-  IdempotencyService,
-} from "@/core/idempotency/idempotency.service";
+import { IdempotencyService } from "@/core/idempotency/idempotency.service";
 
-import {
-  accountService,
-} from "@/services/accounts/account.service";
+import { accountService } from "@/services/accounts/account.service";
 
-import {
-  financialAllocationService,
-} from "@/services/finance/allocation/financial-allocation.service";
+import { financialAllocationService } from "@/services/finance/allocation/financial-allocation.service";
 
-import {
-  transactionService,
-} from "@/services/transactions/transaction.service";
+import { transactionService } from "@/services/transactions/transaction.service";
 
-import {
-  paymentProviderRegistry,
-} from "./providers/payment-provider.registry";
+import { paymentProviderRegistry } from "./providers/payment-provider.registry";
 
 export interface CreatePaymentInput {
   userId: string;
@@ -70,8 +58,7 @@ export interface PaymentResult {
 }
 
 export class PaymentService {
-  private readonly idempotencyService =
-    new IdempotencyService();
+  private readonly idempotencyService = new IdempotencyService();
 
   private readonly financialAuditService =
     new FinancialAuditService();
@@ -104,8 +91,7 @@ export class PaymentService {
       );
     }
 
-    const organizationId =
-      membership.organizationId;
+    const organizationId = membership.organizationId;
 
     const normalizedProvider =
       input.provider?.trim().toUpperCase();
@@ -113,10 +99,8 @@ export class PaymentService {
     const requestBody = {
       userId: input.userId,
       orderId: input.orderId,
-      provider:
-        normalizedProvider ?? null,
-      metadata:
-        input.metadata ?? null,
+      provider: normalizedProvider ?? null,
+      metadata: input.metadata ?? null,
     };
 
     const result =
@@ -125,8 +109,7 @@ export class PaymentService {
           key: input.idempotencyKey,
           scope:
             `payment.intent.create:${organizationId}:${input.userId}`,
-          userId:
-            input.userId,
+          userId: input.userId,
           requestBody,
         },
         async () => {
@@ -155,10 +138,8 @@ export class PaymentService {
                 }
 
                 if (
-                  order.status ===
-                    "CANCELLED" ||
-                  order.status ===
-                    "REFUNDED"
+                  order.status === "CANCELLED" ||
+                  order.status === "REFUNDED"
                 ) {
                   throw new Error(
                     "This order cannot receive a payment."
@@ -168,8 +149,7 @@ export class PaymentService {
                 const activePayment =
                   await database.payment.findFirst({
                     where: {
-                      orderId:
-                        order.id,
+                      orderId: order.id,
                       status: {
                         in: [
                           "CREATED",
@@ -179,8 +159,7 @@ export class PaymentService {
                       },
                     },
                     orderBy: {
-                      createdAt:
-                        "desc",
+                      createdAt: "desc",
                     },
                   });
 
@@ -198,75 +177,50 @@ export class PaymentService {
 
                 const paymentData: Prisma.PaymentUncheckedCreateInput =
                   {
-                    orderId:
-                      order.id,
+                    orderId: order.id,
                     amountMinor,
-                    currency:
-                      order.currency,
-                    status:
-                      PaymentStatus.CREATED,
-                    provider:
-                      normalizedProvider,
+                    currency: order.currency,
+                    status: PaymentStatus.CREATED,
+                    provider: normalizedProvider,
                     idempotencyKey:
                       input.idempotencyKey,
-                    metadata:
-                      input.metadata
-                        ? this.toJsonValue(
-                            input.metadata
-                          )
-                        : undefined,
+                    metadata: input.metadata
+                      ? this.toJsonValue(
+                          input.metadata
+                        )
+                      : undefined,
                   };
 
-                const created =
-                  await database.payment.create({
-                    data:
-                      paymentData,
-                  });
-
-                return created;
+                return database.payment.create({
+                  data: paymentData,
+                });
               }
             );
 
-          await this.financialAuditService.recordPayment(
-            {
-              organizationId,
-              actorUserId:
-                input.userId,
-              paymentId:
-                payment.id,
-              action:
-                "PAYMENT_INTENT_CREATED",
-              correlationId:
-                input.correlationId,
-              requestId:
-                input.requestId,
-              ipAddress:
-                input.ipAddress,
-              userAgent:
-                input.userAgent,
-              metadata: {
-                paymentId:
-                  payment.id,
-                orderId:
-                  payment.orderId,
-                amountMinor:
-                  payment.amountMinor.toString(),
-                currency:
-                  payment.currency,
-                provider:
-                  payment.provider,
-              },
-            }
-          );
+          await this.financialAuditService.recordPayment({
+            organizationId,
+            actorUserId: input.userId,
+            paymentId: payment.id,
+            action: "PAYMENT_INTENT_CREATED",
+            correlationId: input.correlationId,
+            requestId: input.requestId,
+            ipAddress: input.ipAddress,
+            userAgent: input.userAgent,
+            metadata: {
+              paymentId: payment.id,
+              orderId: payment.orderId,
+              amountMinor:
+                payment.amountMinor.toString(),
+              currency: payment.currency,
+              provider: payment.provider,
+            },
+          });
 
           return {
             responseStatus: 201,
-            responseBody:
-              this.toResult(payment),
-            resourceType:
-              "PAYMENT",
-            resourceId:
-              payment.id,
+            responseBody: this.toResult(payment),
+            resourceType: "PAYMENT",
+            resourceId: payment.id,
           };
         }
       );
@@ -295,37 +249,27 @@ export class PaymentService {
       });
 
     if (!payment) {
-      throw new Error(
-        "Payment not found."
-      );
+      throw new Error("Payment not found.");
     }
 
     if (
       !payment.order ||
-      payment.order.userId !==
-        input.userId
+      payment.order.userId !== input.userId
     ) {
-      throw new Error(
-        "Payment not found."
-      );
+      throw new Error("Payment not found.");
     }
 
     if (
       payment.status ===
       PaymentStatus.COMPLETED
     ) {
-      return this.toResult(
-        payment
-      );
+      return this.toResult(payment);
     }
 
     if (
-      payment.status ===
-        PaymentStatus.CANCELLED ||
-      payment.status ===
-        PaymentStatus.REFUNDED ||
-      payment.status ===
-        PaymentStatus.FAILED
+      payment.status === PaymentStatus.CANCELLED ||
+      payment.status === PaymentStatus.REFUNDED ||
+      payment.status === PaymentStatus.FAILED
     ) {
       throw new Error(
         "This payment can no longer be confirmed."
@@ -333,9 +277,7 @@ export class PaymentService {
     }
 
     const providerName =
-      input.provider
-        ?.trim()
-        .toUpperCase() ??
+      input.provider?.trim().toUpperCase() ??
       payment.provider;
 
     if (!providerName) {
@@ -345,13 +287,10 @@ export class PaymentService {
     }
 
     const provider =
-      paymentProviderRegistry.get(
-        providerName
-      );
+      paymentProviderRegistry.get(providerName);
 
     const providerPaymentId =
-      input.providerPaymentId
-        ?.trim() ??
+      input.providerPaymentId?.trim() ??
       payment.providerPaymentId;
 
     if (!providerPaymentId) {
@@ -386,34 +325,18 @@ export class PaymentService {
     const organizationId =
       membership.organizationId;
 
-    /*
-     * The clearing account is the internal recognition
-     * point for funds confirmed by an external provider.
-     *
-     * We provision it before the financial transaction.
-     * The account itself remains an internal MARKA account;
-     * no customer wallet is fabricated for external money.
-     */
     const clearingAccount =
-      await accountService.ensureClearingAccount(
-        {
-          organizationId,
-          currency:
-            payment.currency,
-          actorUserId:
-            input.userId,
-          correlationId:
-            input.correlationId,
-          requestId:
-            input.requestId,
-        }
-      );
+      await accountService.ensureClearingAccount({
+        organizationId,
+        currency: payment.currency,
+        actorUserId: input.userId,
+        correlationId: input.correlationId,
+        requestId: input.requestId,
+      });
 
     const requestBody = {
-      paymentId:
-        input.paymentId,
-      provider:
-        provider.name,
+      paymentId: input.paymentId,
+      provider: provider.name,
       providerPaymentId,
     };
 
@@ -423,39 +346,24 @@ export class PaymentService {
           key: input.idempotencyKey,
           scope:
             `payment.confirm:${organizationId}:${input.userId}`,
-          userId:
-            input.userId,
+          userId: input.userId,
           requestBody,
         },
         async () => {
-          /*
-           * Provider confirmation is deliberately outside
-           * the database transaction. External calls must
-           * never hold a database transaction open.
-           */
           const providerResult =
             await provider.confirm({
-              paymentId:
-                payment.id,
+              paymentId: payment.id,
               providerPaymentId,
-              amountMinor:
-                payment.amountMinor,
-              currency:
-                payment.currency,
-              orderId:
-                payment.orderId!,
-              customerId:
-                input.userId,
-              metadata:
-                input.metadata,
+              amountMinor: payment.amountMinor,
+              currency: payment.currency,
+              orderId: payment.orderId!,
+              customerId: input.userId,
+              metadata: input.metadata,
             });
 
-          let nextStatus:
-            PaymentStatus;
+          let nextStatus: PaymentStatus;
 
-          switch (
-            providerResult.status
-          ) {
+          switch (providerResult.status) {
             case "COMPLETED":
               nextStatus =
                 PaymentStatus.COMPLETED;
@@ -498,10 +406,6 @@ export class PaymentService {
                 )
               : undefined;
 
-          /*
-           * Non-completed provider states do not create
-           * financial funds inside MARKA.
-           */
           if (
             nextStatus !==
             PaymentStatus.COMPLETED
@@ -509,74 +413,64 @@ export class PaymentService {
             const updated =
               await prisma.payment.update({
                 where: {
-                  id:
-                    payment.id,
+                  id: payment.id,
                 },
                 data: {
-                  provider:
-                    provider.name,
+                  provider: provider.name,
                   providerPaymentId:
                     providerResult.providerPaymentId,
-                  status:
-                    nextStatus,
-                  metadata:
-                    nextMetadata,
+                  status: nextStatus,
+                  metadata: nextMetadata,
                 },
               });
 
-            await this.financialAuditService.recordPayment(
-              {
-                organizationId,
-                actorUserId:
-                  input.userId,
-                paymentId:
-                  payment.id,
-                action:
-                  `PAYMENT_PROVIDER_${nextStatus}`,
-                correlationId:
-                  input.correlationId,
-                requestId:
-                  input.requestId,
-                ipAddress:
-                  input.ipAddress,
-                userAgent:
-                  input.userAgent,
-                metadata: {
-                  provider:
-                    provider.name,
-                  providerPaymentId:
-                    providerResult.providerPaymentId,
-                  paymentStatus:
-                    nextStatus,
-                },
-              }
-            );
+            await this.financialAuditService.recordPayment({
+              organizationId,
+              actorUserId: input.userId,
+              paymentId: payment.id,
+              action:
+                `PAYMENT_PROVIDER_${nextStatus}`,
+              correlationId: input.correlationId,
+              requestId: input.requestId,
+              ipAddress: input.ipAddress,
+              userAgent: input.userAgent,
+              metadata: {
+                provider: provider.name,
+                providerPaymentId:
+                  providerResult.providerPaymentId,
+                paymentStatus: nextStatus,
+              },
+            });
 
             return {
               responseStatus: 200,
               responseBody:
-                this.toResult(
-                  updated
-                ),
-              resourceType:
-                "PAYMENT",
-              resourceId:
-                updated.id,
+                this.toResult(updated),
+              resourceType: "PAYMENT",
+              resourceId: updated.id,
             };
           }
 
           /*
-           * COMPLETED:
+           * COMPLETED FINANCIAL FLOW
            *
-           * 1. External provider has confirmed the money.
-           * 2. MARKA recognizes it in CLEARING.
-           * 3. The captured funds are allocated atomically
-           *    into vendor payable and MARKA revenue.
-           * 4. Commission is accrued from the same financial
-           *    allocation.
+           * External provider
+           *        ↓
+           * Payment
+           *        ↓
+           * External CREDIT transaction
+           *        ↓
+           * CLEARING
+           *        ↓
+           * FinancialAllocationService
+           *        ↓
+           * Vendor Payable + MARKA Revenue
+           *        ↓
+           * Commission ACCRUED
            *
-           * All internal financial mutations occur inside
-           * one serializable database transaction.
+           * The capture and the allocation are committed
+           * atomically inside the same Serializable
+           * transaction.
            */
           const completed =
             await prisma.$transaction(
@@ -584,20 +478,15 @@ export class PaymentService {
                 const currentPayment =
                   await database.payment.findUnique({
                     where: {
-                      id:
-                        payment.id,
+                      id: payment.id,
                     },
                     select: {
                       id: true,
                       orderId: true,
-                      transactionId:
-                        true,
-                      amountMinor:
-                        true,
-                      currency:
-                        true,
-                      status:
-                        true,
+                      transactionId: true,
+                      amountMinor: true,
+                      currency: true,
+                      status: true,
                     },
                   });
 
@@ -607,6 +496,15 @@ export class PaymentService {
                   );
                 }
 
+                /*
+                 * Recovery/idempotency path.
+                 *
+                 * If the payment already points to a
+                 * completed capture transaction, do not
+                 * create another capture. The allocation
+                 * service is responsible for validating
+                 * and safely completing/reusing allocation.
+                 */
                 if (
                   currentPayment.transactionId
                 ) {
@@ -618,23 +516,12 @@ export class PaymentService {
                       },
                     });
 
-                  if (
-                    !existingTransaction
-                  ) {
+                  if (!existingTransaction) {
                     throw new Error(
                       "Payment references a missing financial transaction."
                     );
                   }
 
-                  /*
-                   * Recovery/idempotency path:
-                   *
-                   * A previous attempt may already have
-                   * created the capture transaction. The
-                   * allocation service is itself idempotent
-                   * and validates the existing financial
-                   * state before returning the allocation.
-                   */
                   await financialAllocationService.allocatePaymentWithinTransaction(
                     database,
                     {
@@ -693,6 +580,11 @@ export class PaymentService {
                   );
                 }
 
+                /*
+                 * Step 1:
+                 * Recognize the external provider
+                 * funds inside MARKA CLEARING.
+                 */
                 const externalTransaction =
                   await transactionService.createExternalCreditWithinTransaction(
                     database,
@@ -700,8 +592,7 @@ export class PaymentService {
                       organizationId,
                       idempotencyKey:
                         `PAYMENT-CAPTURE-${currentPayment.id}`,
-                      type:
-                        "PAYMENT",
+                      type: "PAYMENT",
                       amountMinor:
                         currentPayment.amountMinor,
                       currency:
@@ -741,11 +632,12 @@ export class PaymentService {
                   );
 
                 /*
-                 * Link the payment to the captured financial
-                 * transaction before invoking the allocation
-                 * service. The allocation service deliberately
-                 * requires payment.transactionId to identify
-                 * the completed source transaction.
+                 * Step 2:
+                 * Link the Payment to the capture
+                 * transaction before allocation.
+                 *
+                 * FinancialAllocationService requires
+                 * this relationship as its source of truth.
                  */
                 const linkedPayment =
                   await database.payment.update({
@@ -759,6 +651,12 @@ export class PaymentService {
                     },
                   });
 
+                /*
+                 * Step 3:
+                 * Allocate the completed payment from
+                 * CLEARING to vendor payable and MARKA
+                 * revenue, including commission accrual.
+                 */
                 await financialAllocationService.allocatePaymentWithinTransaction(
                   database,
                   {
@@ -780,6 +678,12 @@ export class PaymentService {
                   }
                 );
 
+                /*
+                 * Step 4:
+                 * Only after capture and allocation have
+                 * succeeded do we mark the payment
+                 * COMPLETED.
+                 */
                 const updatedPayment =
                   await database.payment.update({
                     where: {
@@ -813,41 +717,33 @@ export class PaymentService {
               }
             );
 
-          await this.financialAuditService.recordPayment(
-            {
-              organizationId,
-              actorUserId:
-                input.userId,
+          await this.financialAuditService.recordPayment({
+            organizationId,
+            actorUserId: input.userId,
+            paymentId:
+              completed.payment.id,
+            action:
+              "PAYMENT_FINANCIAL_CAPTURE_COMPLETED",
+            correlationId: input.correlationId,
+            requestId: input.requestId,
+            ipAddress: input.ipAddress,
+            userAgent: input.userAgent,
+            metadata: {
               paymentId:
                 completed.payment.id,
-              action:
-                "PAYMENT_FINANCIAL_CAPTURE_COMPLETED",
-              correlationId:
-                input.correlationId,
-              requestId:
-                input.requestId,
-              ipAddress:
-                input.ipAddress,
-              userAgent:
-                input.userAgent,
-              metadata: {
-                paymentId:
-                  completed.payment.id,
-                transactionId:
-                  completed.transaction.id,
-                clearingAccountId:
-                  clearingAccount.id,
-                amountMinor:
-                  completed.payment.amountMinor.toString(),
-                currency:
-                  completed.payment.currency,
-                provider:
-                  provider.name,
-                providerPaymentId:
-                  providerResult.providerPaymentId,
-              },
-            }
-          );
+              transactionId:
+                completed.transaction.id,
+              clearingAccountId:
+                clearingAccount.id,
+              amountMinor:
+                completed.payment.amountMinor.toString(),
+              currency:
+                completed.payment.currency,
+              provider: provider.name,
+              providerPaymentId:
+                providerResult.providerPaymentId,
+            },
+          });
 
           return {
             responseStatus: 200,
@@ -855,8 +751,7 @@ export class PaymentService {
               this.toResult(
                 completed.payment
               ),
-            resourceType:
-              "PAYMENT",
+            resourceType: "PAYMENT",
             resourceId:
               completed.payment.id,
           };
@@ -871,9 +766,7 @@ export class PaymentService {
     paymentId: string
   ): Promise<PaymentResult | null> {
     if (!userId.trim()) {
-      throw new Error(
-        "User is required."
-      );
+      throw new Error("User is required.");
     }
 
     if (!paymentId.trim()) {
@@ -896,18 +789,14 @@ export class PaymentService {
       return null;
     }
 
-    return this.toResult(
-      payment
-    );
+    return this.toResult(payment);
   }
 
   private validateCreateInput(
     input: CreatePaymentInput
   ): void {
     if (!input.userId.trim()) {
-      throw new Error(
-        "User is required."
-      );
+      throw new Error("User is required.");
     }
 
     if (!input.orderId.trim()) {
@@ -916,9 +805,7 @@ export class PaymentService {
       );
     }
 
-    if (
-      !input.idempotencyKey.trim()
-    ) {
+    if (!input.idempotencyKey.trim()) {
       throw new Error(
         "Idempotency key is required."
       );
@@ -929,9 +816,7 @@ export class PaymentService {
     input: ConfirmPaymentInput
   ): void {
     if (!input.userId.trim()) {
-      throw new Error(
-        "User is required."
-      );
+      throw new Error("User is required.");
     }
 
     if (!input.paymentId.trim()) {
@@ -940,9 +825,7 @@ export class PaymentService {
       );
     }
 
-    if (
-      !input.idempotencyKey.trim()
-    ) {
+    if (!input.idempotencyKey.trim()) {
       throw new Error(
         "Idempotency key is required."
       );
@@ -953,8 +836,7 @@ export class PaymentService {
     amount: string,
     currency: string
   ): bigint {
-    const normalized =
-      amount.trim();
+    const normalized = amount.trim();
 
     if (
       !/^\d+(\.\d+)?$/.test(
@@ -971,9 +853,7 @@ export class PaymentService {
       fractionPart = "",
     ] = normalized.split(".");
 
-    if (
-      fractionPart.length > 2
-    ) {
+    if (fractionPart.length > 2) {
       const extraDigits =
         fractionPart.slice(2);
 
@@ -990,10 +870,7 @@ export class PaymentService {
     }
 
     const fraction =
-      fractionPart.padEnd(
-        2,
-        "0"
-      );
+      fractionPart.padEnd(2, "0");
 
     return BigInt(
       `${wholePart}${fraction.slice(
@@ -1036,18 +913,12 @@ export class PaymentService {
   private toResult(
     payment: {
       id: string;
-      orderId:
-        | string
-        | null;
-      transactionId:
-        | string
-        | null;
+      orderId: string | null;
+      transactionId: string | null;
       amountMinor: bigint;
       currency: string;
       status: PaymentStatus;
-      provider:
-        | string
-        | null;
+      provider: string | null;
       providerPaymentId:
         | string
         | null;
@@ -1057,28 +928,21 @@ export class PaymentService {
     }
   ): PaymentResult {
     return {
-      id:
-        payment.id,
-      orderId:
-        payment.orderId,
+      id: payment.id,
+      orderId: payment.orderId,
       transactionId:
         payment.transactionId,
       amountMinor:
         payment.amountMinor.toString(),
-      currency:
-        payment.currency,
-      status:
-        payment.status,
-      provider:
-        payment.provider,
+      currency: payment.currency,
+      status: payment.status,
+      provider: payment.provider,
       providerPaymentId:
         payment.providerPaymentId,
       idempotencyKey:
         payment.idempotencyKey,
-      createdAt:
-        payment.createdAt,
-      updatedAt:
-        payment.updatedAt,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
     };
   }
 }
