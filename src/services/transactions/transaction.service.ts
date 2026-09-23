@@ -470,36 +470,46 @@ export class TransactionService {
         data: {
           idempotencyKey:
             input.idempotencyKey,
+
           type:
             input.type,
+
           direction:
             input.direction,
+
           status:
             TransactionStatus.PROCESSING,
 
           amountMinor:
             input.amountMinor,
+
           currency:
             input.currency,
 
           actorUserId:
             input.actorUserId,
+
           actorType:
             input.actorType ??
             TransactionActorType.SYSTEM,
 
           sourceAccountId:
             input.sourceAccountId,
+
           destinationAccountId:
             input.destinationAccountId,
 
           reference,
+
           referenceType:
             input.referenceType,
+
           orderId:
             input.orderId,
+
           vendorId:
             input.vendorId,
+
           context:
             input.context,
 
@@ -805,14 +815,72 @@ export class TransactionService {
         );
       }
 
+      /*
+       * transactionId and paymentId are different
+       * entity identifiers. A payment is already linked
+       * only when transactionId contains an existing
+       * transaction reference.
+       *
+       * The old implementation compared:
+       *
+       *   payment.transactionId !== input.paymentId
+       *
+       * which is semantically invalid and could reject
+       * legitimate captures.
+       */
       if (
-        payment.transactionId &&
-        payment.transactionId !==
-          input.paymentId
+        payment.transactionId
       ) {
-        throw new Error(
-          "Payment is already linked to a financial transaction."
-        );
+        const existingPaymentTransaction =
+          await database.transaction.findUnique({
+            where: {
+              id:
+                payment.transactionId,
+            },
+            select: {
+              id: true,
+              status: true,
+              amountMinor: true,
+              currency: true,
+            },
+          });
+
+        if (
+          !existingPaymentTransaction
+        ) {
+          throw new Error(
+            "Payment references a missing financial transaction."
+          );
+        }
+
+        if (
+          existingPaymentTransaction.status !==
+          TransactionStatus.COMPLETED
+        ) {
+          throw new Error(
+            "Payment is already linked to a financial transaction that is not completed."
+          );
+        }
+
+        if (
+          existingPaymentTransaction.amountMinor !==
+          input.amountMinor
+        ) {
+          throw new Error(
+            "Existing payment transaction amount does not match the external credit."
+          );
+        }
+
+        if (
+          existingPaymentTransaction.currency !==
+          input.currency
+        ) {
+          throw new Error(
+            "Existing payment transaction currency does not match the external credit."
+          );
+        }
+
+        return existingPaymentTransaction;
       }
 
       if (
