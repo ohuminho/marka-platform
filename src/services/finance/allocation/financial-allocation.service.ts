@@ -1453,33 +1453,38 @@ export class FinancialAllocationService {
         policy.version,
       allocations,
     };
-  }
-
-  private findExistingVendorTransactionId(
-    payment: {
-      id: string;
-    },
-    vendorId: string
-  ): string | null {
-    /*
-     * This helper is intentionally conservative.
-     * Existing allocation recovery is only used when
-     * the commission record already exists.
-     *
-     * The transaction ID is recovered through the
-     * deterministic reference in the database by the
-     * caller's transaction client in the creation path.
-     *
-     * A null result is rejected by the caller rather
-     * than guessing an unrelated transaction.
-     */
-    return null;
-  }
-
+      }
   private toMinorUnits(
     amount: string,
     currency: string
-  ): bigint {
+  ): bigin
+  
+private async findExistingVendorTransactionId(
+  database: FinancialTransactionClient,
+  paymentId: string,
+  vendorId: string
+): Promise<string | null> {
+  const transaction =
+    await database.transaction.findFirst({
+      where: {
+        orderId: {
+          not: null,
+        },
+        vendorId,
+        reference:
+          `PAYMENT-VENDOR-${paymentId}-${vendorId}`,
+        type:
+          TransactionType.PAYMENT,
+        status:
+          TransactionStatus.COMPLETED,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  return transaction?.id ?? null;
+      } {
     const normalized =
       amount.trim();
 
