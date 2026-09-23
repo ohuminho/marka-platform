@@ -79,7 +79,19 @@ export function canTransitionRideStatus(
   currentStatus: MobilityRideStatus,
   nextStatus: MobilityRideStatus
 ): boolean {
-  return allowedTransitions[currentStatus].includes(nextStatus);
+  const transitions = allowedTransitions[currentStatus];
+
+  if (!transitions) {
+    return false;
+  }
+
+  for (const allowedStatus of transitions) {
+    if (allowedStatus === nextStatus) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function transitionRideStatus(
@@ -106,26 +118,34 @@ export function transitionRideStatus(
 export function isTerminalRideStatus(
   status: MobilityRideStatus
 ): boolean {
-  return [
-    MobilityRideStatus.TRIP_COMPLETED,
-    MobilityRideStatus.CANCELLED,
-    MobilityRideStatus.EXPIRED,
-    MobilityRideStatus.NO_DRIVER_FOUND,
-    MobilityRideStatus.FAILED,
-  ].includes(status);
+  switch (status) {
+    case MobilityRideStatus.TRIP_COMPLETED:
+    case MobilityRideStatus.CANCELLED:
+    case MobilityRideStatus.EXPIRED:
+    case MobilityRideStatus.NO_DRIVER_FOUND:
+    case MobilityRideStatus.FAILED:
+      return true;
+
+    default:
+      return false;
+  }
 }
 
 export function isActiveRideStatus(
   status: MobilityRideStatus
 ): boolean {
-  return [
-    MobilityRideStatus.REQUESTED,
-    MobilityRideStatus.SEARCHING,
-    MobilityRideStatus.MATCHED,
-    MobilityRideStatus.DRIVER_ASSIGNED,
-    MobilityRideStatus.DRIVER_ARRIVING,
-    MobilityRideStatus.DRIVER_ARRIVED,
-    MobilityRideStatus.TRIP_STARTED,
-    MobilityRideStatus.TRIP_IN_PROGRESS,
-  ].includes(status);
+  switch (status) {
+    case MobilityRideStatus.REQUESTED:
+    case MobilityRideStatus.SEARCHING:
+    case MobilityRideStatus.MATCHED:
+    case MobilityRideStatus.DRIVER_ASSIGNED:
+    case MobilityRideStatus.DRIVER_ARRIVING:
+    case MobilityRideStatus.DRIVER_ARRIVED:
+    case MobilityRideStatus.TRIP_STARTED:
+    case MobilityRideStatus.TRIP_IN_PROGRESS:
+      return true;
+
+    default:
+      return false;
+  }
 }
