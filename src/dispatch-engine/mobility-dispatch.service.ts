@@ -6,36 +6,57 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
+
 import { DispatchDomainError } from "@/dispatch-engine/dispatch.errors";
+
 import {
   mobilityMatchingService,
   type MobilityMatchCandidate,
 } from "@/services/mobility/matching/mobility-matching.service";
+
 import {
   mobilityRideService,
   type AssignMobilityDriverInput,
 } from "@/services/mobility/rides/mobility-ride.service";
 
+import { mobilitySafetyService } from "@/services/mobility/safety/mobility-safety.service";
+
+import type { MobilitySafetyMode } from "@/services/mobility/orchestration/mobility-lifecycle.types";
+
 export interface MobilityDispatchSearchInput {
   rideId: string;
+
   radiusMeters?: number;
+
   limit?: number;
+
   vehicleTypes?: string[];
+
+  safetyMode?: MobilitySafetyMode;
 }
 
 export interface MobilityDispatchAssignment {
   rideId: string;
+
   driverId: string;
+
   vehicleId: string;
+
   distanceMeters: number;
+
   score: number;
 }
 
 export interface MobilityDispatchResult {
   rideId: string;
+
   status: MobilityRideStatus;
+
   candidates: MobilityMatchCandidate[];
-  assignment: MobilityDispatchAssignment | null;
+
+  assignment:
+    | MobilityDispatchAssignment
+    | null;
 }
 
 export class MobilityDispatchService {
@@ -51,21 +72,34 @@ export class MobilityDispatchService {
       await mobilityMatchingService.findCandidates({
         organizationId:
           ride.organizationId,
+
         pickupLatitude:
-          Number(ride.pickupLatitude),
+          Number(
+            ride.pickupLatitude
+          ),
+
         pickupLongitude:
-          Number(ride.pickupLongitude),
+          Number(
+            ride.pickupLongitude
+          ),
+
         serviceType:
           ride.serviceType,
+
         vehicleTypes:
           input.vehicleTypes,
+
         radiusMeters:
           input.radiusMeters,
+
         limit:
           input.limit,
       });
 
-    if (candidates.length === 0) {
+    if (
+      candidates.length ===
+      0
+    ) {
       await mobilityRideService.markNoDriverFound(
         ride.id
       );
@@ -73,10 +107,14 @@ export class MobilityDispatchService {
       return {
         rideId:
           ride.id,
+
         status:
           MobilityRideStatus.NO_DRIVER_FOUND,
+
         candidates: [],
-        assignment: null,
+
+        assignment:
+          null,
       };
     }
 
@@ -84,31 +122,119 @@ export class MobilityDispatchService {
       ride.id
     );
 
+    const safetyMode =
+      input.safetyMode ??
+      "STANDARD";
+
+    const eligibleCandidates:
+      MobilityMatchCandidate[] =
+      [];
+
+    for (
+      const candidate of candidates
+    ) {
+      try {
+        const eligibility =
+          await mobilitySafetyService.evaluateDriverSafety({
+            organizationId:
+              ride.organizationId,
+
+            driverId:
+              candidate.driverId,
+
+            vehicleId:
+              candidate.vehicleId,
+
+            requireTrustedRide:
+              safetyMode ===
+              "TRUSTED",
+
+            requireChildRide:
+              safetyMode ===
+              "CHILD",
+          });
+
+        const eligible =
+          eligibility.status ===
+            "ELIGIBLE" &&
+          eligibility.eligibleForStandardRides &&
+          (
+            safetyMode !==
+              "TRUSTED" ||
+            eligibility.eligibleForTrustedRides
+          ) &&
+          (
+            safetyMode !==
+              "CHILD" ||
+            eligibility.eligibleForChildRides
+          );
+
+        if (eligible) {
+          eligibleCandidates.push(
+            candidate
+          );
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (
+      eligibleCandidates.length ===
+      0
+    ) {
+      await mobilityRideService.markNoDriverFound(
+        ride.id
+      );
+
+      return {
+        rideId:
+          ride.id,
+
+        status:
+          MobilityRideStatus.NO_DRIVER_FOUND,
+
+        candidates,
+
+        assignment:
+          null,
+      };
+    }
+
     const selected =
-      candidates[0];
+      eligibleCandidates[0];
 
     const assignment =
       await this.assignCandidate(
         ride.id,
         selected.driverId,
-        selected.vehicleId
+        selected.vehicleId,
+        safetyMode
       );
 
     return {
       rideId:
         ride.id,
+
       status:
         MobilityRideStatus.DRIVER_ASSIGNED,
-      candidates,
+
+      candidates:
+        eligibleCandidates,
+
       assignment: {
         rideId:
           ride.id,
+
         driverId:
           assignment.driverId,
+
         vehicleId:
           assignment.vehicleId,
+
         distanceMeters:
           selected.distanceMeters,
+
         score:
           selected.score,
       },
@@ -173,7 +299,9 @@ export class MobilityDispatchService {
 
   async acceptAssignment(
     rideId: string,
-    driverId: string
+    driverId: string,
+    safetyMode: MobilitySafetyMode =
+      "STANDARD"
   ) {
     const ride =
       await this.requireRide(
@@ -200,13 +328,63 @@ export class MobilityDispatchService {
       );
     }
 
+    if (!ride.vehicleId) {
+      throw new DispatchDomainError(
+        "Assigned ride does not have a vehicle.",
+        "RIDE_VEHICLE_REQUIRED"
+      );
+    }
+
+    const safety =
+      await mobilitySafetyService.evaluateDriverSafety({
+        organizationId:
+          ride.organizationId,
+
+        driverId,
+
+        vehicleId:
+          ride.vehicleId,
+
+        requireTrustedRide:
+          safetyMode ===
+          "TRUSTED",
+
+        requireChildRide:
+          safetyMode ===
+          "CHILD",
+      });
+
+    if (
+      safety.status !==
+        "ELIGIBLE" ||
+      !safety.eligibleForStandardRides ||
+      (
+        safetyMode ===
+          "TRUSTED" &&
+        !safety.eligibleForTrustedRides
+      ) ||
+      (
+        safetyMode ===
+          "CHILD" &&
+        !safety.eligibleForChildRides
+      )
+    ) {
+      throw new DispatchDomainError(
+        "Driver is no longer eligible for this ride.",
+        "DRIVER_SAFETY_ELIGIBILITY_FAILED"
+      );
+    }
+
     const driver =
       await prisma.mobilityDriver.findUnique({
         where: {
-          id: driverId,
+          id:
+            driverId,
         },
+
         include: {
-          availability: true,
+          availability:
+            true,
         },
       });
 
@@ -245,7 +423,9 @@ export class MobilityDispatchService {
   async rejectAssignment(
     rideId: string,
     driverId: string,
-    reason: string
+    reason: string,
+    safetyMode: MobilitySafetyMode =
+      "STANDARD"
   ): Promise<MobilityDispatchResult> {
     const normalizedReason =
       reason.trim();
@@ -279,7 +459,8 @@ export class MobilityDispatchService {
     const refreshed =
       await prisma.mobilityRide.findUnique({
         where: {
-          id: ride.id,
+          id:
+            ride.id,
         },
       });
 
@@ -302,6 +483,8 @@ export class MobilityDispatchService {
     return this.dispatch({
       rideId:
         refreshed.id,
+
+      safetyMode,
     });
   }
 
@@ -327,28 +510,98 @@ export class MobilityDispatchService {
       );
     }
 
-    return mobilityMatchingService.findCandidates({
-      organizationId:
-        ride.organizationId,
-      pickupLatitude:
-        Number(ride.pickupLatitude),
-      pickupLongitude:
-        Number(ride.pickupLongitude),
-      serviceType:
-        ride.serviceType,
-      radiusMeters:
-        input.radiusMeters,
-      limit:
-        input.limit,
-      vehicleTypes:
-        input.vehicleTypes,
-    });
+    const candidates =
+      await mobilityMatchingService.findCandidates({
+        organizationId:
+          ride.organizationId,
+
+        pickupLatitude:
+          Number(
+            ride.pickupLatitude
+          ),
+
+        pickupLongitude:
+          Number(
+            ride.pickupLongitude
+          ),
+
+        serviceType:
+          ride.serviceType,
+
+        radiusMeters:
+          input.radiusMeters,
+
+        limit:
+          input.limit,
+
+        vehicleTypes:
+          input.vehicleTypes,
+      });
+
+    const safetyMode =
+      input.safetyMode ??
+      "STANDARD";
+
+    const eligible:
+      MobilityMatchCandidate[] =
+      [];
+
+    for (
+      const candidate of candidates
+    ) {
+      try {
+        const result =
+          await mobilitySafetyService.evaluateDriverSafety({
+            organizationId:
+              ride.organizationId,
+
+            driverId:
+              candidate.driverId,
+
+            vehicleId:
+              candidate.vehicleId,
+
+            requireTrustedRide:
+              safetyMode ===
+              "TRUSTED",
+
+            requireChildRide:
+              safetyMode ===
+              "CHILD",
+          });
+
+        if (
+          result.status ===
+            "ELIGIBLE" &&
+          result.eligibleForStandardRides &&
+          (
+            safetyMode !==
+              "TRUSTED" ||
+            result.eligibleForTrustedRides
+          ) &&
+          (
+            safetyMode !==
+              "CHILD" ||
+            result.eligibleForChildRides
+          )
+        ) {
+          eligible.push(
+            candidate
+          );
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return eligible;
   }
 
   private async assignCandidate(
     rideId: string,
     driverId: string,
-    vehicleId: string
+    vehicleId: string,
+    safetyMode: MobilitySafetyMode
   ): Promise<AssignMobilityDriverInput> {
     const ride =
       await this.requireRide(
@@ -358,18 +611,26 @@ export class MobilityDispatchService {
     const driver =
       await prisma.mobilityDriver.findUnique({
         where: {
-          id: driverId,
+          id:
+            driverId,
         },
+
         include: {
-          availability: true,
+          availability:
+            true,
+
           vehicles: {
             where: {
               vehicleId,
-              isPrimary: true,
-              activeUntil: null,
+              isPrimary:
+                true,
+              activeUntil:
+                null,
             },
+
             include: {
-              vehicle: true,
+              vehicle:
+                true,
             },
           },
         },
@@ -442,17 +703,60 @@ export class MobilityDispatchService {
       );
     }
 
+    const safety =
+      await mobilitySafetyService.evaluateDriverSafety({
+        organizationId:
+          ride.organizationId,
+
+        driverId,
+
+        vehicleId,
+
+        requireTrustedRide:
+          safetyMode ===
+          "TRUSTED",
+
+        requireChildRide:
+          safetyMode ===
+          "CHILD",
+      });
+
+    if (
+      safety.status !==
+        "ELIGIBLE" ||
+      !safety.eligibleForStandardRides ||
+      (
+        safetyMode ===
+          "TRUSTED" &&
+        !safety.eligibleForTrustedRides
+      ) ||
+      (
+        safetyMode ===
+          "CHILD" &&
+        !safety.eligibleForChildRides
+      )
+    ) {
+      throw new DispatchDomainError(
+        "Selected driver failed the mobility safety eligibility check.",
+        "DRIVER_SAFETY_ELIGIBILITY_FAILED"
+      );
+    }
+
     const result =
       await mobilityRideService.assignDriver({
         rideId,
+
         driverId,
+
         vehicleId,
       });
 
     return {
       rideId,
+
       driverId:
         result.driverId!,
+
       vehicleId:
         result.vehicleId!,
     };
@@ -490,14 +794,6 @@ export class MobilityDispatchService {
     ) {
       return;
     }
-
-    /*
-     * Assignment history will be introduced through
-     * the dedicated Dispatch persistence model.
-     *
-     * Until then, MobilityRide remains the authoritative
-     * persisted aggregate for the active assignment.
-     */
   }
 
   private async requireDispatchableRide(
