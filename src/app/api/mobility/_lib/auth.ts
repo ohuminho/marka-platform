@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/database/client/prisma";
 import { AuthConfig } from "@/core/authentication/auth.config";
-import { SessionService } from "@/core/authentication/sessions/session.service";
+import { SessionService } from "@/core/auth/sessions/session.service";
 
 export interface MobilityApiSession {
   userId: string;
