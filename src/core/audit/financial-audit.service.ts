@@ -108,3 +108,6 @@ export class FinancialAuditService {
     });
   }
 }
+
+export const financialAuditService =
+  new FinancialAuditService();
