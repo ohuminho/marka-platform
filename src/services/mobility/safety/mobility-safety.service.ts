@@ -1825,6 +1825,8 @@ export class MobilitySafetyService {
     T extends {
       documentType: string;
       createdAt: Date;
+      status: string;
+      documentExpiry: Date | null;
     }
   >(
     verifications: T[]
