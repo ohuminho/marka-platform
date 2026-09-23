@@ -13,7 +13,7 @@ import {
 } from "@/services/mobility/matching/mobility-matching.service";
 import {
   mobilityRideService,
-  type AssignMobilityRideInput,
+  type AssignMobilityDriverInput,
 } from "@/services/mobility/rides/mobility-ride.service";
 
 export interface MobilityDispatchSearchInput {
@@ -42,17 +42,27 @@ export class MobilityDispatchService {
   async dispatch(
     input: MobilityDispatchSearchInput
   ): Promise<MobilityDispatchResult> {
-    const ride = await this.requireDispatchableRide(input.rideId);
+    const ride =
+      await this.requireDispatchableRide(
+        input.rideId
+      );
 
     const candidates =
       await mobilityMatchingService.findCandidates({
-        organizationId: ride.organizationId,
-        pickupLatitude: Number(ride.pickupLatitude),
-        pickupLongitude: Number(ride.pickupLongitude),
-        serviceType: ride.serviceType,
-        vehicleTypes: input.vehicleTypes,
-        radiusMeters: input.radiusMeters,
-        limit: input.limit,
+        organizationId:
+          ride.organizationId,
+        pickupLatitude:
+          Number(ride.pickupLatitude),
+        pickupLongitude:
+          Number(ride.pickupLongitude),
+        serviceType:
+          ride.serviceType,
+        vehicleTypes:
+          input.vehicleTypes,
+        radiusMeters:
+          input.radiusMeters,
+        limit:
+          input.limit,
       });
 
     if (candidates.length === 0) {
@@ -61,16 +71,21 @@ export class MobilityDispatchService {
       );
 
       return {
-        rideId: ride.id,
-        status: MobilityRideStatus.NO_DRIVER_FOUND,
+        rideId:
+          ride.id,
+        status:
+          MobilityRideStatus.NO_DRIVER_FOUND,
         candidates: [],
         assignment: null,
       };
     }
 
-    await this.ensureSearching(ride.id);
+    await this.ensureSearching(
+      ride.id
+    );
 
-    const selected = candidates[0];
+    const selected =
+      candidates[0];
 
     const assignment =
       await this.assignCandidate(
@@ -80,16 +95,22 @@ export class MobilityDispatchService {
       );
 
     return {
-      rideId: ride.id,
-      status: MobilityRideStatus.DRIVER_ASSIGNED,
+      rideId:
+        ride.id,
+      status:
+        MobilityRideStatus.DRIVER_ASSIGNED,
       candidates,
       assignment: {
-        rideId: ride.id,
-        driverId: assignment.driverId,
-        vehicleId: assignment.vehicleId,
+        rideId:
+          ride.id,
+        driverId:
+          assignment.driverId,
+        vehicleId:
+          assignment.vehicleId,
         distanceMeters:
           selected.distanceMeters,
-        score: selected.score,
+        score:
+          selected.score,
       },
     };
   }
@@ -97,12 +118,18 @@ export class MobilityDispatchService {
   async redispatch(
     input: MobilityDispatchSearchInput
   ): Promise<MobilityDispatchResult> {
-    const ride = await this.requireRide(input.rideId);
+    const ride =
+      await this.requireRide(
+        input.rideId
+      );
 
     if (
-      ride.status === MobilityRideStatus.TRIP_STARTED ||
-      ride.status === MobilityRideStatus.TRIP_IN_PROGRESS ||
-      ride.status === MobilityRideStatus.TRIP_COMPLETED
+      ride.status ===
+        MobilityRideStatus.TRIP_STARTED ||
+      ride.status ===
+        MobilityRideStatus.TRIP_IN_PROGRESS ||
+      ride.status ===
+        MobilityRideStatus.TRIP_COMPLETED
     ) {
       throw new DispatchDomainError(
         "An active trip cannot be redispatched.",
@@ -111,10 +138,14 @@ export class MobilityDispatchService {
     }
 
     if (
-      ride.status === MobilityRideStatus.CANCELLED ||
-      ride.status === MobilityRideStatus.EXPIRED ||
-      ride.status === MobilityRideStatus.FAILED ||
-      ride.status === MobilityRideStatus.NO_DRIVER_FOUND
+      ride.status ===
+        MobilityRideStatus.CANCELLED ||
+      ride.status ===
+        MobilityRideStatus.EXPIRED ||
+      ride.status ===
+        MobilityRideStatus.FAILED ||
+      ride.status ===
+        MobilityRideStatus.NO_DRIVER_FOUND
     ) {
       throw new DispatchDomainError(
         `Ride cannot be redispatched from status ${ride.status}.`,
@@ -127,14 +158,17 @@ export class MobilityDispatchService {
     );
 
     if (
-      ride.status !== MobilityRideStatus.SEARCHING
+      ride.status !==
+      MobilityRideStatus.SEARCHING
     ) {
       await mobilityRideService.startSearch(
         ride.id
       );
     }
 
-    return this.dispatch(input);
+    return this.dispatch(
+      input
+    );
   }
 
   async acceptAssignment(
@@ -142,7 +176,9 @@ export class MobilityDispatchService {
     driverId: string
   ) {
     const ride =
-      await this.requireRide(rideId);
+      await this.requireRide(
+        rideId
+      );
 
     if (
       ride.status !==
@@ -154,7 +190,10 @@ export class MobilityDispatchService {
       );
     }
 
-    if (ride.driverId !== driverId) {
+    if (
+      ride.driverId !==
+      driverId
+    ) {
       throw new DispatchDomainError(
         "Driver is not assigned to this ride.",
         "DRIVER_NOT_ASSIGNED"
@@ -219,10 +258,13 @@ export class MobilityDispatchService {
     }
 
     const ride =
-      await this.requireRide(rideId);
+      await this.requireRide(
+        rideId
+      );
 
     if (
-      ride.driverId !== driverId
+      ride.driverId !==
+      driverId
     ) {
       throw new DispatchDomainError(
         "Driver is not assigned to this ride.",
@@ -258,7 +300,8 @@ export class MobilityDispatchService {
     }
 
     return this.dispatch({
-      rideId: refreshed.id,
+      rideId:
+        refreshed.id,
     });
   }
 
@@ -266,7 +309,9 @@ export class MobilityDispatchService {
     input: MobilityDispatchSearchInput
   ): Promise<MobilityMatchCandidate[]> {
     const ride =
-      await this.requireRide(input.rideId);
+      await this.requireRide(
+        input.rideId
+      );
 
     if (
       ride.status ===
@@ -304,12 +349,11 @@ export class MobilityDispatchService {
     rideId: string,
     driverId: string,
     vehicleId: string
-  ): Promise<{
-    driverId: string;
-    vehicleId: string;
-  }> {
+  ): Promise<AssignMobilityDriverInput> {
     const ride =
-      await this.requireRide(rideId);
+      await this.requireRide(
+        rideId
+      );
 
     const driver =
       await prisma.mobilityDriver.findUnique({
@@ -406,8 +450,11 @@ export class MobilityDispatchService {
       });
 
     return {
-      driverId: result.driverId!,
-      vehicleId: result.vehicleId!,
+      rideId,
+      driverId:
+        result.driverId!,
+      vehicleId:
+        result.vehicleId!,
     };
   }
 
@@ -415,7 +462,9 @@ export class MobilityDispatchService {
     rideId: string
   ): Promise<void> {
     const ride =
-      await this.requireRide(rideId);
+      await this.requireRide(
+        rideId
+      );
 
     if (
       ride.status ===
@@ -431,7 +480,9 @@ export class MobilityDispatchService {
     rideId: string
   ): Promise<void> {
     const ride =
-      await this.requireRide(rideId);
+      await this.requireRide(
+        rideId
+      );
 
     if (
       !ride.driverId &&
@@ -441,14 +492,11 @@ export class MobilityDispatchService {
     }
 
     /*
-     * The current Mobility schema does not yet
-     * contain a dedicated dispatch-assignment
-     * history table.
+     * Assignment history will be introduced through
+     * the dedicated Dispatch persistence model.
      *
-     * Therefore we do not fabricate one here.
-     * The ride remains the authoritative persisted
-     * aggregate until the dedicated Dispatch
-     * persistence model is introduced.
+     * Until then, MobilityRide remains the authoritative
+     * persisted aggregate for the active assignment.
      */
   }
 
@@ -456,7 +504,9 @@ export class MobilityDispatchService {
     rideId: string
   ) {
     const ride =
-      await this.requireRide(rideId);
+      await this.requireRide(
+        rideId
+      );
 
     if (
       ride.status ===
@@ -495,7 +545,8 @@ export class MobilityDispatchService {
     const ride =
       await prisma.mobilityRide.findUnique({
         where: {
-          id: normalizedId,
+          id:
+            normalizedId,
         },
       });
 
