@@ -37,6 +37,7 @@ export type MobilityLifecycleAction =
   | "DRIVER_ARRIVED"
   | "START_TRIP"
   | "BEGIN_TRIP_PROGRESS"
+  | "INITIALIZE_FINANCIALS"
   | "COMPLETE"
   | "CANCEL"
   | "RETRY_RECOVERY";
