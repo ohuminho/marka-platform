@@ -98,7 +98,8 @@ export class MobilityPaymentEngineService {
               LIMIT 1
             `;
 
-          const currentRide = ride[0];
+          const currentRide =
+            ride[0];
 
           if (!currentRide) {
             throw new Error(
@@ -157,18 +158,34 @@ export class MobilityPaymentEngineService {
             finalFare;
 
           const driverNet =
-            driverGross - commission;
+            driverGross -
+            commission;
 
           const id =
             randomUUID();
 
           const status: MobilityPaymentStatus =
-            input.paymentMethod === "CASH"
+            input.paymentMethod ===
+            "CASH"
               ? "AUTHORIZED"
               : "PENDING";
 
           const now =
             new Date();
+
+          const pricingSnapshotJson =
+            input.pricingSnapshot
+              ? JSON.stringify(
+                  input.pricingSnapshot
+                )
+              : null;
+
+          const metadataJson =
+            input.metadata
+              ? JSON.stringify(
+                  input.metadata
+                )
+              : null;
 
           const rows =
             await database.$queryRaw<
@@ -201,7 +218,8 @@ export class MobilityPaymentEngineService {
                 ${input.organizationId},
                 ${input.rideId},
                 ${input.riderId},
-                ${input.driverId ?? currentRide.driverId},
+                ${input.driverId ??
+                  currentRide.driverId},
                 ${input.currency},
                 CAST(
                   ${input.paymentMethod}
@@ -217,19 +235,12 @@ export class MobilityPaymentEngineService {
                 ${commission},
                 ${driverGross},
                 ${driverNet},
-                ${
-                  input.pricingSnapshot
-                    ? (input.pricingSnapshot as Prisma.InputJsonValue)
-                    : null
-                },
-                ${
-                  input.metadata
-                    ? (input.metadata as Prisma.InputJsonValue)
-                    : null
-                },
+                ${pricingSnapshotJson}::jsonb,
+                ${metadataJson}::jsonb,
                 ${input.idempotencyKey},
                 ${
-                  status === "AUTHORIZED"
+                  status ===
+                  "AUTHORIZED"
                     ? now
                     : null
                 },
@@ -274,7 +285,9 @@ export class MobilityPaymentEngineService {
         {
           isolationLevel:
             Prisma.TransactionIsolationLevel.Serializable,
+
           maxWait: 5000,
+
           timeout: 10000,
         }
       );
@@ -334,13 +347,17 @@ export class MobilityPaymentEngineService {
       },
     });
 
-    return this.toResult(payment);
+    return this.toResult(
+      payment
+    );
   }
 
   async completePayment(
     input: CompleteMobilityPaymentInput
   ): Promise<MobilityPaymentResult> {
-    this.validateCompleteInput(input);
+    this.validateCompleteInput(
+      input
+    );
 
     const payment =
       await prisma.$transaction(
@@ -389,13 +406,18 @@ export class MobilityPaymentEngineService {
             input.finalFareMinor;
 
           const driverNet =
-            driverGross - commission;
+            driverGross -
+            commission;
 
           const nextStatus: MobilityPaymentStatus =
-            existing.paymentMethod ===
-            "CASH"
-              ? "COLLECTED"
-              : "COLLECTED";
+            "COLLECTED";
+
+          const metadataJson =
+            input.metadata
+              ? JSON.stringify(
+                  input.metadata
+                )
+              : null;
 
           const rows =
             await database.$queryRaw<
@@ -432,16 +454,16 @@ export class MobilityPaymentEngineService {
 
                 "metadata" =
                   CASE
-                    WHEN ${input.metadata ? true : false}
-                    THEN COALESCE(
-                      "metadata",
-                      '{}'::jsonb
-                    ) ||
-                    ${(
-                      input.metadata ??
-                      {}
-                    ) as Prisma.InputJsonValue}
-                    ELSE "metadata"
+                    WHEN ${metadataJson !== null}
+                    THEN
+                      COALESCE(
+                        "metadata",
+                        '{}'::jsonb
+                      )
+                      ||
+                      ${metadataJson}::jsonb
+                    ELSE
+                      "metadata"
                   END
 
               WHERE
@@ -486,7 +508,9 @@ export class MobilityPaymentEngineService {
         {
           isolationLevel:
             Prisma.TransactionIsolationLevel.Serializable,
+
           maxWait: 5000,
+
           timeout: 10000,
         }
       );
@@ -540,7 +564,9 @@ export class MobilityPaymentEngineService {
       },
     });
 
-    return this.toResult(payment);
+    return this.toResult(
+      payment
+    );
   }
 
   async getByRide(
@@ -588,7 +614,9 @@ export class MobilityPaymentEngineService {
           "createdAt",
           "updatedAt"
         FROM "MobilityRidePayment"
-        WHERE "rideId" = ${rideId}
+        WHERE
+          "rideId" =
+            ${rideId}
         LIMIT 1
       `;
 
@@ -602,7 +630,8 @@ export class MobilityPaymentEngineService {
     return (
       fareMinor *
       BigInt(rateBps)
-    ) / BigInt(BPS_TOTAL);
+    ) /
+      BigInt(BPS_TOTAL);
   }
 
   private toResult(
@@ -679,19 +708,25 @@ export class MobilityPaymentEngineService {
   private validateCreateInput(
     input: CreateMobilityPaymentInput
   ): void {
-    if (!input.organizationId.trim()) {
+    if (
+      !input.organizationId.trim()
+    ) {
       throw new Error(
         "Mobility organizationId is required."
       );
     }
 
-    if (!input.rideId.trim()) {
+    if (
+      !input.rideId.trim()
+    ) {
       throw new Error(
         "Mobility rideId is required."
       );
     }
 
-    if (!input.riderId.trim()) {
+    if (
+      !input.riderId.trim()
+    ) {
       throw new Error(
         "Mobility riderId is required."
       );
@@ -737,13 +772,17 @@ export class MobilityPaymentEngineService {
   private validateCompleteInput(
     input: CompleteMobilityPaymentInput
   ): void {
-    if (!input.organizationId.trim()) {
+    if (
+      !input.organizationId.trim()
+    ) {
       throw new Error(
         "Mobility organizationId is required."
       );
     }
 
-    if (!input.rideId.trim()) {
+    if (
+      !input.rideId.trim()
+    ) {
       throw new Error(
         "Mobility rideId is required."
       );
@@ -781,7 +820,9 @@ export class MobilityPaymentEngineService {
     rateBps: number
   ): void {
     if (
-      !Number.isInteger(rateBps) ||
+      !Number.isInteger(
+        rateBps
+      ) ||
       rateBps < 0 ||
       rateBps > BPS_TOTAL
     ) {
@@ -794,4 +835,3 @@ export class MobilityPaymentEngineService {
 
 export const mobilityPaymentEngineService =
   new MobilityPaymentEngineService();
-"}
