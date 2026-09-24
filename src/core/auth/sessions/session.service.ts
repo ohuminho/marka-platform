@@ -15,9 +15,17 @@ export interface SessionResult {
   expiresAt: Date;
 }
 
+export interface ValidatedSession {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  createdAt: Date;
+  lastSeenAt: Date | null;
+}
+
 export class SessionService {
   private readonly sessionDurationMs =
-    AuthConfig.sessionHours * 60 * 60 * 1000;
+    AuthConfig.session.durationHours * 60 * 60 * 1000;
 
   private hashToken(token: string): string {
     return createHash("sha256")
@@ -25,10 +33,14 @@ export class SessionService {
       .digest("hex");
   }
 
+  private generateToken(): string {
+    return randomBytes(48).toString("base64url");
+  }
+
   async create(
     input: CreateSessionInput
   ): Promise<SessionResult> {
-    const token = randomBytes(48).toString("base64url");
+    const token = this.generateToken();
     const tokenHash = this.hashToken(token);
 
     const expiresAt = new Date(
@@ -53,12 +65,26 @@ export class SessionService {
     };
   }
 
-  async validate(token: string) {
+  async validate(
+    token: string
+  ): Promise<ValidatedSession | null> {
+    if (!token.trim()) {
+      return null;
+    }
+
     const tokenHash = this.hashToken(token);
 
     const session = await prisma.session.findUnique({
       where: {
         tokenHash,
+      },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        revokedAt: true,
+        createdAt: true,
+        lastSeenAt: true,
       },
     });
 
@@ -83,25 +109,38 @@ export class SessionService {
       },
     });
 
-    return session;
+    return {
+      id: session.id,
+      userId: session.userId,
+      expiresAt: session.expiresAt,
+      createdAt: session.createdAt,
+      lastSeenAt: session.lastSeenAt,
+    };
   }
 
   async revoke(token: string): Promise<void> {
-    const tokenHash = this.hashToken(token);
-
-    const session = await prisma.session.findUnique({
-      where: {
-        tokenHash,
-      },
-    });
-
-    if (!session || session.revokedAt) {
+    if (!token.trim()) {
       return;
     }
 
-    await prisma.session.update({
+    const tokenHash = this.hashToken(token);
+
+    await prisma.session.updateMany({
       where: {
-        id: session.id,
+        tokenHash,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  }
+
+  async revokeById(sessionId: string): Promise<void> {
+    await prisma.session.updateMany({
+      where: {
+        id: sessionId,
+        revokedAt: null,
       },
       data: {
         revokedAt: new Date(),
@@ -117,6 +156,43 @@ export class SessionService {
       },
       data: {
         revokedAt: new Date(),
+      },
+    });
+  }
+
+  async revokeExpired(): Promise<void> {
+    await prisma.session.updateMany({
+      where: {
+        expiresAt: {
+          lte: new Date(),
+        },
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  }
+
+  async getActiveSessions(userId: string) {
+    return prisma.session.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      select: {
+        id: true,
+        expiresAt: true,
+        createdAt: true,
+        lastSeenAt: true,
+        ipAddress: true,
+        userAgent: true,
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
   }
