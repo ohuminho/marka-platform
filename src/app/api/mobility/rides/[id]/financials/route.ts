@@ -7,12 +7,12 @@ import {
 } from "@/app/api/mobility/_lib/auth";
 
 import {
-  commissionPolicyService,
-} from "@/services/finance/commission/commission-policy.service";
-
-import {
   mobilityFinancialOrchestratorService,
 } from "@/services/mobility/finance/mobility-financial-orchestrator.service";
+
+import {
+  commissionPolicyService,
+} from "@/services/commissions/commission-policy.service";
 
 import {
   MobilityRideService,
@@ -29,10 +29,12 @@ const mobilityRideService =
 
 export async function POST(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
-    await authenticateMobilityRequest(request);
+    await authenticateMobilityRequest(
+      request,
+    );
 
   if (!authentication.ok) {
     return authentication.response;
@@ -44,14 +46,17 @@ export async function POST(
   if (!rideId?.trim()) {
     return NextResponse.json(
       {
-        message: "Ride id is required.",
-        code: "RIDE_ID_REQUIRED",
+        message:
+          "Ride id is required.",
+        code:
+          "RIDE_ID_REQUIRED",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  let body: Record<string, unknown>;
+  let body:
+    Record<string, unknown>;
 
   try {
     const parsed =
@@ -69,25 +74,32 @@ export async function POST(
           code:
             "INVALID_REQUEST_BODY",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     body =
-      parsed as Record<string, unknown>;
+      parsed as Record<
+        string,
+        unknown
+      >;
   } catch {
     return NextResponse.json(
       {
-        message: "Invalid JSON request body.",
-        code: "INVALID_JSON_BODY",
+        message:
+          "Invalid JSON request body.",
+        code:
+          "INVALID_JSON_BODY",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   const operation =
     typeof body.operation === "string"
-      ? body.operation.trim().toUpperCase()
+      ? body.operation
+          .trim()
+          .toUpperCase()
       : "";
 
   if (
@@ -101,22 +113,24 @@ export async function POST(
         code:
           "INVALID_FINANCIAL_OPERATION",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   const ride =
     await mobilityRideService.getById(
-      rideId
+      rideId,
     );
 
   if (!ride) {
     return NextResponse.json(
       {
-        message: "Mobility ride not found.",
-        code: "RIDE_NOT_FOUND",
+        message:
+          "Mobility ride not found.",
+        code:
+          "RIDE_NOT_FOUND",
       },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -131,14 +145,17 @@ export async function POST(
         code:
           "RIDE_ORGANIZATION_ACCESS_DENIED",
       },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
   const requestContext =
     getRequestContext(request);
 
-  if (operation === "INITIALIZE") {
+  if (
+    operation ===
+    "INITIALIZE"
+  ) {
     if (
       ride.riderId !==
       authentication.session.userId
@@ -150,20 +167,23 @@ export async function POST(
           code:
             "RIDER_FINANCIAL_ACCESS_REQUIRED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const paymentMethod =
-      typeof body.paymentMethod === "string"
+      typeof body.paymentMethod ===
+      "string"
         ? body.paymentMethod
             .trim()
             .toUpperCase()
         : "";
 
     if (
-      paymentMethod !== "CASH" &&
-      paymentMethod !== "DIGITAL"
+      paymentMethod !==
+        "CASH" &&
+      paymentMethod !==
+        "DIGITAL"
     ) {
       return NextResponse.json(
         {
@@ -172,17 +192,18 @@ export async function POST(
           code:
             "INVALID_MOBILITY_PAYMENT_METHOD",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const estimatedFareMinor =
       parseBigInt(
-        body.estimatedFareMinor
+        body.estimatedFareMinor,
       );
 
     if (
-      estimatedFareMinor === null
+      estimatedFareMinor ===
+      null
     ) {
       return NextResponse.json(
         {
@@ -191,20 +212,23 @@ export async function POST(
           code:
             "INVALID_ESTIMATED_FARE",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const finalFareMinor =
-      body.finalFareMinor !== undefined
+      body.finalFareMinor !==
+      undefined
         ? parseBigInt(
-            body.finalFareMinor
+            body.finalFareMinor,
           )
         : undefined;
 
     if (
-      body.finalFareMinor !== undefined &&
-      finalFareMinor === null
+      body.finalFareMinor !==
+        undefined &&
+      finalFareMinor ===
+        null
     ) {
       return NextResponse.json(
         {
@@ -213,14 +237,14 @@ export async function POST(
           code:
             "INVALID_FINAL_FARE",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const idempotencyKey =
       getIdempotencyKey(
         request,
-        body
+        body,
       );
 
     if (!idempotencyKey) {
@@ -231,13 +255,13 @@ export async function POST(
           code:
             "IDEMPOTENCY_KEY_REQUIRED",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const policy =
       getMobilityCommissionPolicy(
-        ride.serviceType
+        ride.serviceType,
       );
 
     const result =
@@ -250,7 +274,8 @@ export async function POST(
           rideId,
 
           riderId:
-            authentication.session.userId,
+            authentication.session
+              .userId,
 
           driverId:
             ride.driverId ??
@@ -273,15 +298,23 @@ export async function POST(
           commissionRateBps:
             policy.rateBps,
 
+          commissionPolicyKey:
+            policy.key,
+
+          commissionPolicyVersion:
+            policy.version,
+
           pricingSnapshot:
             isRecord(
-              body.pricingSnapshot
+              body.pricingSnapshot,
             )
               ? body.pricingSnapshot
               : undefined,
 
           metadata:
-            isRecord(body.metadata)
+            isRecord(
+              body.metadata,
+            )
               ? body.metadata
               : undefined,
 
@@ -305,7 +338,7 @@ export async function POST(
 
     return NextResponse.json(
       result,
-      { status: 201 }
+      { status: 201 },
     );
   }
 
@@ -321,17 +354,18 @@ export async function POST(
         code:
           "DRIVER_FINANCIAL_ACCESS_REQUIRED",
       },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
   const finalFareMinor =
     parseBigInt(
-      body.finalFareMinor
+      body.finalFareMinor,
     );
 
   if (
-    finalFareMinor === null
+    finalFareMinor ===
+    null
   ) {
     return NextResponse.json(
       {
@@ -340,7 +374,7 @@ export async function POST(
         code:
           "INVALID_FINAL_FARE",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -360,7 +394,9 @@ export async function POST(
     typeof body
       .settlementCompletionIdempotencyKey ===
     "string"
-      ? body.settlementCompletionIdempotencyKey.trim()
+      ? body
+          .settlementCompletionIdempotencyKey
+          .trim()
       : "";
 
   if (
@@ -375,29 +411,23 @@ export async function POST(
         code:
           "FINANCIAL_IDEMPOTENCY_KEYS_REQUIRED",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
-
-  const paymentMethod =
-    typeof body.paymentMethod === "string"
-      ? body.paymentMethod
-          .trim()
-          .toUpperCase()
-      : undefined;
 
   const availableDigitalProceedsMinor =
     body.availableDigitalProceedsMinor !==
     undefined
       ? parseBigInt(
-          body.availableDigitalProceedsMinor
+          body.availableDigitalProceedsMinor,
         )
       : undefined;
 
   if (
     body.availableDigitalProceedsMinor !==
       undefined &&
-    availableDigitalProceedsMinor === null
+    availableDigitalProceedsMinor ===
+      null
   ) {
     return NextResponse.json(
       {
@@ -406,7 +436,7 @@ export async function POST(
         code:
           "INVALID_DIGITAL_PROCEEDS",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -455,22 +485,25 @@ export async function POST(
         settlementCompletionIdempotencyKey,
 
         metadata:
-          isRecord(body.metadata)
+          isRecord(
+            body.metadata,
+          )
             ? body.metadata
             : undefined,
       });
 
   return NextResponse.json(
     result,
-    { status: 200 }
+    { status: 200 },
   );
 }
 
 function parseBigInt(
-  value: unknown
+  value: unknown,
 ): bigint | null {
   if (
-    typeof value === "bigint"
+    typeof value ===
+    "bigint"
   ) {
     return value >= BigInt(0)
       ? value
@@ -478,7 +511,8 @@ function parseBigInt(
   }
 
   if (
-    typeof value === "number"
+    typeof value ===
+    "number"
   ) {
     if (
       !Number.isSafeInteger(value) ||
@@ -491,21 +525,24 @@ function parseBigInt(
   }
 
   if (
-    typeof value === "string"
+    typeof value ===
+      "string"
   ) {
     const normalized =
       value.trim();
 
     if (
       !/^[0-9]+$/.test(
-        normalized
+        normalized,
       )
     ) {
       return null;
     }
 
     try {
-      return BigInt(normalized);
+      return BigInt(
+        normalized,
+      );
     } catch {
       return null;
     }
@@ -515,7 +552,7 @@ function parseBigInt(
 }
 
 function isRecord(
-  value: unknown
+  value: unknown,
 ): value is Record<string, unknown> {
   return (
     typeof value === "object" &&
@@ -525,15 +562,20 @@ function isRecord(
 }
 
 function getMobilityCommissionPolicy(
-  serviceType: string
+  serviceType: string,
 ) {
   const normalized =
-    serviceType.trim().toUpperCase();
+    serviceType
+      .trim()
+      .toUpperCase();
 
   if (
-    normalized === "MOTO_TAXI" ||
-    normalized === "MOTO-TAXI" ||
-    normalized === "MOTOTAXI"
+    normalized ===
+      "MOTO_TAXI" ||
+    normalized ===
+      "MOTO-TAXI" ||
+    normalized ===
+      "MOTOTAXI"
   ) {
     return commissionPolicyService
       .getMotoTaxiPolicy();
