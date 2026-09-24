@@ -116,7 +116,6 @@ export class MobilityFinancialCoreBridgeService {
           id:
             input.driverId,
         },
-
         select: {
           id: true,
           userId: true,
@@ -186,16 +185,7 @@ export class MobilityFinancialCoreBridgeService {
         input.currency,
       );
 
-    /*
-     * The MobilityPayment id is intentionally NOT passed
-     * as transactionService.paymentId.
-     *
-     * MobilityRidePayment is a separate SQL-level mobility
-     * payment entity and is not the Financial Core Payment
-     * entity. Passing its id as paymentId would make the
-     * Financial Core incorrectly search for a Payment row.
-     */
-    const financialTransaction =
+    const capture =
       await transactionService.createExternalCreditWithinTransaction(
         database,
         {
@@ -224,45 +214,19 @@ export class MobilityFinancialCoreBridgeService {
             TransactionActorType.MARKA,
 
           reference:
-            `MOBILITY-DIGITAL-CAPTURE-${input.settlementId}`,
+            input.sourceReference,
 
           referenceType:
-            "MOBILITY_DIGITAL_PAYMENT",
+            "MOBILITY_DIGITAL_CAPTURE",
 
           context:
-            "MOBILITY_DIGITAL_PAYMENT_CAPTURE",
+            "MOBILITY_DIGITAL_SETTLEMENT",
 
           provider:
-            "MARKA_MOBILITY",
+            "MOBILITY",
 
           providerPaymentId:
             input.paymentId,
-
-          metadata: {
-            settlementId:
-              input.settlementId,
-
-            mobilityPaymentId:
-              input.paymentId,
-
-            rideId:
-              input.rideId,
-
-            driverId:
-              input.driverId,
-
-            grossFareMinor:
-              input.grossFareMinor.toString(),
-
-            availableDigitalProceedsMinor:
-              input.availableDigitalProceedsMinor.toString(),
-
-            sourceReference:
-              input.sourceReference,
-
-            source:
-              "MOBILITY_FINANCIAL_CORE_BRIDGE",
-          },
 
           correlationId:
             input.correlationId,
@@ -275,302 +239,265 @@ export class MobilityFinancialCoreBridgeService {
 
           userAgent:
             input.userAgent,
+
+          metadata: {
+            rideId:
+              input.rideId,
+            settlementId:
+              input.settlementId,
+            source:
+              "MOBILITY_FINANCIAL_CORE_BRIDGE",
+          },
         },
       );
 
     this.assertCompleted(
-      financialTransaction.status,
-      "Mobility digital payment capture",
+      capture.status,
+      "Mobility digital capture",
     );
 
-    let commissionTransactionId:
-      string | null = null;
-
-    if (
+    const commission =
       input.currentCommissionMinor >
       BigInt(0)
-    ) {
-      const transaction =
-        await transactionService.createWithinTransaction(
-          database,
-          {
-            organizationId:
-              input.organizationId,
+        ? await transactionService.createWithinTransaction(
+            database,
+            {
+              organizationId:
+                input.organizationId,
 
-            idempotencyKey:
-              `mobility-commission:${input.settlementId}`,
+              idempotencyKey:
+                `mobility-commission:${input.settlementId}`,
 
-            type:
-              TransactionType.COMMISSION,
+              type:
+                TransactionType.COMMISSION,
 
-            direction:
-              TransactionDirection.DEBIT,
-
-            amountMinor:
-              input.currentCommissionMinor,
-
-            currency:
-              input.currency,
-
-            actorUserId:
-              input.actorUserId,
-
-            actorType:
-              TransactionActorType.MARKA,
-
-            sourceAccountId:
-              clearingAccount.id,
-
-            destinationAccountId:
-              platformRevenueAccount.id,
-
-            reference:
-              `MOBILITY-COMMISSION-${input.settlementId}`,
-
-            referenceType:
-              "MOBILITY_COMMISSION",
-
-            context:
-              "MOBILITY_CURRENT_COMMISSION",
-
-            metadata: {
-              settlementId:
-                input.settlementId,
-
-              paymentId:
-                input.paymentId,
-
-              rideId:
-                input.rideId,
-
-              driverId:
-                input.driverId,
-
-              commissionAmountMinor:
-                input.currentCommissionMinor.toString(),
-
-              source:
-                "MOBILITY_FINANCIAL_CORE_BRIDGE",
-            },
-
-            correlationId:
-              input.correlationId,
-
-            requestId:
-              input.requestId,
-
-            ipAddress:
-              input.ipAddress,
-
-            userAgent:
-              input.userAgent,
-          },
-        );
-
-      this.assertCompleted(
-        transaction.status,
-        "Mobility commission transaction",
-      );
-
-      commissionTransactionId =
-        transaction.id;
-    }
-
-    let cashObligationSettlementTransactionId:
-      string | null = null;
-
-    if (
-      input.priorCashObligationsSettledMinor >
-      BigInt(0)
-    ) {
-      const transaction =
-        await transactionService.createWithinTransaction(
-          database,
-          {
-            organizationId:
-              input.organizationId,
-
-            idempotencyKey:
-              `mobility-cash-obligation-settlement:${input.settlementId}`,
-
-            type:
-              TransactionType.COMMISSION,
-
-            direction:
-              TransactionDirection.DEBIT,
-
-            amountMinor:
-              input.priorCashObligationsSettledMinor,
-
-            currency:
-              input.currency,
-
-            actorUserId:
-              input.actorUserId,
-
-            actorType:
-              TransactionActorType.MARKA,
-
-            sourceAccountId:
-              clearingAccount.id,
-
-            destinationAccountId:
-              platformRevenueAccount.id,
-
-            reference:
-              `MOBILITY-CASH-OBLIGATION-SETTLEMENT-${input.settlementId}`,
-
-            referenceType:
-              "MOBILITY_CASH_OBLIGATION_SETTLEMENT",
-
-            context:
-              "MOBILITY_PRIOR_CASH_OBLIGATION_SETTLEMENT",
-
-            metadata: {
-              settlementId:
-                input.settlementId,
-
-              paymentId:
-                input.paymentId,
-
-              rideId:
-                input.rideId,
-
-              driverId:
-                input.driverId,
+              direction:
+                TransactionDirection.DEBIT,
 
               amountMinor:
-                input.priorCashObligationsSettledMinor.toString(),
+                input.currentCommissionMinor,
 
-              source:
-                "MOBILITY_FINANCIAL_CORE_BRIDGE",
+              currency:
+                input.currency,
+
+              sourceAccountId:
+                clearingAccount.id,
+
+              destinationAccountId:
+                platformRevenueAccount.id,
+
+              actorUserId:
+                input.actorUserId,
+
+              actorType:
+                TransactionActorType.MARKA,
+
+              reference:
+                `MOBILITY-COMMISSION-${input.settlementId}`,
+
+              referenceType:
+                "MOBILITY_COMMISSION",
+
+              context:
+                "MOBILITY_FINANCIAL_SETTLEMENT",
+
+              metadata: {
+                rideId:
+                  input.rideId,
+                settlementId:
+                  input.settlementId,
+              },
+
+              correlationId:
+                input.correlationId,
+
+              requestId:
+                input.requestId,
+
+              ipAddress:
+                input.ipAddress,
+
+              userAgent:
+                input.userAgent,
             },
+          )
+        : null;
 
-            correlationId:
-              input.correlationId,
-
-            requestId:
-              input.requestId,
-
-            ipAddress:
-              input.ipAddress,
-
-            userAgent:
-              input.userAgent,
-          },
-        );
-
+    if (commission) {
       this.assertCompleted(
-        transaction.status,
-        "Mobility cash obligation settlement transaction",
+        commission.status,
+        "Mobility commission",
       );
-
-      cashObligationSettlementTransactionId =
-        transaction.id;
     }
 
-    let vendorPayableTransactionId:
-      string | null = null;
+    const cashObligationSettlement =
+      input.priorCashObligationsSettledMinor >
+      BigInt(0)
+        ? await transactionService.createWithinTransaction(
+            database,
+            {
+              organizationId:
+                input.organizationId,
 
-    if (
+              idempotencyKey:
+                `mobility-cash-obligation-settlement:${input.settlementId}`,
+
+              type:
+                TransactionType.COMMISSION,
+
+              direction:
+                TransactionDirection.DEBIT,
+
+              amountMinor:
+                input.priorCashObligationsSettledMinor,
+
+              currency:
+                input.currency,
+
+              sourceAccountId:
+                clearingAccount.id,
+
+              destinationAccountId:
+                platformRevenueAccount.id,
+
+              actorUserId:
+                input.actorUserId,
+
+              actorType:
+                TransactionActorType.MARKA,
+
+              reference:
+                `MOBILITY-CASH-OBLIGATION-${input.settlementId}`,
+
+              referenceType:
+                "MOBILITY_CASH_OBLIGATION_SETTLEMENT",
+
+              context:
+                "MOBILITY_FINANCIAL_SETTLEMENT",
+
+              metadata: {
+                rideId:
+                  input.rideId,
+                settlementId:
+                  input.settlementId,
+              },
+
+              correlationId:
+                input.correlationId,
+
+              requestId:
+                input.requestId,
+
+              ipAddress:
+                input.ipAddress,
+
+              userAgent:
+                input.userAgent,
+            },
+          )
+        : null;
+
+    if (cashObligationSettlement) {
+      this.assertCompleted(
+        cashObligationSettlement.status,
+        "Mobility cash obligation settlement",
+      );
+    }
+
+    const driverPayable =
       input.driverNetMinor >
       BigInt(0)
-    ) {
-      const transaction =
-        await transactionService.createWithinTransaction(
-          database,
-          {
-            organizationId:
-              input.organizationId,
+        ? await transactionService.createWithinTransaction(
+            database,
+            {
+              organizationId:
+                input.organizationId,
 
-            idempotencyKey:
-              `mobility-driver-payable:${input.settlementId}`,
+              idempotencyKey:
+                `mobility-driver-payable:${input.settlementId}`,
 
-            type:
-              TransactionType.PAYMENT,
+              type:
+                TransactionType.PAYMENT,
 
-            direction:
-              TransactionDirection.DEBIT,
+              direction:
+                TransactionDirection.DEBIT,
 
-            amountMinor:
-              input.driverNetMinor,
+              amountMinor:
+                input.driverNetMinor,
 
-            currency:
-              input.currency,
+              currency:
+                input.currency,
 
-            actorUserId:
-              input.actorUserId,
+              sourceAccountId:
+                clearingAccount.id,
 
-            actorType:
-              TransactionActorType.MARKA,
+              destinationAccountId:
+                driverPayableAccount.id,
 
-            sourceAccountId:
-              clearingAccount.id,
+              actorUserId:
+                input.actorUserId,
 
-            destinationAccountId:
-              driverPayableAccount.id,
+              actorType:
+                TransactionActorType.MARKA,
 
-            reference:
-              `MOBILITY-DRIVER-PAYABLE-${input.settlementId}`,
+              reference:
+                `MOBILITY-DRIVER-PAYABLE-${input.settlementId}`,
 
-            referenceType:
-              "MOBILITY_DRIVER_PAYABLE",
+              referenceType:
+                "MOBILITY_DRIVER_PAYABLE",
 
-            context:
-              "MOBILITY_DRIVER_EARNING",
+              context:
+                "MOBILITY_FINANCIAL_SETTLEMENT",
 
-            metadata: {
-              settlementId:
-                input.settlementId,
+              vendorId:
+                null,
 
-              paymentId:
-                input.paymentId,
+              metadata: {
+                rideId:
+                  input.rideId,
+                settlementId:
+                  input.settlementId,
+                driverId:
+                  input.driverId,
+              },
 
-              rideId:
-                input.rideId,
+              correlationId:
+                input.correlationId,
 
-              driverId:
-                input.driverId,
+              requestId:
+                input.requestId,
 
-              driverNetMinor:
-                input.driverNetMinor.toString(),
+              ipAddress:
+                input.ipAddress,
 
-              source:
-                "MOBILITY_FINANCIAL_CORE_BRIDGE",
+              userAgent:
+                input.userAgent,
             },
+          )
+        : null;
 
-            correlationId:
-              input.correlationId,
-
-            requestId:
-              input.requestId,
-
-            ipAddress:
-              input.ipAddress,
-
-            userAgent:
-              input.userAgent,
-          },
-        );
-
+    if (driverPayable) {
       this.assertCompleted(
-        transaction.status,
-        "Mobility driver payable transaction",
+        driverPayable.status,
+        "Mobility driver payable",
       );
-
-      vendorPayableTransactionId =
-        transaction.id;
     }
 
     return {
       financialTransactionId:
-        financialTransaction.id,
+        capture.id,
 
-      vendorPayableTransactionId,
+      vendorPayableTransactionId:
+        driverPayable?.id ??
+        null,
 
-      commissionTransactionId,
+      commissionTransactionId:
+        commission?.id ??
+        null,
 
-      cashObligationSettlementTransactionId,
+      cashObligationSettlementTransactionId:
+        cashObligationSettlement?.id ??
+        null,
     };
   }
 
@@ -595,43 +522,35 @@ export class MobilityFinancialCoreBridgeService {
           "commissionTransactionId",
           "cashObligationSettlementTransactionId"
         FROM "MobilitySettlement"
-        WHERE
-          "id" =
-            ${settlementId}
+        WHERE "id" = ${settlementId}
         LIMIT 1
       `;
 
-    return rows[0] ??
-      null;
+    return rows[0] ?? null;
   }
 
   private getExistingLinks(
     settlement: MobilitySettlementFinancialLinks,
   ): MobilityFinancialCoreBridgeResult | null {
     if (
-      settlement.financialTransactionId &&
-      (
-        settlement.vendorPayableTransactionId ||
-        settlement.commissionTransactionId ||
-        settlement.cashObligationSettlementTransactionId
-      )
+      !settlement.financialTransactionId
     ) {
-      return {
-        financialTransactionId:
-          settlement.financialTransactionId,
-
-        vendorPayableTransactionId:
-          settlement.vendorPayableTransactionId,
-
-        commissionTransactionId:
-          settlement.commissionTransactionId,
-
-        cashObligationSettlementTransactionId:
-          settlement.cashObligationSettlementTransactionId,
-      };
+      return null;
     }
 
-    return null;
+    return {
+      financialTransactionId:
+        settlement.financialTransactionId,
+
+      vendorPayableTransactionId:
+        settlement.vendorPayableTransactionId,
+
+      commissionTransactionId:
+        settlement.commissionTransactionId,
+
+      cashObligationSettlementTransactionId:
+        settlement.cashObligationSettlementTransactionId,
+    };
   }
 
   private assertSettlement(
@@ -706,9 +625,7 @@ export class MobilityFinancialCoreBridgeService {
         where: {
           code,
         },
-
         update: {},
-
         create: {
           organizationId,
           userId:
@@ -753,9 +670,7 @@ export class MobilityFinancialCoreBridgeService {
         where: {
           code,
         },
-
         update: {},
-
         create: {
           organizationId,
           userId:
@@ -802,9 +717,7 @@ export class MobilityFinancialCoreBridgeService {
         where: {
           code,
         },
-
         update: {},
-
         create: {
           organizationId,
           userId,
@@ -840,15 +753,6 @@ export class MobilityFinancialCoreBridgeService {
     ) {
       throw new Error(
         "Mobility driver payable account belongs to another user.",
-      );
-    }
-
-    if (
-      account.vendorId !==
-      null
-    ) {
-      throw new Error(
-        "Mobility driver payable account cannot belong to a vendor.",
       );
     }
 
@@ -1004,6 +908,17 @@ export class MobilityFinancialCoreBridgeService {
           `Mobility ${name} cannot be negative.`,
         );
       }
+    }
+
+    if (
+      input.driverNetMinor +
+        input.currentCommissionMinor +
+        input.priorCashObligationsSettledMinor !==
+      input.availableDigitalProceedsMinor
+    ) {
+      throw new Error(
+        "Mobility Financial Core allocation invariant failed.",
+      );
     }
 
     if (
