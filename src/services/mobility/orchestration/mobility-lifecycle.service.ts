@@ -37,27 +37,16 @@ import type {
 
 interface OrchestrationRow {
   id: string;
-
   organizationId: string;
-
   rideId: string;
-
   status: MobilityOrchestrationStatus;
-
   currentStep: MobilityOrchestrationStep;
-
   version: number;
-
   attemptCount: number;
-
   correlationId: string | null;
-
   requestId: string | null;
-
   lastErrorCode: string | null;
-
   lastError: string | null;
-
   nextRetryAt: Date | null;
 }
 
@@ -170,12 +159,12 @@ const TRANSITIONS: Record<
 
 export class MobilityLifecycleService {
   async initialize(
-    input: InitializeMobilityLifecycleInput
+    input: InitializeMobilityLifecycleInput,
   ): Promise<MobilityLifecycleResult> {
     this.validateContext(
       input.idempotencyKey,
       input.organizationId,
-      input.rideId
+      input.rideId,
     );
 
     const ride =
@@ -196,20 +185,20 @@ export class MobilityLifecycleService {
 
     if (!ride) {
       throw new Error(
-        "Mobility ride was not found."
+        "Mobility ride was not found.",
       );
     }
 
     const existing =
       await this.getByRide(
         input.organizationId,
-        input.rideId
+        input.rideId,
       );
 
     if (existing) {
       return this.result(
         existing,
-        "REQUEST"
+        "REQUEST",
       );
     }
 
@@ -222,7 +211,7 @@ export class MobilityLifecycleService {
     const safetyMode =
       input.safetyMode ??
       this.readSafetyMode(
-        ride.metadata
+        ride.metadata,
       );
 
     await prisma.$executeRaw`
@@ -322,28 +311,28 @@ export class MobilityLifecycleService {
 
     const created =
       await this.requireById(
-        orchestrationId
+        orchestrationId,
       );
 
     return this.result(
       created,
-      "REQUEST"
+      "REQUEST",
     );
   }
 
   async execute(
-    input: MobilityLifecycleExecuteInput
+    input: MobilityLifecycleExecuteInput,
   ): Promise<MobilityLifecycleResult> {
     this.validateContext(
       input.idempotencyKey,
       input.organizationId,
-      input.rideId
+      input.rideId,
     );
 
     let orchestration =
       await this.getByRide(
         input.organizationId,
-        input.rideId
+        input.rideId,
       );
 
     if (!orchestration) {
@@ -379,37 +368,37 @@ export class MobilityLifecycleService {
       orchestration =
         await this.getByRide(
           input.organizationId,
-          input.rideId
+          input.rideId,
         );
     }
 
     if (!orchestration) {
       throw new Error(
-        "Mobility ride orchestration could not be initialized."
+        "Mobility ride orchestration could not be initialized.",
       );
     }
 
     const existingEvent =
       await this.findEvent(
-        input.idempotencyKey
+        input.idempotencyKey,
       );
 
     if (existingEvent) {
       return this.result(
         orchestration,
-        input.action
+        input.action,
       );
     }
 
     try {
       return await this.executeAction(
         orchestration,
-        input
+        input,
       );
     } catch (error) {
       const classified =
         this.classifyFailure(
-          error
+          error,
         );
 
       const recovery =
@@ -438,15 +427,15 @@ export class MobilityLifecycleService {
         nextStep,
         classified.code,
         classified.message,
-        recovery
+        recovery,
       );
 
       return {
         ...this.result(
           await this.requireById(
-            orchestration.id
+            orchestration.id,
           ),
-          input.action
+          input.action,
         ),
 
         recoveryRequired:
@@ -468,45 +457,45 @@ export class MobilityLifecycleService {
 
   async get(
     organizationId: string,
-    rideId: string
+    rideId: string,
   ): Promise<MobilityLifecycleResult | null> {
     const row =
       await this.getByRide(
         organizationId,
-        rideId
+        rideId,
       );
 
     return row
       ? this.result(
           row,
-          "REQUEST"
+          "REQUEST",
         )
       : null;
   }
 
   private async executeAction(
     orchestration: OrchestrationRow,
-    input: MobilityLifecycleExecuteInput
+    input: MobilityLifecycleExecuteInput,
   ): Promise<MobilityLifecycleResult> {
     const safetyMode =
       input.safetyMode ??
       await this.getRideSafetyMode(
         input.organizationId,
-        input.rideId
+        input.rideId,
       );
 
     switch (input.action) {
       case "REQUEST":
         return this.result(
           orchestration,
-          input.action
+          input.action,
         );
 
       case "SAFETY_PRECHECK": {
         const ride =
           await this.requireRide(
             input.organizationId,
-            input.rideId
+            input.rideId,
           );
 
         await mobilitySafetyService.createTripSafety({
@@ -540,7 +529,7 @@ export class MobilityLifecycleService {
         return this.advance(
           orchestration,
           input,
-          "SAFETY_READY"
+          "SAFETY_READY",
         );
       }
 
@@ -555,7 +544,7 @@ export class MobilityLifecycleService {
           const ride =
             await this.requireRide(
               input.organizationId,
-              input.rideId
+              input.rideId,
             );
 
           await mobilitySafetyService.createTripSafety({
@@ -594,18 +583,18 @@ export class MobilityLifecycleService {
                 idempotencyKey:
                   `${input.idempotencyKey}:safety`,
               },
-              "SAFETY_READY"
+              "SAFETY_READY",
             );
         }
 
         await mobilityRideService.startSearch(
-          input.rideId
+          input.rideId,
         );
 
         return this.advance(
           current,
           input,
-          "SEARCHING"
+          "SEARCHING",
         );
       }
 
@@ -620,7 +609,7 @@ export class MobilityLifecycleService {
           const ride =
             await this.requireRide(
               input.organizationId,
-              input.rideId
+              input.rideId,
             );
 
           await mobilitySafetyService.createTripSafety({
@@ -659,7 +648,7 @@ export class MobilityLifecycleService {
                 idempotencyKey:
                   `${input.idempotencyKey}:safety`,
               },
-              "SAFETY_READY"
+              "SAFETY_READY",
             );
         }
 
@@ -668,7 +657,7 @@ export class MobilityLifecycleService {
           "SAFETY_READY"
         ) {
           await mobilityRideService.startSearch(
-            input.rideId
+            input.rideId,
           );
 
           current =
@@ -679,7 +668,7 @@ export class MobilityLifecycleService {
                 idempotencyKey:
                   `${input.idempotencyKey}:search`,
               },
-              "SEARCHING"
+              "SEARCHING",
             );
         }
 
@@ -695,7 +684,7 @@ export class MobilityLifecycleService {
           current,
           input,
           "DRIVER_ASSIGNED",
-          dispatch.assignment
+          dispatch.assignment,
         );
       }
 
@@ -703,12 +692,12 @@ export class MobilityLifecycleService {
         const ride =
           await this.requireRide(
             input.organizationId,
-            input.rideId
+            input.rideId,
           );
 
         if (!ride.driverId) {
           throw new Error(
-            "Ride has no assigned driver."
+            "Ride has no assigned driver.",
           );
         }
 
@@ -731,77 +720,77 @@ export class MobilityLifecycleService {
             input.actorUserId
         ) {
           throw new Error(
-            "Only the assigned driver may accept the ride."
+            "Only the assigned driver may accept the ride.",
           );
         }
 
         await mobilityDispatchService.acceptAssignment(
           input.rideId,
           ride.driverId,
-          safetyMode
+          safetyMode,
         );
 
         return this.advance(
           orchestration,
           input,
-          "DRIVER_ACCEPTED"
+          "DRIVER_ACCEPTED",
         );
       }
 
       case "DRIVER_ARRIVING":
         await mobilityRideService.markDriverArriving(
-          input.rideId
+          input.rideId,
         );
 
         return this.advance(
           orchestration,
           input,
-          "DRIVER_ARRIVING"
+          "DRIVER_ARRIVING",
         );
 
       case "DRIVER_ARRIVED":
         await mobilityRideService.markDriverArrived(
-          input.rideId
+          input.rideId,
         );
 
         return this.advance(
           orchestration,
           input,
-          "DRIVER_ARRIVED"
+          "DRIVER_ARRIVED",
         );
 
       case "START_TRIP":
         await mobilityRideService.startTrip(
-          input.rideId
+          input.rideId,
         );
 
         return this.advance(
           orchestration,
           input,
-          "TRIP_STARTED"
+          "TRIP_STARTED",
         );
 
       case "BEGIN_TRIP_PROGRESS":
         await mobilityRideService.beginTripProgress(
-          input.rideId
+          input.rideId,
         );
 
         return this.advance(
           orchestration,
           input,
-          "TRIP_IN_PROGRESS"
+          "TRIP_IN_PROGRESS",
         );
 
       case "INITIALIZE_FINANCIALS":
         return this.initializeFinancials(
           orchestration,
-          input as MobilityLifecycleInitializeFinancialsInput
+          input as MobilityLifecycleInitializeFinancialsInput,
         );
 
       case "COMPLETE":
         return this.completeRide(
           orchestration,
-          input as MobilityLifecycleCompleteInput
+          input as MobilityLifecycleCompleteInput,
         );
 
       case "CANCEL": {
@@ -810,13 +799,13 @@ export class MobilityLifecycleService {
 
         if (!reason) {
           throw new Error(
-            "Ride cancellation reason is required."
+            "Ride cancellation reason is required.",
           );
         }
 
         await mobilityRideService.cancel(
           input.rideId,
-          reason
+          reason,
         );
 
         return this.advance(
@@ -824,7 +813,7 @@ export class MobilityLifecycleService {
           input,
           "CANCELLED",
           undefined,
-          "CANCELLED"
+          "CANCELLED",
         );
       }
 
@@ -834,7 +823,7 @@ export class MobilityLifecycleService {
           "RECOVERY_REQUIRED"
         ) {
           throw new Error(
-            "Ride orchestration is not waiting for recovery."
+            "Ride orchestration is not waiting for recovery.",
           );
         }
 
@@ -847,12 +836,12 @@ export class MobilityLifecycleService {
               ...input,
               action:
                 "COMPLETE",
-            } as MobilityLifecycleCompleteInput
+            } as MobilityLifecycleCompleteInput,
           );
         }
 
         throw new Error(
-          "Recovery retry requires the complete financial input."
+          "Recovery retry requires the complete financial input.",
         );
       }
     }
@@ -860,7 +849,7 @@ export class MobilityLifecycleService {
 
   private async initializeFinancials(
     orchestration: OrchestrationRow,
-    input: MobilityLifecycleInitializeFinancialsInput
+    input: MobilityLifecycleInitializeFinancialsInput,
   ): Promise<MobilityLifecycleResult> {
     if (
       input.estimatedFareMinor <
@@ -873,19 +862,19 @@ export class MobilityLifecycleService {
       )
     ) {
       throw new Error(
-        "Mobility fare values cannot be negative."
+        "Mobility fare values cannot be negative.",
       );
     }
 
     const ride =
       await this.requireRide(
         input.organizationId,
-        input.rideId
+        input.rideId,
       );
 
     const policy =
       this.getMobilityCommissionPolicy(
-        ride.serviceType
+        ride.serviceType,
       );
 
     const financials =
@@ -918,6 +907,12 @@ export class MobilityLifecycleService {
 
           commissionRateBps:
             policy.rateBps,
+
+          commissionPolicyKey:
+            policy.key,
+
+          commissionPolicyVersion:
+            policy.version,
 
           pricingSnapshot:
             input.pricingSnapshot,
@@ -959,13 +954,13 @@ export class MobilityLifecycleService {
         orchestration,
         input,
         "PAYMENT_INITIALIZED",
-        financials
+        financials,
       );
 
     return {
       ...this.result(
         updated,
-        input.action
+        input.action,
       ),
 
       financialState:
@@ -979,7 +974,7 @@ export class MobilityLifecycleService {
 
   private async completeRide(
     orchestration: OrchestrationRow,
-    input: MobilityLifecycleCompleteInput
+    input: MobilityLifecycleCompleteInput,
   ): Promise<MobilityLifecycleResult> {
     if (
       input.finalFareMinor <
@@ -988,7 +983,7 @@ export class MobilityLifecycleService {
         BigInt(0)
     ) {
       throw new Error(
-        "Mobility fare values cannot be negative."
+        "Mobility fare values cannot be negative.",
       );
     }
 
@@ -999,14 +994,14 @@ export class MobilityLifecycleService {
         undefined
     ) {
       throw new Error(
-        "Available digital proceeds are required for DIGITAL settlement."
+        "Available digital proceeds are required for DIGITAL settlement.",
       );
     }
 
     const ride =
       await this.requireRide(
         input.organizationId,
-        input.rideId
+        input.rideId,
       );
 
     if (
@@ -1014,14 +1009,14 @@ export class MobilityLifecycleService {
       MobilityRideStatus.TRIP_COMPLETED
     ) {
       await mobilityRideService.complete(
-        input.rideId
+        input.rideId,
       );
     }
 
     const completedRide =
       await this.requireRide(
         input.organizationId,
-        input.rideId
+        input.rideId,
       );
 
     if (
@@ -1029,13 +1024,13 @@ export class MobilityLifecycleService {
       MobilityRideStatus.TRIP_COMPLETED
     ) {
       throw new Error(
-        "Ride could not be moved to TRIP_COMPLETED."
+        "Ride could not be moved to TRIP_COMPLETED.",
       );
     }
 
     let current =
       await this.requireById(
-        orchestration.id
+        orchestration.id,
       );
 
     if (
@@ -1050,13 +1045,13 @@ export class MobilityLifecycleService {
         await this.transitionPersisted(
           current,
           input,
-          "TRIP_COMPLETED"
+          "TRIP_COMPLETED",
         );
     }
 
     const policy =
       this.getMobilityCommissionPolicy(
-        completedRide.serviceType
+        completedRide.serviceType,
       );
 
     const financials =
@@ -1089,6 +1084,12 @@ export class MobilityLifecycleService {
 
           commissionRateBps:
             policy.rateBps,
+
+          commissionPolicyKey:
+            policy.key,
+
+          commissionPolicyVersion:
+            policy.version,
 
           pricingSnapshot:
             input.pricingSnapshot,
@@ -1130,7 +1131,7 @@ export class MobilityLifecycleService {
         current,
         input,
         "PAYMENT_INITIALIZED",
-        financials
+        financials,
       );
 
     const finalized =
@@ -1189,7 +1190,7 @@ export class MobilityLifecycleService {
         input,
         "FINANCIAL_FINALIZED",
         finalized,
-        "COMPLETED"
+        "COMPLETED",
       );
 
     await financialAuditService.record({
@@ -1238,7 +1239,7 @@ export class MobilityLifecycleService {
     return {
       ...this.result(
         current,
-        input.action
+        input.action,
       ),
 
       financialState:
@@ -1260,7 +1261,7 @@ export class MobilityLifecycleService {
     input: MobilityLifecycleActionInput,
     step: MobilityOrchestrationStep,
     assignment?: unknown,
-    status?: MobilityOrchestrationStatus
+    status?: MobilityOrchestrationStatus,
   ): Promise<MobilityLifecycleResult> {
     const updated =
       await this.transitionPersisted(
@@ -1268,18 +1269,18 @@ export class MobilityLifecycleService {
         input,
         step,
         assignment,
-        status
+        status,
       );
 
     const ride =
       await mobilityRideService.getById(
-        input.rideId
+        input.rideId,
       );
 
     return {
       ...this.result(
         updated,
-        input.action
+        input.action,
       ),
 
       ride,
@@ -1297,7 +1298,7 @@ export class MobilityLifecycleService {
     input: MobilityLifecycleActionInput,
     nextStep: MobilityOrchestrationStep,
     metadata?: unknown,
-    finalStatus?: MobilityOrchestrationStatus
+    finalStatus?: MobilityOrchestrationStatus,
   ): Promise<OrchestrationRow> {
     if (
       !TRANSITIONS[
@@ -1312,7 +1313,7 @@ export class MobilityLifecycleService {
       }
 
       throw new Error(
-        `Invalid mobility orchestration transition ${current.currentStep} -> ${nextStep}.`
+        `Invalid mobility orchestration transition ${current.currentStep} -> ${nextStep}.`,
       );
     }
 
@@ -1390,7 +1391,7 @@ export class MobilityLifecycleService {
             1
           ) {
             throw new Error(
-              "Mobility orchestration concurrency conflict."
+              "Mobility orchestration concurrency conflict.",
             );
           }
 
@@ -1437,7 +1438,7 @@ export class MobilityLifecycleService {
           `;
 
           return updatedRow;
-        }
+        },
       );
 
     return updated;
@@ -1450,7 +1451,7 @@ export class MobilityLifecycleService {
     step: MobilityOrchestrationStep,
     code: string,
     message: string,
-    retryable: boolean
+    retryable: boolean,
   ) {
     const now =
       new Date();
@@ -1487,7 +1488,7 @@ export class MobilityLifecycleService {
                   retryable
                     ? new Date(
                         Date.now() +
-                          30_000
+                          30_000,
                       )
                     : null
                 },
@@ -1510,7 +1511,7 @@ export class MobilityLifecycleService {
           1
         ) {
           throw new Error(
-            "Mobility orchestration concurrency conflict while persisting failure."
+            "Mobility orchestration concurrency conflict while persisting failure.",
           );
         }
 
@@ -1556,7 +1557,7 @@ export class MobilityLifecycleService {
             ${now}
           )
         `;
-      }
+      },
     );
   }
 
@@ -1616,7 +1617,7 @@ export class MobilityLifecycleService {
           ${input.requestId ?? null},
           ${input.actorUserId ?? null},
           ${this.jsonValue(
-            input.metadata ?? {}
+            input.metadata ?? {},
           )}::jsonb,
           NOW()
         )
@@ -1624,7 +1625,7 @@ export class MobilityLifecycleService {
     } catch (error) {
       if (
         String(error).includes(
-          "MobilityRideOrchestrationEvent_idempotencyKey_key"
+          "MobilityRideOrchestrationEvent_idempotencyKey_key",
         )
       ) {
         return;
@@ -1636,7 +1637,7 @@ export class MobilityLifecycleService {
 
   private async getByRide(
     organizationId: string,
-    rideId: string
+    rideId: string,
   ): Promise<OrchestrationRow | null> {
     const rows =
       await prisma.$queryRaw<
@@ -1659,7 +1660,7 @@ export class MobilityLifecycleService {
   }
 
   private async requireById(
-    id: string
+    id: string,
   ): Promise<OrchestrationRow> {
     const rows =
       await prisma.$queryRaw<
@@ -1676,7 +1677,7 @@ export class MobilityLifecycleService {
 
     if (!rows[0]) {
       throw new Error(
-        "Mobility ride orchestration was not found."
+        "Mobility ride orchestration was not found.",
       );
     }
 
@@ -1684,7 +1685,7 @@ export class MobilityLifecycleService {
   }
 
   private async findEvent(
-    idempotencyKey: string
+    idempotencyKey: string,
   ) {
     const rows =
       await prisma.$queryRaw<
@@ -1708,7 +1709,7 @@ export class MobilityLifecycleService {
 
   private async requireRide(
     organizationId: string,
-    rideId: string
+    rideId: string,
   ) {
     const ride =
       await prisma.mobilityRide.findFirst({
@@ -1732,7 +1733,7 @@ export class MobilityLifecycleService {
 
     if (!ride) {
       throw new Error(
-        "Mobility ride was not found."
+        "Mobility ride was not found.",
       );
     }
 
@@ -1741,30 +1742,30 @@ export class MobilityLifecycleService {
 
   private async getRideSafetyMode(
     organizationId: string,
-    rideId: string
+    rideId: string,
   ): Promise<MobilitySafetyMode> {
     const ride =
       await this.requireRide(
         organizationId,
-        rideId
+        rideId,
       );
 
     return this.readSafetyMode(
-      ride.metadata
+      ride.metadata,
     );
   }
 
   private readSafetyMode(
     metadata:
       | Prisma.JsonValue
-      | null
+      | null,
   ): MobilitySafetyMode {
     if (
       metadata &&
       typeof metadata ===
         "object" &&
       !Array.isArray(
-        metadata
+        metadata,
       )
     ) {
       const value =
@@ -1788,7 +1789,7 @@ export class MobilityLifecycleService {
   }
 
   private getMobilityCommissionPolicy(
-    serviceType: string
+    serviceType: string,
   ) {
     const normalized =
       serviceType
@@ -1813,7 +1814,7 @@ export class MobilityLifecycleService {
 
   private result(
     row: OrchestrationRow,
-    action: MobilityLifecycleAction
+    action: MobilityLifecycleAction,
   ): MobilityLifecycleResult {
     return {
       orchestrationId:
@@ -1845,29 +1846,29 @@ export class MobilityLifecycleService {
   private validateContext(
     idempotencyKey: string,
     organizationId: string,
-    rideId: string
+    rideId: string,
   ) {
     if (!organizationId.trim()) {
       throw new Error(
-        "Mobility organizationId is required."
+        "Mobility organizationId is required.",
       );
     }
 
     if (!rideId.trim()) {
       throw new Error(
-        "Mobility rideId is required."
+        "Mobility rideId is required.",
       );
     }
 
     if (!idempotencyKey.trim()) {
       throw new Error(
-        "Mobility lifecycle idempotency key is required."
+        "Mobility lifecycle idempotency key is required.",
       );
     }
   }
 
   private classifyFailure(
-    error: unknown
+    error: unknown,
   ) {
     const message =
       error instanceof Error
@@ -1879,29 +1880,29 @@ export class MobilityLifecycleService {
 
     const concurrency =
       lower.includes(
-        "concurrency"
+        "concurrency",
       );
 
     const transient =
       lower.includes(
-        "timeout"
+        "timeout",
       ) ||
       lower.includes(
-        "temporarily"
+        "temporarily",
       ) ||
       lower.includes(
-        "deadlock"
+        "deadlock",
       );
 
     const dependency =
       lower.includes(
-        "provider"
+        "provider",
       ) ||
       lower.includes(
-        "database"
+        "database",
       ) ||
       lower.includes(
-        "connection"
+        "connection",
       );
 
     return {
@@ -1933,17 +1934,17 @@ export class MobilityLifecycleService {
   }
 
   private jsonValue(
-    value: unknown
+    value: unknown,
   ): string {
     return JSON.stringify(
       this.toJsonSafe(
-        value
-      )
+        value,
+      ),
     );
   }
 
   private toJsonSafe(
-    value: unknown
+    value: unknown,
   ): unknown {
     if (
       typeof value ===
@@ -1964,8 +1965,8 @@ export class MobilityLifecycleService {
       return value.map(
         (item) =>
           this.toJsonSafe(
-            item
-          )
+            item,
+          ),
       );
     }
 
@@ -1976,7 +1977,7 @@ export class MobilityLifecycleService {
     ) {
       return Object.fromEntries(
         Object.entries(
-          value
+          value,
         ).map(
           ([
             key,
@@ -1984,10 +1985,10 @@ export class MobilityLifecycleService {
           ]) => [
             key,
             this.toJsonSafe(
-              item
+              item,
             ),
-          ]
-        )
+          ],
+        ),
       );
     }
 
@@ -1997,3 +1998,4 @@ export class MobilityLifecycleService {
 
 export const mobilityLifecycleService =
   new MobilityLifecycleService();
+```0
