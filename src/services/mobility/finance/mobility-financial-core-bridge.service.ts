@@ -17,21 +17,16 @@ import {
 
 export interface SettleDigitalMobilityRideInput {
   organizationId: string;
-
   settlementId: string;
   paymentId: string;
   rideId: string;
   driverId: string;
-
   currency: string;
 
   grossFareMinor: bigint;
   availableDigitalProceedsMinor: bigint;
-
   currentCommissionMinor: bigint;
-
   priorCashObligationsSettledMinor: bigint;
-
   driverNetMinor: bigint;
 
   sourceReference: string;
@@ -45,17 +40,28 @@ export interface SettleDigitalMobilityRideInput {
 
 export interface MobilityFinancialCoreBridgeResult {
   financialTransactionId: string;
-
   vendorPayableTransactionId: string | null;
-
   commissionTransactionId: string | null;
+  cashObligationSettlementTransactionId: string | null;
+}
 
+interface MobilitySettlementFinancialLinks {
+  id: string;
+  organizationId: string;
+  paymentId: string;
+  rideId: string;
+  driverId: string | null;
+  currency: string;
+  paymentMethod: string;
+  financialTransactionId: string | null;
+  vendorPayableTransactionId: string | null;
+  commissionTransactionId: string | null;
   cashObligationSettlementTransactionId: string | null;
 }
 
 export class MobilityFinancialCoreBridgeService {
   async settleDigitalRide(
-    input: SettleDigitalMobilityRideInput
+    input: SettleDigitalMobilityRideInput,
   ): Promise<MobilityFinancialCoreBridgeResult> {
     this.validateInput(input);
 
@@ -63,129 +69,46 @@ export class MobilityFinancialCoreBridgeService {
       async (database) =>
         this.settleDigitalRideWithinTransaction(
           database,
-          input
+          input,
         ),
       {
         isolationLevel:
           Prisma.TransactionIsolationLevel.Serializable,
-
         maxWait: 5000,
-
         timeout: 10000,
-      }
+      },
     );
   }
 
   private async settleDigitalRideWithinTransaction(
     database: FinancialTransactionClient,
-    input: SettleDigitalMobilityRideInput
+    input: SettleDigitalMobilityRideInput,
   ): Promise<MobilityFinancialCoreBridgeResult> {
+    const settlement =
+      await this.findSettlement(
+        database,
+        input.settlementId,
+      );
+
+    if (!settlement) {
+      throw new Error(
+        "Mobility settlement was not found for Financial Core integration.",
+      );
+    }
+
+    this.assertSettlement(input, settlement);
+
     const existing =
-      await database.mobilitySettlement.findUnique({
-        where: {
-          id:
-            input.settlementId,
-        },
-        select: {
-          id: true,
-          organizationId: true,
-          paymentId: true,
-          rideId: true,
-          driverId: true,
-          currency: true,
-          paymentMethod: true,
-          financialTransactionId: true,
-          vendorPayableTransactionId: true,
-          commissionTransactionId: true,
-          cashObligationSettlementTransactionId: true,
-        },
-      });
+      this.getExistingLinks(settlement);
 
-    if (!existing) {
-      throw new Error(
-        "Mobility settlement was not found for Financial Core integration."
-      );
-    }
-
-    if (
-      existing.organizationId !==
-      input.organizationId
-    ) {
-      throw new Error(
-        "Mobility settlement organization does not match Financial Core integration."
-      );
-    }
-
-    if (
-      existing.paymentId !==
-      input.paymentId
-    ) {
-      throw new Error(
-        "Mobility settlement payment does not match Financial Core integration."
-      );
-    }
-
-    if (
-      existing.rideId !==
-      input.rideId
-    ) {
-      throw new Error(
-        "Mobility settlement ride does not match Financial Core integration."
-      );
-    }
-
-    if (
-      existing.driverId !==
-      input.driverId
-    ) {
-      throw new Error(
-        "Mobility settlement driver does not match Financial Core integration."
-      );
-    }
-
-    if (
-      existing.currency !==
-      input.currency
-    ) {
-      throw new Error(
-        "Mobility settlement currency does not match Financial Core integration."
-      );
-    }
-
-    if (
-      existing.paymentMethod !==
-      "DIGITAL"
-    ) {
-      throw new Error(
-        "Financial Core bridge only supports DIGITAL Mobility settlement."
-      );
-    }
-
-    if (
-      existing.financialTransactionId &&
-      existing.vendorPayableTransactionId !==
-        undefined
-    ) {
-      return {
-        financialTransactionId:
-          existing.financialTransactionId,
-
-        vendorPayableTransactionId:
-          existing.vendorPayableTransactionId,
-
-        commissionTransactionId:
-          existing.commissionTransactionId,
-
-        cashObligationSettlementTransactionId:
-          existing.cashObligationSettlementTransactionId,
-      };
+    if (existing) {
+      return existing;
     }
 
     const driver =
       await database.mobilityDriver.findUnique({
         where: {
-          id:
-            input.driverId,
+          id: input.driverId,
         },
         select: {
           id: true,
@@ -197,7 +120,7 @@ export class MobilityFinancialCoreBridgeService {
 
     if (!driver) {
       throw new Error(
-        "Mobility driver was not found."
+        "Mobility driver was not found.",
       );
     }
 
@@ -206,16 +129,27 @@ export class MobilityFinancialCoreBridgeService {
       input.organizationId
     ) {
       throw new Error(
-        "Mobility driver does not belong to the settlement organization."
+        "Mobility driver does not belong to the settlement organization.",
       );
     }
 
+    if (driver.status !== "ACTIVE") {
+      throw new Error(
+        "Mobility driver must be active for Financial Core settlement.",
+      );
+    }
+
+    const allocatedAmount =
+      input.driverNetMinor +
+      input.currentCommissionMinor +
+      input.priorCashObligationsSettledMinor;
+
     if (
-      driver.status !==
-      "ACTIVE"
+      allocatedAmount !==
+      input.availableDigitalProceedsMinor
     ) {
       throw new Error(
-        "Mobility driver must be active for Financial Core settlement."
+        "Mobility Financial Core allocations do not reconcile to digital proceeds.",
       );
     }
 
@@ -223,14 +157,14 @@ export class MobilityFinancialCoreBridgeService {
       await this.ensureClearingAccount(
         database,
         input.organizationId,
-        input.currency
+        input.currency,
       );
 
     const platformRevenueAccount =
       await this.ensurePlatformRevenueAccount(
         database,
         input.organizationId,
-        input.currency
+        input.currency,
       );
 
     const driverPayableAccount =
@@ -239,7 +173,7 @@ export class MobilityFinancialCoreBridgeService {
         input.organizationId,
         input.driverId,
         driver.userId,
-        input.currency
+        input.currency,
       );
 
     const financialTransaction =
@@ -319,27 +253,22 @@ export class MobilityFinancialCoreBridgeService {
 
           userAgent:
             input.userAgent,
-        }
+        },
       );
 
-    if (
-      financialTransaction.status !==
-      TransactionStatus.COMPLETED
-    ) {
-      throw new Error(
-        "Mobility digital payment capture did not complete in Financial Core."
-      );
-    }
+    this.assertCompleted(
+      financialTransaction.status,
+      "Mobility digital payment capture",
+    );
 
     let commissionTransactionId:
-      string | null =
-        null;
+      string | null = null;
 
     if (
       input.currentCommissionMinor >
       BigInt(0)
     ) {
-      const commissionTransaction =
+      const transaction =
         await transactionService.createWithinTransaction(
           database,
           {
@@ -379,9 +308,6 @@ export class MobilityFinancialCoreBridgeService {
             referenceType:
               "MOBILITY_COMMISSION",
 
-            vendorId:
-              undefined,
-
             context:
               "MOBILITY_CURRENT_COMMISSION",
 
@@ -416,31 +342,26 @@ export class MobilityFinancialCoreBridgeService {
 
             userAgent:
               input.userAgent,
-          }
+          },
         );
 
-      if (
-        commissionTransaction.status !==
-        TransactionStatus.COMPLETED
-      ) {
-        throw new Error(
-          "Mobility commission transaction did not complete."
-        );
-      }
+      this.assertCompleted(
+        transaction.status,
+        "Mobility commission transaction",
+      );
 
       commissionTransactionId =
-        commissionTransaction.id;
+        transaction.id;
     }
 
     let cashObligationSettlementTransactionId:
-      string | null =
-        null;
+      string | null = null;
 
     if (
       input.priorCashObligationsSettledMinor >
       BigInt(0)
     ) {
-      const cashObligationTransaction =
+      const transaction =
         await transactionService.createWithinTransaction(
           database,
           {
@@ -514,45 +435,26 @@ export class MobilityFinancialCoreBridgeService {
 
             userAgent:
               input.userAgent,
-          }
+          },
         );
 
-      if (
-        cashObligationTransaction.status !==
-        TransactionStatus.COMPLETED
-      ) {
-        throw new Error(
-          "Mobility cash obligation settlement transaction did not complete."
-        );
-      }
+      this.assertCompleted(
+        transaction.status,
+        "Mobility cash obligation settlement transaction",
+      );
 
       cashObligationSettlementTransactionId =
-        cashObligationTransaction.id;
-    }
-
-    const allocatedAmount =
-      input.driverNetMinor +
-      input.currentCommissionMinor +
-      input.priorCashObligationsSettledMinor;
-
-    if (
-      allocatedAmount !==
-      input.availableDigitalProceedsMinor
-    ) {
-      throw new Error(
-        "Mobility Financial Core allocations do not reconcile to digital proceeds."
-      );
+        transaction.id;
     }
 
     let vendorPayableTransactionId:
-      string | null =
-        null;
+      string | null = null;
 
     if (
       input.driverNetMinor >
       BigInt(0)
     ) {
-      const vendorTransaction =
+      const transaction =
         await transactionService.createWithinTransaction(
           database,
           {
@@ -626,20 +528,16 @@ export class MobilityFinancialCoreBridgeService {
 
             userAgent:
               input.userAgent,
-          }
+          },
         );
 
-      if (
-        vendorTransaction.status !==
-        TransactionStatus.COMPLETED
-      ) {
-        throw new Error(
-          "Mobility driver payable transaction did not complete."
-        );
-      }
+      this.assertCompleted(
+        transaction.status,
+        "Mobility driver payable transaction",
+      );
 
       vendorPayableTransactionId =
-        vendorTransaction.id;
+        transaction.id;
     }
 
     return {
@@ -654,10 +552,129 @@ export class MobilityFinancialCoreBridgeService {
     };
   }
 
+  private async findSettlement(
+    database: FinancialTransactionClient,
+    settlementId: string,
+  ): Promise<MobilitySettlementFinancialLinks | null> {
+    const rows =
+      await database.$queryRaw<
+        MobilitySettlementFinancialLinks[]
+      >`
+        SELECT
+          "id",
+          "organizationId",
+          "paymentId",
+          "rideId",
+          "driverId",
+          "currency",
+          "paymentMethod",
+          "financialTransactionId",
+          "vendorPayableTransactionId",
+          "commissionTransactionId",
+          "cashObligationSettlementTransactionId"
+        FROM "MobilitySettlement"
+        WHERE "id" = ${settlementId}
+        LIMIT 1
+      `;
+
+    return rows[0] ?? null;
+  }
+
+  private getExistingLinks(
+    settlement: MobilitySettlementFinancialLinks,
+  ): MobilityFinancialCoreBridgeResult | null {
+    if (
+      !settlement.financialTransactionId
+    ) {
+      return null;
+    }
+
+    if (
+      !settlement.vendorPayableTransactionId &&
+      !settlement.commissionTransactionId &&
+      !settlement.cashObligationSettlementTransactionId
+    ) {
+      return null;
+    }
+
+    return {
+      financialTransactionId:
+        settlement.financialTransactionId,
+
+      vendorPayableTransactionId:
+        settlement.vendorPayableTransactionId,
+
+      commissionTransactionId:
+        settlement.commissionTransactionId,
+
+      cashObligationSettlementTransactionId:
+        settlement.cashObligationSettlementTransactionId,
+    };
+  }
+
+  private assertSettlement(
+    input: SettleDigitalMobilityRideInput,
+    settlement: MobilitySettlementFinancialLinks,
+  ): void {
+    if (
+      settlement.organizationId !==
+      input.organizationId
+    ) {
+      throw new Error(
+        "Mobility settlement organization does not match Financial Core integration.",
+      );
+    }
+
+    if (
+      settlement.paymentId !==
+      input.paymentId
+    ) {
+      throw new Error(
+        "Mobility settlement payment does not match Financial Core integration.",
+      );
+    }
+
+    if (
+      settlement.rideId !==
+      input.rideId
+    ) {
+      throw new Error(
+        "Mobility settlement ride does not match Financial Core integration.",
+      );
+    }
+
+    if (
+      settlement.driverId !==
+      input.driverId
+    ) {
+      throw new Error(
+        "Mobility settlement driver does not match Financial Core integration.",
+      );
+    }
+
+    if (
+      settlement.currency !==
+      input.currency
+    ) {
+      throw new Error(
+        "Mobility settlement currency does not match Financial Core integration.",
+      );
+    }
+
+    if (
+      settlement.paymentMethod !==
+      "DIGITAL"
+    ) {
+      throw new Error(
+        "Financial Core bridge only supports DIGITAL Mobility settlement.",
+      );
+    }
+  }
+
   private async ensureClearingAccount(
     database: FinancialTransactionClient,
     organizationId: string,
-    currency: string
+    currency: string,
   ) {
     const code =
       `CLEARING-${organizationId}-${currency}`;
@@ -667,7 +684,9 @@ export class MobilityFinancialCoreBridgeService {
         where: {
           code,
         },
+
         update: {},
+
         create: {
           organizationId,
           userId: null,
@@ -690,7 +709,7 @@ export class MobilityFinancialCoreBridgeService {
       account,
       organizationId,
       currency,
-      AccountType.CLEARING
+      AccountType.CLEARING,
     );
 
     return account;
@@ -699,7 +718,7 @@ export class MobilityFinancialCoreBridgeService {
   private async ensurePlatformRevenueAccount(
     database: FinancialTransactionClient,
     organizationId: string,
-    currency: string
+    currency: string,
   ) {
     const code =
       `PLATFORM-REVENUE-${organizationId}-${currency}`;
@@ -709,7 +728,9 @@ export class MobilityFinancialCoreBridgeService {
         where: {
           code,
         },
+
         update: {},
+
         create: {
           organizationId,
           userId: null,
@@ -732,7 +753,7 @@ export class MobilityFinancialCoreBridgeService {
       account,
       organizationId,
       currency,
-      AccountType.PLATFORM_REVENUE
+      AccountType.PLATFORM_REVENUE,
     );
 
     return account;
@@ -743,7 +764,7 @@ export class MobilityFinancialCoreBridgeService {
     organizationId: string,
     driverId: string,
     userId: string,
-    currency: string
+    currency: string,
   ) {
     const code =
       `MOBILITY-DRIVER-PAYABLE-${driverId}-${currency}`;
@@ -753,7 +774,9 @@ export class MobilityFinancialCoreBridgeService {
         where: {
           code,
         },
+
         update: {},
+
         create: {
           organizationId,
           userId,
@@ -777,7 +800,7 @@ export class MobilityFinancialCoreBridgeService {
       organizationId
     ) {
       throw new Error(
-        "Mobility driver payable account belongs to another organization."
+        "Mobility driver payable account belongs to another organization.",
       );
     }
 
@@ -786,7 +809,7 @@ export class MobilityFinancialCoreBridgeService {
       userId
     ) {
       throw new Error(
-        "Mobility driver payable account belongs to another user."
+        "Mobility driver payable account belongs to another user.",
       );
     }
 
@@ -795,7 +818,7 @@ export class MobilityFinancialCoreBridgeService {
       null
     ) {
       throw new Error(
-        "Mobility driver payable account cannot belong to a vendor."
+        "Mobility driver payable account cannot belong to a vendor.",
       );
     }
 
@@ -803,7 +826,7 @@ export class MobilityFinancialCoreBridgeService {
       account,
       organizationId,
       currency,
-      AccountType.VENDOR_PAYABLE
+      AccountType.VENDOR_PAYABLE,
     );
 
     return account;
@@ -818,14 +841,14 @@ export class MobilityFinancialCoreBridgeService {
     },
     organizationId: string,
     currency: string,
-    type: AccountType
+    type: AccountType,
   ): void {
     if (
       account.organizationId !==
       organizationId
     ) {
       throw new Error(
-        "Financial Core account belongs to another organization."
+        "Financial Core account belongs to another organization.",
       );
     }
 
@@ -834,7 +857,7 @@ export class MobilityFinancialCoreBridgeService {
       currency
     ) {
       throw new Error(
-        "Financial Core account currency mismatch."
+        "Financial Core account currency mismatch.",
       );
     }
 
@@ -843,7 +866,7 @@ export class MobilityFinancialCoreBridgeService {
       type
     ) {
       throw new Error(
-        "Financial Core account type mismatch."
+        "Financial Core account type mismatch.",
       );
     }
 
@@ -852,128 +875,83 @@ export class MobilityFinancialCoreBridgeService {
       AccountStatus.ACTIVE
     ) {
       throw new Error(
-        "Financial Core account is not active."
+        "Financial Core account is not active.",
+      );
+    }
+  }
+
+  private assertCompleted(
+    status: TransactionStatus,
+    label: string,
+  ): void {
+    if (
+      status !==
+      TransactionStatus.COMPLETED
+    ) {
+      throw new Error(
+        `${label} did not complete in Financial Core.`,
       );
     }
   }
 
   private validateInput(
-    input: SettleDigitalMobilityRideInput
+    input: SettleDigitalMobilityRideInput,
   ): void {
-    if (
-      !input.organizationId.trim()
+    const requiredStrings = [
+      ["organizationId", input.organizationId],
+      ["settlementId", input.settlementId],
+      ["paymentId", input.paymentId],
+      ["rideId", input.rideId],
+      ["driverId", input.driverId],
+      ["currency", input.currency],
+      ["sourceReference", input.sourceReference],
+    ] as const;
+
+    for (
+      const [name, value] of
+      requiredStrings
     ) {
-      throw new Error(
-        "Mobility organizationId is required."
-      );
+      if (!value.trim()) {
+        throw new Error(
+          `Mobility ${name} is required.`,
+        );
+      }
+    }
+
+    const amounts = [
+      ["grossFareMinor", input.grossFareMinor],
+      [
+        "availableDigitalProceedsMinor",
+        input.availableDigitalProceedsMinor,
+      ],
+      [
+        "currentCommissionMinor",
+        input.currentCommissionMinor,
+      ],
+      [
+        "priorCashObligationsSettledMinor",
+        input.priorCashObligationsSettledMinor,
+      ],
+      ["driverNetMinor", input.driverNetMinor],
+    ] as const;
+
+    for (
+      const [name, value] of
+      amounts
+    ) {
+      if (value < BigInt(0)) {
+        throw new Error(
+          `Mobility ${name} cannot be negative.`,
+        );
+      }
     }
 
     if (
-      !input.settlementId.trim()
+      input.currency.length !==
+      3
     ) {
       throw new Error(
-        "Mobility settlementId is required."
-      );
-    }
-
-    if (
-      !input.paymentId.trim()
-    ) {
-      throw new Error(
-        "Mobility paymentId is required."
-      );
-    }
-
-    if (
-      !input.rideId.trim()
-    ) {
-      throw new Error(
-        "Mobility rideId is required."
-      );
-    }
-
-    if (
-      !input.driverId.trim()
-    ) {
-      throw new Error(
-        "Mobility driverId is required."
-      );
-    }
-
-    if (
-      !/^[A-Z]{3}$/.test(
-        input.currency
-      )
-    ) {
-      throw new Error(
-        "Mobility currency must be a valid ISO 4217 code."
-      );
-    }
-
-    if (
-      input.grossFareMinor <
-      BigInt(0)
-    ) {
-      throw new Error(
-        "Gross fare cannot be negative."
-      );
-    }
-
-    if (
-      input.availableDigitalProceedsMinor <=
-      BigInt(0)
-    ) {
-      throw new Error(
-        "Digital proceeds must be greater than zero."
-      );
-    }
-
-    if (
-      input.currentCommissionMinor <
-      BigInt(0)
-    ) {
-      throw new Error(
-        "Current commission cannot be negative."
-      );
-    }
-
-    if (
-      input.priorCashObligationsSettledMinor <
-      BigInt(0)
-    ) {
-      throw new Error(
-        "Prior cash obligations settled cannot be negative."
-      );
-    }
-
-    if (
-      input.driverNetMinor <
-      BigInt(0)
-    ) {
-      throw new Error(
-        "Driver net cannot be negative."
-      );
-    }
-
-    if (
-      !input.sourceReference.trim()
-    ) {
-      throw new Error(
-        "Digital source reference is required."
-      );
-    }
-
-    const expected =
-      input.driverNetMinor +
-      input.currentCommissionMinor +
-      input.priorCashObligationsSettledMinor;
-
-    if (
-      expected !==
-      input.availableDigitalProceedsMinor
-    ) {
-      throw new Error(
-        "Mobility Financial Core amounts do not reconcile."
+        "Mobility currency must contain exactly three characters.",
       );
     }
   }
