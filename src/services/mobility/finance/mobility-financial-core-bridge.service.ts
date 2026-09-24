@@ -449,9 +449,6 @@ export class MobilityFinancialCoreBridgeService {
               context:
                 "MOBILITY_FINANCIAL_SETTLEMENT",
 
-              vendorId:
-                null,
-
               metadata: {
                 rideId:
                   input.rideId,
