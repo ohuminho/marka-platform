@@ -96,10 +96,15 @@ export class MobilityFinancialCoreBridgeService {
       );
     }
 
-    this.assertSettlement(input, settlement);
+    this.assertSettlement(
+      input,
+      settlement,
+    );
 
     const existing =
-      this.getExistingLinks(settlement);
+      this.getExistingLinks(
+        settlement,
+      );
 
     if (existing) {
       return existing;
@@ -108,8 +113,10 @@ export class MobilityFinancialCoreBridgeService {
     const driver =
       await database.mobilityDriver.findUnique({
         where: {
-          id: input.driverId,
+          id:
+            input.driverId,
         },
+
         select: {
           id: true,
           userId: true,
@@ -133,7 +140,10 @@ export class MobilityFinancialCoreBridgeService {
       );
     }
 
-    if (driver.status !== "ACTIVE") {
+    if (
+      driver.status !==
+      "ACTIVE"
+    ) {
       throw new Error(
         "Mobility driver must be active for Financial Core settlement.",
       );
@@ -176,6 +186,15 @@ export class MobilityFinancialCoreBridgeService {
         input.currency,
       );
 
+    /*
+     * The MobilityPayment id is intentionally NOT passed
+     * as transactionService.paymentId.
+     *
+     * MobilityRidePayment is a separate SQL-level mobility
+     * payment entity and is not the Financial Core Payment
+     * entity. Passing its id as paymentId would make the
+     * Financial Core incorrectly search for a Payment row.
+     */
     const financialTransaction =
       await transactionService.createExternalCreditWithinTransaction(
         database,
@@ -213,6 +232,9 @@ export class MobilityFinancialCoreBridgeService {
           context:
             "MOBILITY_DIGITAL_PAYMENT_CAPTURE",
 
+          provider:
+            "MARKA_MOBILITY",
+
           providerPaymentId:
             input.paymentId,
 
@@ -220,7 +242,7 @@ export class MobilityFinancialCoreBridgeService {
             settlementId:
               input.settlementId,
 
-            paymentId:
+            mobilityPaymentId:
               input.paymentId,
 
             rideId:
@@ -573,43 +595,43 @@ export class MobilityFinancialCoreBridgeService {
           "commissionTransactionId",
           "cashObligationSettlementTransactionId"
         FROM "MobilitySettlement"
-        WHERE "id" = ${settlementId}
+        WHERE
+          "id" =
+            ${settlementId}
         LIMIT 1
       `;
 
-    return rows[0] ?? null;
+    return rows[0] ??
+      null;
   }
 
   private getExistingLinks(
     settlement: MobilitySettlementFinancialLinks,
   ): MobilityFinancialCoreBridgeResult | null {
     if (
-      !settlement.financialTransactionId
+      settlement.financialTransactionId &&
+      (
+        settlement.vendorPayableTransactionId ||
+        settlement.commissionTransactionId ||
+        settlement.cashObligationSettlementTransactionId
+      )
     ) {
-      return null;
+      return {
+        financialTransactionId:
+          settlement.financialTransactionId,
+
+        vendorPayableTransactionId:
+          settlement.vendorPayableTransactionId,
+
+        commissionTransactionId:
+          settlement.commissionTransactionId,
+
+        cashObligationSettlementTransactionId:
+          settlement.cashObligationSettlementTransactionId,
+      };
     }
 
-    if (
-      !settlement.vendorPayableTransactionId &&
-      !settlement.commissionTransactionId &&
-      !settlement.cashObligationSettlementTransactionId
-    ) {
-      return null;
-    }
-
-    return {
-      financialTransactionId:
-        settlement.financialTransactionId,
-
-      vendorPayableTransactionId:
-        settlement.vendorPayableTransactionId,
-
-      commissionTransactionId:
-        settlement.commissionTransactionId,
-
-      cashObligationSettlementTransactionId:
-        settlement.cashObligationSettlementTransactionId,
-    };
+    return null;
   }
 
   private assertSettlement(
@@ -689,8 +711,10 @@ export class MobilityFinancialCoreBridgeService {
 
         create: {
           organizationId,
-          userId: null,
-          vendorId: null,
+          userId:
+            null,
+          vendorId:
+            null,
           type:
             AccountType.CLEARING,
           code,
@@ -701,7 +725,8 @@ export class MobilityFinancialCoreBridgeService {
             BigInt(0),
           heldBalanceMinor:
             BigInt(0),
-          version: 0,
+          version:
+            0,
         },
       });
 
@@ -733,8 +758,10 @@ export class MobilityFinancialCoreBridgeService {
 
         create: {
           organizationId,
-          userId: null,
-          vendorId: null,
+          userId:
+            null,
+          vendorId:
+            null,
           type:
             AccountType.PLATFORM_REVENUE,
           code,
@@ -745,7 +772,8 @@ export class MobilityFinancialCoreBridgeService {
             BigInt(0),
           heldBalanceMinor:
             BigInt(0),
-          version: 0,
+          version:
+            0,
         },
       });
 
@@ -780,7 +808,8 @@ export class MobilityFinancialCoreBridgeService {
         create: {
           organizationId,
           userId,
-          vendorId: null,
+          vendorId:
+            null,
           type:
             AccountType.VENDOR_PAYABLE,
           code,
@@ -791,7 +820,8 @@ export class MobilityFinancialCoreBridgeService {
             BigInt(0),
           heldBalanceMinor:
             BigInt(0),
-          version: 0,
+          version:
+            0,
         },
       });
 
@@ -898,13 +928,34 @@ export class MobilityFinancialCoreBridgeService {
     input: SettleDigitalMobilityRideInput,
   ): void {
     const requiredStrings = [
-      ["organizationId", input.organizationId],
-      ["settlementId", input.settlementId],
-      ["paymentId", input.paymentId],
-      ["rideId", input.rideId],
-      ["driverId", input.driverId],
-      ["currency", input.currency],
-      ["sourceReference", input.sourceReference],
+      [
+        "organizationId",
+        input.organizationId,
+      ],
+      [
+        "settlementId",
+        input.settlementId,
+      ],
+      [
+        "paymentId",
+        input.paymentId,
+      ],
+      [
+        "rideId",
+        input.rideId,
+      ],
+      [
+        "driverId",
+        input.driverId,
+      ],
+      [
+        "currency",
+        input.currency,
+      ],
+      [
+        "sourceReference",
+        input.sourceReference,
+      ],
     ] as const;
 
     for (
@@ -919,7 +970,10 @@ export class MobilityFinancialCoreBridgeService {
     }
 
     const amounts = [
-      ["grossFareMinor", input.grossFareMinor],
+      [
+        "grossFareMinor",
+        input.grossFareMinor,
+      ],
       [
         "availableDigitalProceedsMinor",
         input.availableDigitalProceedsMinor,
@@ -932,14 +986,20 @@ export class MobilityFinancialCoreBridgeService {
         "priorCashObligationsSettledMinor",
         input.priorCashObligationsSettledMinor,
       ],
-      ["driverNetMinor", input.driverNetMinor],
+      [
+        "driverNetMinor",
+        input.driverNetMinor,
+      ],
     ] as const;
 
     for (
       const [name, value] of
       amounts
     ) {
-      if (value < BigInt(0)) {
+      if (
+        value <
+        BigInt(0)
+      ) {
         throw new Error(
           `Mobility ${name} cannot be negative.`,
         );
