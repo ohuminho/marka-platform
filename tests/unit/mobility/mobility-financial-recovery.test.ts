@@ -58,22 +58,23 @@ function assertThrows(
  * The 1,200 AOA becomes an open financial obligation.
  */
 assert.equal(
-  1200n,
-  10000n * 1200n / 10000n,
+  BigInt(1200),
+  (BigInt(10000) * BigInt(1200)) /
+    BigInt(10000),
 );
 
 assertAllocation({
   grossFareMinor:
-    10000n,
+    BigInt(10000),
 
   commissionMinor:
-    1200n,
+    BigInt(1200),
 
   priorCashObligationsSettledMinor:
-    0n,
+    BigInt(0),
 
   driverNetMinor:
-    8800n,
+    BigInt(8800),
 });
 
 /*
@@ -90,16 +91,16 @@ assertAllocation({
  */
 assertAllocation({
   grossFareMinor:
-    10000n,
+    BigInt(10000),
 
   commissionMinor:
-    1200n,
+    BigInt(1200),
 
   priorCashObligationsSettledMinor:
-    1200n,
+    BigInt(1200),
 
   driverNetMinor:
-    7600n,
+    BigInt(7600),
 });
 
 /*
@@ -107,16 +108,16 @@ assertAllocation({
  */
 assertAllocation({
   grossFareMinor:
-    1200n,
+    BigInt(1200),
 
   commissionMinor:
-    1200n,
+    BigInt(1200),
 
   priorCashObligationsSettledMinor:
-    0n,
+    BigInt(0),
 
   driverNetMinor:
-    0n,
+    BigInt(0),
 });
 
 /*
@@ -126,16 +127,16 @@ assertThrows(
   () => {
     assertAllocation({
       grossFareMinor:
-        10000n,
+        BigInt(10000),
 
       commissionMinor:
-        1200n,
+        BigInt(1200),
 
       priorCashObligationsSettledMinor:
-        1200n,
+        BigInt(1200),
 
       driverNetMinor:
-        7000n,
+        BigInt(7000),
     });
   },
   "Mobility financial allocation must reconcile",
@@ -148,16 +149,16 @@ assertThrows(
   () => {
     assertAllocation({
       grossFareMinor:
-        10000n,
+        BigInt(10000),
 
       commissionMinor:
-        1200n,
+        BigInt(1200),
 
       priorCashObligationsSettledMinor:
-        1200n,
+        BigInt(1200),
 
       driverNetMinor:
-        8000n,
+        BigInt(8000),
     });
   },
   "Mobility financial allocation must reconcile",
@@ -182,15 +183,15 @@ function assertDigitalRecoveryAmount(
 }
 
 assertDigitalRecoveryAmount(
-  10000n,
-  10000n,
+  BigInt(10000),
+  BigInt(10000),
 );
 
 assertThrows(
   () => {
     assertDigitalRecoveryAmount(
-      10000n,
-      8800n,
+      BigInt(10000),
+      BigInt(8800),
     );
   },
   "Digital recovery proceeds must equal",
@@ -254,7 +255,7 @@ function assertFinancialLinks(
 
   if (
     input.commissionMinor >
-      0n &&
+      BigInt(0) &&
     !input.commission
   ) {
     throw new Error(
@@ -264,7 +265,7 @@ function assertFinancialLinks(
 
   if (
     input.priorCashMinor >
-      0n &&
+      BigInt(0) &&
     !input.cashSettlement
   ) {
     throw new Error(
@@ -274,7 +275,7 @@ function assertFinancialLinks(
 
   if (
     input.driverNetMinor >
-      0n &&
+      BigInt(0) &&
     !input.driverPayable
   ) {
     throw new Error(
@@ -297,13 +298,13 @@ assertFinancialLinks({
     "driver-1",
 
   commissionMinor:
-    1200n,
+    BigInt(1200),
 
   priorCashMinor:
-    1200n,
+    BigInt(1200),
 
   driverNetMinor:
-    7600n,
+    BigInt(7600),
 });
 
 assertThrows(
@@ -322,13 +323,203 @@ assertThrows(
         "driver-1",
 
       commissionMinor:
-        1200n,
+        BigInt(1200),
 
       priorCashMinor:
-        1200n,
+        BigInt(1200),
 
       driverNetMinor:
-        7600n,
+        BigInt(7600),
+    });
+  },
+  "COMMISSION_TRANSACTION",
+);
+
+/*
+ * Recovery must distinguish between an incomplete state
+ * and an accounting mismatch.
+ */
+function recoveryDisposition(
+  status:
+    | "RECONCILED"
+    | "INCOMPLETE"
+    | "MISMATCH",
+): "NOOP" | "RECOVER" | "BLOCK" {
+  if (
+    status ===
+    "RECONCILED"
+  ) {
+    return "NOOP";
+  }
+
+  if (
+    status ===
+    "INCOMPLETE"
+  ) {
+    return "RECOVER";
+  }
+
+  return "BLOCK";
+}
+
+assert.equal(
+  recoveryDisposition(
+    "RECONCILED",
+  ),
+  "NOOP",
+);
+
+assert.equal(
+  recoveryDisposition(
+    "INCOMPLETE",
+  ),
+  "RECOVER",
+);
+
+assert.equal(
+  recoveryDisposition(
+    "MISMATCH",
+  ),
+  "BLOCK",
+);
+
+/*
+ * Recovery must never automatically mutate accounting
+ * when reconciliation has detected a mismatch.
+ */
+function assertRecoveryAllowed(
+  reconciliationStatus:
+    | "RECONCILED"
+    | "INCOMPLETE"
+    | "MISMATCH",
+): void {
+  if (
+    reconciliationStatus ===
+    "MISMATCH"
+  ) {
+    throw new Error(
+      "Mobility financial recovery is blocked because reconciliation detected an accounting mismatch.",
+    );
+  }
+}
+
+assertRecoveryAllowed(
+  "RECONCILED",
+);
+
+assertRecoveryAllowed(
+  "INCOMPLETE",
+);
+
+assertThrows(
+  () => {
+    assertRecoveryAllowed(
+      "MISMATCH",
+    );
+  },
+  "accounting mismatch",
+);
+
+/*
+ * A completed settlement must have all required
+ * financial links.
+ */
+function assertCompletedFinancialLinks(
+  input: {
+    capture: string | null;
+    commission: string | null;
+    cashSettlement: string | null;
+    driverPayable: string | null;
+    commissionMinor: bigint;
+    priorCashMinor: bigint;
+    driverNetMinor: bigint;
+  },
+): void {
+  if (
+    !input.capture
+  ) {
+    throw new Error(
+      "FINANCIAL_CAPTURE_TRANSACTION",
+    );
+  }
+
+  if (
+    input.commissionMinor >
+      BigInt(0) &&
+    !input.commission
+  ) {
+    throw new Error(
+      "COMMISSION_TRANSACTION",
+    );
+  }
+
+  if (
+    input.priorCashMinor >
+      BigInt(0) &&
+    !input.cashSettlement
+  ) {
+    throw new Error(
+      "CASH_OBLIGATION_SETTLEMENT_TRANSACTION",
+    );
+  }
+
+  if (
+    input.driverNetMinor >
+      BigInt(0) &&
+    !input.driverPayable
+  ) {
+    throw new Error(
+      "DRIVER_PAYABLE_TRANSACTION",
+    );
+  }
+}
+
+assertCompletedFinancialLinks({
+  capture:
+    "capture-1",
+
+  commission:
+    "commission-1",
+
+  cashSettlement:
+    "cash-1",
+
+  driverPayable:
+    "driver-1",
+
+  commissionMinor:
+    BigInt(1200),
+
+  priorCashMinor:
+    BigInt(1200),
+
+  driverNetMinor:
+    BigInt(7600),
+});
+
+assertThrows(
+  () => {
+    assertCompletedFinancialLinks({
+      capture:
+        "capture-1",
+
+      commission:
+        null,
+
+      cashSettlement:
+        "cash-1",
+
+      driverPayable:
+        "driver-1",
+
+      commissionMinor:
+        BigInt(1200),
+
+      priorCashMinor:
+        BigInt(1200),
+
+      driverNetMinor:
+        BigInt(7600),
     });
   },
   "COMMISSION_TRANSACTION",
