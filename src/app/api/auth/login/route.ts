@@ -1,34 +1,42 @@
 import { NextResponse } from "next/server";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
-import { PasswordService } from "@/core/authentication/password.service";
-import { SessionService } from "@/core/auth/sessions/session.service";
+import {
+  passwordService,
+} from "@/core/authentication/password.service";
+import {
+  SessionService,
+} from "@/core/auth/sessions/session.service";
 
 import { prisma } from "@/database/client/prisma";
 
-function normalizeEmail(email: string): string {
+function normalizeEmail(
+  email: string
+): string {
   return email.trim().toLowerCase();
 }
 
-function getClientIp(request: Request): string | undefined {
-  const forwardedFor =
-    request.headers.get("x-forwarded-for");
-
-  if (forwardedFor) {
-    return forwardedFor
-      .split(",")[0]
-      ?.trim();
-  }
-
+function getClientIp(
+  request: Request
+): string | undefined {
   return (
-    request.headers.get("x-real-ip") ??
+    request.headers
+      .get("x-forwarded-for")
+      ?.split(",")[0]
+      ?.trim() ??
+    request.headers
+      .get("x-real-ip")
+      ?.trim() ??
     undefined
   );
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   try {
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const email =
       typeof body.email === "string"
@@ -43,11 +51,11 @@ export async function POST(request: Request) {
     if (!email || !password) {
       return NextResponse.json(
         {
-          message: "Invalid credentials.",
+          message:
+            "Invalid credentials.",
+          code: "INVALID_CREDENTIALS",
         },
-        {
-          status: 401,
-        }
+        { status: 401 }
       );
     }
 
@@ -61,16 +69,13 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json(
         {
-          message: "Invalid credentials.",
+          message:
+            "Invalid credentials.",
+          code: "INVALID_CREDENTIALS",
         },
-        {
-          status: 401,
-        }
+        { status: 401 }
       );
     }
-
-    const passwordService =
-      new PasswordService();
 
     const valid =
       await passwordService.compare(
@@ -81,24 +86,26 @@ export async function POST(request: Request) {
     if (!valid) {
       return NextResponse.json(
         {
-          message: "Invalid credentials.",
+          message:
+            "Invalid credentials.",
+          code: "INVALID_CREDENTIALS",
         },
-        {
-          status: 401,
-        }
+        { status: 401 }
       );
     }
 
-    if (user.status === "PENDING_VERIFICATION") {
+    if (
+      user.status ===
+      "PENDING_VERIFICATION"
+    ) {
       return NextResponse.json(
         {
           message:
             "Please verify your email address before signing in.",
-          code: "EMAIL_VERIFICATION_REQUIRED",
+          code:
+            "EMAIL_VERIFICATION_REQUIRED",
         },
-        {
-          status: 403,
-        }
+        { status: 403 }
       );
     }
 
@@ -111,10 +118,10 @@ export async function POST(request: Request) {
         {
           message:
             "This account is not available.",
+          code:
+            "USER_ACCOUNT_UNAVAILABLE",
         },
-        {
-          status: 403,
-        }
+        { status: 403 }
       );
     }
 
@@ -124,10 +131,12 @@ export async function POST(request: Request) {
     const session =
       await sessionService.create({
         userId: user.id,
-        ipAddress: getClientIp(request),
+        ipAddress:
+          getClientIp(request),
         userAgent:
-          request.headers.get("user-agent") ??
-          undefined,
+          request.headers.get(
+            "user-agent"
+          ) ?? undefined,
       });
 
     await prisma.user.update({
@@ -144,20 +153,36 @@ export async function POST(request: Request) {
         user: {
           id: user.id,
           name: user.name,
+          email: user.email,
           role: user.role,
+          status: user.status,
+          emailVerifiedAt:
+            user.emailVerifiedAt,
+        },
+        session: {
+          expiresAt:
+            session.expiresAt,
         },
       });
 
     response.cookies.set({
-      name: AuthConfig.cookies.name,
+      name:
+        AuthConfig.cookies.name,
       value: session.token,
-      httpOnly: AuthConfig.cookies.httpOnly,
-      secure: AuthConfig.cookies.secure,
-      sameSite: AuthConfig.cookies.sameSite,
-      path: AuthConfig.cookies.path,
+      httpOnly:
+        AuthConfig.cookies.httpOnly,
+      secure:
+        AuthConfig.cookies.secure,
+      sameSite:
+        AuthConfig.cookies.sameSite,
+      path:
+        AuthConfig.cookies.path,
       maxAge:
-        AuthConfig.sessionHours * 60 * 60,
-      expires: session.expiresAt,
+        AuthConfig.session.durationHours *
+        60 *
+        60,
+      expires:
+        session.expiresAt,
     });
 
     return response;
@@ -172,9 +197,7 @@ export async function POST(request: Request) {
         message:
           "Unable to authenticate at this time.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
