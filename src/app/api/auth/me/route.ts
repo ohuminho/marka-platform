@@ -1,9 +1,13 @@
 import { cookies } from "next/headers";
 
 import { prisma } from "@/database/client/prisma";
-
 import { AuthConfig } from "@/core/authentication/auth.config";
-import { SessionService } from "@/core/auth/sessions/session.service";
+import {
+  SessionService,
+} from "@/core/auth/sessions/session.service";
+import {
+  authorizationService,
+} from "@/core/authorization/authorization.service";
 
 export async function GET() {
   try {
@@ -17,12 +21,8 @@ export async function GET() {
 
     if (!token) {
       return Response.json(
-        {
-          user: null,
-        },
-        {
-          status: 401,
-        }
+        { user: null },
+        { status: 401 }
       );
     }
 
@@ -30,16 +30,14 @@ export async function GET() {
       new SessionService();
 
     const session =
-      await sessionService.validate(token);
+      await sessionService.validate(
+        token
+      );
 
     if (!session) {
       return Response.json(
-        {
-          user: null,
-        },
-        {
-          status: 401,
-        }
+        { user: null },
+        { status: 401 }
       );
     }
 
@@ -65,41 +63,100 @@ export async function GET() {
               timezone: true,
             },
           },
+          memberships: {
+            where: {
+              status: "ACTIVE",
+              organization: {
+                status: "ACTIVE",
+              },
+            },
+            select: {
+              organizationId: true,
+              organization: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
         },
       });
 
     if (!user) {
-      await sessionService.revoke(token);
+      await sessionService.revoke(
+        token
+      );
 
       return Response.json(
-        {
-          user: null,
-        },
-        {
-          status: 401,
-        }
+        { user: null },
+        { status: 401 }
       );
     }
 
     if (
       user.status === "SUSPENDED" ||
       user.status === "LOCKED" ||
-      user.status === "DELETED"
+      user.status === "DELETED" ||
+      user.status ===
+        "PENDING_VERIFICATION"
     ) {
-      await sessionService.revoke(token);
+      await sessionService.revoke(
+        token
+      );
 
       return Response.json(
-        {
-          user: null,
-        },
-        {
-          status: 401,
-        }
+        { user: null },
+        { status: 401 }
       );
     }
 
+    const organizationId =
+      user.memberships[0]
+        ?.organizationId;
+
+    const authorization =
+      await authorizationService.authorize(
+        {
+          userId: user.id,
+          organizationId,
+        }
+      );
+
     return Response.json({
-      user,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        emailVerifiedAt:
+          user.emailVerifiedAt,
+        profile: user.profile,
+      },
+      session: {
+        id: session.id,
+        expiresAt:
+          session.expiresAt,
+        createdAt:
+          session.createdAt,
+        lastSeenAt:
+          session.lastSeenAt,
+      },
+      organizations:
+        user.memberships.map(
+          (membership) =>
+            membership.organization
+        ),
+      authorization: {
+        organizationId:
+          authorization.organizationId,
+        roles:
+          authorization.roles,
+        permissions:
+          authorization.permissions,
+      },
     });
   } catch (error) {
     console.error(
@@ -108,12 +165,8 @@ export async function GET() {
     );
 
     return Response.json(
-      {
-        user: null,
-      },
-      {
-        status: 401,
-      }
+      { user: null },
+      { status: 401 }
     );
   }
 }
