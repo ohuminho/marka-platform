@@ -39,6 +39,9 @@ interface MobilityPaymentRecord {
   commissionRateBps: number;
   commissionAmountMinor: bigint;
 
+  commissionPolicyKey: string;
+  commissionPolicyVersion: number;
+
   driverGrossMinor: bigint;
   driverNetMinor: bigint;
 
@@ -58,17 +61,37 @@ export class MobilityPaymentEngineService {
     new FinancialAuditService();
 
   async createPayment(
-    input: CreateMobilityPaymentInput
+    input: CreateMobilityPaymentInput,
   ): Promise<MobilityPaymentResult> {
     this.validateCreateInput(input);
 
     const existing =
       await this.findByRide(
         prisma,
-        input.rideId
+        input.rideId,
       );
 
     if (existing) {
+      if (
+        existing.organizationId !==
+        input.organizationId
+      ) {
+        throw new Error(
+          "Existing Mobility payment belongs to another organization.",
+        );
+      }
+
+      if (
+        existing.commissionPolicyKey !==
+          input.commissionPolicyKey ||
+        existing.commissionPolicyVersion !==
+          input.commissionPolicyVersion
+      ) {
+        throw new Error(
+          "Mobility payment already exists with a different commission policy.",
+        );
+      }
+
       return this.toResult(existing);
     }
 
@@ -103,7 +126,7 @@ export class MobilityPaymentEngineService {
 
           if (!currentRide) {
             throw new Error(
-              "Mobility ride was not found."
+              "Mobility ride was not found.",
             );
           }
 
@@ -112,7 +135,7 @@ export class MobilityPaymentEngineService {
             input.organizationId
           ) {
             throw new Error(
-              "Mobility ride does not belong to the organization."
+              "Mobility ride does not belong to the organization.",
             );
           }
 
@@ -121,7 +144,7 @@ export class MobilityPaymentEngineService {
             input.riderId
           ) {
             throw new Error(
-              "Mobility rider does not match the payment rider."
+              "Mobility rider does not match the payment rider.",
             );
           }
 
@@ -130,7 +153,7 @@ export class MobilityPaymentEngineService {
             input.currency
           ) {
             throw new Error(
-              "Payment currency does not match the ride currency."
+              "Payment currency does not match the ride currency.",
             );
           }
 
@@ -140,7 +163,7 @@ export class MobilityPaymentEngineService {
               input.driverId
           ) {
             throw new Error(
-              "Payment driver does not match the assigned ride driver."
+              "Payment driver does not match the assigned ride driver.",
             );
           }
 
@@ -151,7 +174,7 @@ export class MobilityPaymentEngineService {
           const commission =
             this.calculateCommission(
               finalFare,
-              input.commissionRateBps
+              input.commissionRateBps,
             );
 
           const driverGross =
@@ -176,16 +199,18 @@ export class MobilityPaymentEngineService {
           const pricingSnapshotJson =
             input.pricingSnapshot
               ? JSON.stringify(
-                  input.pricingSnapshot
+                  input.pricingSnapshot,
                 )
               : null;
 
           const metadataJson =
-            input.metadata
-              ? JSON.stringify(
-                  input.metadata
-                )
-              : null;
+            JSON.stringify({
+              ...(input.metadata ?? {}),
+              commissionPolicyKey:
+                input.commissionPolicyKey,
+              commissionPolicyVersion:
+                input.commissionPolicyVersion,
+            });
 
           const rows =
             await database.$queryRaw<
@@ -204,6 +229,8 @@ export class MobilityPaymentEngineService {
                 "finalFareMinor",
                 "commissionRateBps",
                 "commissionAmountMinor",
+                "commissionPolicyKey",
+                "commissionPolicyVersion",
                 "driverGrossMinor",
                 "driverNetMinor",
                 "pricingSnapshot",
@@ -233,6 +260,8 @@ export class MobilityPaymentEngineService {
                 ${finalFare},
                 ${input.commissionRateBps},
                 ${commission},
+                ${input.commissionPolicyKey},
+                ${input.commissionPolicyVersion},
                 ${driverGross},
                 ${driverNet},
                 ${pricingSnapshotJson}::jsonb,
@@ -260,6 +289,8 @@ export class MobilityPaymentEngineService {
                 "finalFareMinor",
                 "commissionRateBps",
                 "commissionAmountMinor",
+                "commissionPolicyKey",
+                "commissionPolicyVersion",
                 "driverGrossMinor",
                 "driverNetMinor",
                 "pricingSnapshot",
@@ -276,7 +307,7 @@ export class MobilityPaymentEngineService {
 
           if (!created) {
             throw new Error(
-              "Unable to create Mobility payment."
+              "Unable to create Mobility payment.",
             );
           }
 
@@ -285,79 +316,61 @@ export class MobilityPaymentEngineService {
         {
           isolationLevel:
             Prisma.TransactionIsolationLevel.Serializable,
-
           maxWait: 5000,
-
           timeout: 10000,
-        }
+        },
       );
 
     await this.financialAuditService.record({
       organizationId:
         payment.organizationId,
-
       actorUserId:
         input.actorUserId,
-
       action:
         "MOBILITY_PAYMENT_CREATED",
-
       entityType:
         "MOBILITY_RIDE_PAYMENT",
-
       entityId:
         payment.id,
-
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
-
       metadata: {
         rideId:
           payment.rideId,
-
         paymentMethod:
           payment.paymentMethod,
-
         status:
           payment.status,
-
         estimatedFareMinor:
           payment.estimatedFareMinor.toString(),
-
         finalFareMinor:
           payment.finalFareMinor.toString(),
-
         commissionAmountMinor:
           payment.commissionAmountMinor.toString(),
-
+        commissionPolicyKey:
+          payment.commissionPolicyKey,
+        commissionPolicyVersion:
+          payment.commissionPolicyVersion,
         driverNetMinor:
           payment.driverNetMinor.toString(),
-
         source:
           "MOBILITY_PAYMENT_ENGINE",
       },
     });
 
-    return this.toResult(
-      payment
-    );
+    return this.toResult(payment);
   }
 
   async completePayment(
-    input: CompleteMobilityPaymentInput
+    input: CompleteMobilityPaymentInput,
   ): Promise<MobilityPaymentResult> {
-    this.validateCompleteInput(
-      input
-    );
+    this.validateCompleteInput(input);
 
     const payment =
       await prisma.$transaction(
@@ -365,12 +378,12 @@ export class MobilityPaymentEngineService {
           const existing =
             await this.findByRide(
               database,
-              input.rideId
+              input.rideId,
             );
 
           if (!existing) {
             throw new Error(
-              "Mobility payment was not found for this ride."
+              "Mobility payment was not found for this ride.",
             );
           }
 
@@ -379,7 +392,7 @@ export class MobilityPaymentEngineService {
             input.organizationId
           ) {
             throw new Error(
-              "Mobility payment does not belong to the organization."
+              "Mobility payment does not belong to the organization.",
             );
           }
 
@@ -392,18 +405,21 @@ export class MobilityPaymentEngineService {
               "REFUNDED"
           ) {
             throw new Error(
-              `Mobility payment cannot be completed from status ${existing.status}.`
+              `Mobility payment cannot be completed from status ${existing.status}.`,
             );
           }
 
+          const finalFare =
+            input.finalFareMinor;
+
           const commission =
             this.calculateCommission(
-              input.finalFareMinor,
-              input.commissionRateBps
+              finalFare,
+              existing.commissionRateBps,
             );
 
           const driverGross =
-            input.finalFareMinor;
+            finalFare;
 
           const driverNet =
             driverGross -
@@ -415,7 +431,7 @@ export class MobilityPaymentEngineService {
           const metadataJson =
             input.metadata
               ? JSON.stringify(
-                  input.metadata
+                  input.metadata,
                 )
               : null;
 
@@ -426,10 +442,7 @@ export class MobilityPaymentEngineService {
               UPDATE "MobilityRidePayment"
               SET
                 "finalFareMinor" =
-                  ${input.finalFareMinor},
-
-                "commissionRateBps" =
-                  ${input.commissionRateBps},
+                  ${finalFare},
 
                 "commissionAmountMinor" =
                   ${commission},
@@ -447,7 +460,10 @@ export class MobilityPaymentEngineService {
                   ),
 
                 "collectedAt" =
-                  CURRENT_TIMESTAMP,
+                  COALESCE(
+                    "collectedAt",
+                    CURRENT_TIMESTAMP
+                  ),
 
                 "updatedAt" =
                   CURRENT_TIMESTAMP,
@@ -483,6 +499,8 @@ export class MobilityPaymentEngineService {
                 "finalFareMinor",
                 "commissionRateBps",
                 "commissionAmountMinor",
+                "commissionPolicyKey",
+                "commissionPolicyVersion",
                 "driverGrossMinor",
                 "driverNetMinor",
                 "pricingSnapshot",
@@ -499,7 +517,7 @@ export class MobilityPaymentEngineService {
 
           if (!updated) {
             throw new Error(
-              "Unable to complete Mobility payment."
+              "Unable to complete Mobility payment.",
             );
           }
 
@@ -508,74 +526,60 @@ export class MobilityPaymentEngineService {
         {
           isolationLevel:
             Prisma.TransactionIsolationLevel.Serializable,
-
           maxWait: 5000,
-
           timeout: 10000,
-        }
+        },
       );
 
     await this.financialAuditService.record({
       organizationId:
         payment.organizationId,
-
       actorUserId:
         input.actorUserId,
-
       action:
         "MOBILITY_PAYMENT_COMPLETED",
-
       entityType:
         "MOBILITY_RIDE_PAYMENT",
-
       entityId:
         payment.id,
-
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
-
       metadata: {
         rideId:
           payment.rideId,
-
         paymentMethod:
           payment.paymentMethod,
-
         finalFareMinor:
           payment.finalFareMinor.toString(),
-
         commissionAmountMinor:
           payment.commissionAmountMinor.toString(),
-
+        commissionPolicyKey:
+          payment.commissionPolicyKey,
+        commissionPolicyVersion:
+          payment.commissionPolicyVersion,
         driverNetMinor:
           payment.driverNetMinor.toString(),
-
         source:
           "MOBILITY_PAYMENT_ENGINE",
       },
     });
 
-    return this.toResult(
-      payment
-    );
+    return this.toResult(payment);
   }
 
   async getByRide(
-    rideId: string
+    rideId: string,
   ): Promise<MobilityPaymentResult | null> {
     const payment =
       await this.findByRide(
         prisma,
-        rideId
+        rideId,
       );
 
     return payment
@@ -585,7 +589,7 @@ export class MobilityPaymentEngineService {
 
   private async findByRide(
     database: SqlExecutor,
-    rideId: string
+    rideId: string,
   ): Promise<MobilityPaymentRecord | null> {
     const rows =
       await database.$queryRaw<
@@ -604,6 +608,8 @@ export class MobilityPaymentEngineService {
           "finalFareMinor",
           "commissionRateBps",
           "commissionAmountMinor",
+          "commissionPolicyKey",
+          "commissionPolicyVersion",
           "driverGrossMinor",
           "driverNetMinor",
           "pricingSnapshot",
@@ -625,7 +631,7 @@ export class MobilityPaymentEngineService {
 
   private calculateCommission(
     fareMinor: bigint,
-    rateBps: number
+    rateBps: number,
   ): bigint {
     return (
       fareMinor *
@@ -635,84 +641,70 @@ export class MobilityPaymentEngineService {
   }
 
   private toResult(
-    payment: MobilityPaymentRecord
+    payment: MobilityPaymentRecord,
   ): MobilityPaymentResult {
     return {
       id:
         payment.id,
-
       organizationId:
         payment.organizationId,
-
       rideId:
         payment.rideId,
-
       riderId:
         payment.riderId,
-
       driverId:
         payment.driverId,
-
       currency:
         payment.currency,
-
       paymentMethod:
         payment.paymentMethod,
-
       status:
         payment.status,
-
       estimatedFareMinor:
         payment.estimatedFareMinor.toString(),
-
       finalFareMinor:
         payment.finalFareMinor.toString(),
-
       commissionRateBps:
         Number(
-          payment.commissionRateBps
+          payment.commissionRateBps,
         ),
-
       commissionAmountMinor:
         payment.commissionAmountMinor.toString(),
-
+      commissionPolicyKey:
+        payment.commissionPolicyKey,
+      commissionPolicyVersion:
+        Number(
+          payment.commissionPolicyVersion,
+        ),
       driverGrossMinor:
         payment.driverGrossMinor.toString(),
-
       driverNetMinor:
         payment.driverNetMinor.toString(),
-
       pricingSnapshot:
         payment.pricingSnapshot,
-
       metadata:
         payment.metadata,
-
       authorizedAt:
         payment.authorizedAt,
-
       collectedAt:
         payment.collectedAt,
-
       settledAt:
         payment.settledAt,
-
       createdAt:
         payment.createdAt,
-
       updatedAt:
         payment.updatedAt,
     };
   }
 
   private validateCreateInput(
-    input: CreateMobilityPaymentInput
+    input: CreateMobilityPaymentInput,
   ): void {
     if (
       !input.organizationId.trim()
     ) {
       throw new Error(
-        "Mobility organizationId is required."
+        "Mobility organizationId is required.",
       );
     }
 
@@ -720,7 +712,7 @@ export class MobilityPaymentEngineService {
       !input.rideId.trim()
     ) {
       throw new Error(
-        "Mobility rideId is required."
+        "Mobility rideId is required.",
       );
     }
 
@@ -728,12 +720,12 @@ export class MobilityPaymentEngineService {
       !input.riderId.trim()
     ) {
       throw new Error(
-        "Mobility riderId is required."
+        "Mobility riderId is required.",
       );
     }
 
     this.validateCurrency(
-      input.currency
+      input.currency,
     );
 
     if (
@@ -741,7 +733,7 @@ export class MobilityPaymentEngineService {
       BigInt(0)
     ) {
       throw new Error(
-        "Estimated fare cannot be negative."
+        "Estimated fare cannot be negative.",
       );
     }
 
@@ -752,31 +744,51 @@ export class MobilityPaymentEngineService {
         BigInt(0)
     ) {
       throw new Error(
-        "Final fare cannot be negative."
+        "Final fare cannot be negative.",
       );
     }
 
     this.validateRate(
-      input.commissionRateBps
+      input.commissionRateBps,
     );
+
+    if (
+      !input.commissionPolicyKey.trim()
+    ) {
+      throw new Error(
+        "Commission policy key is required.",
+      );
+    }
+
+    if (
+      !Number.isInteger(
+        input.commissionPolicyVersion,
+      ) ||
+      input.commissionPolicyVersion <=
+        0
+    ) {
+      throw new Error(
+        "Commission policy version must be a positive integer.",
+      );
+    }
 
     if (
       !input.idempotencyKey.trim()
     ) {
       throw new Error(
-        "Mobility payment idempotency key is required."
+        "Mobility payment idempotency key is required.",
       );
     }
   }
 
   private validateCompleteInput(
-    input: CompleteMobilityPaymentInput
+    input: CompleteMobilityPaymentInput,
   ): void {
     if (
       !input.organizationId.trim()
     ) {
       throw new Error(
-        "Mobility organizationId is required."
+        "Mobility organizationId is required.",
       );
     }
 
@@ -784,7 +796,7 @@ export class MobilityPaymentEngineService {
       !input.rideId.trim()
     ) {
       throw new Error(
-        "Mobility rideId is required."
+        "Mobility rideId is required.",
       );
     }
 
@@ -793,41 +805,41 @@ export class MobilityPaymentEngineService {
       BigInt(0)
     ) {
       throw new Error(
-        "Final fare cannot be negative."
+        "Final fare cannot be negative.",
       );
     }
 
     this.validateRate(
-      input.commissionRateBps
+      input.commissionRateBps,
     );
   }
 
   private validateCurrency(
-    currency: string
+    currency: string,
   ): void {
     if (
       !/^[A-Z]{3}$/.test(
-        currency
+        currency,
       )
     ) {
       throw new Error(
-        "Mobility currency must be a valid ISO 4217 code."
+        "Mobility currency must be a valid ISO 4217 code.",
       );
     }
   }
 
   private validateRate(
-    rateBps: number
+    rateBps: number,
   ): void {
     if (
       !Number.isInteger(
-        rateBps
+        rateBps,
       ) ||
       rateBps < 0 ||
       rateBps > BPS_TOTAL
     ) {
       throw new Error(
-        "Mobility commission rate must be between 0 and 10000 basis points."
+        "Mobility commission rate must be between 0 and 10000 basis points.",
       );
     }
   }
