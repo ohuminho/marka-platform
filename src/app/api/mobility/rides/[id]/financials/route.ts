@@ -12,7 +12,7 @@ import {
 
 import {
   commissionPolicyService,
-} from "@/services/commissions/commission-policy.service";
+} from "@/services/finance/commission/commission-policy.service";
 
 import {
   MobilityRideService,
