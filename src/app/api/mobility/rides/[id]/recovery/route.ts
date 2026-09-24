@@ -68,16 +68,27 @@ export async function GET(
   }
 
   try {
+    const requestContext =
+      getRequestContext(
+        request,
+      );
+
     const reconciliation =
       await mobilityFinancialRecoveryService
         .reconcile({
           organizationId:
             authentication.session.organizationId,
-
           rideId,
-
           actorUserId:
             authentication.session.userId,
+          correlationId:
+            requestContext.correlationId,
+          requestId:
+            requestContext.requestId,
+          ipAddress:
+            requestContext.ipAddress,
+          userAgent:
+            requestContext.userAgent,
         });
 
     return NextResponse.json(
@@ -162,7 +173,10 @@ export async function POST(
       !Array.isArray(parsed)
     ) {
       body =
-        parsed as Record<string, unknown>;
+        parsed as Record<
+          string,
+          unknown
+        >;
     }
   } catch {
     body = {};
@@ -229,12 +243,14 @@ export async function POST(
     await mobilityFinancialRecoveryService
       .recover({
         organizationId:
-          authentication.session.organizationId,
+          authentication.session
+            .organizationId,
 
         rideId,
 
         actorUserId:
-          authentication.session.userId,
+          authentication.session
+            .userId,
 
         correlationId:
           requestContext.correlationId,
@@ -268,7 +284,9 @@ export async function POST(
           `${idempotencyKey}:settlement-complete`,
 
         metadata:
-          isRecord(body.metadata)
+          isRecord(
+            body.metadata,
+          )
             ? body.metadata
             : undefined,
       });
