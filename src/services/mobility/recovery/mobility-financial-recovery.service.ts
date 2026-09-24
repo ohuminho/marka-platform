@@ -1,7 +1,7 @@
 import { prisma } from "@/database/client/prisma";
 
 import {
-  financialAuditService,
+  FinancialAuditService,
 } from "@/core/audit/financial-audit.service";
 
 import {
@@ -15,6 +15,9 @@ import {
 const ZERO = BigInt(0);
 
 export class MobilityFinancialRecoveryService {
+  private readonly financialAuditService =
+    new FinancialAuditService();
+
   async reconcile(
     input: {
       organizationId: string;
@@ -26,18 +29,25 @@ export class MobilityFinancialRecoveryService {
       userAgent?: string;
     },
   ) {
-    const payment =
+    const paymentRows =
       await prisma.$queryRaw<any[]>`
         SELECT *
         FROM "MobilityRidePayment"
         WHERE
-          "organizationId" = ${input.organizationId}
-          AND "rideId" = ${input.rideId}
-        ORDER BY "createdAt" DESC
+          "organizationId" =
+            ${input.organizationId}
+          AND
+          "rideId" =
+            ${input.rideId}
+        ORDER BY
+          "createdAt" DESC
         LIMIT 1
       `;
 
-    if (!payment[0]) {
+    const payment =
+      paymentRows[0];
+
+    if (!payment) {
       return {
         reconciled: false,
         status: "MISSING_PAYMENT",
@@ -45,48 +55,71 @@ export class MobilityFinancialRecoveryService {
       };
     }
 
-    const p = payment[0];
-
-    const settlement =
+    const settlementRows =
       await prisma.$queryRaw<any[]>`
         SELECT *
         FROM "MobilitySettlement"
-        WHERE "paymentId" = ${p.id}
+        WHERE
+          "paymentId" =
+            ${payment.id}
         LIMIT 1
       `;
 
-    if (!settlement[0]) {
+    const settlement =
+      settlementRows[0];
+
+    if (!settlement) {
       return {
         reconciled: false,
         status: "MISSING_SETTLEMENT",
         rideId: input.rideId,
-        paymentId: p.id,
+        paymentId: payment.id,
       };
     }
-
-    const s = settlement[0];
 
     const missing: string[] = [];
     const mismatches: string[] = [];
 
+    const gross =
+      BigInt(
+        payment.finalFareMinor,
+      );
+
+    const commission =
+      BigInt(
+        payment.commissionAmountMinor,
+      );
+
+    const driverNet =
+      BigInt(
+        settlement.driverNetAmountMinor,
+      );
+
+    const priorCashSettled =
+      BigInt(
+        settlement.cashObligationSettledMinor,
+      );
+
     const expectedAllocation =
-      BigInt(s.driverNetAmountMinor) +
-      BigInt(s.commissionAmountMinor) +
-      BigInt(s.cashObligationSettledMinor);
+      driverNet +
+      commission +
+      priorCashSettled;
 
     if (
-      p.paymentMethod === "DIGITAL"
+      payment.paymentMethod ===
+      "DIGITAL"
     ) {
-      if (!s.financialTransactionId) {
+      if (
+        !settlement.financialTransactionId
+      ) {
         missing.push(
           "FINANCIAL_CAPTURE_TRANSACTION",
         );
       }
 
       if (
-        BigInt(s.driverNetAmountMinor) >
-          ZERO &&
-        !s.vendorPayableTransactionId
+        driverNet > ZERO &&
+        !settlement.vendorPayableTransactionId
       ) {
         missing.push(
           "DRIVER_PAYABLE_TRANSACTION",
@@ -94,9 +127,8 @@ export class MobilityFinancialRecoveryService {
       }
 
       if (
-        BigInt(s.commissionAmountMinor) >
-          ZERO &&
-        !s.commissionTransactionId
+        commission > ZERO &&
+        !settlement.commissionTransactionId
       ) {
         missing.push(
           "COMMISSION_TRANSACTION",
@@ -104,10 +136,8 @@ export class MobilityFinancialRecoveryService {
       }
 
       if (
-        BigInt(
-          s.cashObligationSettledMinor,
-        ) > ZERO &&
-        !s.cashObligationSettlementTransactionId
+        priorCashSettled > ZERO &&
+        !settlement.cashObligationSettlementTransactionId
       ) {
         missing.push(
           "CASH_OBLIGATION_SETTLEMENT_TRANSACTION",
@@ -115,12 +145,34 @@ export class MobilityFinancialRecoveryService {
       }
 
       if (
-        s.status === "COMPLETED" &&
+        settlement.status ===
+          "COMPLETED" &&
         expectedAllocation !==
-          BigInt(p.finalFareMinor)
+          gross
       ) {
         mismatches.push(
           "DIGITAL_ALLOCATION_MISMATCH",
+        );
+      }
+    }
+
+    if (
+      payment.paymentMethod ===
+      "CASH" &&
+      settlement.status ===
+        "COMPLETED"
+    ) {
+      const expectedCashObligation =
+        commission;
+
+      if (
+        BigInt(
+          settlement.cashObligationAmountMinor,
+        ) !==
+        expectedCashObligation
+      ) {
+        mismatches.push(
+          "CASH_OBLIGATION_AMOUNT_MISMATCH",
         );
       }
     }
@@ -141,49 +193,51 @@ export class MobilityFinancialRecoveryService {
         input.rideId,
 
       paymentId:
-        p.id,
+        payment.id,
 
       settlementId:
-        s.id,
+        settlement.id,
 
       missing,
-
       mismatches,
+
+      grossFareMinor:
+        gross.toString(),
+
+      currentCommissionMinor:
+        commission.toString(),
+
+      driverNetMinor:
+        driverNet.toString(),
+
+      priorCashObligationsSettledMinor:
+        priorCashSettled.toString(),
 
       expectedAllocation:
         expectedAllocation.toString(),
     };
 
-    await financialAuditService.record({
+    await this.financialAuditService.record({
       organizationId:
         input.organizationId,
-
       actorUserId:
         input.actorUserId,
-
       action:
         result.reconciled
           ? "MOBILITY_FINANCIAL_RECONCILIATION_COMPLETED"
           : "MOBILITY_FINANCIAL_RECONCILIATION_MISMATCH",
-
       entityType:
         "MOBILITY_RIDE",
-
       entityId:
         input.rideId,
-
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
-
       metadata:
         result,
     });
@@ -214,9 +268,13 @@ export class MobilityFinancialRecoveryService {
         SELECT *
         FROM "MobilityRidePayment"
         WHERE
-          "organizationId" = ${input.organizationId}
-          AND "rideId" = ${input.rideId}
-        ORDER BY "createdAt" DESC
+          "organizationId" =
+            ${input.organizationId}
+          AND
+          "rideId" =
+            ${input.rideId}
+        ORDER BY
+          "createdAt" DESC
         LIMIT 1
       `;
 
@@ -229,53 +287,69 @@ export class MobilityFinancialRecoveryService {
       );
     }
 
+    const reconciliation =
+      await this.reconcile({
+        organizationId:
+          input.organizationId,
+        rideId:
+          input.rideId,
+        actorUserId:
+          input.actorUserId,
+        correlationId:
+          input.correlationId,
+        requestId:
+          input.requestId,
+        ipAddress:
+          input.ipAddress,
+        userAgent:
+          input.userAgent,
+      });
+
+    if (
+      reconciliation.status ===
+      "MISMATCH"
+    ) {
+      throw new Error(
+        "Mobility financial recovery is blocked because reconciliation detected an accounting mismatch.",
+      );
+    }
+
     const finalFareMinor =
       input.finalFareMinor ??
-      BigInt(payment.finalFareMinor);
+      BigInt(
+        payment.finalFareMinor,
+      );
 
     await mobilityFinancialOrchestratorService
       .finalizeRideFinancials({
         organizationId:
           input.organizationId,
-
         rideId:
           input.rideId,
-
         finalFareMinor,
-
         availableDigitalProceedsMinor:
           input.availableDigitalProceedsMinor,
-
         sourceReference:
           input.sourceReference,
-
         actorUserId:
           input.actorUserId,
-
         correlationId:
           input.correlationId,
-
         requestId:
           input.requestId,
-
         ipAddress:
           input.ipAddress,
-
         userAgent:
           input.userAgent,
-
         paymentIdempotencyKey:
           input.paymentIdempotencyKey ??
           `mobility-recovery:${input.rideId}:payment`,
-
         settlementIdempotencyKey:
           input.settlementIdempotencyKey ??
           `mobility-recovery:${input.rideId}:settlement`,
-
         settlementCompletionIdempotencyKey:
           input.settlementCompletionIdempotencyKey ??
           `mobility-recovery:${input.rideId}:settlement-complete`,
-
         metadata: {
           ...(input.metadata ?? {}),
           recovery: true,
@@ -307,7 +381,9 @@ export class MobilityFinancialRecoveryService {
         await prisma.$queryRaw<any[]>`
           SELECT *
           FROM "MobilitySettlement"
-          WHERE "paymentId" = ${payment.id}
+          WHERE
+            "paymentId" =
+              ${payment.id}
           LIMIT 1
         `;
 
@@ -331,60 +407,44 @@ export class MobilityFinancialRecoveryService {
           .settleDigitalRide({
             organizationId:
               input.organizationId,
-
             settlementId:
               settlement.id,
-
             paymentId:
               payment.id,
-
             rideId:
               input.rideId,
-
             driverId:
               payment.driverId,
-
             currency:
               payment.currency,
-
             grossFareMinor:
               BigInt(
                 payment.finalFareMinor,
               ),
-
             availableDigitalProceedsMinor:
               input.availableDigitalProceedsMinor,
-
             currentCommissionMinor:
               BigInt(
                 payment.commissionAmountMinor,
               ),
-
             priorCashObligationsSettledMinor:
               BigInt(
                 settlement.cashObligationSettledMinor,
               ),
-
             driverNetMinor:
               BigInt(
                 settlement.driverNetAmountMinor,
               ),
-
             sourceReference:
               input.sourceReference,
-
             actorUserId:
               input.actorUserId,
-
             correlationId:
               input.correlationId,
-
             requestId:
               input.requestId,
-
             ipAddress:
               input.ipAddress,
-
             userAgent:
               input.userAgent,
           });
@@ -394,46 +454,64 @@ export class MobilityFinancialRecoveryService {
         SET
           "financialTransactionId" =
             ${bridge.financialTransactionId},
-
           "vendorPayableTransactionId" =
             ${bridge.vendorPayableTransactionId},
-
           "commissionTransactionId" =
             ${bridge.commissionTransactionId},
-
           "cashObligationSettlementTransactionId" =
             ${bridge.cashObligationSettlementTransactionId},
-
           "updatedAt" =
             CURRENT_TIMESTAMP
-
-        WHERE "id" =
-          ${settlement.id}
+        WHERE
+          "id" =
+            ${settlement.id}
       `;
     }
 
-    return this.reconcile({
+    const finalReconciliation =
+      await this.reconcile({
+        organizationId:
+          input.organizationId,
+        rideId:
+          input.rideId,
+        actorUserId:
+          input.actorUserId,
+        correlationId:
+          input.correlationId,
+        requestId:
+          input.requestId,
+        ipAddress:
+          input.ipAddress,
+        userAgent:
+          input.userAgent,
+      });
+
+    await this.financialAuditService.record({
       organizationId:
         input.organizationId,
-
-      rideId:
-        input.rideId,
-
       actorUserId:
         input.actorUserId,
-
+      action:
+        finalReconciliation.reconciled
+          ? "MOBILITY_FINANCIAL_RECOVERY_COMPLETED"
+          : "MOBILITY_FINANCIAL_RECOVERY_INCOMPLETE",
+      entityType:
+        "MOBILITY_RIDE",
+      entityId:
+        input.rideId,
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
+      metadata:
+        finalReconciliation,
     });
+
+    return finalReconciliation;
   }
 }
 
