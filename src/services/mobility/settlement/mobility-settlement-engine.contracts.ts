@@ -29,18 +29,8 @@ export interface CompleteMobilitySettlementInput {
 
   idempotencyKey: string;
 
-  /**
-   * Required for DIGITAL settlement.
-   *
-   * This represents the confirmed digital proceeds
-   * available for driver settlement.
-   */
   availableDigitalProceedsMinor?: bigint;
 
-  /**
-   * External/internal source reference proving
-   * the digital proceeds event.
-   */
   sourceReference?: string;
 
   metadata?: Record<string, unknown>;
