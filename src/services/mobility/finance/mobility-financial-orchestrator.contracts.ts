@@ -57,9 +57,7 @@ export interface FinalizeMobilityFinancialsInput {
   userAgent?: string;
 
   paymentIdempotencyKey: string;
-
   settlementIdempotencyKey: string;
-
   settlementCompletionIdempotencyKey: string;
 
   metadata?: Record<string, unknown>;
@@ -81,12 +79,9 @@ export interface MobilityFinancialOrchestrationResult {
   paymentMethod: MobilityPaymentMethod;
 
   grossFareMinor: string;
-
   commissionAmountMinor: string;
-
   driverNetAmountMinor: string;
 
   cashObligationCreatedMinor: string;
-
   cashObligationSettledMinor: string;
 }
