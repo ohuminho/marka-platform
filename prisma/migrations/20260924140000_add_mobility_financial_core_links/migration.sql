@@ -11,16 +11,20 @@ ALTER TABLE "MobilitySettlement"
 ADD COLUMN "cashObligationSettlementTransactionId" TEXT;
 
 CREATE UNIQUE INDEX "MobilitySettlement_financialTransactionId_key"
-ON "MobilitySettlement"("financialTransactionId");
+ON "MobilitySettlement"("financialTransactionId")
+WHERE "financialTransactionId" IS NOT NULL;
 
 CREATE UNIQUE INDEX "MobilitySettlement_vendorPayableTransactionId_key"
-ON "MobilitySettlement"("vendorPayableTransactionId");
+ON "MobilitySettlement"("vendorPayableTransactionId")
+WHERE "vendorPayableTransactionId" IS NOT NULL;
 
 CREATE UNIQUE INDEX "MobilitySettlement_commissionTransactionId_key"
-ON "MobilitySettlement"("commissionTransactionId");
+ON "MobilitySettlement"("commissionTransactionId")
+WHERE "commissionTransactionId" IS NOT NULL;
 
 CREATE UNIQUE INDEX "MobilitySettlement_cashObligationSettlementTransactionId_key"
-ON "MobilitySettlement"("cashObligationSettlementTransactionId");
+ON "MobilitySettlement"("cashObligationSettlementTransactionId")
+WHERE "cashObligationSettlementTransactionId" IS NOT NULL;
 
 ALTER TABLE "MobilitySettlement"
 ADD CONSTRAINT "MobilitySettlement_financialTransactionId_fkey"
