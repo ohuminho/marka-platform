@@ -23,10 +23,6 @@ import {
 } from "@/services/mobility/finance/mobility-financial-core-bridge.service";
 
 import type {
-  MobilityCashObligationResult,
-} from "@/services/mobility/payments/mobility-payment.contracts";
-
-import type {
   CreateMobilitySettlementInput,
   CompleteMobilitySettlementInput,
   CancelMobilitySettlementInput,
@@ -76,6 +72,12 @@ interface MobilitySettlementRecord {
   cashObligationAmountMinor: bigint;
   cashObligationSettledMinor: bigint;
   sourceReference: string | null;
+
+  financialTransactionId: string | null;
+  vendorPayableTransactionId: string | null;
+  commissionTransactionId: string | null;
+  cashObligationSettlementTransactionId: string | null;
+
   idempotencyKey: string;
   metadata: unknown;
   processingStartedAt: Date | null;
@@ -85,8 +87,6 @@ interface MobilitySettlementRecord {
   createdAt: Date;
   updatedAt: Date;
 }
-
-const BPS_TOTAL = 10_000;
 
 export class MobilitySettlementEngineService {
   private readonly idempotencyService =
@@ -103,10 +103,12 @@ export class MobilitySettlementEngineService {
     const result =
       await this.idempotencyService.execute(
         {
-          key: input.idempotencyKey,
+          key:
+            input.idempotencyKey,
           scope:
             `mobility.settlement.create:${input.organizationId}`,
-          userId: input.actorUserId,
+          userId:
+            input.actorUserId,
           requestBody: {
             organizationId:
               input.organizationId,
@@ -145,15 +147,18 @@ export class MobilitySettlementEngineService {
                 );
 
                 if (
-                  payment.status !== "COLLECTED" &&
-                  payment.status !== "SETTLED"
+                  payment.status !==
+                    "COLLECTED" &&
+                  payment.status !==
+                    "SETTLED"
                 ) {
                   throw new Error(
                     `Mobility payment cannot enter settlement from status ${payment.status}.`,
                   );
                 }
 
-                const id = randomUUID();
+                const id =
+                  randomUUID();
 
                 const rows =
                   await database.$queryRaw<
@@ -201,11 +206,13 @@ export class MobilitySettlementEngineService {
                       ${BigInt(0)},
                       NULL,
                       ${input.idempotencyKey},
-                      ${input.metadata
-                        ? JSON.stringify(
-                            input.metadata,
-                          )
-                        : null}::jsonb,
+                      ${
+                        input.metadata
+                          ? JSON.stringify(
+                              input.metadata,
+                            )
+                          : null
+                      }::jsonb,
                       CURRENT_TIMESTAMP,
                       CURRENT_TIMESTAMP
                     )
@@ -224,6 +231,10 @@ export class MobilitySettlementEngineService {
                       "cashObligationAmountMinor",
                       "cashObligationSettledMinor",
                       "sourceReference",
+                      "financialTransactionId",
+                      "vendorPayableTransactionId",
+                      "commissionTransactionId",
+                      "cashObligationSettlementTransactionId",
                       "idempotencyKey",
                       "metadata",
                       "processingStartedAt",
@@ -256,7 +267,9 @@ export class MobilitySettlementEngineService {
           return {
             responseStatus: 200,
             responseBody:
-              this.toResult(settlement),
+              this.toResult(
+                settlement,
+              ),
             resourceType:
               "MOBILITY_SETTLEMENT",
             resourceId:
@@ -309,7 +322,9 @@ export class MobilitySettlementEngineService {
   async completeSettlement(
     input: CompleteMobilitySettlementInput,
   ): Promise<MobilitySettlementEngineResult> {
-    this.validateCompleteInput(input);
+    this.validateCompleteInput(
+      input,
+    );
 
     const settlement =
       await this.findSettlementByPayment(
@@ -338,8 +353,10 @@ export class MobilitySettlementEngineService {
     }
 
     if (
-      settlement.status === "CANCELLED" ||
-      settlement.status === "FAILED"
+      settlement.status ===
+        "CANCELLED" ||
+      settlement.status ===
+        "FAILED"
     ) {
       throw new Error(
         `Mobility settlement cannot be completed from status ${settlement.status}.`,
@@ -389,8 +406,10 @@ export class MobilitySettlementEngineService {
     );
 
     if (
-      payment.status !== "COLLECTED" &&
-      payment.status !== "SETTLED"
+      payment.status !==
+        "COLLECTED" &&
+      payment.status !==
+        "SETTLED"
     ) {
       throw new Error(
         `Mobility payment must be collected before settlement. Current status: ${payment.status}.`,
@@ -418,7 +437,9 @@ export class MobilitySettlementEngineService {
   async cancelSettlement(
     input: CancelMobilitySettlementInput,
   ): Promise<MobilitySettlementResult> {
-    this.validateCancelInput(input);
+    this.validateCancelInput(
+      input,
+    );
 
     const result =
       await this.idempotencyService.execute(
@@ -508,6 +529,10 @@ export class MobilitySettlementEngineService {
                 "cashObligationAmountMinor",
                 "cashObligationSettledMinor",
                 "sourceReference",
+                "financialTransactionId",
+                "vendorPayableTransactionId",
+                "commissionTransactionId",
+                "cashObligationSettlementTransactionId",
                 "idempotencyKey",
                 "metadata",
                 "processingStartedAt",
@@ -530,7 +555,9 @@ export class MobilitySettlementEngineService {
           return {
             responseStatus: 200,
             responseBody:
-              this.toResult(updated),
+              this.toResult(
+                updated,
+              ),
             resourceType:
               "MOBILITY_SETTLEMENT",
             resourceId:
@@ -596,7 +623,9 @@ export class MobilitySettlementEngineService {
       );
 
     return settlement
-      ? this.toResult(settlement)
+      ? this.toResult(
+          settlement,
+        )
       : null;
   }
 
@@ -1144,6 +1173,10 @@ export class MobilitySettlementEngineService {
           "cashObligationAmountMinor",
           "cashObligationSettledMinor",
           "sourceReference",
+          "financialTransactionId",
+          "vendorPayableTransactionId",
+          "commissionTransactionId",
+          "cashObligationSettlementTransactionId",
           "idempotencyKey",
           "metadata",
           "processingStartedAt",
@@ -1185,6 +1218,10 @@ export class MobilitySettlementEngineService {
           "cashObligationAmountMinor",
           "cashObligationSettledMinor",
           "sourceReference",
+          "financialTransactionId",
+          "vendorPayableTransactionId",
+          "commissionTransactionId",
+          "cashObligationSettlementTransactionId",
           "idempotencyKey",
           "metadata",
           "processingStartedAt",
@@ -1243,46 +1280,84 @@ export class MobilitySettlementEngineService {
     return {
       id:
         settlement.id,
+
       organizationId:
         settlement.organizationId,
+
       paymentId:
         settlement.paymentId,
+
       rideId:
         settlement.rideId,
+
       driverId:
         settlement.driverId,
+
       currency:
         settlement.currency,
+
       paymentMethod:
         settlement.paymentMethod,
+
       status:
         settlement.status,
+
       grossAmountMinor:
-        settlement.grossAmountMinor.toString(),
+        settlement
+          .grossAmountMinor
+          .toString(),
+
       commissionAmountMinor:
-        settlement.commissionAmountMinor.toString(),
+        settlement
+          .commissionAmountMinor
+          .toString(),
+
       driverNetAmountMinor:
-        settlement.driverNetAmountMinor.toString(),
+        settlement
+          .driverNetAmountMinor
+          .toString(),
+
       cashObligationAmountMinor:
         settlement
           .cashObligationAmountMinor
           .toString(),
+
       cashObligationSettledMinor:
         settlement
           .cashObligationSettledMinor
           .toString(),
+
       sourceReference:
         settlement.sourceReference,
+
+      financialTransactionId:
+        settlement.financialTransactionId,
+
+      vendorPayableTransactionId:
+        settlement.vendorPayableTransactionId,
+
+      commissionTransactionId:
+        settlement.commissionTransactionId,
+
+      cashObligationSettlementTransactionId:
+        settlement
+          .cashObligationSettlementTransactionId,
+
       createdAt:
         settlement.createdAt,
+
       updatedAt:
         settlement.updatedAt,
+
       processingStartedAt:
         settlement.processingStartedAt,
+
       completedAt:
         settlement.completedAt,
+
       failedAt:
         settlement.failedAt,
+
       cancelledAt:
         settlement.cancelledAt,
     };
