@@ -18,6 +18,9 @@ export interface CreateMobilityPaymentInput {
 
   commissionRateBps: number;
 
+  commissionPolicyKey: string;
+  commissionPolicyVersion: number;
+
   pricingSnapshot?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 
@@ -65,6 +68,9 @@ export interface MobilityPaymentResult {
 
   commissionRateBps: number;
   commissionAmountMinor: string;
+
+  commissionPolicyKey: string;
+  commissionPolicyVersion: number;
 
   driverGrossMinor: string;
   driverNetMinor: string;
