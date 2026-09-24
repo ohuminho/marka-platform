@@ -44,7 +44,6 @@ export interface InitializeMobilityLifecycleInput {
 export interface MobilityLifecycleActionInput
   extends MobilityLifecycleContext {
   action: MobilityLifecycleAction;
-
   reason?: string;
 }
 
@@ -53,7 +52,6 @@ export interface MobilityLifecycleInitializeFinancialsInput
   action: "INITIALIZE_FINANCIALS";
 
   estimatedFareMinor: bigint;
-
   finalFareMinor?: bigint;
 
   paymentMethod:
@@ -68,7 +66,6 @@ export interface MobilityLifecycleCompleteInput
   action: "COMPLETE";
 
   estimatedFareMinor: bigint;
-
   finalFareMinor: bigint;
 
   paymentMethod:
@@ -76,13 +73,10 @@ export interface MobilityLifecycleCompleteInput
     | "DIGITAL";
 
   availableDigitalProceedsMinor?: bigint;
-
   sourceReference?: string;
 
   paymentIdempotencyKey: string;
-
   settlementIdempotencyKey: string;
-
   settlementCompletionIdempotencyKey: string;
 
   pricingSnapshot?: Record<string, unknown>;
@@ -95,15 +89,12 @@ export type MobilityLifecycleExecuteInput =
 
 export interface MobilityLifecycleResult {
   orchestrationId: string;
-
   rideId: string;
 
   status: string;
-
   currentStep: string;
 
   version: number;
-
   attemptCount: number;
 
   action: MobilityLifecycleAction;
@@ -117,9 +108,7 @@ export interface MobilityLifecycleResult {
     | "SETTLEMENT_COMPLETED";
 
   ride?: unknown;
-
   assignment?: unknown;
-
   financials?: unknown;
 
   error?: {
