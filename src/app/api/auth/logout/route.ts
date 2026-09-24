@@ -1,7 +1,10 @@
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
-import { SessionService } from "@/core/auth/sessions/session.service";
+import {
+  SessionService,
+} from "@/core/auth/sessions/session.service";
 
 export async function POST() {
   try {
@@ -17,19 +20,31 @@ export async function POST() {
       const sessionService =
         new SessionService();
 
-      await sessionService.revoke(token);
+      await sessionService.revoke(
+        token
+      );
     }
 
     const response =
-      Response.json({
+      NextResponse.json({
         message:
           "Signed out successfully.",
       });
 
-    response.headers.append(
-      "Set-Cookie",
-      `${AuthConfig.cookies.name}=; Path=${AuthConfig.cookies.path}; Max-Age=0; HttpOnly; SameSite=${AuthConfig.cookies.sameSite}${AuthConfig.cookies.secure ? "; Secure" : ""}`
-    );
+    response.cookies.set({
+      name:
+        AuthConfig.cookies.name,
+      value: "",
+      httpOnly:
+        AuthConfig.cookies.httpOnly,
+      secure:
+        AuthConfig.cookies.secure,
+      sameSite:
+        AuthConfig.cookies.sameSite,
+      path:
+        AuthConfig.cookies.path,
+      maxAge: 0,
+    });
 
     return response;
   } catch (error) {
@@ -38,14 +53,12 @@ export async function POST() {
       error
     );
 
-    return Response.json(
+    return NextResponse.json(
       {
         message:
           "Unable to sign out at this time.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
