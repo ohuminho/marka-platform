@@ -22,29 +22,32 @@ export class TokenService {
       );
     }
 
-    if (secret.length < 32) {
+    if (
+      secret.length <
+      AuthConfig.token.minimumSecretLength
+    ) {
       throw new Error(
-        "JWT_SECRET must contain at least 32 characters."
+        `JWT_SECRET must contain at least ${AuthConfig.token.minimumSecretLength} characters.`
       );
     }
 
     this.secret = secret;
   }
 
-  generate(payload: {
+  generate(input: {
     userId: string;
     role: string;
   }): string {
     const options: SignOptions = {
-      expiresIn: `${AuthConfig.sessionHours}h`,
+      expiresIn: `${AuthConfig.session.durationHours}h`,
       issuer: AuthConfig.token.issuer,
       algorithm: AuthConfig.token.algorithm,
     };
 
     return jwt.sign(
       {
-        userId: payload.userId,
-        role: payload.role,
+        userId: input.userId,
+        role: input.role,
       },
       this.secret,
       options
@@ -52,10 +55,20 @@ export class TokenService {
   }
 
   verify(token: string): AuthTokenPayload {
-    const payload = jwt.verify(token, this.secret, {
-      issuer: AuthConfig.token.issuer,
-      algorithms: [AuthConfig.token.algorithm],
-    });
+    if (!token.trim()) {
+      throw new Error("Authentication token is required.");
+    }
+
+    const payload = jwt.verify(
+      token,
+      this.secret,
+      {
+        issuer: AuthConfig.token.issuer,
+        algorithms: [
+          AuthConfig.token.algorithm,
+        ],
+      }
+    );
 
     if (
       typeof payload !== "object" ||
@@ -63,9 +76,14 @@ export class TokenService {
       typeof payload.userId !== "string" ||
       typeof payload.role !== "string"
     ) {
-      throw new Error("Invalid authentication token payload.");
+      throw new Error(
+        "Invalid authentication token payload."
+      );
     }
 
     return payload as AuthTokenPayload;
   }
 }
+
+export const tokenService =
+  new TokenService();
