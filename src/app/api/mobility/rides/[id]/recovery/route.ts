@@ -36,8 +36,22 @@ export async function GET(
     return authentication.response;
   }
 
-  const { id: rideId } =
+  const {
+    id: rideId,
+  } =
     await context.params;
+
+  if (!rideId.trim()) {
+    return NextResponse.json(
+      {
+        message:
+          "Mobility ride id is required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
 
   const ride =
     await mobilityRideService.getById(
@@ -50,7 +64,9 @@ export async function GET(
         message:
           "Mobility ride not found.",
       },
-      { status: 404 },
+      {
+        status: 404,
+      },
     );
   }
 
@@ -63,7 +79,9 @@ export async function GET(
         message:
           "Mobility ride organization access denied.",
       },
-      { status: 403 },
+      {
+        status: 403,
+      },
     );
   }
 
@@ -77,16 +95,24 @@ export async function GET(
       await mobilityFinancialRecoveryService
         .reconcile({
           organizationId:
-            authentication.session.organizationId,
+            authentication.session
+              .organizationId,
+
           rideId,
+
           actorUserId:
-            authentication.session.userId,
+            authentication.session
+              .userId,
+
           correlationId:
             requestContext.correlationId,
+
           requestId:
             requestContext.requestId,
+
           ipAddress:
             requestContext.ipAddress,
+
           userAgent:
             requestContext.userAgent,
         });
@@ -111,7 +137,9 @@ export async function GET(
             ? error.message
             : "Unable to reconcile Mobility financials.",
       },
-      { status: 500 },
+      {
+        status: 500,
+      },
     );
   }
 }
@@ -129,8 +157,22 @@ export async function POST(
     return authentication.response;
   }
 
-  const { id: rideId } =
+  const {
+    id: rideId,
+  } =
     await context.params;
+
+  if (!rideId.trim()) {
+    return NextResponse.json(
+      {
+        message:
+          "Mobility ride id is required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
 
   const ride =
     await mobilityRideService.getById(
@@ -143,7 +185,9 @@ export async function POST(
         message:
           "Mobility ride not found.",
       },
-      { status: 404 },
+      {
+        status: 404,
+      },
     );
   }
 
@@ -156,7 +200,9 @@ export async function POST(
         message:
           "Mobility ride organization access denied.",
       },
-      { status: 403 },
+      {
+        status: 403,
+      },
     );
   }
 
@@ -169,7 +215,8 @@ export async function POST(
 
     if (
       parsed &&
-      typeof parsed === "object" &&
+      typeof parsed ===
+        "object" &&
       !Array.isArray(parsed)
     ) {
       body =
@@ -194,7 +241,9 @@ export async function POST(
         message:
           "Idempotency key is required.",
       },
-      { status: 400 },
+      {
+        status: 400,
+      },
     );
   }
 
@@ -204,102 +253,155 @@ export async function POST(
     );
 
   const finalFareMinor =
-    parseBigInt(
-      body.finalFareMinor,
-    );
-
-  const availableDigitalProceedsMinor =
-    parseBigInt(
-      body.availableDigitalProceedsMinor,
-    );
+    body.finalFareMinor ===
+    undefined
+      ? undefined
+      : parseBigInt(
+          body.finalFareMinor,
+        );
 
   if (
+    body.finalFareMinor !==
+      undefined &&
     finalFareMinor ===
-    null
+      null
   ) {
     return NextResponse.json(
       {
         message:
           "finalFareMinor must be a valid non-negative integer.",
       },
-      { status: 400 },
+      {
+        status: 400,
+      },
     );
   }
 
+  const availableDigitalProceedsMinor =
+    body.availableDigitalProceedsMinor ===
+    undefined
+      ? undefined
+      : parseBigInt(
+          body.availableDigitalProceedsMinor,
+        );
+
   if (
+    body.availableDigitalProceedsMinor !==
+      undefined &&
     availableDigitalProceedsMinor ===
-    null
+      null
   ) {
     return NextResponse.json(
       {
         message:
           "availableDigitalProceedsMinor must be a valid non-negative integer.",
       },
-      { status: 400 },
+      {
+        status: 400,
+      },
     );
   }
 
-  const result =
-    await mobilityFinancialRecoveryService
-      .recover({
-        organizationId:
-          authentication.session
-            .organizationId,
+  const sourceReference =
+    typeof body.sourceReference ===
+    "string"
+      ? body.sourceReference.trim()
+      : undefined;
 
-        rideId,
+  try {
+    const result =
+      await mobilityFinancialRecoveryService
+        .recover({
+          organizationId:
+            authentication.session
+              .organizationId,
 
-        actorUserId:
-          authentication.session
-            .userId,
+          rideId,
 
-        correlationId:
-          requestContext.correlationId,
+          actorUserId:
+            authentication.session
+              .userId,
 
-        requestId:
-          requestContext.requestId,
+          correlationId:
+            requestContext.correlationId,
 
-        ipAddress:
-          requestContext.ipAddress,
+          requestId:
+            requestContext.requestId,
 
-        userAgent:
-          requestContext.userAgent,
+          ipAddress:
+            requestContext.ipAddress,
 
-        finalFareMinor,
+          userAgent:
+            requestContext.userAgent,
 
-        availableDigitalProceedsMinor,
+          finalFareMinor:
+            finalFareMinor ??
+            undefined,
 
-        sourceReference:
-          typeof body.sourceReference ===
-          "string"
-            ? body.sourceReference.trim()
-            : undefined,
+          availableDigitalProceedsMinor:
+            availableDigitalProceedsMinor ??
+            undefined,
 
-        paymentIdempotencyKey:
-          `${idempotencyKey}:payment`,
+          sourceReference,
 
-        settlementIdempotencyKey:
-          `${idempotencyKey}:settlement`,
+          paymentIdempotencyKey:
+            `${idempotencyKey}:payment`,
 
-        settlementCompletionIdempotencyKey:
-          `${idempotencyKey}:settlement-complete`,
+          settlementIdempotencyKey:
+            `${idempotencyKey}:settlement`,
 
-        metadata:
-          isRecord(
-            body.metadata,
+          settlementCompletionIdempotencyKey:
+            `${idempotencyKey}:settlement-complete`,
+
+          metadata:
+            isRecord(
+              body.metadata,
+            )
+              ? body.metadata
+              : undefined,
+        });
+
+    return NextResponse.json(
+      result,
+      {
+        status:
+          result.reconciled
+            ? 200
+            : 409,
+      },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to recover Mobility financials.";
+
+    const status =
+      message.includes(
+        "accounting mismatch",
+      ) ||
+      message.includes(
+        "does not reconcile",
+      )
+        ? 409
+        : message.includes(
+            "requires",
+          ) ||
+          message.includes(
+            "must",
           )
-            ? body.metadata
-            : undefined,
-      });
+          ? 400
+          : 500;
 
-  return NextResponse.json(
-    result,
-    {
-      status:
-        result.reconciled
-          ? 200
-          : 409,
-    },
-  );
+    return NextResponse.json(
+      {
+        message,
+      },
+      {
+        status,
+      },
+    );
+  }
 }
 
 function parseBigInt(
@@ -309,7 +411,8 @@ function parseBigInt(
     typeof value ===
     "bigint"
   ) {
-    return value >= BigInt(0)
+    return value >=
+      BigInt(0)
       ? value
       : null;
   }
@@ -319,13 +422,17 @@ function parseBigInt(
     "number"
   ) {
     if (
-      !Number.isSafeInteger(value) ||
+      !Number.isSafeInteger(
+        value,
+      ) ||
       value < 0
     ) {
       return null;
     }
 
-    return BigInt(value);
+    return BigInt(
+      value,
+    );
   }
 
   if (
@@ -349,7 +456,10 @@ function parseBigInt(
 
 function isRecord(
   value: unknown,
-): value is Record<string, unknown> {
+): value is Record<
+  string,
+  unknown
+> {
   return (
     typeof value ===
       "object" &&
