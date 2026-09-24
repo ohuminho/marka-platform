@@ -25,6 +25,9 @@ export interface InitializeMobilityFinancialsInput {
 
   commissionRateBps: number;
 
+  commissionPolicyKey: string;
+  commissionPolicyVersion: number;
+
   pricingSnapshot?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 
@@ -43,19 +46,8 @@ export interface FinalizeMobilityFinancialsInput {
 
   finalFareMinor: bigint;
 
-  /**
-   * Required when the payment method is DIGITAL.
-   *
-   * Represents the confirmed digital proceeds
-   * available for the driver's financial settlement.
-   */
   availableDigitalProceedsMinor?: bigint;
 
-  /**
-   * Required when the payment method is DIGITAL.
-   *
-   * Identifies the confirmed digital proceeds event.
-   */
   sourceReference?: string;
 
   actorUserId?: string;
@@ -64,19 +56,10 @@ export interface FinalizeMobilityFinancialsInput {
   ipAddress?: string;
   userAgent?: string;
 
-  /**
-   * Idempotency key for the payment finalization.
-   */
   paymentIdempotencyKey: string;
 
-  /**
-   * Idempotency key for settlement creation.
-   */
   settlementIdempotencyKey: string;
 
-  /**
-   * Idempotency key for settlement completion.
-   */
   settlementCompletionIdempotencyKey: string;
 
   metadata?: Record<string, unknown>;
@@ -106,4 +89,4 @@ export interface MobilityFinancialOrchestrationResult {
   cashObligationCreatedMinor: string;
 
   cashObligationSettledMinor: string;
-  }
+}
