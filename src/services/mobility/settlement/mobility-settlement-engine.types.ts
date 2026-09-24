@@ -23,49 +23,27 @@ export type MobilitySettlementResult = {
     MobilitySettlementStatus;
 
   grossAmountMinor: string;
-
   commissionAmountMinor: string;
-
   driverNetAmountMinor: string;
 
   cashObligationAmountMinor: string;
-
   cashObligationSettledMinor: string;
 
   sourceReference: string | null;
 
-  /**
-   * Authoritative MARKA Financial Core
-   * transaction representing the external
-   * digital payment capture.
-   */
   financialTransactionId:
     string | null;
 
-  /**
-   * Financial Core transaction that credits
-   * the driver's payable account.
-   */
   vendorPayableTransactionId:
     string | null;
 
-  /**
-   * Financial Core transaction recognizing
-   * the current Mobility commission.
-   */
   commissionTransactionId:
     string | null;
 
-  /**
-   * Financial Core transaction recognizing
-   * previously-created cash obligations
-   * settled from current digital proceeds.
-   */
   cashObligationSettlementTransactionId:
     string | null;
 
   createdAt: Date;
-
   updatedAt: Date;
 
   processingStartedAt:
