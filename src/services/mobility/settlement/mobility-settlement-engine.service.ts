@@ -18,6 +18,10 @@ import {
   mobilityCashSettlementService,
 } from "@/services/mobility/payments/mobility-cash-settlement.service";
 
+import {
+  mobilityFinancialCoreBridgeService,
+} from "@/services/mobility/finance/mobility-financial-core-bridge.service";
+
 import type {
   MobilityCashObligationResult,
 } from "@/services/mobility/payments/mobility-payment.contracts";
@@ -40,58 +44,44 @@ type SqlExecutor =
 
 interface MobilityPaymentRecord {
   id: string;
-
   organizationId: string;
   rideId: string;
   riderId: string;
   driverId: string | null;
-
   currency: string;
-
   paymentMethod: "CASH" | "DIGITAL";
   status: string;
-
   finalFareMinor: bigint;
   commissionRateBps: number;
   commissionAmountMinor: bigint;
-
   driverGrossMinor: bigint;
   driverNetMinor: bigint;
-
   idempotencyKey: string;
+  commissionPolicyKey: string;
+  commissionPolicyVersion: number;
 }
 
 interface MobilitySettlementRecord {
   id: string;
-
   organizationId: string;
   paymentId: string;
   rideId: string;
   driverId: string | null;
-
   currency: string;
-
   paymentMethod: "CASH" | "DIGITAL";
   status: MobilitySettlementStatus;
-
   grossAmountMinor: bigint;
   commissionAmountMinor: bigint;
   driverNetAmountMinor: bigint;
-
   cashObligationAmountMinor: bigint;
   cashObligationSettledMinor: bigint;
-
   sourceReference: string | null;
-
   idempotencyKey: string;
-
   metadata: unknown;
-
   processingStartedAt: Date | null;
   completedAt: Date | null;
   failedAt: Date | null;
   cancelledAt: Date | null;
-
   createdAt: Date;
   updatedAt: Date;
 }
@@ -106,33 +96,24 @@ export class MobilitySettlementEngineService {
     new FinancialAuditService();
 
   async createSettlement(
-    input: CreateMobilitySettlementInput
+    input: CreateMobilitySettlementInput,
   ): Promise<MobilitySettlementResult> {
     this.validateCreateInput(input);
-
-    const requestBody = {
-      organizationId:
-        input.organizationId,
-
-      paymentId:
-        input.paymentId,
-    };
 
     const result =
       await this.idempotencyService.execute(
         {
-          key:
-            input.idempotencyKey,
-
+          key: input.idempotencyKey,
           scope:
             `mobility.settlement.create:${input.organizationId}`,
-
-          userId:
-            input.actorUserId,
-
-          requestBody,
+          userId: input.actorUserId,
+          requestBody: {
+            organizationId:
+              input.organizationId,
+            paymentId:
+              input.paymentId,
+          },
         },
-
         async () => {
           const settlement =
             await prisma.$transaction(
@@ -140,13 +121,13 @@ export class MobilitySettlementEngineService {
                 const existing =
                   await this.findSettlementByPayment(
                     database,
-                    input.paymentId
+                    input.paymentId,
                   );
 
                 if (existing) {
                   this.assertOrganization(
                     existing.organizationId,
-                    input.organizationId
+                    input.organizationId,
                   );
 
                   return existing;
@@ -155,27 +136,24 @@ export class MobilitySettlementEngineService {
                 const payment =
                   await this.requirePayment(
                     database,
-                    input.paymentId
+                    input.paymentId,
                   );
 
                 this.assertOrganization(
                   payment.organizationId,
-                  input.organizationId
+                  input.organizationId,
                 );
 
                 if (
-                  payment.status !==
-                    "COLLECTED" &&
-                  payment.status !==
-                    "SETTLED"
+                  payment.status !== "COLLECTED" &&
+                  payment.status !== "SETTLED"
                 ) {
                   throw new Error(
-                    `Mobility payment cannot enter settlement from status ${payment.status}.`
+                    `Mobility payment cannot enter settlement from status ${payment.status}.`,
                   );
                 }
 
-                const id =
-                  randomUUID();
+                const id = randomUUID();
 
                 const rows =
                   await database.$queryRaw<
@@ -225,7 +203,7 @@ export class MobilitySettlementEngineService {
                       ${input.idempotencyKey},
                       ${input.metadata
                         ? JSON.stringify(
-                            input.metadata
+                            input.metadata,
                           )
                         : null}::jsonb,
                       CURRENT_TIMESTAMP,
@@ -261,36 +239,30 @@ export class MobilitySettlementEngineService {
 
                 if (!created) {
                   throw new Error(
-                    "Unable to create Mobility settlement."
+                    "Unable to create Mobility settlement.",
                   );
                 }
 
                 return created;
               },
-
               {
                 isolationLevel:
                   Prisma.TransactionIsolationLevel.Serializable,
-
                 maxWait: 5000,
-
                 timeout: 10000,
-              }
+              },
             );
 
           return {
             responseStatus: 200,
-
             responseBody:
               this.toResult(settlement),
-
             resourceType:
               "MOBILITY_SETTLEMENT",
-
             resourceId:
               settlement.id,
           };
-        }
+        },
       );
 
     const responseBody =
@@ -298,45 +270,34 @@ export class MobilitySettlementEngineService {
 
     if (!responseBody) {
       throw new Error(
-        "Mobility settlement creation did not return a response body."
+        "Mobility settlement creation did not return a response body.",
       );
     }
 
     await this.financialAuditService.record({
       organizationId:
         input.organizationId,
-
       actorUserId:
         input.actorUserId,
-
       action:
         "MOBILITY_SETTLEMENT_CREATED",
-
       entityType:
         "MOBILITY_SETTLEMENT",
-
       entityId:
         responseBody.id,
-
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
-
       metadata: {
         paymentId:
           input.paymentId,
-
         settlementId:
           responseBody.id,
-
         source:
           "MOBILITY_SETTLEMENT_ENGINE",
       },
@@ -346,25 +307,25 @@ export class MobilitySettlementEngineService {
   }
 
   async completeSettlement(
-    input: CompleteMobilitySettlementInput
+    input: CompleteMobilitySettlementInput,
   ): Promise<MobilitySettlementEngineResult> {
     this.validateCompleteInput(input);
 
     const settlement =
       await this.findSettlementByPayment(
         prisma,
-        input.paymentId
+        input.paymentId,
       );
 
     if (!settlement) {
       throw new Error(
-        "Mobility settlement was not found for the payment."
+        "Mobility settlement was not found for the payment.",
       );
     }
 
     this.assertOrganization(
       settlement.organizationId,
-      input.organizationId
+      input.organizationId,
     );
 
     if (
@@ -372,18 +333,16 @@ export class MobilitySettlementEngineService {
       "COMPLETED"
     ) {
       return this.buildCompletedResult(
-        settlement
+        settlement,
       );
     }
 
     if (
-      settlement.status ===
-        "CANCELLED" ||
-      settlement.status ===
-        "FAILED"
+      settlement.status === "CANCELLED" ||
+      settlement.status === "FAILED"
     ) {
       throw new Error(
-        `Mobility settlement cannot be completed from status ${settlement.status}.`
+        `Mobility settlement cannot be completed from status ${settlement.status}.`,
       );
     }
 
@@ -396,7 +355,10 @@ export class MobilitySettlementEngineService {
             AS "MobilitySettlementStatus"
           ),
         "processingStartedAt" =
-          CURRENT_TIMESTAMP,
+          COALESCE(
+            "processingStartedAt",
+            CURRENT_TIMESTAMP
+          ),
         "updatedAt" =
           CURRENT_TIMESTAMP
       WHERE
@@ -418,22 +380,20 @@ export class MobilitySettlementEngineService {
     const payment =
       await this.requirePayment(
         prisma,
-        input.paymentId
+        input.paymentId,
       );
 
     this.assertOrganization(
       payment.organizationId,
-      input.organizationId
+      input.organizationId,
     );
 
     if (
-      payment.status !==
-        "COLLECTED" &&
-      payment.status !==
-        "SETTLED"
+      payment.status !== "COLLECTED" &&
+      payment.status !== "SETTLED"
     ) {
       throw new Error(
-        `Mobility payment must be collected before settlement. Current status: ${payment.status}.`
+        `Mobility payment must be collected before settlement. Current status: ${payment.status}.`,
       );
     }
 
@@ -444,19 +404,19 @@ export class MobilitySettlementEngineService {
       return this.completeCashSettlement(
         settlement,
         payment,
-        input
+        input,
       );
     }
 
     return this.completeDigitalSettlement(
       settlement,
       payment,
-      input
+      input,
     );
   }
 
   async cancelSettlement(
-    input: CancelMobilitySettlementInput
+    input: CancelMobilitySettlementInput,
   ): Promise<MobilitySettlementResult> {
     this.validateCancelInput(input);
 
@@ -465,41 +425,35 @@ export class MobilitySettlementEngineService {
         {
           key:
             input.idempotencyKey,
-
           scope:
             `mobility.settlement.cancel:${input.organizationId}`,
-
           userId:
             input.actorUserId,
-
           requestBody: {
             organizationId:
               input.organizationId,
-
             paymentId:
               input.paymentId,
-
             reason:
               input.reason,
           },
         },
-
         async () => {
           const settlement =
             await this.findSettlementByPayment(
               prisma,
-              input.paymentId
+              input.paymentId,
             );
 
           if (!settlement) {
             throw new Error(
-              "Mobility settlement was not found."
+              "Mobility settlement was not found.",
             );
           }
 
           this.assertOrganization(
             settlement.organizationId,
-            input.organizationId
+            input.organizationId,
           );
 
           if (
@@ -507,7 +461,7 @@ export class MobilitySettlementEngineService {
             "COMPLETED"
           ) {
             throw new Error(
-              "A completed Mobility settlement cannot be cancelled."
+              "A completed Mobility settlement cannot be cancelled.",
             );
           }
 
@@ -522,10 +476,8 @@ export class MobilitySettlementEngineService {
                     'CANCELLED'
                     AS "MobilitySettlementStatus"
                   ),
-
                 "cancelledAt" =
                   CURRENT_TIMESTAMP,
-
                 "metadata" =
                   COALESCE(
                     "metadata",
@@ -536,14 +488,11 @@ export class MobilitySettlementEngineService {
                     'cancellationReason',
                     ${input.reason}
                   ),
-
                 "updatedAt" =
                   CURRENT_TIMESTAMP
-
               WHERE
                 "id" =
                   ${settlement.id}
-
               RETURNING
                 "id",
                 "organizationId",
@@ -574,23 +523,20 @@ export class MobilitySettlementEngineService {
 
           if (!updated) {
             throw new Error(
-              "Unable to cancel Mobility settlement."
+              "Unable to cancel Mobility settlement.",
             );
           }
 
           return {
             responseStatus: 200,
-
             responseBody:
               this.toResult(updated),
-
             resourceType:
               "MOBILITY_SETTLEMENT",
-
             resourceId:
               updated.id,
           };
-        }
+        },
       );
 
     const responseBody =
@@ -598,45 +544,34 @@ export class MobilitySettlementEngineService {
 
     if (!responseBody) {
       throw new Error(
-        "Mobility settlement cancellation did not return a response body."
+        "Mobility settlement cancellation did not return a response body.",
       );
     }
 
     await this.financialAuditService.record({
       organizationId:
         input.organizationId,
-
       actorUserId:
         input.actorUserId,
-
       action:
         "MOBILITY_SETTLEMENT_CANCELLED",
-
       entityType:
         "MOBILITY_SETTLEMENT",
-
       entityId:
         responseBody.id,
-
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
-
       metadata: {
         paymentId:
           input.paymentId,
-
         reason:
           input.reason,
-
         source:
           "MOBILITY_SETTLEMENT_ENGINE",
       },
@@ -646,18 +581,18 @@ export class MobilitySettlementEngineService {
   }
 
   async getByPayment(
-    paymentId: string
+    paymentId: string,
   ): Promise<MobilitySettlementResult | null> {
     if (!paymentId.trim()) {
       throw new Error(
-        "Payment ID is required."
+        "Payment ID is required.",
       );
     }
 
     const settlement =
       await this.findSettlementByPayment(
         prisma,
-        paymentId
+        paymentId,
       );
 
     return settlement
@@ -668,11 +603,11 @@ export class MobilitySettlementEngineService {
   private async completeCashSettlement(
     settlement: MobilitySettlementRecord,
     payment: MobilityPaymentRecord,
-    input: CompleteMobilitySettlementInput
+    input: CompleteMobilitySettlementInput,
   ): Promise<MobilitySettlementEngineResult> {
     if (!payment.driverId) {
       throw new Error(
-        "Cash Mobility settlement requires an assigned driver."
+        "Cash Mobility settlement requires an assigned driver.",
       );
     }
 
@@ -683,56 +618,43 @@ export class MobilitySettlementEngineService {
       await mobilityCashSettlementService.createCashObligation({
         organizationId:
           payment.organizationId,
-
         driverId:
           payment.driverId,
-
         rideId:
           payment.rideId,
-
         currency:
           payment.currency,
-
         grossFareMinor:
           payment.finalFareMinor,
-
         commissionRateBps:
           payment.commissionRateBps,
-
         commissionAmountMinor:
           payment.commissionAmountMinor,
-
         policyKey:
-          "MOBILITY",
-
+          payment.commissionPolicyKey,
         policyVersion:
-          1,
-
+          payment.commissionPolicyVersion,
         idempotencyKey:
           obligationKey,
-
         actorUserId:
           input.actorUserId,
-
         correlationId:
           input.correlationId,
-
         requestId:
           input.requestId,
-
         ipAddress:
           input.ipAddress,
-
         userAgent:
           input.userAgent,
-
         metadata: {
           paymentId:
             payment.id,
-
           settlementId:
             settlement.id,
-
+          commissionPolicyKey:
+            payment.commissionPolicyKey,
+          commissionPolicyVersion:
+            payment.commissionPolicyVersion,
           source:
             "MOBILITY_SETTLEMENT_ENGINE",
         },
@@ -748,24 +670,18 @@ export class MobilitySettlementEngineService {
                 'COMPLETED'
                 AS "MobilitySettlementStatus"
               ),
-
             "cashObligationAmountMinor" =
               ${BigInt(
-                obligation.commissionAmountMinor
+                obligation.commissionAmountMinor,
               )},
-
             "cashObligationSettledMinor" =
               ${BigInt(0)},
-
             "driverNetAmountMinor" =
               ${payment.driverNetMinor},
-
             "completedAt" =
               CURRENT_TIMESTAMP,
-
             "updatedAt" =
               CURRENT_TIMESTAMP
-
           WHERE
             "id" =
               ${settlement.id}
@@ -779,85 +695,67 @@ export class MobilitySettlementEngineService {
                 'SETTLED'
                 AS "MobilityPaymentStatus"
               ),
-
             "settledAt" =
               CURRENT_TIMESTAMP,
-
             "updatedAt" =
               CURRENT_TIMESTAMP
-
           WHERE
             "id" =
               ${payment.id}
         `;
       },
-
       {
         isolationLevel:
           Prisma.TransactionIsolationLevel.Serializable,
-
         maxWait: 5000,
-
         timeout: 10000,
-      }
+      },
     );
 
     const finalSettlement =
       await this.requireSettlement(
         prisma,
-        settlement.id
+        settlement.id,
       );
 
     await this.financialAuditService.record({
       organizationId:
         payment.organizationId,
-
       actorUserId:
         input.actorUserId,
-
       action:
         "MOBILITY_CASH_SETTLEMENT_COMPLETED",
-
       entityType:
         "MOBILITY_SETTLEMENT",
-
       entityId:
         settlement.id,
-
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
-
       metadata: {
         paymentId:
           payment.id,
-
         rideId:
           payment.rideId,
-
         driverId:
           payment.driverId,
-
         grossAmountMinor:
           payment.finalFareMinor.toString(),
-
         commissionAmountMinor:
           payment.commissionAmountMinor.toString(),
-
         cashObligationAmountMinor:
           obligation.commissionAmountMinor,
-
         driverNetAmountMinor:
           payment.driverNetMinor.toString(),
-
+        commissionPolicyKey:
+          payment.commissionPolicyKey,
+        commissionPolicyVersion:
+          payment.commissionPolicyVersion,
         source:
           "MOBILITY_SETTLEMENT_ENGINE",
       },
@@ -866,18 +764,14 @@ export class MobilitySettlementEngineService {
     return {
       settlement:
         this.toResult(
-          finalSettlement
+          finalSettlement,
         ),
-
       paymentStatus:
         "SETTLED",
-
       cashObligationCreatedMinor:
         obligation.commissionAmountMinor,
-
       cashObligationSettledMinor:
         "0",
-
       driverNetAmountMinor:
         payment.driverNetMinor.toString(),
     };
@@ -886,11 +780,11 @@ export class MobilitySettlementEngineService {
   private async completeDigitalSettlement(
     settlement: MobilitySettlementRecord,
     payment: MobilityPaymentRecord,
-    input: CompleteMobilitySettlementInput
+    input: CompleteMobilitySettlementInput,
   ): Promise<MobilitySettlementEngineResult> {
     if (!payment.driverId) {
       throw new Error(
-        "Digital Mobility settlement requires an assigned driver."
+        "Digital Mobility settlement requires an assigned driver.",
       );
     }
 
@@ -899,7 +793,7 @@ export class MobilitySettlementEngineService {
       undefined
     ) {
       throw new Error(
-        "Available digital proceeds are required for digital Mobility settlement."
+        "Available digital proceeds are required for digital Mobility settlement.",
       );
     }
 
@@ -907,7 +801,7 @@ export class MobilitySettlementEngineService {
       !input.sourceReference?.trim()
     ) {
       throw new Error(
-        "Digital Mobility settlement requires a source reference."
+        "Digital Mobility settlement requires a source reference.",
       );
     }
 
@@ -916,7 +810,7 @@ export class MobilitySettlementEngineService {
 
     if (proceeds < BigInt(0)) {
       throw new Error(
-        "Digital proceeds cannot be negative."
+        "Digital proceeds cannot be negative.",
       );
     }
 
@@ -924,51 +818,100 @@ export class MobilitySettlementEngineService {
       await mobilityCashSettlementService.applyDigitalSettlement({
         organizationId:
           payment.organizationId,
-
         driverId:
           payment.driverId,
-
         currency:
           payment.currency,
-
         availableDigitalProceedsMinor:
           proceeds,
-
         currentDigitalCommissionMinor:
           payment.commissionAmountMinor,
-
         sourceReference:
           input.sourceReference,
-
         idempotencyKey:
-          input.idempotencyKey,
-
+          `mobility-cash-digital-settlement:${settlement.id}`,
         actorUserId:
           input.actorUserId,
-
         correlationId:
           input.correlationId,
-
         requestId:
           input.requestId,
-
         ipAddress:
           input.ipAddress,
-
         userAgent:
           input.userAgent,
-
         metadata: {
           paymentId:
             payment.id,
-
           settlementId:
             settlement.id,
-
           source:
             "MOBILITY_SETTLEMENT_ENGINE",
         },
       });
+
+    const priorCashObligationsSettledMinor =
+      BigInt(
+        cashSettlement
+          .priorCashObligationsSettledMinor,
+      );
+
+    const driverNetMinor =
+      BigInt(
+        cashSettlement
+          .driverNetProceedsMinor,
+      );
+
+    const allocatedAmount =
+      payment.commissionAmountMinor +
+      priorCashObligationsSettledMinor +
+      driverNetMinor;
+
+    if (
+      allocatedAmount !==
+      proceeds
+    ) {
+      throw new Error(
+        "Mobility digital settlement allocation does not reconcile to available digital proceeds.",
+      );
+    }
+
+    const bridge =
+      await mobilityFinancialCoreBridgeService
+        .settleDigitalRide({
+          organizationId:
+            payment.organizationId,
+          settlementId:
+            settlement.id,
+          paymentId:
+            payment.id,
+          rideId:
+            payment.rideId,
+          driverId:
+            payment.driverId,
+          currency:
+            payment.currency,
+          grossFareMinor:
+            payment.finalFareMinor,
+          availableDigitalProceedsMinor:
+            proceeds,
+          currentCommissionMinor:
+            payment.commissionAmountMinor,
+          priorCashObligationsSettledMinor,
+          driverNetMinor,
+          sourceReference:
+            input.sourceReference,
+          actorUserId:
+            input.actorUserId,
+          correlationId:
+            input.correlationId,
+          requestId:
+            input.requestId,
+          ipAddress:
+            input.ipAddress,
+          userAgent:
+            input.userAgent,
+        });
 
     await prisma.$transaction(
       async (database) => {
@@ -980,7 +923,6 @@ export class MobilitySettlementEngineService {
                 'COMPLETED'
                 AS "MobilitySettlementStatus"
               ),
-
             "cashObligationAmountMinor" =
               (
                 SELECT
@@ -1012,28 +954,24 @@ export class MobilitySettlementEngineService {
                     )
                   )
               ),
-
             "cashObligationSettledMinor" =
-              ${BigInt(
-                cashSettlement
-                  .priorCashObligationsSettledMinor
-              )},
-
+              ${priorCashObligationsSettledMinor},
             "driverNetAmountMinor" =
-              ${BigInt(
-                cashSettlement
-                  .driverNetProceedsMinor
-              )},
-
+              ${driverNetMinor},
             "sourceReference" =
               ${input.sourceReference},
-
+            "financialTransactionId" =
+              ${bridge.financialTransactionId},
+            "vendorPayableTransactionId" =
+              ${bridge.vendorPayableTransactionId},
+            "commissionTransactionId" =
+              ${bridge.commissionTransactionId},
+            "cashObligationSettlementTransactionId" =
+              ${bridge.cashObligationSettlementTransactionId},
             "completedAt" =
               CURRENT_TIMESTAMP,
-
             "updatedAt" =
               CURRENT_TIMESTAMP
-
           WHERE
             "id" =
               ${settlement.id}
@@ -1047,94 +985,77 @@ export class MobilitySettlementEngineService {
                 'SETTLED'
                 AS "MobilityPaymentStatus"
               ),
-
             "settledAt" =
               CURRENT_TIMESTAMP,
-
             "updatedAt" =
               CURRENT_TIMESTAMP
-
           WHERE
             "id" =
               ${payment.id}
         `;
       },
-
       {
         isolationLevel:
           Prisma.TransactionIsolationLevel.Serializable,
-
         maxWait: 5000,
-
         timeout: 10000,
-      }
+      },
     );
 
     const finalSettlement =
       await this.requireSettlement(
         prisma,
-        settlement.id
+        settlement.id,
       );
 
     await this.financialAuditService.record({
       organizationId:
         payment.organizationId,
-
       actorUserId:
         input.actorUserId,
-
       action:
         "MOBILITY_DIGITAL_SETTLEMENT_COMPLETED",
-
       entityType:
         "MOBILITY_SETTLEMENT",
-
       entityId:
         settlement.id,
-
       correlationId:
         input.correlationId,
-
       requestId:
         input.requestId,
-
       ipAddress:
         input.ipAddress,
-
       userAgent:
         input.userAgent,
-
       metadata: {
         paymentId:
           payment.id,
-
         rideId:
           payment.rideId,
-
         driverId:
           payment.driverId,
-
         sourceReference:
           input.sourceReference,
-
         availableDigitalProceedsMinor:
           proceeds.toString(),
-
         currentDigitalCommissionMinor:
           payment.commissionAmountMinor.toString(),
-
         priorCashObligationsSettledMinor:
-          cashSettlement
-            .priorCashObligationsSettledMinor,
-
+          priorCashObligationsSettledMinor.toString(),
         driverNetProceedsMinor:
-          cashSettlement
-            .driverNetProceedsMinor,
-
+          driverNetMinor.toString(),
         remainingCashObligationMinor:
           cashSettlement
             .remainingCashObligationMinor,
-
+        financialTransactionId:
+          bridge.financialTransactionId,
+        vendorPayableTransactionId:
+          bridge.vendorPayableTransactionId,
+        commissionTransactionId:
+          bridge.commissionTransactionId,
+        cashObligationSettlementTransactionId:
+          bridge
+            .cashObligationSettlementTransactionId,
         source:
           "MOBILITY_SETTLEMENT_ENGINE",
       },
@@ -1143,28 +1064,22 @@ export class MobilitySettlementEngineService {
     return {
       settlement:
         this.toResult(
-          finalSettlement
+          finalSettlement,
         ),
-
       paymentStatus:
         "SETTLED",
-
       cashObligationCreatedMinor:
         "0",
-
       cashObligationSettledMinor:
-        cashSettlement
-          .priorCashObligationsSettledMinor,
-
+        priorCashObligationsSettledMinor.toString(),
       driverNetAmountMinor:
-        cashSettlement
-          .driverNetProceedsMinor,
+        driverNetMinor.toString(),
     };
   }
 
   private async requirePayment(
     database: SqlExecutor,
-    paymentId: string
+    paymentId: string,
   ): Promise<MobilityPaymentRecord> {
     const rows =
       await database.$queryRaw<
@@ -1184,7 +1099,9 @@ export class MobilitySettlementEngineService {
           "commissionAmountMinor",
           "driverGrossMinor",
           "driverNetMinor",
-          "idempotencyKey"
+          "idempotencyKey",
+          "commissionPolicyKey",
+          "commissionPolicyVersion"
         FROM "MobilityRidePayment"
         WHERE
           "id" =
@@ -1197,7 +1114,7 @@ export class MobilitySettlementEngineService {
 
     if (!payment) {
       throw new Error(
-        "Mobility payment was not found."
+        "Mobility payment was not found.",
       );
     }
 
@@ -1206,7 +1123,7 @@ export class MobilitySettlementEngineService {
 
   private async findSettlementByPayment(
     database: SqlExecutor,
-    paymentId: string
+    paymentId: string,
   ): Promise<MobilitySettlementRecord | null> {
     const rows =
       await database.$queryRaw<
@@ -1247,7 +1164,7 @@ export class MobilitySettlementEngineService {
 
   private async requireSettlement(
     database: SqlExecutor,
-    settlementId: string
+    settlementId: string,
   ): Promise<MobilitySettlementRecord> {
     const rows =
       await database.$queryRaw<
@@ -1288,7 +1205,7 @@ export class MobilitySettlementEngineService {
 
     if (!settlement) {
       throw new Error(
-        "Mobility settlement was not found."
+        "Mobility settlement was not found.",
       );
     }
 
@@ -1296,27 +1213,23 @@ export class MobilitySettlementEngineService {
   }
 
   private buildCompletedResult(
-    settlement: MobilitySettlementRecord
+    settlement: MobilitySettlementRecord,
   ): MobilitySettlementEngineResult {
     return {
       settlement:
         this.toResult(
-          settlement
+          settlement,
         ),
-
       paymentStatus:
         "SETTLED",
-
       cashObligationCreatedMinor:
         settlement
           .cashObligationAmountMinor
           .toString(),
-
       cashObligationSettledMinor:
         settlement
           .cashObligationSettledMinor
           .toString(),
-
       driverNetAmountMinor:
         settlement
           .driverNetAmountMinor
@@ -1325,70 +1238,51 @@ export class MobilitySettlementEngineService {
   }
 
   private toResult(
-    settlement: MobilitySettlementRecord
+    settlement: MobilitySettlementRecord,
   ): MobilitySettlementResult {
     return {
       id:
         settlement.id,
-
       organizationId:
         settlement.organizationId,
-
       paymentId:
         settlement.paymentId,
-
       rideId:
         settlement.rideId,
-
       driverId:
         settlement.driverId,
-
       currency:
         settlement.currency,
-
       paymentMethod:
         settlement.paymentMethod,
-
       status:
         settlement.status,
-
       grossAmountMinor:
         settlement.grossAmountMinor.toString(),
-
       commissionAmountMinor:
         settlement.commissionAmountMinor.toString(),
-
       driverNetAmountMinor:
         settlement.driverNetAmountMinor.toString(),
-
       cashObligationAmountMinor:
         settlement
           .cashObligationAmountMinor
           .toString(),
-
       cashObligationSettledMinor:
         settlement
           .cashObligationSettledMinor
           .toString(),
-
       sourceReference:
         settlement.sourceReference,
-
       createdAt:
         settlement.createdAt,
-
       updatedAt:
         settlement.updatedAt,
-
       processingStartedAt:
         settlement.processingStartedAt,
-
       completedAt:
         settlement.completedAt,
-
       failedAt:
         settlement.failedAt,
-
       cancelledAt:
         settlement.cancelledAt,
     };
@@ -1396,70 +1290,58 @@ export class MobilitySettlementEngineService {
 
   private assertOrganization(
     actualOrganizationId: string,
-    expectedOrganizationId: string
+    expectedOrganizationId: string,
   ): void {
     if (
       actualOrganizationId !==
       expectedOrganizationId
     ) {
       throw new Error(
-        "Mobility settlement organization mismatch."
+        "Mobility settlement organization mismatch.",
       );
     }
   }
 
   private validateCreateInput(
-    input: CreateMobilitySettlementInput
+    input: CreateMobilitySettlementInput,
   ): void {
-    if (
-      !input.organizationId.trim()
-    ) {
+    if (!input.organizationId.trim()) {
       throw new Error(
-        "Mobility organizationId is required."
+        "Mobility organizationId is required.",
       );
     }
 
-    if (
-      !input.paymentId.trim()
-    ) {
+    if (!input.paymentId.trim()) {
       throw new Error(
-        "Mobility paymentId is required."
+        "Mobility paymentId is required.",
       );
     }
 
-    if (
-      !input.idempotencyKey.trim()
-    ) {
+    if (!input.idempotencyKey.trim()) {
       throw new Error(
-        "Mobility settlement idempotency key is required."
+        "Mobility settlement idempotency key is required.",
       );
     }
   }
 
   private validateCompleteInput(
-    input: CompleteMobilitySettlementInput
+    input: CompleteMobilitySettlementInput,
   ): void {
-    if (
-      !input.organizationId.trim()
-    ) {
+    if (!input.organizationId.trim()) {
       throw new Error(
-        "Mobility organizationId is required."
+        "Mobility organizationId is required.",
       );
     }
 
-    if (
-      !input.paymentId.trim()
-    ) {
+    if (!input.paymentId.trim()) {
       throw new Error(
-        "Mobility paymentId is required."
+        "Mobility paymentId is required.",
       );
     }
 
-    if (
-      !input.idempotencyKey.trim()
-    ) {
+    if (!input.idempotencyKey.trim()) {
       throw new Error(
-        "Mobility settlement idempotency key is required."
+        "Mobility settlement idempotency key is required.",
       );
     }
 
@@ -1470,43 +1352,35 @@ export class MobilitySettlementEngineService {
         BigInt(0)
     ) {
       throw new Error(
-        "Digital proceeds cannot be negative."
+        "Digital proceeds cannot be negative.",
       );
     }
   }
 
   private validateCancelInput(
-    input: CancelMobilitySettlementInput
+    input: CancelMobilitySettlementInput,
   ): void {
-    if (
-      !input.organizationId.trim()
-    ) {
+    if (!input.organizationId.trim()) {
       throw new Error(
-        "Mobility organizationId is required."
+        "Mobility organizationId is required.",
       );
     }
 
-    if (
-      !input.paymentId.trim()
-    ) {
+    if (!input.paymentId.trim()) {
       throw new Error(
-        "Mobility paymentId is required."
+        "Mobility paymentId is required.",
       );
     }
 
-    if (
-      !input.reason.trim()
-    ) {
+    if (!input.reason.trim()) {
       throw new Error(
-        "Mobility settlement cancellation reason is required."
+        "Mobility settlement cancellation reason is required.",
       );
     }
 
-    if (
-      !input.idempotencyKey.trim()
-    ) {
+    if (!input.idempotencyKey.trim()) {
       throw new Error(
-        "Mobility settlement cancellation idempotency key is required."
+        "Mobility settlement cancellation idempotency key is required.",
       );
     }
   }
