@@ -24,13 +24,15 @@ type FailurePoint =
   | "DRIVER_PAYABLE"
   | "RECONCILIATION";
 
-function expectedRecoveryFor(
-  point: FailurePoint,
-):
+type RecoveryExpectation =
   | "NONE"
   | "ORCHESTRATION"
   | "FINANCIAL_RECOVERY"
-  | "BLOCK" {
+  | "BLOCK";
+
+function expectedRecoveryFor(
+  point: FailurePoint,
+): RecoveryExpectation {
   switch (point) {
     case "SAFETY":
     case "SEARCH":
@@ -51,9 +53,15 @@ function expectedRecoveryFor(
 
     case "RECONCILIATION":
       return "BLOCK";
+
+    default:
+      return "NONE";
   }
 }
 
+/*
+ * Recovery classification.
+ */
 assert.equal(
   expectedRecoveryFor("SAFETY"),
   "ORCHESTRATION",
@@ -85,7 +93,8 @@ assert.equal(
 );
 
 /*
- * Completed ride must never roll backwards.
+ * A financially failed ride that has already completed
+ * must never roll back to an earlier ride state.
  */
 assertRideNeverRollsBack(
   "TRIP_COMPLETED",
@@ -102,37 +111,47 @@ assert.throws(
 
 /*
  * Complete DIGITAL allocation.
+ *
+ * Gross fare:
+ * 10,000
+ *
+ * Current commission:
+ * 1,200
+ *
+ * Previous cash debt settled:
+ * 0
+ *
+ * Driver net:
+ * 8,800
  */
 assertFinancialAllocation({
-  grossFareMinor:
-    BigInt(10000),
-
-  commissionMinor:
-    BigInt(1200),
-
-  priorCashObligationsSettledMinor:
-    BigInt(0),
-
-  driverNetMinor:
-    BigInt(8800),
+  grossFareMinor: BigInt(10000),
+  commissionMinor: BigInt(1200),
+  priorCashObligationsSettledMinor: BigInt(0),
+  driverNetMinor: BigInt(8800),
 });
 
 /*
- * DIGITAL after CASH debt.
+ * DIGITAL payment after a previous CASH debt.
+ *
+ * Gross fare:
+ * 10,000
+ *
+ * Current commission:
+ * 1,200
+ *
+ * Previous cash obligation settled:
+ * 1,200
+ *
+ * Driver net:
+ * 7,600
  */
 assertFinancialAllocation({
-  grossFareMinor:
-    BigInt(10000),
-
-  commissionMinor:
-    BigInt(1200),
-
-  priorCashObligationsSettledMinor:
-    BigInt(1200),
-
-  driverNetMinor:
-    BigInt(7600),
-);
+  grossFareMinor: BigInt(10000),
+  commissionMinor: BigInt(1200),
+  priorCashObligationsSettledMinor: BigInt(1200),
+  driverNetMinor: BigInt(7600),
+});
 
 /*
  * Partial Financial Core state:
@@ -141,29 +160,14 @@ assertFinancialAllocation({
 assert.throws(
   () => {
     assertRequiredFinancialLinks({
-      grossFareMinor:
-        BigInt(10000),
-
-      commissionMinor:
-        BigInt(1200),
-
-      priorCashObligationsSettledMinor:
-        BigInt(0),
-
-      driverNetMinor:
-        BigInt(8800),
-
-      captureTransactionId:
-        "capture-1",
-
-      commissionTransactionId:
-        null,
-
-      cashObligationSettlementTransactionId:
-        null,
-
-      driverPayableTransactionId:
-        "driver-1",
+      grossFareMinor: BigInt(10000),
+      commissionMinor: BigInt(1200),
+      priorCashObligationsSettledMinor: BigInt(0),
+      driverNetMinor: BigInt(8800),
+      captureTransactionId: "capture-1",
+      commissionTransactionId: null,
+      cashObligationSettlementTransactionId: null,
+      driverPayableTransactionId: "driver-1",
     });
   },
   /Commission transaction is required/,
@@ -176,29 +180,14 @@ assert.throws(
 assert.throws(
   () => {
     assertRequiredFinancialLinks({
-      grossFareMinor:
-        BigInt(10000),
-
-      commissionMinor:
-        BigInt(1200),
-
-      priorCashObligationsSettledMinor:
-        BigInt(1200),
-
-      driverNetMinor:
-        BigInt(7600),
-
-      captureTransactionId:
-        "capture-1",
-
-      commissionTransactionId:
-        "commission-1",
-
-      cashObligationSettlementTransactionId:
-        null,
-
-      driverPayableTransactionId:
-        "driver-1",
+      grossFareMinor: BigInt(10000),
+      commissionMinor: BigInt(1200),
+      priorCashObligationsSettledMinor: BigInt(1200),
+      driverNetMinor: BigInt(7600),
+      captureTransactionId: "capture-1",
+      commissionTransactionId: "commission-1",
+      cashObligationSettlementTransactionId: null,
+      driverPayableTransactionId: "driver-1",
     });
   },
   /Cash-obligation settlement transaction is required/,
@@ -208,23 +197,17 @@ assert.throws(
  * Reconciliation states.
  */
 assert.equal(
-  recoveryDisposition(
-    "RECONCILED",
-  ),
+  recoveryDisposition("RECONCILED"),
   "NOOP",
 );
 
 assert.equal(
-  recoveryDisposition(
-    "INCOMPLETE",
-  ),
+  recoveryDisposition("INCOMPLETE"),
   "RECOVER",
 );
 
 assert.equal(
-  recoveryDisposition(
-    "MISMATCH",
-  ),
+  recoveryDisposition("MISMATCH"),
   "BLOCK",
 );
 
@@ -238,9 +221,7 @@ assertRecoveryAllowed(
 
 assert.throws(
   () => {
-    assertRecoveryAllowed(
-      "MISMATCH",
-    );
+    assertRecoveryAllowed("MISMATCH");
   },
   /accounting mismatch/,
 );
@@ -251,17 +232,10 @@ assert.throws(
 assert.throws(
   () => {
     assertFinancialAllocation({
-      grossFareMinor:
-        BigInt(10000),
-
-      commissionMinor:
-        BigInt(1200),
-
-      priorCashObligationsSettledMinor:
-        BigInt(1200),
-
-      driverNetMinor:
-        BigInt(7000),
+      grossFareMinor: BigInt(10000),
+      commissionMinor: BigInt(1200),
+      priorCashObligationsSettledMinor: BigInt(1200),
+      driverNetMinor: BigInt(7000),
     });
   },
   /reconcile to gross fare/,
