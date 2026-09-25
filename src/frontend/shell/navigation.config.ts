@@ -11,6 +11,12 @@ export type NavigationSection = {
   items: NavigationItem[];
 };
 
+const mobilityNavigationItem = {
+  title: "Mobility",
+  route: "/app/mobility",
+  description: "Rides, safety, dispatch and financial flow",
+};
+
 export const NavigationConfig = {
   CUSTOMER: [
     {
@@ -25,6 +31,11 @@ export const NavigationConfig = {
           title: "Marketplace",
           route: "/app/marketplace",
           description: "Discover products, services and stores",
+        },
+        {
+          title: "Mobility",
+          route: "/app/mobility",
+          description: "Rides, safety, dispatch and financial flow",
         },
         {
           title: "Wallet",
@@ -55,6 +66,11 @@ export const NavigationConfig = {
           description: "Your business command center",
         },
         {
+          title: "Mobility",
+          route: "/app/mobility",
+          description: "Mobility operations and settlements",
+        },
+        {
           title: "Products",
           route: "/app/vendor/products",
           description: "Manage your catalogue",
@@ -83,6 +99,11 @@ export const NavigationConfig = {
           description: "Platform overview",
         },
         {
+          title: "Mobility",
+          route: "/app/mobility",
+          description: "Mobility operational control",
+        },
+        {
           title: "Users",
           route: "/app/admin/users",
           description: "Manage the MARKA community",
@@ -105,6 +126,12 @@ export const NavigationConfig = {
     {
       group: "Control Center",
       items: [
+        {
+          group: "Mobility",
+          items: [
+            mobilityNavigationItem,
+          ],
+        },
         {
           title: "Everything",
           route: "/app/super-admin",
