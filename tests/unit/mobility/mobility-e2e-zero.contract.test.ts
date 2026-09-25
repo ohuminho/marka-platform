@@ -1,96 +1,14 @@
 import assert from "node:assert/strict";
 
-type E2EState = {
-  rideStatus: string;
-  orchestrationStatus: string;
-  orchestrationStep: string;
+import {
+  assertCompletedE2E,
+  assertDigitalCapture,
+  createIdempotencyStore,
+  executeIdempotently,
+  type MobilityE2EState,
+} from "./mobility-validation.fixtures";
 
-  paymentStatus: string;
-  settlementStatus: string;
-
-  finalFareMinor: bigint;
-  commissionMinor: bigint;
-  priorCashObligationsSettledMinor: bigint;
-  driverNetMinor: bigint;
-
-  financialCaptureTransactionId: string | null;
-  commissionTransactionId: string | null;
-  cashObligationSettlementTransactionId: string | null;
-  driverPayableTransactionId: string | null;
-};
-
-function assertE2EZeroInvariants(
-  state: E2EState,
-): void {
-  assert.equal(
-    state.rideStatus,
-    "TRIP_COMPLETED",
-  );
-
-  assert.equal(
-    state.orchestrationStatus,
-    "COMPLETED",
-  );
-
-  assert.equal(
-    state.orchestrationStep,
-    "FINANCIAL_FINALIZED",
-  );
-
-  assert.equal(
-    state.paymentStatus,
-    "SETTLED",
-  );
-
-  assert.equal(
-    state.settlementStatus,
-    "COMPLETED",
-  );
-
-  assert.equal(
-    state.priorCashObligationsSettledMinor,
-    BigInt(0),
-  );
-
-  assert.ok(
-    state.financialCaptureTransactionId,
-  );
-
-  assert.ok(
-    state.commissionTransactionId,
-  );
-
-  assert.ok(
-    state.driverPayableTransactionId,
-  );
-
-  assert.equal(
-    state.cashObligationSettlementTransactionId,
-    null,
-  );
-
-  const allocated =
-    state.commissionMinor +
-    state.priorCashObligationsSettledMinor +
-    state.driverNetMinor;
-
-  assert.equal(
-    allocated,
-    state.finalFareMinor,
-    "E2E-0 financial allocation invariant failed.",
-  );
-}
-
-/*
- * E2E-0:
- *
- * Fare = 10,000 AOA
- * Taxi commission = 12%
- * Commission = 1,200 AOA
- * Previous CASH obligation = 0
- * Driver payable = 8,800 AOA
- */
-const state: E2EState = {
+const state: MobilityE2EState = {
   rideStatus:
     "TRIP_COMPLETED",
 
@@ -106,7 +24,7 @@ const state: E2EState = {
   settlementStatus:
     "COMPLETED",
 
-  finalFareMinor:
+  grossFareMinor:
     BigInt(10000),
 
   commissionMinor:
@@ -118,7 +36,7 @@ const state: E2EState = {
   driverNetMinor:
     BigInt(8800),
 
-  financialCaptureTransactionId:
+  captureTransactionId:
     "financial-capture-e2e-0",
 
   commissionTransactionId:
@@ -131,20 +49,57 @@ const state: E2EState = {
     "driver-payable-e2e-0",
 };
 
-assertE2EZeroInvariants(
-  state,
+assertDigitalCapture(state);
+
+assertCompletedE2E(state);
+
+assert.equal(
+  state.commissionMinor,
+  BigInt(1200),
 );
 
-/*
- * Idempotent replay must not change
- * the financial result.
- */
+assert.equal(
+  state.driverNetMinor,
+  BigInt(8800),
+);
+
+assert.equal(
+  state.priorCashObligationsSettledMinor,
+  BigInt(0),
+);
+
+const idempotencyStore =
+  createIdempotencyStore();
+
+const first =
+  executeIdempotently(
+    idempotencyStore,
+    "mobility:e2e-0:financial-finalization",
+    "financial-finalized-e2e-0",
+  );
+
 const replay =
-  structuredClone(state);
+  executeIdempotently(
+    idempotencyStore,
+    "mobility:e2e-0:financial-finalization",
+    "financial-finalized-e2e-0",
+  );
+
+assert.equal(
+  first,
+  replay,
+);
+
+assert.equal(
+  idempotencyStore.size,
+  1,
+);
 
 assert.deepEqual(
-  replay,
   state,
+  {
+    ...state,
+  },
 );
 
 console.log(
