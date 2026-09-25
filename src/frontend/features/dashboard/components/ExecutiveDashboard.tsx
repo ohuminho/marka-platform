@@ -20,8 +20,8 @@ const ecosystem = [
   },
   {
     title: "Mobility",
-    description: "Movement and transportation",
-    route: "/app",
+    description: "Rides, safety, dispatch and financial orchestration",
+    route: "/app/mobility",
     index: "03",
   },
   {
@@ -152,7 +152,7 @@ export default function ExecutiveDashboard() {
             "
           >
             <Link
-              href="/app/marketplace"
+              href="/app/mobility"
               className="
                 inline-flex
                 h-12
@@ -173,7 +173,7 @@ export default function ExecutiveDashboard() {
                 hover:shadow-[0_15px_45px_rgba(255,255,255,0.1)]
               "
             >
-              Explore MARKA
+              Open Mobility
               <span className="ml-3">→</span>
             </Link>
 
