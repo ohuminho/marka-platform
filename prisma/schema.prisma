@@ -351,6 +351,32 @@ enum AutomationExecutionStatus {
   SKIPPED
 }
 
+enum MobilityOrchestrationStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  CANCELLED
+  RECOVERY_REQUIRED
+}
+
+enum MobilityOrchestrationStep {
+  REQUESTED
+  SAFETY_READY
+  SEARCHING
+  DRIVER_ASSIGNED
+  DRIVER_ACCEPTED
+  DRIVER_ARRIVING
+  DRIVER_ARRIVED
+  TRIP_STARTED
+  TRIP_IN_PROGRESS
+  TRIP_COMPLETED
+  PAYMENT_INITIALIZED
+  FINANCIAL_FINALIZED
+  CANCELLED
+  FAILED
+  RECOVERY_REQUIRED
+}
+
 model MobilityDriver {
   id             String               @id @default(uuid())
   organizationId String
@@ -369,7 +395,7 @@ model MobilityDriver {
   vehicles      MobilityDriverVehicle[]
   availability  MobilityDriverAvailability?
   location      MobilityLocation?
-  ridesAsDriver MobilityRide[]               @relation("MobilityRideDriver")
+  ridesAsDriver MobilityRide[] @relation("MobilityRideDriver")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -438,8 +464,8 @@ model MobilityDriverVehicle {
   driverId  String
   vehicleId String
 
-  isPrimary   Boolean   @default(false)
-  activeFrom  DateTime  @default(now())
+  isPrimary  Boolean   @default(false)
+  activeFrom DateTime  @default(now())
   activeUntil DateTime?
 
   driver  MobilityDriver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
@@ -547,12 +573,14 @@ model MobilityRide {
   cancellationReason String?
   metadata           Json?
 
-  organization Organization     @relation(fields: [organizationId], references: [id])
-  rider        User             @relation("MobilityRideRider", fields: [riderId], references: [id])
-  driver       MobilityDriver?  @relation("MobilityRideDriver", fields: [driverId], references: [id])
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  rider        User            @relation("MobilityRideRider", fields: [riderId], references: [id])
+  driver       MobilityDriver? @relation("MobilityRideDriver", fields: [driverId], references: [id])
   vehicle      MobilityVehicle? @relation(fields: [vehicleId], references: [id])
 
-  stops MobilityRideStop[]
+  stops          MobilityRideStop[]
+  orchestration  MobilityRideOrchestration?
+  orchestrationEvents MobilityRideOrchestrationEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -627,6 +655,9 @@ model Organization {
   mobilityDrivers      MobilityDriver[]
   mobilityVehicles     MobilityVehicle[]
   mobilityRides        MobilityRide[]
+
+  mobilityOrchestrations       MobilityRideOrchestration[]
+  mobilityOrchestrationEvents  MobilityRideOrchestrationEvent[]
 
   @@index([tenantId])
   @@index([status])
@@ -836,7 +867,7 @@ model Store {
   name        String
   description String?
   logo        String?
-  banner      String?
+  banner       String?
   location    String?
   rating      Decimal     @default(0) @db.Decimal(5, 2)
   status      StoreStatus @default(ACTIVE)
@@ -1086,7 +1117,7 @@ model Ledger {
   currency       String       @default("AOA") @db.Char(3)
   status         LedgerStatus @default(ACTIVE)
 
-  organization Organization  @relation(fields: [organizationId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
   entries      LedgerEntry[]
 
   createdAt DateTime @default(now())
@@ -1470,5 +1501,60 @@ model DomainEvent {
   @@index([aggregateType, aggregateId])
   @@index([eventType])
   @@index([status, availableAt])
+  @@index([createdAt])
+}
+
+model MobilityRideOrchestration {
+  id             String                    @id
+  organizationId String
+  rideId         String                    @unique
+  status         MobilityOrchestrationStatus @default(ACTIVE)
+  currentStep    MobilityOrchestrationStep  @default(REQUESTED)
+  version        Int                       @default(1)
+  attemptCount   Int                       @default(0)
+  correlationId  String?
+  requestId      String?
+  lastErrorCode  String?
+  lastError      String?
+  nextRetryAt    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  ride         MobilityRide @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  events MobilityRideOrchestrationEvent[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([currentStep])
+  @@index([nextRetryAt])
+}
+
+model MobilityRideOrchestrationEvent {
+  id             String                    @id
+  orchestrationId String
+  organizationId String
+  rideId         String
+  action         String
+  fromStep       MobilityOrchestrationStep?
+  toStep         MobilityOrchestrationStep
+  status         MobilityOrchestrationStatus
+  idempotencyKey String                    @unique
+  correlationId  String?
+  requestId      String?
+  actorUserId    String?
+  metadata       Json?
+  createdAt      DateTime                  @default(now())
+
+  orchestration MobilityRideOrchestration @relation(fields: [orchestrationId], references: [id], onDelete: Cascade)
+  organization   Organization              @relation(fields: [organizationId], references: [id])
+  ride           MobilityRide              @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@index([orchestrationId])
+  @@index([organizationId])
+  @@index([rideId])
   @@index([createdAt])
 }
