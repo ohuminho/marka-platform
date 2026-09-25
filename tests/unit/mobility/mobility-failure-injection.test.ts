@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
 
+import {
+  assertFinancialAllocation,
+  assertRecoveryAllowed,
+  assertRequiredFinancialLinks,
+  assertRideNeverRollsBack,
+  recoveryDisposition,
+} from "./mobility-validation.fixtures";
+
 type FailurePoint =
   | "SAFETY"
   | "SEARCH"
@@ -16,15 +24,13 @@ type FailurePoint =
   | "DRIVER_PAYABLE"
   | "RECONCILIATION";
 
-type ExpectedRecovery =
+function expectedRecoveryFor(
+  point: FailurePoint,
+):
   | "NONE"
   | "ORCHESTRATION"
   | "FINANCIAL_RECOVERY"
-  | "BLOCK";
-
-function expectedRecoveryFor(
-  point: FailurePoint,
-): ExpectedRecovery {
+  | "BLOCK" {
   switch (point) {
     case "SAFETY":
     case "SEARCH":
@@ -32,8 +38,6 @@ function expectedRecoveryFor(
     case "ACCEPT":
     case "ARRIVAL":
     case "START_TRIP":
-      return "ORCHESTRATION";
-
     case "COMPLETE_RIDE":
       return "ORCHESTRATION";
 
@@ -51,228 +55,216 @@ function expectedRecoveryFor(
 }
 
 assert.equal(
-  expectedRecoveryFor(
-    "SAFETY",
-  ),
+  expectedRecoveryFor("SAFETY"),
   "ORCHESTRATION",
 );
 
 assert.equal(
-  expectedRecoveryFor(
-    "PAYMENT",
-  ),
+  expectedRecoveryFor("DISPATCH"),
+  "ORCHESTRATION",
+);
+
+assert.equal(
+  expectedRecoveryFor("PAYMENT"),
   "FINANCIAL_RECOVERY",
 );
 
 assert.equal(
-  expectedRecoveryFor(
-    "DRIVER_PAYABLE",
-  ),
+  expectedRecoveryFor("FINANCIAL_CAPTURE"),
   "FINANCIAL_RECOVERY",
 );
 
 assert.equal(
-  expectedRecoveryFor(
-    "RECONCILIATION",
-  ),
+  expectedRecoveryFor("DRIVER_PAYABLE"),
+  "FINANCIAL_RECOVERY",
+);
+
+assert.equal(
+  expectedRecoveryFor("RECONCILIATION"),
   "BLOCK",
 );
 
 /*
- * Ride completion is irreversible from the
- * financial perspective.
+ * Completed ride must never roll backwards.
  */
-function rideStateAfterFinancialFailure(
-  rideCompleted: boolean,
-): "TRIP_COMPLETED" | "NOT_COMPLETED" {
-  return rideCompleted
-    ? "TRIP_COMPLETED"
-    : "NOT_COMPLETED";
-}
-
-assert.equal(
-  rideStateAfterFinancialFailure(
-    true,
-  ),
+assertRideNeverRollsBack(
   "TRIP_COMPLETED",
 );
 
-/*
- * A financial failure after ride completion
- * cannot roll the ride back.
- */
-function assertRideNeverRollsBack(
-  rideStatus: string,
-): void {
-  assert.equal(
-    rideStatus,
-    "TRIP_COMPLETED",
-  );
-}
-
-assertRideNeverRollsBack(
-  rideStateAfterFinancialFailure(
-    true,
-  ),
+assert.throws(
+  () => {
+    assertRideNeverRollsBack(
+      "TRIP_IN_PROGRESS",
+    );
+  },
+  /Financial failure/,
 );
 
 /*
- * Financial Core completion requires all
- * mandatory links that actually carry value.
+ * Complete DIGITAL allocation.
  */
-function validateFinancialLinks(input: {
-  capture: boolean;
-  commission: boolean;
-  cashObligationSettlement: boolean;
-  driverPayable: boolean;
-  commissionMinor: bigint;
-  priorCashMinor: bigint;
-  driverNetMinor: bigint;
-}): void {
-  if (!input.capture) {
-    throw new Error(
-      "FINANCIAL_CAPTURE_TRANSACTION",
-    );
-  }
+assertFinancialAllocation({
+  grossFareMinor:
+    BigInt(10000),
 
-  if (
-    input.commissionMinor >
-      BigInt(0) &&
-    !input.commission
-  ) {
-    throw new Error(
-      "COMMISSION_TRANSACTION",
-    );
-  }
+  commissionMinor:
+    BigInt(1200),
 
-  if (
-    input.priorCashMinor >
-      BigInt(0) &&
-    !input.cashObligationSettlement
-  ) {
-    throw new Error(
-      "CASH_OBLIGATION_SETTLEMENT_TRANSACTION",
-    );
-  }
+  priorCashObligationsSettledMinor:
+    BigInt(0),
 
-  if (
-    input.driverNetMinor >
-      BigInt(0) &&
-    !input.driverPayable
-  ) {
-    throw new Error(
-      "DRIVER_PAYABLE_TRANSACTION",
-    );
-  }
-}
-
-validateFinancialLinks({
-  capture: true,
-  commission: true,
-  cashObligationSettlement: false,
-  driverPayable: true,
-  commissionMinor: BigInt(1200),
-  priorCashMinor: BigInt(0),
-  driverNetMinor: BigInt(8800),
+  driverNetMinor:
+    BigInt(8800),
 });
 
+/*
+ * DIGITAL after CASH debt.
+ */
+assertFinancialAllocation({
+  grossFareMinor:
+    BigInt(10000),
+
+  commissionMinor:
+    BigInt(1200),
+
+  priorCashObligationsSettledMinor:
+    BigInt(1200),
+
+  driverNetMinor:
+    BigInt(7600),
+);
+
+/*
+ * Partial Financial Core state:
+ * missing commission link must not be considered complete.
+ */
 assert.throws(
   () => {
-    validateFinancialLinks({
-      capture: true,
-      commission: false,
-      cashObligationSettlement: false,
-      driverPayable: true,
-      commissionMinor: BigInt(1200),
-      priorCashMinor: BigInt(0),
-      driverNetMinor: BigInt(8800),
+    assertRequiredFinancialLinks({
+      grossFareMinor:
+        BigInt(10000),
+
+      commissionMinor:
+        BigInt(1200),
+
+      priorCashObligationsSettledMinor:
+        BigInt(0),
+
+      driverNetMinor:
+        BigInt(8800),
+
+      captureTransactionId:
+        "capture-1",
+
+      commissionTransactionId:
+        null,
+
+      cashObligationSettlementTransactionId:
+        null,
+
+      driverPayableTransactionId:
+        "driver-1",
     });
   },
-  /COMMISSION_TRANSACTION/,
+  /Commission transaction is required/,
 );
 
 /*
- * Reconciliation mismatch must block
- * automatic financial mutation.
+ * Previous CASH debt requires its own
+ * Financial Core settlement transaction.
  */
-function allowRecovery(
-  reconciliation:
-    | "RECONCILED"
-    | "INCOMPLETE"
-    | "MISMATCH",
-): boolean {
-  return (
-    reconciliation !==
-    "MISMATCH"
-  );
-}
+assert.throws(
+  () => {
+    assertRequiredFinancialLinks({
+      grossFareMinor:
+        BigInt(10000),
 
+      commissionMinor:
+        BigInt(1200),
+
+      priorCashObligationsSettledMinor:
+        BigInt(1200),
+
+      driverNetMinor:
+        BigInt(7600),
+
+      captureTransactionId:
+        "capture-1",
+
+      commissionTransactionId:
+        "commission-1",
+
+      cashObligationSettlementTransactionId:
+        null,
+
+      driverPayableTransactionId:
+        "driver-1",
+    });
+  },
+  /Cash-obligation settlement transaction is required/,
+);
+
+/*
+ * Reconciliation states.
+ */
 assert.equal(
-  allowRecovery(
+  recoveryDisposition(
     "RECONCILED",
   ),
-  true,
+  "NOOP",
 );
 
 assert.equal(
-  allowRecovery(
+  recoveryDisposition(
     "INCOMPLETE",
   ),
-  true,
+  "RECOVER",
 );
 
 assert.equal(
-  allowRecovery(
+  recoveryDisposition(
     "MISMATCH",
   ),
-  false,
+  "BLOCK",
 );
 
-/*
- * Final allocation invariant.
- */
-function assertAllocation(
-  grossFareMinor: bigint,
-  commissionMinor: bigint,
-  priorCashMinor: bigint,
-  driverNetMinor: bigint,
-): void {
-  const allocated =
-    commissionMinor +
-    priorCashMinor +
-    driverNetMinor;
-
-  assert.equal(
-    allocated,
-    grossFareMinor,
-    "Mobility financial allocation mismatch.",
-  );
-}
-
-assertAllocation(
-  BigInt(10000),
-  BigInt(1200),
-  BigInt(0),
-  BigInt(8800),
+assertRecoveryAllowed(
+  "RECONCILED",
 );
 
-assertAllocation(
-  BigInt(10000),
-  BigInt(1200),
-  BigInt(1200),
-  BigInt(7600),
+assertRecoveryAllowed(
+  "INCOMPLETE",
 );
 
 assert.throws(
   () => {
-    assertAllocation(
-      BigInt(10000),
-      BigInt(1200),
-      BigInt(1200),
-      BigInt(7000),
+    assertRecoveryAllowed(
+      "MISMATCH",
     );
   },
-  /Mobility financial allocation mismatch/,
+  /accounting mismatch/,
+);
+
+/*
+ * Allocation mismatch must be rejected.
+ */
+assert.throws(
+  () => {
+    assertFinancialAllocation({
+      grossFareMinor:
+        BigInt(10000),
+
+      commissionMinor:
+        BigInt(1200),
+
+      priorCashObligationsSettledMinor:
+        BigInt(1200),
+
+      driverNetMinor:
+        BigInt(7000),
+    });
+  },
+  /reconcile to gross fare/,
 );
 
 console.log(
