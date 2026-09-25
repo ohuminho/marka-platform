@@ -377,6 +377,36 @@ enum MobilityOrchestrationStep {
   RECOVERY_REQUIRED
 }
 
+enum FulfillmentStatus {
+  REQUESTED
+  ASSIGNED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  COMPLETED
+  EXCEPTION
+  CANCELLED
+}
+
+enum DispatchServiceType {
+  DELIVERY
+  MOBILITY
+  FREIGHT
+}
+
+enum DispatchStatus {
+  CREATED
+  SEARCHING
+  OFFERED
+  ASSIGNED
+  ACCEPTED
+  REASSIGNING
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
 model MobilityDriver {
   id             String               @id @default(uuid())
   organizationId String
@@ -578,9 +608,9 @@ model MobilityRide {
   driver       MobilityDriver? @relation("MobilityRideDriver", fields: [driverId], references: [id])
   vehicle      MobilityVehicle? @relation(fields: [vehicleId], references: [id])
 
-  stops          MobilityRideStop[]
-  orchestration  MobilityRideOrchestration?
-  orchestrationEvents MobilityRideOrchestrationEvent[]
+  stops                MobilityRideStop[]
+  orchestration        MobilityRideOrchestration?
+  orchestrationEvents  MobilityRideOrchestrationEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -656,8 +686,11 @@ model Organization {
   mobilityVehicles     MobilityVehicle[]
   mobilityRides        MobilityRide[]
 
-  mobilityOrchestrations       MobilityRideOrchestration[]
-  mobilityOrchestrationEvents  MobilityRideOrchestrationEvent[]
+  mobilityOrchestrations      MobilityRideOrchestration[]
+  mobilityOrchestrationEvents MobilityRideOrchestrationEvent[]
+
+  fulfillmentRequests FulfillmentRequest[]
+  dispatchRequests    DispatchRequest[]
 
   @@index([tenantId])
   @@index([status])
@@ -867,7 +900,7 @@ model Store {
   name        String
   description String?
   logo        String?
-  banner       String?
+  banner      String?
   location    String?
   rating      Decimal     @default(0) @db.Decimal(5, 2)
   status      StoreStatus @default(ACTIVE)
@@ -985,6 +1018,8 @@ model Order {
   payments     Payment[]
   transactions Transaction[]
   commissions  Commission[]
+
+  fulfillment FulfillmentRequest?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1504,14 +1539,101 @@ model DomainEvent {
   @@index([createdAt])
 }
 
-model MobilityRideOrchestration {
-  id             String                    @id
+model FulfillmentRequest {
+  id             String            @id @default(uuid())
   organizationId String
-  rideId         String                    @unique
+  orderId        String            @unique
+
+  pickupType      String
+  pickupId        String
+  destinationType String
+  destinationId   String
+
+  status          FulfillmentStatus @default(REQUESTED)
+  assignedAgentId String?
+  exceptionCode   String?
+  metadata        Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  assignment FulfillmentAssignment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([orderId])
+  @@index([assignedAgentId])
+}
+
+model FulfillmentAssignment {
+  id            String   @id @default(uuid())
+  fulfillmentId String   @unique
+  agentId       String
+  assignedAt    DateTime @default(now())
+  acceptedAt    DateTime?
+
+  fulfillment FulfillmentRequest @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+}
+
+model DispatchRequest {
+  id             String             @id @default(uuid())
+  organizationId String
+  serviceType    DispatchServiceType
+
+  subjectType String
+  subjectId   String
+
+  originLatitude       Decimal  @db.Decimal(10, 7)
+  originLongitude      Decimal  @db.Decimal(10, 7)
+  destinationLatitude  Decimal? @db.Decimal(10, 7)
+  destinationLongitude Decimal? @db.Decimal(10, 7)
+
+  status             DispatchStatus @default(CREATED)
+  candidatePolicyRef String?
+  assignedAgentId    String?
+  acceptedAgentId    String?
+  metadata           Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  candidates DispatchCandidate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([serviceType, status])
+  @@index([subjectId])
+  @@index([assignedAgentId])
+}
+
+model DispatchCandidate {
+  id                String   @id @default(uuid())
+  dispatchRequestId String
+  agentId           String
+  score             Float?
+  distanceMeters    Float?
+  available         Boolean  @default(true)
+  metadata          Json?
+
+  dispatchRequest DispatchRequest @relation(fields: [dispatchRequestId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([dispatchRequestId])
+  @@index([agentId])
+}
+
+model MobilityRideOrchestration {
+  id             String                     @id
+  organizationId String
+  rideId         String                     @unique
   status         MobilityOrchestrationStatus @default(ACTIVE)
   currentStep    MobilityOrchestrationStep  @default(REQUESTED)
-  version        Int                       @default(1)
-  attemptCount   Int                       @default(0)
+  version        Int                        @default(1)
+  attemptCount   Int                        @default(0)
   correlationId  String?
   requestId      String?
   lastErrorCode  String?
@@ -1519,8 +1641,8 @@ model MobilityRideOrchestration {
   nextRetryAt    DateTime?
   startedAt      DateTime?
   completedAt    DateTime?
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
   ride         MobilityRide @relation(fields: [rideId], references: [id], onDelete: Cascade)
@@ -1534,20 +1656,20 @@ model MobilityRideOrchestration {
 }
 
 model MobilityRideOrchestrationEvent {
-  id             String                    @id
+  id              String                    @id
   orchestrationId String
-  organizationId String
-  rideId         String
-  action         String
-  fromStep       MobilityOrchestrationStep?
-  toStep         MobilityOrchestrationStep
-  status         MobilityOrchestrationStatus
-  idempotencyKey String                    @unique
-  correlationId  String?
-  requestId      String?
-  actorUserId    String?
-  metadata       Json?
-  createdAt      DateTime                  @default(now())
+  organizationId  String
+  rideId          String
+  action          String
+  fromStep        MobilityOrchestrationStep?
+  toStep          MobilityOrchestrationStep
+  status          MobilityOrchestrationStatus
+  idempotencyKey  String                    @unique
+  correlationId   String?
+  requestId       String?
+  actorUserId     String?
+  metadata        Json?
+  createdAt       DateTime                  @default(now())
 
   orchestration MobilityRideOrchestration @relation(fields: [orchestrationId], references: [id], onDelete: Cascade)
   organization   Organization              @relation(fields: [organizationId], references: [id])
