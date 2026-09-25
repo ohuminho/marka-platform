@@ -1,4 +1,8 @@
-import type { DomainEventEnvelope, EntityRef, LifecycleRecord } from "@/core/domain/contracts";
+import type {
+  DomainEventEnvelope,
+  EntityRef,
+  LifecycleRecord,
+} from "@/core/domain/contracts";
 
 export type FulfillmentStatus =
   | "REQUESTED"
@@ -11,7 +15,8 @@ export type FulfillmentStatus =
   | "EXCEPTION"
   | "CANCELLED";
 
-export interface FulfillmentRequest extends LifecycleRecord {
+export interface FulfillmentRequest
+  extends LifecycleRecord {
   orderId: string;
   pickup: EntityRef;
   destination: EntityRef;
@@ -28,18 +33,40 @@ export interface FulfillmentAssignment {
 }
 
 export interface FulfillmentPort {
-  request(input: Omit<FulfillmentRequest, keyof LifecycleRecord>, correlationId?: string): Promise<FulfillmentRequest>;
-  assign(fulfillmentId: string, agentId: string): Promise<FulfillmentAssignment>;
-  transition(fulfillmentId: string, status: FulfillmentStatus, reason?: string): Promise<FulfillmentRequest>;
+  request(
+    input: {
+      organizationId: string;
+      orderId: string;
+      pickup: EntityRef;
+      destination: EntityRef;
+      assignedAgentId?: string;
+      exceptionCode?: string;
+      metadata?: Record<string, unknown>;
+    },
+    correlationId?: string,
+  ): Promise<FulfillmentRequest>;
+
+  assign(
+    fulfillmentId: string,
+    agentId: string,
+  ): Promise<FulfillmentAssignment>;
+
+  transition(
+    fulfillmentId: string,
+    status: FulfillmentStatus,
+    reason?: string,
+  ): Promise<FulfillmentRequest>;
 }
 
-export type FulfillmentEvent = DomainEventEnvelope<
-  | "fulfillment.requested"
-  | "fulfillment.assigned"
-  | "fulfillment.preparation.started"
-  | "fulfillment.picked_up"
-  | "fulfillment.completed"
-  | "fulfillment.exceptioned"
-  | "fulfillment.cancelled",
-  FulfillmentRequest | FulfillmentAssignment
->;
+export type FulfillmentEvent =
+  DomainEventEnvelope<
+    | "fulfillment.requested"
+    | "fulfillment.assigned"
+    | "fulfillment.preparation.started"
+    | "fulfillment.picked_up"
+    | "fulfillment.completed"
+    | "fulfillment.exceptioned"
+    | "fulfillment.cancelled",
+    FulfillmentRequest |
+      FulfillmentAssignment
+  >;
