@@ -11,12 +11,6 @@ export type NavigationSection = {
   items: NavigationItem[];
 };
 
-const mobilityNavigationItem = {
-  title: "Mobility",
-  route: "/app/mobility",
-  description: "Rides, safety, dispatch and financial flow",
-};
-
 export const NavigationConfig = {
   CUSTOMER: [
     {
@@ -127,15 +121,14 @@ export const NavigationConfig = {
       group: "Control Center",
       items: [
         {
-          group: "Mobility",
-          items: [
-            mobilityNavigationItem,
-          ],
-        },
-        {
           title: "Everything",
           route: "/app/super-admin",
           description: "Global platform control",
+        },
+        {
+          title: "Mobility",
+          route: "/app/mobility",
+          description: "Global Mobility control",
         },
       ],
     },
