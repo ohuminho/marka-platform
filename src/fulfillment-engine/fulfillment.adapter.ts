@@ -8,6 +8,7 @@ import type {
   FulfillmentRequest,
   FulfillmentStatus,
 } from "@/fulfillment-engine/fulfillment.contracts";
+import { prisma } from "@/database/client/prisma";
 
 export interface CreateFulfillmentCommand {
   organizationId: string;
@@ -24,68 +25,139 @@ export interface FulfillmentRequestInput {
   destination: EntityRef;
   assignedAgentId?: string;
   exceptionCode?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export class FulfillmentAdapter implements FulfillmentPort {
-  private readonly requests = new Map<string, FulfillmentRequest>();
-  private readonly assignments = new Map<string, FulfillmentAssignment>();
-
   async request(
     input: FulfillmentRequestInput,
     correlationId?: string,
   ): Promise<FulfillmentRequest> {
-    const now = new Date();
+    this.validateRequestInput(input);
 
-    const request: FulfillmentRequest = {
-      id: crypto.randomUUID(),
-      organizationId: input.organizationId,
-      status: "REQUESTED",
-      createdAt: now,
-      updatedAt: now,
-      orderId: input.orderId,
-      pickup: input.pickup,
-      destination: input.destination,
-      assignedAgentId: input.assignedAgentId,
-      exceptionCode: input.exceptionCode,
-    };
+    const existing = await prisma.fulfillmentRequest.findUnique({
+      where: {
+        orderId: input.orderId,
+      },
+    });
 
-    this.requests.set(request.id, request);
+    if (existing) {
+      return this.toContract(existing);
+    }
 
-    void correlationId;
+    const request = await prisma.fulfillmentRequest.create({
+      data: {
+        id: crypto.randomUUID(),
+        organizationId: input.organizationId,
+        orderId: input.orderId,
+        pickupType: input.pickup.type,
+        pickupId: input.pickup.id,
+        destinationType: input.destination.type,
+        destinationId: input.destination.id,
+        status: "REQUESTED",
+        assignedAgentId: input.assignedAgentId,
+        exceptionCode: input.exceptionCode,
+        metadata: {
+          ...(input.metadata ?? {}),
+          correlationId: correlationId ?? null,
+        },
+      },
+    });
 
-    return request;
+    await this.recordEvent(
+      "fulfillment.requested",
+      request.id,
+      request.organizationId,
+      {
+        orderId: request.orderId,
+        status: request.status,
+        correlationId: correlationId ?? null,
+      },
+    );
+
+    return this.toContract(request);
   }
 
   async assign(
     fulfillmentId: string,
     agentId: string,
   ): Promise<FulfillmentAssignment> {
-    const request = this.getRequired(fulfillmentId);
-
-    if (request.status !== "REQUESTED" && request.status !== "EXCEPTION") {
-      throw new Error(
-        "Fulfillment can only be assigned from REQUESTED or EXCEPTION.",
-      );
+    if (!fulfillmentId.trim()) {
+      throw new Error("Fulfillment is required.");
     }
 
     if (!agentId.trim()) {
       throw new Error("Fulfillment agent is required.");
     }
 
+    const request = await prisma.fulfillmentRequest.findUnique({
+      where: {
+        id: fulfillmentId,
+      },
+    });
+
+    if (!request) {
+      throw new Error("Fulfillment not found.");
+    }
+
+    if (
+      request.status !== "REQUESTED" &&
+      request.status !== "EXCEPTION"
+    ) {
+      throw new Error(
+        "Fulfillment can only be assigned from REQUESTED or EXCEPTION.",
+      );
+    }
+
     const now = new Date();
 
-    const assignment: FulfillmentAssignment = {
+    const assignment = await prisma.$transaction(async (database) => {
+      const created = await database.fulfillmentAssignment.upsert({
+        where: {
+          fulfillmentId,
+        },
+        create: {
+          id: crypto.randomUUID(),
+          fulfillmentId,
+          agentId,
+          assignedAt: now,
+        },
+        update: {
+          agentId,
+          assignedAt: now,
+          acceptedAt: null,
+        },
+      });
+
+      await database.fulfillmentRequest.update({
+        where: {
+          id: fulfillmentId,
+        },
+        data: {
+          status: "ASSIGNED",
+          assignedAgentId: agentId,
+          exceptionCode: null,
+        },
+      });
+
+      return created;
+    });
+
+    await this.recordEvent(
+      "fulfillment.assigned",
       fulfillmentId,
-      agentId,
-      assignedAt: now,
+      request.organizationId,
+      {
+        agentId,
+      },
+    );
+
+    return {
+      fulfillmentId: assignment.fulfillmentId,
+      agentId: assignment.agentId,
+      assignedAt: assignment.assignedAt,
+      acceptedAt: assignment.acceptedAt ?? undefined,
     };
-
-    this.assignments.set(fulfillmentId, assignment);
-
-    this.updateStatus(request, "ASSIGNED");
-    request.assignedAgentId = agentId;
-
-    return assignment;
   }
 
   async transition(
@@ -93,21 +165,76 @@ export class FulfillmentAdapter implements FulfillmentPort {
     status: FulfillmentStatus,
     reason?: string,
   ): Promise<FulfillmentRequest> {
-    const request = this.getRequired(fulfillmentId);
+    if (!fulfillmentId.trim()) {
+      throw new Error("Fulfillment is required.");
+    }
 
-    if (!this.isValidTransition(request.status, status)) {
+    const current = await prisma.fulfillmentRequest.findUnique({
+      where: {
+        id: fulfillmentId,
+      },
+    });
+
+    if (!current) {
+      throw new Error("Fulfillment not found.");
+    }
+
+    const currentStatus = current.status as FulfillmentStatus;
+
+    if (currentStatus === status) {
+      return this.toContract(current);
+    }
+
+    if (!this.isValidTransition(currentStatus, status)) {
       throw new Error(
-        `Invalid fulfillment transition: ${request.status} -> ${status}.`,
+        `Invalid fulfillment transition: ${currentStatus} -> ${status}.`,
       );
     }
 
-    if (status === "EXCEPTION") {
-      request.exceptionCode = reason?.trim() || "FULFILLMENT_EXCEPTION";
-    }
+    const updated = await prisma.$transaction(async (database) => {
+      const result = await database.fulfillmentRequest.update({
+        where: {
+          id: fulfillmentId,
+        },
+        data: {
+          status,
+          exceptionCode:
+            status === "EXCEPTION"
+              ? reason?.trim() || "FULFILLMENT_EXCEPTION"
+              : null,
+        },
+      });
 
-    this.updateStatus(request, status);
+      if (status === "COMPLETED" || status === "CANCELLED") {
+        await database.fulfillmentAssignment.updateMany({
+          where: {
+            fulfillmentId,
+            acceptedAt: null,
+          },
+          data: {
+            acceptedAt:
+              status === "COMPLETED"
+                ? new Date()
+                : null,
+          },
+        });
+      }
 
-    return request;
+      return result;
+    });
+
+    await this.recordEvent(
+      this.eventTypeForStatus(status),
+      fulfillmentId,
+      updated.organizationId,
+      {
+        fromStatus: currentStatus,
+        toStatus: status,
+        reason: reason ?? null,
+      },
+    );
+
+    return this.toContract(updated);
   }
 
   async create(
@@ -120,70 +247,181 @@ export class FulfillmentAdapter implements FulfillmentPort {
       );
     }
 
-    if (!command.orderId.trim()) {
-      throw new Error("Order is required.");
-    }
-
-    if (!command.pickup.id.trim()) {
-      throw new Error("Pickup location is required.");
-    }
-
-    if (!command.destination.id.trim()) {
-      throw new Error("Destination is required.");
-    }
-
     return this.request({
+      organizationId: command.organizationId,
       orderId: command.orderId,
       pickup: command.pickup,
       destination: command.destination,
-      organizationId: command.organizationId,
-      assignedAgentId: undefined,
-      exceptionCode: undefined,
+      metadata: command.metadata,
     });
   }
 
-  get(fulfillmentId: string): FulfillmentRequest | null {
-    return this.requests.get(fulfillmentId) ?? null;
+  async get(
+    fulfillmentId: string,
+  ): Promise<FulfillmentRequest | null> {
+    const request = await prisma.fulfillmentRequest.findUnique({
+      where: {
+        id: fulfillmentId,
+      },
+    });
+
+    return request ? this.toContract(request) : null;
   }
 
-  private getRequired(fulfillmentId: string): FulfillmentRequest {
-    const request = this.get(fulfillmentId);
-
-    if (!request) {
-      throw new Error("Fulfillment not found.");
+  private validateRequestInput(
+    input: FulfillmentRequestInput,
+  ): void {
+    if (!input.organizationId.trim()) {
+      throw new Error("Organization is required.");
     }
 
-    return request;
+    if (!input.orderId.trim()) {
+      throw new Error("Order is required.");
+    }
+
+    if (!input.pickup.id.trim()) {
+      throw new Error("Pickup location is required.");
+    }
+
+    if (!input.pickup.type.trim()) {
+      throw new Error("Pickup type is required.");
+    }
+
+    if (!input.destination.id.trim()) {
+      throw new Error("Destination is required.");
+    }
+
+    if (!input.destination.type.trim()) {
+      throw new Error("Destination type is required.");
+    }
   }
 
-  private updateStatus(
-    request: FulfillmentRequest,
-    status: FulfillmentStatus,
-  ): void {
-    request.status = status;
-    request.updatedAt = new Date();
+  private toContract(
+    request: {
+      id: string;
+      organizationId: string;
+      orderId: string;
+      pickupType: string;
+      pickupId: string;
+      destinationType: string;
+      destinationId: string;
+      status: string;
+      assignedAgentId: string | null;
+      exceptionCode: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+  ): FulfillmentRequest {
+    return {
+      id: request.id,
+      organizationId: request.organizationId,
+      status: request.status as FulfillmentStatus,
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt,
+      orderId: request.orderId,
+      pickup: {
+        id: request.pickupId,
+        type: request.pickupType,
+      },
+      destination: {
+        id: request.destinationId,
+        type: request.destinationType,
+      },
+      assignedAgentId:
+        request.assignedAgentId ?? undefined,
+      exceptionCode:
+        request.exceptionCode ?? undefined,
+    };
   }
 
   private isValidTransition(
     current: FulfillmentStatus,
     next: FulfillmentStatus,
   ): boolean {
-    if (current === next) return true;
-
-    const transitions: Record<FulfillmentStatus, FulfillmentStatus[]> = {
-      REQUESTED: ["ASSIGNED", "CANCELLED", "EXCEPTION"],
-      ASSIGNED: ["PREPARING", "CANCELLED", "EXCEPTION"],
-      PREPARING: ["READY_FOR_PICKUP", "CANCELLED", "EXCEPTION"],
-      READY_FOR_PICKUP: ["PICKED_UP", "CANCELLED", "EXCEPTION"],
-      PICKED_UP: ["IN_TRANSIT", "EXCEPTION"],
-      IN_TRANSIT: ["COMPLETED", "EXCEPTION"],
+    const transitions: Record<
+      FulfillmentStatus,
+      FulfillmentStatus[]
+    > = {
+      REQUESTED: [
+        "ASSIGNED",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      ASSIGNED: [
+        "PREPARING",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      PREPARING: [
+        "READY_FOR_PICKUP",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      READY_FOR_PICKUP: [
+        "PICKED_UP",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      PICKED_UP: [
+        "IN_TRANSIT",
+        "EXCEPTION",
+      ],
+      IN_TRANSIT: [
+        "COMPLETED",
+        "EXCEPTION",
+      ],
       COMPLETED: [],
-      EXCEPTION: ["ASSIGNED", "CANCELLED"],
+      EXCEPTION: [
+        "ASSIGNED",
+        "CANCELLED",
+      ],
       CANCELLED: [],
     };
 
     return transitions[current].includes(next);
   }
+
+  private eventTypeForStatus(
+    status: FulfillmentStatus,
+  ): string {
+    switch (status) {
+      case "ASSIGNED":
+        return "fulfillment.assigned";
+      case "PREPARING":
+        return "fulfillment.preparation.started";
+      case "PICKED_UP":
+        return "fulfillment.picked_up";
+      case "COMPLETED":
+        return "fulfillment.completed";
+      case "EXCEPTION":
+        return "fulfillment.exceptioned";
+      case "CANCELLED":
+        return "fulfillment.cancelled";
+      default:
+        return `fulfillment.${status.toLowerCase()}`;
+    }
+  }
+
+  private async recordEvent(
+    eventType: string,
+    aggregateId: string,
+    organizationId: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    await prisma.domainEvent.create({
+      data: {
+        eventKey: `${eventType}:${aggregateId}:${crypto.randomUUID()}`,
+        aggregateType: "FULFILLMENT",
+        aggregateId,
+        eventType,
+        payload,
+        status: "PENDING",
+      },
+    });
+
+    void organizationId;
+  }
 }
 
-export const fulfillmentAdapter = new FulfillmentAdapter();
+export const fulfillmentAdapter =
+  new FulfillmentAdapter();
