@@ -4,7 +4,11 @@ import type {
   DispatchRequest,
   DispatchStatus,
 } from "@/dispatch-engine/dispatch.contracts";
-import type { EntityRef, GeoPoint } from "@/core/domain/contracts";
+import type {
+  EntityRef,
+  GeoPoint,
+} from "@/core/domain/contracts";
+import { prisma } from "@/database/client/prisma";
 
 export interface CreateDispatchRequestInput {
   organizationId: string;
@@ -13,55 +17,92 @@ export interface CreateDispatchRequestInput {
   origin: GeoPoint;
   destination?: GeoPoint;
   candidatePolicyRef?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export class DispatchAdapter implements DispatchPort {
-  private readonly requests = new Map<string, DispatchRequest>();
-  private readonly candidates = new Map<string, DispatchCandidate[]>();
+  async createRequest(
+    input: CreateDispatchRequestInput,
+  ): Promise<DispatchRequest> {
+    this.validateCreateRequest(input);
 
-  createRequest(input: CreateDispatchRequestInput): DispatchRequest {
-    if (!input.organizationId.trim()) {
-      throw new Error("Organization is required.");
-    }
+    const request = await prisma.dispatchRequest.create({
+      data: {
+        id: crypto.randomUUID(),
+        organizationId: input.organizationId,
+        serviceType: input.serviceType,
+        subjectType: input.subject.type,
+        subjectId: input.subject.id,
+        originLatitude: input.origin.latitude,
+        originLongitude: input.origin.longitude,
+        destinationLatitude:
+          input.destination?.latitude,
+        destinationLongitude:
+          input.destination?.longitude,
+        status: "CREATED",
+        candidatePolicyRef:
+          input.candidatePolicyRef,
+        metadata: input.metadata,
+      },
+    });
 
-    const id = crypto.randomUUID();
-    const now = new Date();
+    await this.recordEvent(
+      "dispatch.created",
+      request.id,
+      {
+        serviceType: request.serviceType,
+        subjectId: request.subjectId,
+      },
+    );
 
-    const request: DispatchRequest = {
-      id,
-      organizationId: input.organizationId,
-      status: "CREATED",
-      createdAt: now,
-      updatedAt: now,
-      serviceType: input.serviceType,
-      subject: input.subject,
-      origin: input.origin,
-      destination: input.destination,
-      candidatePolicyRef: input.candidatePolicyRef,
-    };
-
-    this.requests.set(id, request);
-    this.candidates.set(id, []);
-
-    return request;
+    return this.toContract(request);
   }
 
   async discoverCandidates(
     request: DispatchRequest,
   ): Promise<DispatchCandidate[]> {
-    const stored = this.requests.get(request.id);
+    const stored =
+      await prisma.dispatchRequest.findUnique({
+        where: {
+          id: request.id,
+        },
+        include: {
+          candidates: true,
+        },
+      });
 
     if (!stored) {
-      throw new Error("Dispatch request not found.");
+      throw new Error(
+        "Dispatch request not found.",
+      );
     }
 
-    const existingCandidates = this.candidates.get(request.id) ?? [];
-
-    if (stored.status === "CREATED") {
-      this.updateStatus(request.id, "SEARCHING");
+    if (
+      stored.status === "CREATED" ||
+      stored.status === "REASSIGNING"
+    ) {
+      await prisma.dispatchRequest.update({
+        where: {
+          id: stored.id,
+        },
+        data: {
+          status: "SEARCHING",
+        },
+      });
     }
 
-    return existingCandidates;
+    return stored.candidates.map(
+      (candidate) => ({
+        agentId: candidate.agentId,
+        score:
+          candidate.score ?? undefined,
+        distanceMeters:
+          candidate.distanceMeters ?? undefined,
+        available: candidate.available,
+        metadata:
+          this.jsonRecord(candidate.metadata),
+      }),
+    );
   }
 
   async assign(
@@ -72,7 +113,8 @@ export class DispatchAdapter implements DispatchPort {
       throw new Error("Agent is required.");
     }
 
-    const request = this.requireRequest(requestId);
+    const request =
+      await this.requireRequest(requestId);
 
     if (
       request.status !== "CREATED" &&
@@ -80,10 +122,31 @@ export class DispatchAdapter implements DispatchPort {
       request.status !== "OFFERED" &&
       request.status !== "REASSIGNING"
     ) {
-      throw new Error("Dispatch request cannot be assigned in its current state.");
+      throw new Error(
+        "Dispatch request cannot be assigned in its current state.",
+      );
     }
 
-    return this.updateStatus(requestId, "ASSIGNED");
+    const updated =
+      await prisma.dispatchRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          status: "ASSIGNED",
+          assignedAgentId: agentId,
+        },
+      });
+
+    await this.recordEvent(
+      "dispatch.assigned",
+      requestId,
+      {
+        agentId,
+      },
+    );
+
+    return this.toContract(updated);
   }
 
   async accept(
@@ -94,13 +157,47 @@ export class DispatchAdapter implements DispatchPort {
       throw new Error("Agent is required.");
     }
 
-    const request = this.requireRequest(requestId);
+    const request =
+      await this.requireRequest(requestId);
 
-    if (request.status !== "ASSIGNED" && request.status !== "OFFERED") {
-      throw new Error("Dispatch request cannot be accepted in its current state.");
+    if (
+      request.status !== "ASSIGNED" &&
+      request.status !== "OFFERED"
+    ) {
+      throw new Error(
+        "Dispatch request cannot be accepted in its current state.",
+      );
     }
 
-    return this.updateStatus(requestId, "ACCEPTED");
+    if (
+      request.assignedAgentId &&
+      request.assignedAgentId !== agentId
+    ) {
+      throw new Error(
+        "Dispatch request is assigned to another agent.",
+      );
+    }
+
+    const updated =
+      await prisma.dispatchRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          status: "ACCEPTED",
+          acceptedAgentId: agentId,
+        },
+      });
+
+    await this.recordEvent(
+      "dispatch.accepted",
+      requestId,
+      {
+        agentId,
+      },
+    );
+
+    return this.toContract(updated);
   }
 
   async reassign(
@@ -108,112 +205,382 @@ export class DispatchAdapter implements DispatchPort {
     reason: string,
   ): Promise<DispatchRequest> {
     if (!reason.trim()) {
-      throw new Error("Reassignment reason is required.");
+      throw new Error(
+        "Reassignment reason is required.",
+      );
     }
 
-    const request = this.requireRequest(requestId);
+    const request =
+      await this.requireRequest(requestId);
 
     if (
       request.status === "COMPLETED" ||
       request.status === "CANCELLED" ||
       request.status === "EXPIRED"
     ) {
-      throw new Error("Dispatch request cannot be reassigned in its current state.");
+      throw new Error(
+        "Dispatch request cannot be reassigned in its current state.",
+      );
     }
 
-    return this.updateStatus(requestId, "REASSIGNING");
+    const updated =
+      await prisma.dispatchRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          status: "REASSIGNING",
+          assignedAgentId: null,
+          acceptedAgentId: null,
+          metadata: {
+            reassignmentReason: reason,
+          },
+        },
+      });
+
+    await this.recordEvent(
+      "dispatch.reassigned",
+      requestId,
+      {
+        reason,
+      },
+    );
+
+    return this.toContract(updated);
   }
 
-  complete(requestId: string): DispatchRequest {
-    const request = this.requireRequest(requestId);
+  async complete(
+    requestId: string,
+  ): Promise<DispatchRequest> {
+    const request =
+      await this.requireRequest(requestId);
 
     if (request.status !== "ACCEPTED") {
-      throw new Error("Dispatch request cannot be completed in its current state.");
+      throw new Error(
+        "Dispatch request cannot be completed in its current state.",
+      );
     }
 
-    return this.updateStatus(requestId, "COMPLETED");
+    const updated =
+      await prisma.dispatchRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          status: "COMPLETED",
+        },
+      });
+
+    await this.recordEvent(
+      "dispatch.completed",
+      requestId,
+      {},
+    );
+
+    return this.toContract(updated);
   }
 
-  cancel(requestId: string, reason?: string): DispatchRequest {
-    const request = this.requireRequest(requestId);
+  async cancel(
+    requestId: string,
+    reason?: string,
+  ): Promise<DispatchRequest> {
+    const request =
+      await this.requireRequest(requestId);
 
     if (
       request.status === "COMPLETED" ||
       request.status === "CANCELLED"
     ) {
-      throw new Error("Dispatch request cannot be cancelled in its current state.");
+      throw new Error(
+        "Dispatch request cannot be cancelled in its current state.",
+      );
     }
 
-    const updated = this.updateStatus(requestId, "CANCELLED");
+    const updated =
+      await prisma.dispatchRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          status: "CANCELLED",
+          metadata: reason
+            ? {
+                cancellationReason: reason,
+              }
+            : undefined,
+        },
+      });
 
-    if (reason?.trim()) {
-      return {
-        ...updated,
-        candidatePolicyRef: updated.candidatePolicyRef,
-      };
-    }
+    await this.recordEvent(
+      "dispatch.cancelled",
+      requestId,
+      {
+        reason: reason ?? null,
+      },
+    );
 
-    return updated;
+    return this.toContract(updated);
   }
 
-  expire(requestId: string): DispatchRequest {
-    const request = this.requireRequest(requestId);
+  async expire(
+    requestId: string,
+  ): Promise<DispatchRequest> {
+    const request =
+      await this.requireRequest(requestId);
 
     if (
       request.status === "COMPLETED" ||
       request.status === "CANCELLED"
     ) {
-      throw new Error("Dispatch request cannot expire in its current state.");
+      throw new Error(
+        "Dispatch request cannot expire in its current state.",
+      );
     }
 
-    return this.updateStatus(requestId, "EXPIRED");
+    const updated =
+      await prisma.dispatchRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          status: "EXPIRED",
+        },
+      });
+
+    return this.toContract(updated);
   }
 
-  setCandidates(
+  async setCandidates(
     requestId: string,
     candidates: DispatchCandidate[],
-  ): DispatchRequest {
-    this.requireRequest(requestId);
+  ): Promise<DispatchRequest> {
+    await this.requireRequest(requestId);
 
-    this.candidates.set(requestId, [...candidates]);
+    const request =
+      await prisma.$transaction(
+        async (database) => {
+          await database.dispatchCandidate.deleteMany({
+            where: {
+              dispatchRequestId: requestId,
+            },
+          });
 
-    return this.updateStatus(requestId, "OFFERED");
+          if (candidates.length > 0) {
+            await database.dispatchCandidate.createMany({
+              data: candidates.map(
+                (candidate) => ({
+                  id: crypto.randomUUID(),
+                  dispatchRequestId:
+                    requestId,
+                  agentId:
+                    candidate.agentId,
+                  score:
+                    candidate.score,
+                  distanceMeters:
+                    candidate.distanceMeters,
+                  available:
+                    candidate.available,
+                  metadata:
+                    candidate.metadata,
+                }),
+              ),
+            });
+          }
+
+          return database.dispatchRequest.update({
+            where: {
+              id: requestId,
+            },
+            data: {
+              status: "OFFERED",
+            },
+          });
+        },
+      );
+
+    await this.recordEvent(
+      "dispatch.candidates.discovered",
+      requestId,
+      {
+        candidateCount:
+          candidates.length,
+      },
+    );
+
+    return this.toContract(request);
   }
 
-  getRequest(requestId: string): DispatchRequest | null {
-    return this.requests.get(requestId) ?? null;
+  async getRequest(
+    requestId: string,
+  ): Promise<DispatchRequest | null> {
+    const request =
+      await prisma.dispatchRequest.findUnique({
+        where: {
+          id: requestId,
+        },
+      });
+
+    return request
+      ? this.toContract(request)
+      : null;
   }
 
-  private requireRequest(requestId: string): DispatchRequest {
+  private async requireRequest(
+    requestId: string,
+  ) {
     if (!requestId.trim()) {
-      throw new Error("Dispatch request is required.");
+      throw new Error(
+        "Dispatch request is required.",
+      );
     }
 
-    const request = this.requests.get(requestId);
+    const request =
+      await prisma.dispatchRequest.findUnique({
+        where: {
+          id: requestId,
+        },
+      });
 
     if (!request) {
-      throw new Error("Dispatch request not found.");
+      throw new Error(
+        "Dispatch request not found.",
+      );
     }
 
     return request;
   }
 
-  private updateStatus(
-    requestId: string,
-    status: DispatchStatus,
+  private validateCreateRequest(
+    input: CreateDispatchRequestInput,
+  ): void {
+    if (!input.organizationId.trim()) {
+      throw new Error(
+        "Organization is required.",
+      );
+    }
+
+    if (!input.subject.id.trim()) {
+      throw new Error(
+        "Dispatch subject is required.",
+      );
+    }
+
+    if (!input.subject.type.trim()) {
+      throw new Error(
+        "Dispatch subject type is required.",
+      );
+    }
+
+    if (
+      !Number.isFinite(
+        input.origin.latitude,
+      ) ||
+      !Number.isFinite(
+        input.origin.longitude,
+      )
+    ) {
+      throw new Error(
+        "Dispatch origin is invalid.",
+      );
+    }
+  }
+
+  private toContract(
+    request: {
+      id: string;
+      organizationId: string;
+      serviceType: string;
+      subjectType: string;
+      subjectId: string;
+      originLatitude: unknown;
+      originLongitude: unknown;
+      destinationLatitude: unknown;
+      destinationLongitude: unknown;
+      status: string;
+      candidatePolicyRef: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
   ): DispatchRequest {
-    const request = this.requireRequest(requestId);
+    const destination =
+      request.destinationLatitude !== null &&
+      request.destinationLongitude !== null
+        ? {
+            latitude: Number(
+              request.destinationLatitude,
+            ),
+            longitude: Number(
+              request.destinationLongitude,
+            ),
+          }
+        : undefined;
 
-    const updated: DispatchRequest = {
-      ...request,
-      status,
-      updatedAt: new Date(),
+    return {
+      id: request.id,
+      organizationId:
+        request.organizationId,
+      status:
+        request.status as DispatchStatus,
+      createdAt:
+        request.createdAt,
+      updatedAt:
+        request.updatedAt,
+      serviceType:
+        request.serviceType as DispatchRequest["serviceType"],
+      subject: {
+        id: request.subjectId,
+        type: request.subjectType,
+      },
+      origin: {
+        latitude: Number(
+          request.originLatitude,
+        ),
+        longitude: Number(
+          request.originLongitude,
+        ),
+      },
+      destination,
+      candidatePolicyRef:
+        request.candidatePolicyRef ??
+        undefined,
     };
+  }
 
-    this.requests.set(requestId, updated);
+  private jsonRecord(
+    value: unknown,
+  ): Record<string, unknown> {
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      Array.isArray(value)
+    ) {
+      return {};
+    }
 
-    return updated;
+    return value as Record<
+      string,
+      unknown
+    >;
+  }
+
+  private async recordEvent(
+    eventType: string,
+    aggregateId: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    await prisma.domainEvent.create({
+      data: {
+        eventKey:
+          `${eventType}:${aggregateId}:${crypto.randomUUID()}`,
+        aggregateType: "DISPATCH",
+        aggregateId,
+        eventType,
+        payload,
+        status: "PENDING",
+      },
+    });
   }
 }
 
-export const dispatchAdapter = new DispatchAdapter();
+export const dispatchAdapter =
+  new DispatchAdapter();
