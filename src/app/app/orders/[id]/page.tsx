@@ -45,145 +45,208 @@ function formatMoney(
   amountMinor: number,
   currency: string
 ) {
-  return new Intl.NumberFormat(
-    undefined,
-    {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }
-  ).format(amountMinor / 100);
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amountMinor / 100);
 }
 
-function formatDate(
-  value: string
-) {
-  return new Intl.DateTimeFormat(
-    undefined,
-    {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }
-  ).format(new Date(value));
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
-function label(
-  value: string
-) {
+function label(value: string) {
   return value
     .replaceAll("_", " ")
     .toLowerCase()
-    .replace(
-      /^\w/,
-      (character) =>
-        character.toUpperCase()
+    .replace(/^\w/, (character) =>
+      character.toUpperCase()
     );
+}
+
+function isConfirmablePayment(
+  payment: OrderPayment
+) {
+  return (
+    payment.status === "CREATED" ||
+    payment.status === "PENDING" ||
+    payment.status === "PROCESSING"
+  );
 }
 
 export default function OrderDetailPage({
   params,
 }: OrderPageProps) {
-  const [
-    orderId,
-    setOrderId,
-  ] = useState<string | null>(
-    null
-  );
+  const [orderId, setOrderId] =
+    useState<string | null>(null);
 
-  const [
-    order,
-    setOrder,
-  ] = useState<OrderDetail | null>(
-    null
-  );
+  const [order, setOrder] =
+    useState<OrderDetail | null>(null);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [
-    error,
-    setError,
-  ] = useState<string | null>(
-    null
-  );
+  const [confirmingPaymentId, setConfirmingPaymentId] =
+    useState<string | null>(null);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [paymentError, setPaymentError] =
+    useState<string | null>(null);
+
+  const loadOrder = async (
+    active = true
+  ) => {
+    const resolvedParams = await params;
+
+    const id =
+      resolvedParams.id.trim();
+
+    if (!id) {
+      throw new Error(
+        "Order id is required."
+      );
+    }
+
+    if (active) {
+      setOrderId(id);
+    }
+
+    const response =
+      await fetch(
+        `/api/orders/${encodeURIComponent(id)}`,
+        {
+          credentials: "include",
+          cache: "no-store",
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message ??
+          "Unable to load order."
+      );
+    }
+
+    if (active) {
+      setOrder(data);
+    }
+  };
 
   useEffect(() => {
     let active = true;
 
-    const loadOrder =
-      async () => {
-        try {
-          const resolvedParams =
-            await params;
+    const run = async () => {
+      try {
+        await loadOrder(active);
+      } catch (error) {
+        console.error(
+          "[ORDER_DETAIL_PAGE_ERROR]",
+          error
+        );
 
-          const id =
-            resolvedParams.id.trim();
-
-          if (!id) {
-            throw new Error(
-              "Order id is required."
-            );
-          }
-
-          if (active) {
-            setOrderId(id);
-          }
-
-          const response =
-            await fetch(
-              `/api/orders/${encodeURIComponent(
-                id
-              )}`,
-              {
-                credentials:
-                  "include",
-                cache:
-                  "no-store",
-              }
-            );
-
-          const data =
-            await response.json();
-
-          if (!response.ok) {
-            throw new Error(
-              data?.message ??
-                "Unable to load order."
-            );
-          }
-
-          if (active) {
-            setOrder(data);
-          }
-        } catch (error) {
-          console.error(
-            "[ORDER_DETAIL_PAGE_ERROR]",
-            error
+        if (active) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load order."
           );
-
-          if (active) {
-            setError(
-              error instanceof Error
-                ? error.message
-                : "Unable to load order."
-            );
-          }
-        } finally {
-          if (active) {
-            setLoading(false);
-          }
         }
-      };
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
 
-    loadOrder();
+    run();
 
     return () => {
       active = false;
     };
   }, [params]);
+
+  const confirmPayment = async (
+    payment: OrderPayment
+  ) => {
+    if (
+      !payment.providerPaymentId
+    ) {
+      setPaymentError(
+        "This payment does not have a provider payment id."
+      );
+      return;
+    }
+
+    setConfirmingPaymentId(
+      payment.id
+    );
+    setPaymentError(null);
+
+    try {
+      const idempotencyKey =
+        `payment-confirm:${payment.id}:${crypto.randomUUID()}`;
+
+      const response =
+        await fetch(
+          "/api/payments/confirm",
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type":
+                "application/json",
+              "Idempotency-Key":
+                idempotencyKey,
+            },
+            body: JSON.stringify({
+              paymentId:
+                payment.id,
+              provider:
+                payment.provider ??
+                undefined,
+              providerPaymentId:
+                payment.providerPaymentId,
+              idempotencyKey,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ??
+            "Payment confirmation failed."
+        );
+      }
+
+      await loadOrder(true);
+    } catch (error) {
+      console.error(
+        "[PAYMENT_CONFIRMATION_UI_ERROR]",
+        error
+      );
+
+      setPaymentError(
+        error instanceof Error
+          ? error.message
+          : "Payment confirmation failed."
+      );
+    } finally {
+      setConfirmingPaymentId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -257,15 +320,7 @@ export default function OrderDetailPage({
       </header>
 
       <section className="mt-10 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div
-          className="
-            rounded-3xl
-            border
-            border-white/10
-            bg-white/5
-            p-6
-          "
-        >
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <h2 className="text-xl font-semibold">
             Items
           </h2>
@@ -275,12 +330,7 @@ export default function OrderDetailPage({
               (item) => (
                 <div
                   key={item.id}
-                  className="
-                    rounded-2xl
-                    border
-                    border-white/10
-                    p-4
-                  "
+                  className="rounded-2xl border border-white/10 p-4"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -322,15 +372,7 @@ export default function OrderDetailPage({
         </div>
 
         <aside className="space-y-6">
-          <div
-            className="
-              rounded-3xl
-              border
-              border-white/10
-              bg-white/5
-              p-6
-            "
-          >
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <p className="text-xs uppercase tracking-[0.18em] text-white/40">
               Order Total
             </p>
@@ -347,18 +389,16 @@ export default function OrderDetailPage({
             </p>
           </div>
 
-          <div
-            className="
-              rounded-3xl
-              border
-              border-white/10
-              bg-white/5
-              p-6
-            "
-          >
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <h2 className="text-xl font-semibold">
               Payments
             </h2>
+
+            {paymentError && (
+              <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-300">
+                {paymentError}
+              </div>
+            )}
 
             {order.payments.length ===
             0 ? (
@@ -368,39 +408,78 @@ export default function OrderDetailPage({
             ) : (
               <div className="mt-5 space-y-3">
                 {order.payments.map(
-                  (payment) => (
-                    <div
-                      key={payment.id}
-                      className="
-                        rounded-2xl
-                        border
-                        border-white/10
-                        p-4
-                      "
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-sm text-white/50">
-                          {label(
-                            payment.status
-                          )}
-                        </span>
+                  (payment) => {
+                    const confirmable =
+                      isConfirmablePayment(
+                        payment
+                      );
 
-                        <span className="font-medium">
-                          {formatMoney(
-                            payment.amount,
-                            payment.currency
-                          )}
-                        </span>
+                    const confirming =
+                      confirmingPaymentId ===
+                      payment.id;
+
+                    return (
+                      <div
+                        key={payment.id}
+                        className="rounded-2xl border border-white/10 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-sm text-white/50">
+                            {label(
+                              payment.status
+                            )}
+                          </span>
+
+                          <span className="font-medium">
+                            {formatMoney(
+                              payment.amount,
+                              payment.currency
+                            )}
+                          </span>
+                        </div>
+
+                        {payment.provider && (
+                          <p className="mt-2 text-xs text-white/30">
+                            Provider:{" "}
+                            {payment.provider}
+                          </p>
+                        )}
+
+                        {payment.providerPaymentId && (
+                          <p className="mt-1 break-all font-mono text-[11px] text-white/20">
+                            {payment.providerPaymentId}
+                          </p>
+                        )}
+
+                        {payment.transactionId && (
+                          <p className="mt-1 break-all font-mono text-[11px] text-emerald-300/50">
+                            Financial transaction:{" "}
+                            {payment.transactionId}
+                          </p>
+                        )}
+
+                        {confirmable && (
+                          <button
+                            type="button"
+                            disabled={
+                              confirming ||
+                              !payment.providerPaymentId
+                            }
+                            onClick={() =>
+                              confirmPayment(
+                                payment
+                              )
+                            }
+                            className="mt-4 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {confirming
+                              ? "Confirming payment..."
+                              : "Confirm payment"}
+                          </button>
+                        )}
                       </div>
-
-                      {payment.provider && (
-                        <p className="mt-2 text-xs text-white/30">
-                          Provider:{" "}
-                          {payment.provider}
-                        </p>
-                      )}
-                    </div>
-                  )
+                    );
+                  }
                 )}
               </div>
             )}
