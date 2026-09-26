@@ -2,206 +2,247 @@
 
 import { useEffect, useState } from "react";
 
-interface Payment {
-  id: string;
-  orderId: string | null;
-  transactionId: string | null;
-  amountMinor: string;
-  currency: string;
-  status: string;
-  provider: string | null;
-  createdAt: string;
-}
-
 interface PaymentHistoryProps {
   limit?: number;
 }
 
-function formatAmount(
-  amountMinor: string,
-  currency: string
-) {
-  const amount =
-    Number(amountMinor) / 100;
-
-  return new Intl.NumberFormat(
-    undefined,
-    {
-      style: "currency",
-      currency,
-    }
-  ).format(amount);
+interface PaymentItem {
+  id: string;
+  orderId: string | null;
+  transactionId: string | null;
+  amountMinor: string | number;
+  currency: string;
+  status: string;
+  provider: string | null;
+  providerPaymentId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-function formatDate(
-  value: string
-) {
-  return new Intl.DateTimeFormat(
-    undefined,
-    {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }
-  ).format(
-    new Date(value)
-  );
+interface PaymentsResponse {
+  payments?: PaymentItem[];
+  total?: number;
+  limit?: number;
+  offset?: number;
 }
 
-function statusLabel(
-  status: string
-) {
+function formatMoney(
+  amountMinor: string | number,
+  currency: string,
+): string {
+  const amount = Number(amountMinor);
+
+  if (!Number.isFinite(amount)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount / 100);
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function formatStatus(status: string): string {
   return status
+    .replaceAll("_", " ")
     .toLowerCase()
-    .replaceAll("_", " ");
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function statusClasses(status: string): string {
+  switch (status.toUpperCase()) {
+    case "COMPLETED":
+      return "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/20";
+
+    case "PENDING":
+    case "PROCESSING":
+    case "CREATED":
+      return "bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/20";
+
+    case "FAILED":
+    case "CANCELLED":
+    case "REVERSED":
+    case "REFUNDED":
+      return "bg-red-500/10 text-red-300 ring-1 ring-red-500/20";
+
+    default:
+      return "bg-white/10 text-white/70 ring-1 ring-white/10";
+  }
 }
 
 export default function PaymentHistory({
   limit = 10,
 }: PaymentHistoryProps) {
-  const [
-    payments,
-    setPayments,
-  ] = useState<Payment[]>([]);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  const [
-    error,
-    setError,
-  ] = useState<string | null>(
-    null
-  );
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load =
-      async () => {
-        try {
-          setLoading(true);
-          setError(null);
+    let active = true;
 
-          const response =
-            await fetch(
-              `/api/payments?limit=${limit}`,
-              {
-                credentials:
-                  "include",
-                cache:
-                  "no-store",
-              }
-            );
+    const loadPayments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-          const data =
-            await response.json();
+        const response = await fetch(
+          `/api/payments?limit=${encodeURIComponent(String(limit))}`,
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          },
+        );
 
-          if (!response.ok) {
-            throw new Error(
-              data.message ??
-                "Unable to load payments."
-            );
-          }
+        const data: PaymentsResponse | { message?: string } =
+          await response.json();
 
-          setPayments(
-            data.items ?? []
+        if (!response.ok) {
+          throw new Error(
+            "message" in data && data.message
+              ? data.message
+              : "Unable to load payment history.",
           );
-        } catch (error) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : "Unable to load payments."
-          );
-        } finally {
+        }
+
+        if (!active) {
+          return;
+        }
+
+        setPayments(
+          Array.isArray((data as PaymentsResponse).payments)
+            ? (data as PaymentsResponse).payments!
+            : [],
+        );
+      } catch (loadError) {
+        console.error("[PAYMENT_HISTORY_ERROR]", loadError);
+
+        if (!active) {
+          return;
+        }
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load payment history.",
+        );
+      } finally {
+        if (active) {
           setLoading(false);
         }
-      };
+      }
+    };
 
-    load();
+    void loadPayments();
+
+    return () => {
+      active = false;
+    };
   }, [limit]);
 
   return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold">
-          Payment history
-        </h2>
-
-        <p className="text-sm text-neutral-400">
-          Payments processed through MARKA Financial Core.
-        </p>
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-sm">
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-white">
+            Payment history
+          </h2>
+          <p className="mt-1 text-sm text-white/50">
+            Recent payments associated with your account.
+          </p>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-white/10">
-        {loading && (
-          <div className="p-6 text-sm text-neutral-400">
-            Loading payments...
-          </div>
-        )}
+      {loading && (
+        <div className="space-y-3" aria-label="Loading payment history">
+          {Array.from({ length: Math.min(limit, 5) }).map((_, index) => (
+            <div
+              key={index}
+              className="h-16 animate-pulse rounded-xl bg-white/5"
+            />
+          ))}
+        </div>
+      )}
 
-        {!loading && error && (
-          <div className="p-6 text-sm text-red-400">
-            {error}
-          </div>
-        )}
+      {!loading && error && (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200"
+        >
+          {error}
+        </div>
+      )}
 
-        {!loading &&
-          !error &&
-          payments.length === 0 && (
-            <div className="p-6 text-sm text-neutral-400">
-              No payments yet.
-            </div>
-          )}
+      {!loading && !error && payments.length === 0 && (
+        <div className="rounded-xl border border-dashed border-white/10 bg-black/10 px-5 py-10 text-center">
+          <p className="text-sm font-medium text-white/80">
+            No payments yet.
+          </p>
+          <p className="mt-1 text-sm text-white/40">
+            Your payment activity will appear here after your first payment.
+          </p>
+        </div>
+      )}
 
-        {!loading &&
-          !error &&
-          payments.length > 0 && (
-            <div className="divide-y divide-white/10">
-              {payments.map(
-                (payment) => (
-                  <div
-                    key={
-                      payment.id
-                    }
-                    className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between"
+      {!loading && !error && payments.length > 0 && (
+        <div className="divide-y divide-white/10">
+          {payments.map((payment) => (
+            <div
+              key={payment.id}
+              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-white">
+                    {formatMoney(payment.amountMinor, payment.currency)}
+                  </span>
+
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses(
+                      payment.status,
+                    )}`}
                   >
-                    <div>
-                      <p className="font-medium">
-                        {payment.orderId
-                          ? `Order ${payment.orderId.slice(
-                              0,
-                              8
-                            )}`
-                          : "MARKA payment"}
-                      </p>
+                    {formatStatus(payment.status)}
+                  </span>
+                </div>
 
-                      <p className="mt-1 text-sm text-neutral-400">
-                        {formatDate(
-                          payment.createdAt
-                        )}
-                      </p>
-                    </div>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/40">
+                  {payment.orderId && (
+                    <span>Order: {payment.orderId}</span>
+                  )}
 
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm capitalize text-neutral-400">
-                        {statusLabel(
-                          payment.status
-                        )}
-                      </span>
+                  {payment.provider && (
+                    <span>Provider: {payment.provider}</span>
+                  )}
 
-                      <span className="font-semibold">
-                        {formatAmount(
-                          payment.amountMinor,
-                          payment.currency
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                )
-              )}
+                  <span>{formatDate(payment.createdAt)}</span>
+                </div>
+              </div>
+
+              <div className="shrink-0 text-xs text-white/30">
+                {payment.providerPaymentId
+                  ? `Ref: ${payment.providerPaymentId}`
+                  : `Payment: ${payment.id}`}
+              </div>
             </div>
-          )}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
