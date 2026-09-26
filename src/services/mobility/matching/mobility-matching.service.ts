@@ -66,7 +66,7 @@ export class MobilityMatchingService {
                 input.vehicleTypes.length > 0
                   ? {
                       type: {
-                        in: input.vehicleTypes as any,
+                        in: input.vehicleTypes as Prisma.MobilityVehicleType[],
                       },
                     }
                   : {}),
