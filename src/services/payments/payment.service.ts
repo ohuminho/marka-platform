@@ -281,26 +281,25 @@ export class PaymentService {
                   input.metadata,
               });
           } catch (error) {
-            const failed =
-              await prisma.payment.update({
-                where: {
-                  id: payment.id,
-                },
-                data: {
-                  status:
-                    PaymentStatus.FAILED,
-                  metadata:
-                    this.mergeJsonMetadata(
-                      payment.metadata,
-                      {
-                        providerError:
-                          error instanceof Error
-                            ? error.message
-                            : "Payment provider intent creation failed.",
-                      }
-                    ),
-                },
-              });
+            await prisma.payment.update({
+              where: {
+                id: payment.id,
+              },
+              data: {
+                status:
+                  PaymentStatus.FAILED,
+                metadata:
+                  this.mergeJsonMetadata(
+                    payment.metadata,
+                    {
+                      providerError:
+                        error instanceof Error
+                          ? error.message
+                          : "Payment provider intent creation failed.",
+                    }
+                  ),
+              },
+            });
 
             await this.financialAuditService.recordPayment({
               organizationId,
