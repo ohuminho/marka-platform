@@ -57,9 +57,6 @@ export default function CartPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Mantém a mesma chave durante retries do mesmo checkout.
-  // Isso evita criar múltiplas intenções de pagamento se houver
-  // falha de rede depois de o servidor já ter processado a primeira tentativa.
   const [paymentIdempotencyKey, setPaymentIdempotencyKey] = useState("");
 
   const loadCart = useCallback(async () => {
@@ -94,7 +91,11 @@ export default function CartPage() {
   }, []);
 
   useEffect(() => {
-    void loadCart();
+    const timer = window.setTimeout(() => {
+      void loadCart();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [loadCart]);
 
   async function removeItem(itemId: string) {
