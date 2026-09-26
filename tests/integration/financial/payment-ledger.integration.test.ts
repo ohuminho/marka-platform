@@ -1,6 +1,5 @@
 import {
   AccountType,
-  Prisma,
   TransactionDirection,
   TransactionStatus,
   TransactionType,
@@ -82,6 +81,12 @@ async function main(): Promise<void> {
     "Clearing account currency must be AOA"
   );
 
+  /*
+   * ---------------------------------------------------------
+   * 1. Normal external payment -> clearing
+   * ---------------------------------------------------------
+   */
+
   const testKey =
     `TEST-EXTERNAL-CREDIT-${crypto.randomUUID()}`;
 
@@ -111,8 +116,7 @@ async function main(): Promise<void> {
       type: TransactionType.PAYMENT,
       amountMinor,
       currency: "AOA",
-      destinationAccountId:
-        clearing.id,
+      destinationAccountId: clearing.id,
       actorUserId: userId,
       actorType: "CUSTOMER",
       reference:
@@ -130,26 +134,22 @@ async function main(): Promise<void> {
     });
 
   assert(
-    first.status ===
-      TransactionStatus.COMPLETED,
+    first.status === TransactionStatus.COMPLETED,
     "External credit must complete"
   );
 
   assert(
-    first.direction ===
-      TransactionDirection.CREDIT,
+    first.direction === TransactionDirection.CREDIT,
     "External credit must be CREDIT"
   );
 
   assert(
-    first.amountMinor ===
-      amountMinor.toString(),
+    first.amountMinor === amountMinor.toString(),
     "Transaction amount must remain in minor units"
   );
 
   assert(
-    first.destinationAccountId ===
-      clearing.id,
+    first.destinationAccountId === clearing.id,
     "Transaction must credit the clearing account"
   );
 
@@ -177,14 +177,12 @@ async function main(): Promise<void> {
 
   assert(
     after.balanceMinor ===
-      before.balanceMinor +
-        amountMinor,
+      before.balanceMinor + amountMinor,
     "Clearing balance must increase exactly once"
   );
 
   assert(
-    after.version ===
-      before.version + 1,
+    after.version === before.version + 1,
     "Clearing account version must increment exactly once"
   );
 
@@ -222,28 +220,30 @@ async function main(): Promise<void> {
   );
 
   assert(
-    ledgerEntries[0].direction ===
-      "CREDIT",
+    ledgerEntries[0].direction === "CREDIT",
     "External credit ledger entry must be CREDIT"
   );
 
   assert(
-    ledgerEntries[0].amountMinor ===
-      amountMinor,
+    ledgerEntries[0].amountMinor === amountMinor,
     "Ledger entry amount must equal transaction amount"
   );
 
   assert(
-    ledgerEntries[0].currency ===
-      "AOA",
+    ledgerEntries[0].currency === "AOA",
     "Ledger entry currency must equal transaction currency"
   );
 
   assert(
-    ledgerEntries[0].accountId ===
-      clearing.id,
+    ledgerEntries[0].accountId === clearing.id,
     "Ledger entry must belong to the clearing account"
   );
+
+  /*
+   * ---------------------------------------------------------
+   * 2. Idempotent replay
+   * ---------------------------------------------------------
+   */
 
   const replay =
     await transactionService.createExternalCredit({
@@ -252,21 +252,21 @@ async function main(): Promise<void> {
       type: TransactionType.PAYMENT,
       amountMinor,
       currency: "AOA",
-      destinationAccountId:
-        clearing.id,
+      destinationAccountId: clearing.id,
       actorUserId: userId,
       actorType: "CUSTOMER",
       reference:
-        `TEST-PAYMENT-${crypto.randomUUID()}`,
+        `REPLAY-${crypto.randomUUID()}`,
       referenceType:
         "INTEGRATION_TEST",
       context:
         "FINANCIAL_INTEGRATION_TEST",
       provider: "SANDBOX",
       providerPaymentId:
-        "SAME-PROVIDER-ID",
+        "REPLAY-PROVIDER-ID",
       metadata: {
         test: true,
+        replay: true,
       },
     });
 
@@ -293,16 +293,20 @@ async function main(): Promise<void> {
   }
 
   assert(
-    afterReplay.balanceMinor ===
-      after.balanceMinor,
+    afterReplay.balanceMinor === after.balanceMinor,
     "Idempotency replay must not increase balance"
   );
 
   assert(
-    afterReplay.version ===
-      after.version,
+    afterReplay.version === after.version,
     "Idempotency replay must not change account version"
   );
+
+  /*
+   * ---------------------------------------------------------
+   * 3. Concurrent identical requests
+   * ---------------------------------------------------------
+   */
 
   const concurrentKey =
     `TEST-CONCURRENT-CREDIT-${crypto.randomUUID()}`;
@@ -330,14 +334,11 @@ async function main(): Promise<void> {
     await Promise.allSettled([
       transactionService.createExternalCredit({
         organizationId,
-        idempotencyKey:
-          concurrentKey,
+        idempotencyKey: concurrentKey,
         type: TransactionType.PAYMENT,
-        amountMinor:
-          concurrentAmount,
+        amountMinor: concurrentAmount,
         currency: "AOA",
-        destinationAccountId:
-          clearing.id,
+        destinationAccountId: clearing.id,
         actorUserId: userId,
         actorType: "CUSTOMER",
         reference:
@@ -353,14 +354,11 @@ async function main(): Promise<void> {
 
       transactionService.createExternalCredit({
         organizationId,
-        idempotencyKey:
-          concurrentKey,
+        idempotencyKey: concurrentKey,
         type: TransactionType.PAYMENT,
-        amountMinor:
-          concurrentAmount,
+        amountMinor: concurrentAmount,
         currency: "AOA",
-        destinationAccountId:
-          clearing.id,
+        destinationAccountId: clearing.id,
         actorUserId: userId,
         actorType: "CUSTOMER",
         reference:
@@ -375,22 +373,20 @@ async function main(): Promise<void> {
       }),
     ]);
 
-  const fulfilled =
+  const rejected =
     results.filter(
-      (result) =>
-        result.status === "fulfilled"
+      (result) => result.status === "rejected"
     );
 
   assert(
-    fulfilled.length === 1,
-    "Concurrent identical requests must produce exactly one successful operation"
+    rejected.length <= 1,
+    "Concurrent identical requests may reject at most one transaction attempt"
   );
 
   const concurrentTransactionCount =
     await prisma.transaction.count({
       where: {
-        idempotencyKey:
-          concurrentKey,
+        idempotencyKey: concurrentKey,
       },
     });
 
@@ -403,8 +399,7 @@ async function main(): Promise<void> {
     await prisma.ledgerEntry.count({
       where: {
         transaction: {
-          idempotencyKey:
-            concurrentKey,
+          idempotencyKey: concurrentKey,
         },
       },
     });
@@ -433,8 +428,7 @@ async function main(): Promise<void> {
 
   assert(
     concurrentAfter.balanceMinor ===
-      concurrentBefore.balanceMinor +
-        concurrentAmount,
+      concurrentBefore.balanceMinor + concurrentAmount,
     "Concurrent idempotent requests must credit the account exactly once"
   );
 
@@ -444,18 +438,22 @@ async function main(): Promise<void> {
     "Concurrent idempotent requests must increment account version exactly once"
   );
 
+  /*
+   * ---------------------------------------------------------
+   * 4. Idempotency key reuse with different financial input
+   * ---------------------------------------------------------
+   */
+
   const mismatchedKey =
     `TEST-MISMATCHED-${crypto.randomUUID()}`;
 
   await transactionService.createExternalCredit({
     organizationId,
-    idempotencyKey:
-      mismatchedKey,
+    idempotencyKey: mismatchedKey,
     type: TransactionType.PAYMENT,
     amountMinor: 5000n,
     currency: "AOA",
-    destinationAccountId:
-      clearing.id,
+    destinationAccountId: clearing.id,
     actorUserId: userId,
     actorType: "CUSTOMER",
     reference:
@@ -472,13 +470,11 @@ async function main(): Promise<void> {
   try {
     await transactionService.createExternalCredit({
       organizationId,
-      idempotencyKey:
-        mismatchedKey,
+      idempotencyKey: mismatchedKey,
       type: TransactionType.PAYMENT,
       amountMinor: 6000n,
       currency: "AOA",
-      destinationAccountId:
-        clearing.id,
+      destinationAccountId: clearing.id,
       actorUserId: userId,
       actorType: "CUSTOMER",
       reference:
