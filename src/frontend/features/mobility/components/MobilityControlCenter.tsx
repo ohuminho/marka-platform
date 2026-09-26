@@ -14,9 +14,6 @@ type MobilitySafetyMode =
   | "TRUSTED"
   | "CHILD";
 
-type RideStatus =
-  | string;
-
 interface MobilityOverview {
   generatedAt: string;
 
@@ -443,21 +440,19 @@ export default function MobilityControlCenter() {
     }, []);
 
   useEffect(() => {
+  const initialLoadTimer = window.setTimeout(() => {
     void loadOverview();
+  }, 0);
 
-    const interval =
-      window.setInterval(
-        () => {
-          void loadOverview();
-        },
-        5000,
-      );
+  const interval = window.setInterval(() => {
+    void loadOverview();
+  }, 5000);
 
-    return () =>
-      window.clearInterval(
-        interval,
-      );
-  }, [loadOverview]);
+  return () => {
+    window.clearTimeout(initialLoadTimer);
+    window.clearInterval(interval);
+  };
+}, [loadOverview]);
 
   const createRide =
     async (
