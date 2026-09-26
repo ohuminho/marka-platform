@@ -2,138 +2,129 @@
 
 import { useEffect, useState } from "react";
 
-interface PaymentItem {
+type Payment = {
   id: string;
   orderId: string | null;
   transactionId: string | null;
-  amountMinor: string | number;
+  amountMinor: string;
   currency: string;
   status: string;
   provider: string | null;
   providerPaymentId: string | null;
+  idempotencyKey: string;
   createdAt: string;
   updatedAt: string;
-}
+};
 
-interface PaymentsResponse {
-  payments?: PaymentItem[];
+type PaymentsResponse = {
+  payments?: Payment[];
   total?: number;
   limit?: number;
   offset?: number;
-}
+  error?: string;
+  message?: string;
+};
 
-function formatMoney(
-  amountMinor: string | number,
-  currency: string,
-): string {
-  const amount = Number(amountMinor);
+function formatAmount(amountMinor: string, currency: string): string {
+  const amount = Number(amountMinor) / 100;
 
-  if (!Number.isFinite(amount)) {
-    return "—";
-  }
-
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat("pt-AO", {
     style: "currency",
-    currency,
+    currency: currency || "AOA",
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
+  }).format(amount);
 }
 
 function formatDate(value: string): string {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "—";
+    return value;
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("pt-AO", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
 }
 
-function formatStatus(status: string): string {
-  return status
-    .replaceAll("_", " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+function getStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    CREATED: "Criado",
+    PENDING: "Pendente",
+    PROCESSING: "A processar",
+    COMPLETED: "Concluído",
+    FAILED: "Falhou",
+    CANCELLED: "Cancelado",
+    REFUNDED: "Reembolsado",
+  };
+
+  return labels[status] ?? status;
 }
 
-function statusClasses(status: string): string {
-  switch (status.toUpperCase()) {
+function getStatusClassName(status: string): string {
+  switch (status) {
     case "COMPLETED":
-      return "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/20";
-
-    case "PENDING":
-    case "PROCESSING":
-    case "CREATED":
-      return "bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/20";
+      return "bg-green-100 text-green-700";
 
     case "FAILED":
     case "CANCELLED":
-    case "REVERSED":
+      return "bg-red-100 text-red-700";
+
     case "REFUNDED":
-      return "bg-red-500/10 text-red-300 ring-1 ring-red-500/20";
+      return "bg-purple-100 text-purple-700";
+
+    case "PROCESSING":
+    case "PENDING":
+      return "bg-yellow-100 text-yellow-700";
 
     default:
-      return "bg-white/10 text-white/70 ring-1 ring-white/10";
+      return "bg-gray-100 text-gray-700";
   }
 }
 
 export default function PaymentHistory() {
-  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
+    let cancelled = false;
 
     async function loadPayments() {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch("/api/payments?limit=10", {
+        const response = await fetch("/api/payments?limit=20&offset=0", {
           method: "GET",
           credentials: "include",
           cache: "no-store",
         });
 
-        const data: PaymentsResponse | { message?: string } =
-          await response.json();
+        const data: PaymentsResponse = await response.json();
 
         if (!response.ok) {
           throw new Error(
-            "message" in data && data.message
-              ? data.message
-              : "Unable to load payment history.",
+            data.error ||
+              data.message ||
+              "Não foi possível carregar o histórico de pagamentos.",
           );
         }
 
-        if (!active) {
-          return;
+        if (!cancelled) {
+          setPayments(data.payments ?? []);
         }
-
-        setPayments(
-          Array.isArray((data as PaymentsResponse).payments)
-            ? (data as PaymentsResponse).payments!
-            : [],
-        );
-      } catch (loadError) {
-        console.error("[PAYMENT_HISTORY_ERROR]", loadError);
-
-        if (!active) {
-          return;
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Não foi possível carregar o histórico de pagamentos.",
+          );
         }
-
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Unable to load payment history.",
-        );
       } finally {
-        if (active) {
+        if (!cancelled) {
           setLoading(false);
         }
       }
@@ -142,96 +133,93 @@ export default function PaymentHistory() {
     void loadPayments();
 
     return () => {
-      active = false;
+      cancelled = true;
     };
   }, []);
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-sm">
+    <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="mb-5">
-        <h2 className="text-lg font-semibold text-white">
-          Payment history
+        <h2 className="text-lg font-semibold text-gray-900">
+          Histórico de pagamentos
         </h2>
 
-        <p className="mt-1 text-sm text-white/50">
-          Recent payments associated with your account.
+        <p className="mt-1 text-sm text-gray-500">
+          Consulte os pagamentos associados à sua conta.
         </p>
       </div>
 
       {loading && (
         <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-16 animate-pulse rounded-xl bg-white/5"
-            />
-          ))}
+          <div className="h-16 animate-pulse rounded-lg bg-gray-100" />
+          <div className="h-16 animate-pulse rounded-lg bg-gray-100" />
+          <div className="h-16 animate-pulse rounded-lg bg-gray-100" />
         </div>
       )}
 
       {!loading && error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200"
-        >
-          {error}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
 
       {!loading && !error && payments.length === 0 && (
-        <div className="rounded-xl border border-dashed border-white/10 px-5 py-10 text-center">
-          <p className="text-sm font-medium text-white/80">
-            No payments yet.
+        <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+          <p className="text-sm font-medium text-gray-700">
+            Ainda não existem pagamentos.
           </p>
 
-          <p className="mt-1 text-sm text-white/40">
-            Your payment activity will appear here after your first payment.
+          <p className="mt-1 text-sm text-gray-500">
+            Os pagamentos das suas compras aparecerão aqui.
           </p>
         </div>
       )}
 
       {!loading && !error && payments.length > 0 && (
-        <div className="divide-y divide-white/10">
+        <div className="divide-y divide-gray-100">
           {payments.map((payment) => (
             <div
               key={payment.id}
-              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-white">
-                    {formatMoney(
-                      payment.amountMinor,
-                      payment.currency,
-                    )}
-                  </span>
+                  <p className="font-medium text-gray-900">
+                    Pagamento #{payment.id.slice(0, 8)}
+                  </p>
 
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses(
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClassName(
                       payment.status,
                     )}`}
                   >
-                    {formatStatus(payment.status)}
+                    {getStatusLabel(payment.status)}
                   </span>
                 </div>
 
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/40">
+                <div className="mt-1 space-y-0.5 text-sm text-gray-500">
                   {payment.orderId && (
-                    <span>Order: {payment.orderId}</span>
+                    <p>Pedido: {payment.orderId}</p>
                   )}
 
                   {payment.provider && (
-                    <span>Provider: {payment.provider}</span>
+                    <p>Provedor: {payment.provider}</p>
                   )}
 
-                  <span>{formatDate(payment.createdAt)}</span>
+                  <p>{formatDate(payment.createdAt)}</p>
                 </div>
               </div>
 
-              <div className="shrink-0 text-xs text-white/30">
-                {payment.providerPaymentId
-                  ? `Ref: ${payment.providerPaymentId}`
-                  : `Payment: ${payment.id}`}
+              <div className="shrink-0 text-left sm:text-right">
+                <p className="font-semibold text-gray-900">
+                  {formatAmount(payment.amountMinor, payment.currency)}
+                </p>
+
+                {payment.transactionId && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Transação: {payment.transactionId.slice(0, 8)}
+                  </p>
+                )}
               </div>
             </div>
           ))}
