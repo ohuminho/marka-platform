@@ -15,14 +15,6 @@ import {
 } from "@/services/mobility/settlement/mobility-settlement-engine.service";
 
 import type {
-  MobilityPaymentResult,
-} from "@/services/mobility/payments/mobility-payment-engine.contracts";
-
-import type {
-  MobilitySettlementEngineResult,
-} from "@/services/mobility/settlement/mobility-settlement-engine.contracts";
-
-import type {
   InitializeMobilityFinancialsInput,
   FinalizeMobilityFinancialsInput,
   MobilityFinancialOrchestrationResult,
