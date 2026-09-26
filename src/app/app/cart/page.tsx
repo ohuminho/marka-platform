@@ -1,56 +1,68 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-interface CartItem {
+type CartItem = {
   id: string;
-  productId: string;
   quantity: number;
-  unitPrice: number | string;
-  subtotal: number | string;
+  unitPrice: string | number;
+  subtotal: string | number;
   product?: {
     id: string;
     name: string;
-    price?: number | string;
-    currency?: string;
-  } | null;
-}
+    imageUrl?: string | null;
+  };
+};
 
-interface CartData {
+type Cart = {
   id: string;
-  userId: string;
-  items: CartItem[];
-  total?: number | string;
+  status?: string;
   currency?: string;
-}
+  items: CartItem[];
+  subtotal?: string | number;
+  total?: string | number;
+};
 
-function toNumber(value: number | string | null | undefined): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+type ApiResponse = {
+  cart?: Cart;
+  error?: string;
+  message?: string;
+  orderId?: string;
+  payment?: {
+    id: string;
+    status: string;
+  };
+};
 
 function formatMoney(
-  amountMinor: number | string,
+  value: string | number | undefined,
   currency = "AOA",
 ): string {
-  return new Intl.NumberFormat(undefined, {
+  const amount = Number(value ?? 0);
+
+  return new Intl.NumberFormat("pt-AO", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(toNumber(amountMinor) / 100);
+  }).format(amount);
 }
 
 export default function CartPage() {
-  const [cart, setCart] = useState<CartData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [checkingOut, setCheckingOut] = useState(false);
-  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
+  const router = useRouter();
 
-  async function loadCart() {
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Mantém a mesma chave durante retries do mesmo checkout.
+  // Isso evita criar múltiplas intenções de pagamento se houver
+  // falha de rede depois de o servidor já ter processado a primeira tentativa.
+  const [paymentIdempotencyKey, setPaymentIdempotencyKey] = useState("");
+
+  const loadCart = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -61,61 +73,54 @@ export default function CartPage() {
         cache: "no-store",
       });
 
-      const data = await response.json();
+      const data: ApiResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data?.message ?? "Unable to load your cart.",
+          data.error || data.message || "Não foi possível carregar o carrinho.",
         );
       }
 
-      setCart(data?.cart ?? data ?? null);
-    } catch (loadError) {
-      console.error("[CART_PAGE_ERROR]", loadError);
-
+      setCart(data.cart ?? null);
+    } catch (err) {
       setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Unable to load your cart.",
+        err instanceof Error
+          ? err.message
+          : "Não foi possível carregar o carrinho.",
       );
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void loadCart();
-  }, []);
+  }, [loadCart]);
 
   async function removeItem(itemId: string) {
     try {
       setRemovingItemId(itemId);
       setError(null);
 
-      const response = await fetch(
-        `/api/cart/items/${encodeURIComponent(itemId)}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
+      const response = await fetch(`/api/cart/items/${itemId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
-      const data = await response.json();
+      const data: ApiResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data?.message ?? "Unable to remove item from cart.",
+          data.error || data.message || "Não foi possível remover o item.",
         );
       }
 
       await loadCart();
-    } catch (removeError) {
-      console.error("[CART_REMOVE_ITEM_ERROR]", removeError);
-
+    } catch (err) {
       setError(
-        removeError instanceof Error
-          ? removeError.message
-          : "Unable to remove item from cart.",
+        err instanceof Error
+          ? err.message
+          : "Não foi possível remover o item.",
       );
     } finally {
       setRemovingItemId(null);
@@ -123,14 +128,20 @@ export default function CartPage() {
   }
 
   async function checkout() {
-    if (!cart || cart.items.length === 0) {
+    if (!cart?.id || checkingOut) {
       return;
     }
 
     try {
       setCheckingOut(true);
-      setCheckoutMessage(null);
       setError(null);
+
+      const idempotencyKey =
+        paymentIdempotencyKey || crypto.randomUUID();
+
+      if (!paymentIdempotencyKey) {
+        setPaymentIdempotencyKey(idempotencyKey);
+      }
 
       const response = await fetch("/api/checkout", {
         method: "POST",
@@ -140,222 +151,215 @@ export default function CartPage() {
         },
         body: JSON.stringify({
           cartId: cart.id,
+          paymentIdempotencyKey: idempotencyKey,
         }),
       });
 
-      const data = await response.json();
+      const data: ApiResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data?.message ?? "Unable to complete checkout.",
+          data.error || data.message || "Não foi possível concluir o checkout.",
         );
       }
 
-      const orderId = data?.orderId ?? data?.order?.id;
-
-      if (orderId) {
-        window.location.href = `/app/orders/${encodeURIComponent(
-          orderId,
-        )}`;
-        return;
+      if (!data.orderId) {
+        throw new Error(
+          "O checkout foi processado, mas não foi devolvido um pedido.",
+        );
       }
 
-      setCheckoutMessage(
-        "Checkout completed successfully.",
-      );
-    } catch (checkoutError) {
-      console.error("[CART_CHECKOUT_ERROR]", checkoutError);
-
+      router.push(`/app/orders/${data.orderId}`);
+    } catch (err) {
       setError(
-        checkoutError instanceof Error
-          ? checkoutError.message
-          : "Unable to complete checkout.",
+        err instanceof Error
+          ? err.message
+          : "Não foi possível concluir o checkout.",
       );
-    } finally {
       setCheckingOut(false);
     }
   }
 
-  const calculatedTotal = useMemo(() => {
-    if (!cart) {
-      return 0;
-    }
-
-    return cart.items.reduce(
-      (total, item) => total + toNumber(item.subtotal),
-      0,
-    );
-  }, [cart]);
-
-  const currency = cart?.currency ?? "AOA";
-
   if (loading) {
     return (
-      <main className="space-y-6">
-        <div>
-          <div className="h-8 w-40 animate-pulse rounded bg-white/10" />
-          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-white/5" />
+      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-40 rounded bg-gray-200" />
+          <div className="h-24 rounded-lg bg-gray-200" />
+          <div className="h-24 rounded-lg bg-gray-200" />
         </div>
-
-        <div className="h-32 animate-pulse rounded-2xl bg-white/5" />
-        <div className="h-32 animate-pulse rounded-2xl bg-white/5" />
       </main>
     );
   }
 
-  return (
-    <main className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-white">
-          Shopping cart
-        </h1>
+  if (error && !cart) {
+    return (
+      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{error}</p>
 
-        <p className="mt-1 text-sm text-white/50">
-          Review your products before checkout.
-        </p>
-      </header>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200"
-        >
-          {error}
+          <button
+            type="button"
+            onClick={() => void loadCart()}
+            className="mt-3 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Tentar novamente
+          </button>
         </div>
-      )}
+      </main>
+    );
+  }
 
-      {checkoutMessage && (
-        <div
-          role="status"
-          className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200"
-        >
-          {checkoutMessage}
+  if (!cart || cart.items.length === 0) {
+    return (
+      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Carrinho</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Revise os produtos antes de finalizar a compra.
+          </p>
         </div>
-      )}
 
-      {!cart || cart.items.length === 0 ? (
-        <section className="rounded-2xl border border-dashed border-white/10 px-6 py-16 text-center">
-          <h2 className="text-lg font-medium text-white">
-            Your cart is empty
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">
+            O carrinho está vazio
           </h2>
 
-          <p className="mt-2 text-sm text-white/50">
-            Add products from the marketplace to continue.
+          <p className="mt-2 text-sm text-gray-500">
+            Adicione produtos ao carrinho para iniciar uma compra.
           </p>
 
-          <Link
-            href="/app/marketplace"
-            className="mt-6 inline-flex rounded-xl bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-white/90"
+          <button
+            type="button"
+            onClick={() => router.push("/app/marketplace")}
+            className="mt-5 rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
           >
-            Browse marketplace
-          </Link>
-        </section>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <section className="rounded-2xl border border-white/10 bg-white/[0.03]">
-            <div className="border-b border-white/10 px-5 py-4">
-              <h2 className="font-semibold text-white">
-                Cart items
-              </h2>
-            </div>
+            Explorar marketplace
+          </button>
+        </div>
+      </main>
+    );
+  }
 
-            <div className="divide-y divide-white/10">
-              {cart.items.map((item) => (
-                <article
-                  key={item.id}
-                  className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <h3 className="font-medium text-white">
-                      {item.product?.name ?? `Product ${item.productId}`}
-                    </h3>
+  const currency = cart.currency || "AOA";
 
-                    <p className="mt-1 text-sm text-white/50">
-                      Quantity: {item.quantity}
-                    </p>
+  const calculatedSubtotal = cart.items.reduce(
+    (total, item) => total + Number(item.subtotal ?? 0),
+    0,
+  );
 
-                    <p className="mt-1 text-xs text-white/35">
-                      Unit price:{" "}
-                      {formatMoney(item.unitPrice, currency)}
-                    </p>
-                  </div>
+  const subtotal = Number(cart.subtotal ?? calculatedSubtotal);
+  const total = Number(cart.total ?? subtotal);
 
-                  <div className="flex items-center justify-between gap-4 sm:justify-end">
-                    <span className="font-medium text-white">
-                      {formatMoney(item.subtotal, currency)}
-                    </span>
+  return (
+    <main className="mx-auto w-full max-w-6xl px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Carrinho</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Revise os produtos e finalize a sua compra.
+        </p>
+      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => void removeItem(item.id)}
-                      disabled={removingItemId === item.id}
-                      className="rounded-lg border border-red-500/20 px-3 py-2 text-xs font-medium text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {removingItemId === item.id
-                        ? "Removing..."
-                        : "Remove"}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <aside className="h-fit rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-            <h2 className="text-lg font-semibold text-white">
-              Summary
-            </h2>
-
-            <div className="mt-5 space-y-3 text-sm">
-              <div className="flex items-center justify-between text-white/60">
-                <span>Items</span>
-                <span>{cart.items.length}</span>
-              </div>
-
-              <div className="flex items-center justify-between text-white/60">
-                <span>Subtotal</span>
-                <span>
-                  {formatMoney(
-                    cart.total ?? calculatedTotal,
-                    currency,
-                  )}
-                </span>
-              </div>
-
-              <div className="border-t border-white/10 pt-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-white">
-                    Total
-                  </span>
-
-                  <span className="text-lg font-semibold text-white">
-                    {formatMoney(
-                      cart.total ?? calculatedTotal,
-                      currency,
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void checkout()}
-              disabled={checkingOut || cart.items.length === 0}
-              className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {checkingOut ? "Processing..." : "Proceed to checkout"}
-            </button>
-
-            <Link
-              href="/app/marketplace"
-              className="mt-3 flex w-full items-center justify-center rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-white/70 transition hover:bg-white/5 hover:text-white"
-            >
-              Continue shopping
-            </Link>
-          </aside>
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section className="space-y-4">
+          {cart.items.map((item) => (
+            <article
+              key={item.id}
+              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+            >
+              <div className="flex gap-4">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
+                  {item.product?.imageUrl ? (
+                    <img
+                      src={item.product.imageUrl}
+                      alt={item.product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-400">Sem imagem</span>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate font-semibold text-gray-900">
+                    {item.product?.name || "Produto"}
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Quantidade: {item.quantity}
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Preço unitário:{" "}
+                    {formatMoney(item.unitPrice, currency)}
+                  </p>
+
+                  <p className="mt-2 font-semibold text-gray-900">
+                    {formatMoney(item.subtotal, currency)}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void removeItem(item.id)}
+                  disabled={removingItemId === item.id || checkingOut}
+                  className="self-start rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {removingItemId === item.id ? "A remover..." : "Remover"}
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <aside className="h-fit rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Resumo da compra
+          </h2>
+
+          <div className="mt-5 space-y-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Subtotal</span>
+              <span className="font-medium text-gray-900">
+                {formatMoney(subtotal, currency)}
+              </span>
+            </div>
+
+            <div className="border-t border-gray-100 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-900">Total</span>
+                <span className="text-lg font-bold text-gray-900">
+                  {formatMoney(total, currency)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void checkout()}
+            disabled={checkingOut || cart.items.length === 0}
+            className="mt-6 w-full rounded-md bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {checkingOut ? "A processar..." : "Finalizar compra"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.push("/app/marketplace")}
+            disabled={checkingOut}
+            className="mt-3 w-full rounded-md border border-gray-300 px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Continuar a comprar
+          </button>
+        </aside>
+      </div>
     </main>
   );
 }
