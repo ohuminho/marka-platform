@@ -25,7 +25,7 @@ interface PaymentListResponse {
 
 function formatAmount(
   amountMinor: string,
-  currency: string
+  currency: string,
 ): string {
   const amount = Number(amountMinor) / 100;
 
@@ -74,23 +74,35 @@ function getStatusLabel(status: string): string {
 }
 
 export default function PaymentHistory() {
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [
+    payments,
+    setPayments,
+  ] = useState<Payment[]>([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(null);
 
   const loadPayments = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(
-        "/api/payments?limit=20&offset=0",
-        {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        }
-      );
+      const response =
+        await fetch(
+          "/api/payments?limit=20&offset=0",
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          },
+        );
 
       const data =
         (await response.json()) as
@@ -101,20 +113,20 @@ export default function PaymentHistory() {
         throw new Error(
           "error" in data && data.error
             ? data.error
-            : "Unable to load payment history."
+            : "Unable to load payment history.",
         );
       }
 
       setPayments(
         "payments" in data
           ? data.payments
-          : []
+          : [],
       );
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to load payment history."
+          : "Unable to load payment history.",
       );
     } finally {
       setLoading(false);
@@ -122,7 +134,11 @@ export default function PaymentHistory() {
   }, []);
 
   useEffect(() => {
-    void loadPayments();
+    const timer = window.setTimeout(() => {
+      void loadPayments();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [loadPayments]);
 
   return (
@@ -132,6 +148,7 @@ export default function PaymentHistory() {
           <h2 className="text-xl font-semibold">
             Payment history
           </h2>
+
           <p className="mt-1 text-sm text-gray-500">
             Recent payments associated with your orders.
           </p>
@@ -167,18 +184,23 @@ export default function PaymentHistory() {
                 <th className="px-3 py-3 font-medium">
                   Payment
                 </th>
+
                 <th className="px-3 py-3 font-medium">
                   Order
                 </th>
+
                 <th className="px-3 py-3 font-medium">
                   Provider
                 </th>
+
                 <th className="px-3 py-3 font-medium">
                   Status
                 </th>
+
                 <th className="px-3 py-3 text-right font-medium">
                   Amount
                 </th>
+
                 <th className="px-3 py-3 font-medium">
                   Date
                 </th>
@@ -215,7 +237,7 @@ export default function PaymentHistory() {
                   <td className="px-3 py-4">
                     <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium">
                       {getStatusLabel(
-                        payment.status
+                        payment.status,
                       )}
                     </span>
                   </td>
@@ -223,13 +245,13 @@ export default function PaymentHistory() {
                   <td className="px-3 py-4 text-right font-medium">
                     {formatAmount(
                       payment.amountMinor,
-                      payment.currency
+                      payment.currency,
                     )}
                   </td>
 
                   <td className="px-3 py-4 text-gray-600">
                     {formatDate(
-                      payment.createdAt
+                      payment.createdAt,
                     )}
                   </td>
                 </tr>
