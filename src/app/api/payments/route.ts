@@ -6,6 +6,116 @@ import { SessionService } from "@/core/auth/sessions/session.service";
 import {
   PaymentService,
 } from "@/services/payments/payment.service";
+import {
+  paymentQueryService,
+} from "@/services/payments/payment-query.service";
+
+export async function GET(
+  request: Request
+) {
+  try {
+    const cookieStore =
+      await cookies();
+
+    const token =
+      cookieStore.get(
+        AuthConfig.cookies.name
+      )?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        {
+          message:
+            "Authentication required.",
+          code:
+            "AUTHENTICATION_REQUIRED",
+        },
+        { status: 401 }
+      );
+    }
+
+    const session =
+      await new SessionService().validate(
+        token
+      );
+
+    if (!session) {
+      return NextResponse.json(
+        {
+          message:
+            "Invalid or expired session.",
+          code:
+            "INVALID_SESSION",
+        },
+        { status: 401 }
+      );
+    }
+
+    const url =
+      new URL(request.url);
+
+    const limitParam =
+      Number(
+        url.searchParams.get(
+          "limit"
+        ) ?? "20"
+      );
+
+    const offsetParam =
+      Number(
+        url.searchParams.get(
+          "offset"
+        ) ?? "0"
+      );
+
+    const status =
+      url.searchParams.get(
+        "status"
+      ) ?? undefined;
+
+    const result =
+      await paymentQueryService.listForUser(
+        {
+          userId:
+            session.userId,
+          status:
+            status as
+              | undefined,
+          limit:
+            Number.isFinite(
+              limitParam
+            )
+              ? limitParam
+              : 20,
+          offset:
+            Number.isFinite(
+              offsetParam
+            )
+              ? offsetParam
+              : 0,
+        }
+      );
+
+    return NextResponse.json(
+      result
+    );
+  } catch (error) {
+    console.error(
+      "[PAYMENT_LIST_API_ERROR]",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        message:
+          "Unable to load payments.",
+        code:
+          "PAYMENT_LIST_FAILED",
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(
   request: Request
@@ -31,11 +141,8 @@ export async function POST(
       );
     }
 
-    const sessionService =
-      new SessionService();
-
     const session =
-      await sessionService.validate(
+      await new SessionService().validate(
         token
       );
 
@@ -98,11 +205,8 @@ export async function POST(
       );
     }
 
-    const paymentService =
-      new PaymentService();
-
     const payment =
-      await paymentService.createPayment(
+      await new PaymentService().createPayment(
         {
           userId:
             session.userId,
@@ -114,9 +218,7 @@ export async function POST(
 
     return NextResponse.json(
       payment,
-      {
-        status: 201,
-      }
+      { status: 201 }
     );
   } catch (error) {
     console.error(
