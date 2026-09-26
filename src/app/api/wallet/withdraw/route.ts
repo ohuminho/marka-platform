@@ -1,24 +1,13 @@
-import { WalletService } from "@/services/wallet/wallet.service";
-
-const walletService = new WalletService();
-
-
-export async function POST(
-  request: Request
-) {
-
-  const body = await request.json();
-
-
-  const result =
-    await walletService.withdraw({
-      walletId: body.walletId,
-      amount: body.amount,
-      reference: body.reference,
-      currency: body.currency,
-      metadata: body.metadata,
-    });
-
-
-  return Response.json(result);
+export async function POST() {
+  return Response.json(
+    {
+      message:
+        "Wallet withdrawals are processed through the MARKA Settlement flow. Direct wallet balance mutation is disabled.",
+      code:
+        "WALLET_WITHDRAWAL_REQUIRES_SETTLEMENT_FLOW",
+    },
+    {
+      status: 409,
+    }
+  );
 }
