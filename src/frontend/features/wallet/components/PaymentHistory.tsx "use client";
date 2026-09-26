@@ -2,10 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-interface PaymentHistoryProps {
-  limit?: number;
-}
-
 interface PaymentItem {
   id: string;
   orderId: string | null;
@@ -85,9 +81,7 @@ function statusClasses(status: string): string {
   }
 }
 
-export default function PaymentHistory({
-  limit = 10,
-}: PaymentHistoryProps) {
+export default function PaymentHistory() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,19 +89,16 @@ export default function PaymentHistory({
   useEffect(() => {
     let active = true;
 
-    const loadPayments = async () => {
+    async function loadPayments() {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(
-          `/api/payments?limit=${encodeURIComponent(String(limit))}`,
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          },
-        );
+        const response = await fetch("/api/payments?limit=10", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
         const data: PaymentsResponse | { message?: string } =
           await response.json();
@@ -146,31 +137,30 @@ export default function PaymentHistory({
           setLoading(false);
         }
       }
-    };
+    }
 
     void loadPayments();
 
     return () => {
       active = false;
     };
-  }, [limit]);
+  }, []);
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-sm">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-white">
-            Payment history
-          </h2>
-          <p className="mt-1 text-sm text-white/50">
-            Recent payments associated with your account.
-          </p>
-        </div>
+      <div className="mb-5">
+        <h2 className="text-lg font-semibold text-white">
+          Payment history
+        </h2>
+
+        <p className="mt-1 text-sm text-white/50">
+          Recent payments associated with your account.
+        </p>
       </div>
 
       {loading && (
-        <div className="space-y-3" aria-label="Loading payment history">
-          {Array.from({ length: Math.min(limit, 5) }).map((_, index) => (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
               className="h-16 animate-pulse rounded-xl bg-white/5"
@@ -189,10 +179,11 @@ export default function PaymentHistory({
       )}
 
       {!loading && !error && payments.length === 0 && (
-        <div className="rounded-xl border border-dashed border-white/10 bg-black/10 px-5 py-10 text-center">
+        <div className="rounded-xl border border-dashed border-white/10 px-5 py-10 text-center">
           <p className="text-sm font-medium text-white/80">
             No payments yet.
           </p>
+
           <p className="mt-1 text-sm text-white/40">
             Your payment activity will appear here after your first payment.
           </p>
@@ -209,7 +200,10 @@ export default function PaymentHistory({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-white">
-                    {formatMoney(payment.amountMinor, payment.currency)}
+                    {formatMoney(
+                      payment.amountMinor,
+                      payment.currency,
+                    )}
                   </span>
 
                   <span
