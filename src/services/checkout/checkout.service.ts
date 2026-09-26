@@ -1,5 +1,10 @@
 import { prisma } from "@/database/client/prisma";
 
+import {
+  PaymentService,
+  type PaymentResult,
+} from "@/services/payments/payment.service";
+
 export interface CheckoutResult {
   orderId: string;
   userId: string;
@@ -7,6 +12,7 @@ export interface CheckoutResult {
   subtotal: number;
   total: number;
   status: string;
+  payment: PaymentResult;
   items: Array<{
     productId: string;
     quantity: number;
@@ -15,17 +21,41 @@ export interface CheckoutResult {
   }>;
 }
 
+export interface CheckoutInput {
+  userId: string;
+  cartId: string;
+  paymentIdempotencyKey: string;
+  provider?: string;
+  metadata?: Record<string, unknown>;
+  correlationId?: string;
+  requestId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
 export class CheckoutService {
+  private readonly paymentService = new PaymentService();
+
   async checkout(
-    userId: string,
-    cartId: string,
+    input: CheckoutInput,
   ): Promise<CheckoutResult> {
-    if (!userId.trim()) {
+    const userId = input.userId.trim();
+    const cartId = input.cartId.trim();
+    const paymentIdempotencyKey =
+      input.paymentIdempotencyKey.trim();
+
+    if (!userId) {
       throw new Error("User is required.");
     }
 
-    if (!cartId.trim()) {
+    if (!cartId) {
       throw new Error("Cart is required.");
+    }
+
+    if (!paymentIdempotencyKey) {
+      throw new Error(
+        "Payment idempotency key is required.",
+      );
     }
 
     const cart = await prisma.cart.findFirst({
@@ -61,7 +91,9 @@ export class CheckoutService {
 
     const preparedItems = cart.items.map((item) => {
       if (item.quantity <= 0) {
-        throw new Error("Cart contains an invalid quantity.");
+        throw new Error(
+          "Cart contains an invalid quantity.",
+        );
       }
 
       if (item.product.status !== "ACTIVE") {
@@ -77,6 +109,13 @@ export class CheckoutService {
       }
 
       const unitPrice = Number(item.product.price);
+
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+        throw new Error(
+          `Product "${item.product.name}" has an invalid price.`,
+        );
+      }
+
       const subtotal = unitPrice * item.quantity;
 
       return {
@@ -94,63 +133,116 @@ export class CheckoutService {
       0,
     );
 
-    const order = await prisma.$transaction(async (database) => {
-      const createdOrder = await database.order.create({
-        data: {
-          userId,
-          status: "PENDING",
-          total: subtotal,
-          currency: cart.currency,
-          items: {
-            create: preparedItems.map((item) => ({
-              productId: item.productId,
-              storeId: item.storeId,
-              vendorId: item.vendorId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              subtotal: item.subtotal,
-            })),
-          },
-        },
-        include: {
-          items: true,
-        },
-      });
-
-      for (const item of preparedItems) {
-        const updated = await database.product.updateMany({
-          where: {
-            id: item.productId,
-            status: "ACTIVE",
-            stock: {
-              gte: item.quantity,
-            },
-          },
+    const order = await prisma.$transaction(
+      async (database) => {
+        const createdOrder = await database.order.create({
           data: {
-            stock: {
-              decrement: item.quantity,
+            userId,
+            status: "PENDING",
+            total: subtotal,
+            currency: cart.currency,
+            items: {
+              create: preparedItems.map((item) => ({
+                productId: item.productId,
+                storeId: item.storeId,
+                vendorId: item.vendorId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                subtotal: item.subtotal,
+              })),
             },
+          },
+          include: {
+            items: true,
           },
         });
 
-        if (updated.count !== 1) {
-          throw new Error(
-            `Stock changed while checking out product "${item.productId}".`,
-          );
+        for (const item of preparedItems) {
+          const updated = await database.product.updateMany({
+            where: {
+              id: item.productId,
+              status: "ACTIVE",
+              stock: {
+                gte: item.quantity,
+              },
+            },
+            data: {
+              stock: {
+                decrement: item.quantity,
+              },
+            },
+          });
+
+          if (updated.count !== 1) {
+            throw new Error(
+              `Stock changed while checking out product "${item.productId}".`,
+            );
+          }
         }
-      }
 
-      await database.cart.update({
-        where: {
-          id: cartId,
+        await database.cart.update({
+          where: {
+            id: cartId,
+          },
+          data: {
+            status: "CHECKED_OUT",
+          },
+        });
+
+        return createdOrder;
+      },
+    );
+
+    /*
+     * Checkout creates the commercial order first.
+     *
+     * PaymentService then creates the payment intent
+     * using the existing Financial Core payment model.
+     *
+     * No financial transaction is recognized here.
+     * Funds enter the Financial Core only when the payment
+     * provider is successfully confirmed.
+     */
+    let payment: PaymentResult;
+
+    try {
+      payment = await this.paymentService.createPayment({
+        userId,
+        orderId: order.id,
+        idempotencyKey: paymentIdempotencyKey,
+        provider: input.provider,
+        metadata: {
+          ...(input.metadata ?? {}),
+          checkout: {
+            cartId,
+            orderId: order.id,
+          },
         },
-        data: {
-          status: "CHECKED_OUT",
-        },
+        correlationId: input.correlationId,
+        requestId: input.requestId,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
       });
+    } catch (error) {
+      /*
+       * The order intentionally remains PENDING.
+       *
+       * This is recoverable through the existing payment
+       * API and avoids inventing a second financial engine.
+       */
+      console.error(
+        "[CHECKOUT_PAYMENT_INTENT_ERROR]",
+        {
+          orderId: order.id,
+          userId,
+          error,
+        },
+      );
 
-      return createdOrder;
-    });
+      throw new Error(
+        `Order ${order.id} was created, but the payment intent could not be created.`,
+      );
+    }
 
     return {
       orderId: order.id,
@@ -159,6 +251,7 @@ export class CheckoutService {
       subtotal,
       total: Number(order.total),
       status: order.status,
+      payment,
       items: order.items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
