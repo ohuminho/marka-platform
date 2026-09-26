@@ -1,24 +1,13 @@
-import { WalletService } from "@/services/wallet/wallet.service";
-
-const walletService = new WalletService();
-
-
-export async function POST(
-  request: Request
-) {
-
-  const body = await request.json();
-
-
-  const result =
-    await walletService.deposit({
-      walletId: body.walletId,
-      amount: body.amount,
-      reference: body.reference,
-      currency: body.currency,
-      metadata: body.metadata,
-    });
-
-
-  return Response.json(result);
+export async function POST() {
+  return Response.json(
+    {
+      message:
+        "Wallet deposits are processed through the MARKA Payment flow. Direct wallet balance mutation is disabled.",
+      code:
+        "WALLET_DEPOSIT_REQUIRES_PAYMENT_FLOW",
+    },
+    {
+      status: 409,
+    }
+  );
 }
