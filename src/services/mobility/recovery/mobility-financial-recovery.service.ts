@@ -32,6 +32,29 @@ interface TransactionRow {
   reference: string;
 }
 
+interface MobilityRidePaymentRow {
+  id: string;
+  finalFareMinor: bigint;
+  commissionAmountMinor: bigint;
+  paymentMethod: string;
+  status: string;
+  currency: string;
+  driverId: string | null;
+}
+
+interface MobilitySettlementRow {
+  id: string;
+  status: string;
+  driverNetAmountMinor: bigint;
+  cashObligationSettledMinor: bigint;
+  cashObligationAmountMinor: bigint;
+  financialTransactionId: string | null;
+  commissionTransactionId: string | null;
+  cashObligationSettlementTransactionId: string | null;
+  vendorPayableTransactionId: string | null;
+  completedAt: Date | null;
+}
+
 export class MobilityFinancialRecoveryService {
   private readonly financialAuditService =
     new FinancialAuditService();
@@ -48,7 +71,7 @@ export class MobilityFinancialRecoveryService {
     },
   ) {
     const paymentRows =
-      await prisma.$queryRaw<any[]>`
+      await prisma.$queryRaw<MobilityRidePaymentRow[]>`
         SELECT
           *
         FROM "MobilityRidePayment"
@@ -76,7 +99,7 @@ export class MobilityFinancialRecoveryService {
     }
 
     const settlementRows =
-      await prisma.$queryRaw<any[]>`
+      await prisma.$queryRaw<MobilitySettlementRow[]>`
         SELECT
           *
         FROM "MobilitySettlement"
@@ -425,8 +448,8 @@ export class MobilityFinancialRecoveryService {
 
   private async reconcileFinancialTransactions(
     input: {
-      settlement: any;
-      payment: any;
+      settlement: MobilitySettlementRow;
+      payment: MobilityRidePaymentRow;
       grossFareMinor: bigint;
       commissionMinor: bigint;
       driverNetMinor: bigint;
@@ -697,7 +720,7 @@ export class MobilityFinancialRecoveryService {
     },
   ) {
     const paymentRows =
-      await prisma.$queryRaw<any[]>`
+      await prisma.$queryRaw<MobilityRidePaymentRow[]>`
         SELECT
           *
         FROM "MobilityRidePayment"
@@ -876,7 +899,7 @@ export class MobilityFinancialRecoveryService {
       "DIGITAL"
     ) {
       const settlements =
-        await prisma.$queryRaw<any[]>`
+        await prisma.$queryRaw<MobilitySettlementRow[]>`
           SELECT
             *
           FROM "MobilitySettlement"
