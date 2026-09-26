@@ -1,22 +1,11 @@
-import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
-import AppShell from "@/frontend/shell/AppShell";
 import WalletDashboard from "@/frontend/features/wallet/components/WalletDashboard";
-
+import PaymentHistory from "@/frontend/features/wallet/components/PaymentHistory";
 
 export default function WalletPage() {
-
   return (
-
-    <DynamicBackground>
-
-      <AppShell>
-
-        <WalletDashboard />
-
-      </AppShell>
-
-    </DynamicBackground>
-
+    <main className="space-y-10">
+      <WalletDashboard />
+      <PaymentHistory />
+    </main>
   );
-
 }
