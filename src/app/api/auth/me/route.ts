@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { NextRequest } from "next/server";
 
 import { prisma } from "@/database/client/prisma";
 import { AuthConfig } from "@/core/authentication/auth.config";
@@ -9,7 +10,9 @@ import {
   authorizationService,
 } from "@/core/authorization/authorization.service";
 
-export async function GET() {
+export async function GET(
+  request: NextRequest
+) {
   try {
     const cookieStore =
       await cookies();
@@ -41,6 +44,11 @@ export async function GET() {
       );
     }
 
+    const requestedOrganizationId =
+      request.nextUrl.searchParams.get(
+        "organizationId"
+      ) ?? undefined;
+
     const user =
       await prisma.user.findUnique({
         where: {
@@ -53,6 +61,7 @@ export async function GET() {
           role: true,
           status: true,
           emailVerifiedAt: true,
+
           profile: {
             select: {
               displayName: true,
@@ -63,6 +72,7 @@ export async function GET() {
               timezone: true,
             },
           },
+
           memberships: {
             where: {
               status: "ACTIVE",
@@ -70,8 +80,10 @@ export async function GET() {
                 status: "ACTIVE",
               },
             },
+
             select: {
               organizationId: true,
+
               organization: {
                 select: {
                   id: true,
@@ -112,9 +124,20 @@ export async function GET() {
       );
     }
 
+    const membershipOrganizationIds =
+      user.memberships.map(
+        (membership) =>
+          membership.organizationId
+      );
+
     const organizationId =
-      user.memberships[0]
-        ?.organizationId;
+      requestedOrganizationId &&
+      membershipOrganizationIds.includes(
+        requestedOrganizationId
+      )
+        ? requestedOrganizationId
+        : user.memberships[0]
+            ?.organizationId;
 
     const authorization =
       await authorizationService.authorize(
@@ -123,6 +146,38 @@ export async function GET() {
           organizationId,
         }
       );
+
+    if (
+      !authorization.allowed ||
+      !authorization.organizationId
+    ) {
+      return Response.json(
+        {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            emailVerifiedAt:
+              user.emailVerifiedAt,
+            profile: user.profile,
+          },
+
+          organizations:
+            user.memberships.map(
+              (membership) =>
+                membership.organization
+            ),
+
+          authorization: {
+            organizationId: undefined,
+            roles: [],
+            permissions: [],
+          },
+        }
+      );
+    }
 
     return Response.json({
       user: {
@@ -135,6 +190,7 @@ export async function GET() {
           user.emailVerifiedAt,
         profile: user.profile,
       },
+
       session: {
         id: session.id,
         expiresAt:
@@ -144,11 +200,13 @@ export async function GET() {
         lastSeenAt:
           session.lastSeenAt,
       },
+
       organizations:
         user.memberships.map(
           (membership) =>
             membership.organization
         ),
+
       authorization: {
         organizationId:
           authorization.organizationId,
