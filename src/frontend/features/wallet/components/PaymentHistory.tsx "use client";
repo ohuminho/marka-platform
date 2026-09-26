@@ -1,0 +1,207 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface Payment {
+  id: string;
+  orderId: string | null;
+  transactionId: string | null;
+  amountMinor: string;
+  currency: string;
+  status: string;
+  provider: string | null;
+  createdAt: string;
+}
+
+interface PaymentHistoryProps {
+  limit?: number;
+}
+
+function formatAmount(
+  amountMinor: string,
+  currency: string
+) {
+  const amount =
+    Number(amountMinor) / 100;
+
+  return new Intl.NumberFormat(
+    undefined,
+    {
+      style: "currency",
+      currency,
+    }
+  ).format(amount);
+}
+
+function formatDate(
+  value: string
+) {
+  return new Intl.DateTimeFormat(
+    undefined,
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }
+  ).format(
+    new Date(value)
+  );
+}
+
+function statusLabel(
+  status: string
+) {
+  return status
+    .toLowerCase()
+    .replaceAll("_", " ");
+}
+
+export default function PaymentHistory({
+  limit = 10,
+}: PaymentHistoryProps) {
+  const [
+    payments,
+    setPayments,
+  ] = useState<Payment[]>([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    const load =
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          const response =
+            await fetch(
+              `/api/payments?limit=${limit}`,
+              {
+                credentials:
+                  "include",
+                cache:
+                  "no-store",
+              }
+            );
+
+          const data =
+            await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              data.message ??
+                "Unable to load payments."
+            );
+          }
+
+          setPayments(
+            data.items ?? []
+          );
+        } catch (error) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load payments."
+          );
+        } finally {
+          setLoading(false);
+        }
+      };
+
+    load();
+  }, [limit]);
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold">
+          Payment history
+        </h2>
+
+        <p className="text-sm text-neutral-400">
+          Payments processed through MARKA Financial Core.
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-3xl border border-white/10">
+        {loading && (
+          <div className="p-6 text-sm text-neutral-400">
+            Loading payments...
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="p-6 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        {!loading &&
+          !error &&
+          payments.length === 0 && (
+            <div className="p-6 text-sm text-neutral-400">
+              No payments yet.
+            </div>
+          )}
+
+        {!loading &&
+          !error &&
+          payments.length > 0 && (
+            <div className="divide-y divide-white/10">
+              {payments.map(
+                (payment) => (
+                  <div
+                    key={
+                      payment.id
+                    }
+                    className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {payment.orderId
+                          ? `Order ${payment.orderId.slice(
+                              0,
+                              8
+                            )}`
+                          : "MARKA payment"}
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-400">
+                        {formatDate(
+                          payment.createdAt
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm capitalize text-neutral-400">
+                        {statusLabel(
+                          payment.status
+                        )}
+                      </span>
+
+                      <span className="font-semibold">
+                        {formatAmount(
+                          payment.amountMinor,
+                          payment.currency
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+      </div>
+    </section>
+  );
+}
