@@ -25,58 +25,60 @@ export default function DeliveryAgentManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = async () => {
-    if (!activeOrganization?.id || !hasPermission("DELIVERY_AGENT_MANAGE")) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch(
-        `/api/delivery/agents?organizationId=${encodeURIComponent(activeOrganization.id)}&limit=100`,
-        { credentials: "include", cache: "no-store" },
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.code ?? "DELIVERY_AGENT_LIST_FAILED");
-      }
-
-      setAgents(Array.isArray(data.items) ? data.items : []);
-      setTotal(Number(data.total ?? 0));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load delivery agents.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      if (!activeOrganization?.id || !hasPermission("DELIVERY_AGENT_MANAGE")) {
+        setLoading(false);
+        return;
+      }
+
+      const load = async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const response = await fetch(
+            `/api/delivery/agents?organizationId=${encodeURIComponent(activeOrganization.id)}&limit=100`,
+            { credentials: "include", cache: "no-store" },
+          );
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.code ?? "DELIVERY_AGENT_LIST_FAILED");
+          setAgents(Array.isArray(data.items) ? data.items : []);
+          setTotal(Number(data.total ?? 0));
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Unable to load delivery agents.");
+        } finally {
+          setLoading(false);
+        }
+      };
+
       void load();
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [load]);
+  }, [activeOrganization?.id, hasPermission]);
 
-  const activate = async (agentId: string) => {
+  const updateStatus = async (agentId: string, status: string) => {
     setError("");
-
-    const response = await fetch(`/api/delivery/agents/${agentId}/activate`, {
-      method: "POST",
+    const response = await fetch(`/api/delivery/agents/${agentId}/status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
       credentials: "include",
+      body: JSON.stringify({ status }),
     });
     const data = await response.json();
 
     if (!response.ok) {
-      setError(data.code ?? "DELIVERY_AGENT_ACTIVATION_FAILED");
+      setError(data.code ?? "DELIVERY_AGENT_STATUS_UPDATE_FAILED");
       return;
     }
 
-    await load();
+    setAgents((current) =>
+      current.map((agent) =>
+        agent.id === agentId
+          ? { ...agent, status: data.agent.status, availability: data.agent.availability }
+          : agent,
+      ),
+    );
   };
 
   if (!activeOrganization) {
@@ -134,15 +136,10 @@ export default function DeliveryAgentManagement() {
                       : "No location"}
                   </td>
                   <td className="p-4">
-                    {agent.status !== "ACTIVE" && (
-                      <button
-                        type="button"
-                        onClick={() => void activate(agent.id)}
-                        className="rounded-lg border px-3 py-2"
-                      >
-                        Activate
-                      </button>
-                    )}
+                    {agent.status !== "ACTIVE" && <button type="button" onClick={() => void updateStatus(agent.id, "ACTIVE")} className="rounded-lg border px-3 py-2">Activate</button>}
+                    {agent.status === "ACTIVE" && <button type="button" onClick={() => void updateStatus(agent.id, "SUSPENDED")} className="rounded-lg border px-3 py-2">Suspend</button>}
+                    {agent.status === "ACTIVE" && <button type="button" onClick={() => void updateStatus(agent.id, "BLOCKED")} className="rounded-lg border px-3 py-2">Block</button>}
+                    {agent.status !== "INACTIVE" && <button type="button" onClick={() => void updateStatus(agent.id, "INACTIVE")} className="rounded-lg border px-3 py-2">Deactivate</button>}
                   </td>
                 </tr>
               ))}
