@@ -51,6 +51,12 @@ export class CustomerDeliveryTrackingService {
         })
       : null;
 
+    const locationFreshnessThresholdMs = 5 * 60 * 1000;
+    const locationTimestamp = agent?.lastLocationAt?.getTime() ?? 0;
+    const locationFresh =
+      locationTimestamp > 0 &&
+      Date.now() - locationTimestamp <= locationFreshnessThresholdMs;
+
     return {
       dispatchId: dispatch.id,
       status: dispatch.status,
@@ -62,6 +68,7 @@ export class CustomerDeliveryTrackingService {
             latitude: agent.latitude === null ? null : Number(agent.latitude),
             longitude: agent.longitude === null ? null : Number(agent.longitude),
             lastLocationAt: agent.lastLocationAt,
+            locationFresh,
           }
         : null,
     };
