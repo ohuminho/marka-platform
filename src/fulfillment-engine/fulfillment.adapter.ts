@@ -46,24 +46,40 @@ export class FulfillmentAdapter implements FulfillmentPort {
       return this.toContract(existing);
     }
 
-    const request = await prisma.fulfillmentRequest.create({
-      data: {
-        id: crypto.randomUUID(),
-        organizationId: input.organizationId,
-        orderId: input.orderId,
-        pickupType: input.pickup.type,
-        pickupId: input.pickup.id,
-        destinationType: input.destination.type,
-        destinationId: input.destination.id,
-        status: "REQUESTED",
-        assignedAgentId: input.assignedAgentId,
-        exceptionCode: input.exceptionCode,
-        metadata: {
-          ...(input.metadata ?? {}),
-          correlationId: correlationId ?? null,
-        },
+    const request = await prisma.$transaction(
+      async (database) => {
+        const created = await database.fulfillmentRequest.create({
+          data: {
+            id: crypto.randomUUID(),
+            organizationId: input.organizationId,
+            orderId: input.orderId,
+            pickupType: input.pickup.type,
+            pickupId: input.pickup.id,
+            destinationType: input.destination.type,
+            destinationId: input.destination.id,
+            status: "REQUESTED",
+            assignedAgentId: input.assignedAgentId,
+            exceptionCode: input.exceptionCode,
+            metadata: {
+              ...(input.metadata ?? {}),
+              correlationId: correlationId ?? null,
+            },
+          },
+        });
+
+        await database.order.updateMany({
+          where: {
+            id: input.orderId,
+            status: "CONFIRMED",
+          },
+          data: {
+            status: "PROCESSING",
+          },
+        });
+
+        return created;
       },
-    });
+    );
 
     await this.recordEvent(
       "fulfillment.requested",
@@ -205,6 +221,43 @@ export class FulfillmentAdapter implements FulfillmentPort {
               : null,
         },
       });
+
+      const orderStatusByFulfillmentStatus: Partial<
+        Record<FulfillmentStatus, "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED">
+      > = {
+        PREPARING: "PROCESSING",
+        READY_FOR_PICKUP: "PROCESSING",
+        PICKED_UP: "SHIPPED",
+        IN_TRANSIT: "SHIPPED",
+        COMPLETED: "DELIVERED",
+        CANCELLED: "CANCELLED",
+      };
+
+      const nextOrderStatus =
+        orderStatusByFulfillmentStatus[status];
+
+      if (nextOrderStatus) {
+        const allowedCurrentStatuses =
+          nextOrderStatus === "CANCELLED"
+            ? ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED"]
+            : nextOrderStatus === "SHIPPED"
+              ? ["CONFIRMED", "PROCESSING"]
+              : nextOrderStatus === "DELIVERED"
+                ? ["SHIPPED", "PROCESSING"]
+                : ["CONFIRMED", "PROCESSING"];
+
+        await database.order.updateMany({
+          where: {
+            id: result.orderId,
+            status: {
+              in: allowedCurrentStatuses,
+            },
+          },
+          data: {
+            status: nextOrderStatus,
+          },
+        });
+      }
 
       if (status === "COMPLETED" || status === "CANCELLED") {
         await database.fulfillmentAssignment.updateMany({
