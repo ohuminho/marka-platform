@@ -56,6 +56,30 @@ export async function POST(request: Request) {
         ? body.provider.trim()
         : undefined;
 
+    const delivery =
+      body?.delivery &&
+      typeof body.delivery === "object" &&
+      !Array.isArray(body.delivery)
+        ? {
+            address:
+              typeof body.delivery.address === "string"
+                ? body.delivery.address.trim()
+                : "",
+            latitude:
+              typeof body.delivery.latitude === "number"
+                ? body.delivery.latitude
+                : Number.NaN,
+            longitude:
+              typeof body.delivery.longitude === "number"
+                ? body.delivery.longitude
+                : Number.NaN,
+            instructions:
+              typeof body.delivery.instructions === "string"
+                ? body.delivery.instructions.trim()
+                : undefined,
+          }
+        : undefined;
+
     const metadata =
       body?.metadata &&
       typeof body.metadata === "object" &&
@@ -91,6 +115,7 @@ export async function POST(request: Request) {
       cartId,
       paymentIdempotencyKey,
       provider,
+      delivery,
       metadata,
       correlationId:
         request.headers.get("x-correlation-id") ??
@@ -120,6 +145,22 @@ export async function POST(request: Request) {
       error instanceof Error
         ? error.message
         : "Checkout failed.";
+
+    if (message === "Delivery destination is required.") {
+      return NextResponse.json({ message, code: "DELIVERY_DESTINATION_REQUIRED" }, { status: 400 });
+    }
+
+    if (message === "Delivery address is required.") {
+      return NextResponse.json({ message, code: "DELIVERY_ADDRESS_REQUIRED" }, { status: 400 });
+    }
+
+    if (message.startsWith("Delivery latitude")) {
+      return NextResponse.json({ message, code: "INVALID_DELIVERY_LATITUDE" }, { status: 400 });
+    }
+
+    if (message.startsWith("Delivery longitude")) {
+      return NextResponse.json({ message, code: "INVALID_DELIVERY_LONGITUDE" }, { status: 400 });
+    }
 
     if (
       message ===
