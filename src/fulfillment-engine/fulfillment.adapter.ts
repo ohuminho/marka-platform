@@ -12,6 +12,7 @@ import type {
 } from "@/fulfillment-engine/fulfillment.contracts";
 import { prisma } from "@/database/client/prisma";
 import { dispatchAdapter } from "@/dispatch-engine/dispatch.adapter";
+import { inventoryService } from "@/services/inventory/inventory.service";
 
 export interface CreateFulfillmentCommand {
   organizationId: string;
@@ -398,6 +399,19 @@ export class FulfillmentAdapter implements FulfillmentPort {
         },
       });
 
+      if (status === "COMPLETED" || status === "CANCELLED") {
+        const orderItems = await database.orderItem.findMany({
+          where: { orderId: current.orderId },
+          select: { productId: true, quantity: true },
+        });
+
+        if (status === "COMPLETED") {
+          await inventoryService.consumeWithinTransaction(database, orderItems);
+        } else {
+          await inventoryService.releaseWithinTransaction(database, orderItems);
+        }
+      }
+
       const orderStatusByFulfillmentStatus: Partial<
         Record<FulfillmentStatus, OrderStatus>
       > = {
@@ -533,6 +547,12 @@ export class FulfillmentAdapter implements FulfillmentPort {
           exceptionCode: null,
         },
       });
+
+      const orderItems = await database.orderItem.findMany({
+        where: { orderId: current.orderId },
+        select: { productId: true, quantity: true },
+      });
+      await inventoryService.consumeWithinTransaction(database, orderItems);
 
       await database.order.updateMany({
         where: {
