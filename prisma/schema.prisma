@@ -1013,6 +1013,11 @@ model Order {
   total    Decimal     @default(0) @db.Decimal(20, 4)
   currency String      @default("AOA") @db.Char(3)
 
+  deliveryAddress      String?
+  deliveryLatitude     Decimal? @db.Decimal(10, 7)
+  deliveryLongitude    Decimal? @db.Decimal(10, 7)
+  deliveryInstructions String?
+
   customer     User          @relation("OrderCustomer", fields: [userId], references: [id])
   items        OrderItem[]
   payments     Payment[]
