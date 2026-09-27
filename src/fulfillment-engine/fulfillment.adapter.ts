@@ -467,6 +467,129 @@ export class FulfillmentAdapter implements FulfillmentPort {
     return this.toContract(updated);
   }
 
+  async completeDeliveryDispatch(
+    dispatchId: string,
+    fulfillmentId: string,
+    agentId: string,
+  ): Promise<FulfillmentRequest> {
+    if (!dispatchId.trim() || !fulfillmentId.trim() || !agentId.trim()) {
+      throw new Error("Delivery completion context is required.");
+    }
+
+    const current = await prisma.fulfillmentRequest.findUnique({
+      where: { id: fulfillmentId },
+      select: {
+        id: true,
+        organizationId: true,
+        orderId: true,
+        status: true,
+        pickupType: true,
+        pickupId: true,
+        destinationType: true,
+        destinationId: true,
+        assignedAgentId: true,
+        exceptionCode: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!current) {
+      throw new Error("Fulfillment not found.");
+    }
+
+    if (current.status !== "IN_TRANSIT") {
+      throw new Error(
+        `Invalid fulfillment transition: ${current.status} -> COMPLETED.`,
+      );
+    }
+
+    const updated = await prisma.$transaction(async (database) => {
+      const dispatch = await database.dispatchRequest.findFirst({
+        where: {
+          id: dispatchId,
+          organizationId: current.organizationId,
+          serviceType: "DELIVERY",
+          subjectType: "FULFILLMENT",
+          subjectId: fulfillmentId,
+          acceptedAgentId: agentId,
+          status: "ACCEPTED",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!dispatch) {
+        throw new Error("Delivery dispatch is not active for completion.");
+      }
+
+      const result = await database.fulfillmentRequest.update({
+        where: {
+          id: fulfillmentId,
+        },
+        data: {
+          status: "COMPLETED",
+          exceptionCode: null,
+        },
+      });
+
+      await database.order.updateMany({
+        where: {
+          id: result.orderId,
+          status: {
+            in: ["SHIPPED", "PROCESSING"],
+          },
+        },
+        data: {
+          status: "DELIVERED",
+        },
+      });
+
+      await database.fulfillmentAssignment.updateMany({
+        where: {
+          fulfillmentId,
+          acceptedAt: null,
+        },
+        data: {
+          acceptedAt: new Date(),
+        },
+      });
+
+      await database.dispatchRequest.update({
+        where: { id: dispatch.id },
+        data: { status: "COMPLETED" },
+      });
+
+      await database.deliveryAgent.updateMany({
+        where: {
+          id: agentId,
+          organizationId: current.organizationId,
+          availability: "BUSY",
+        },
+        data: {
+          availability: "AVAILABLE",
+        },
+      });
+
+      return result;
+    });
+
+    await this.recordEvent(
+      "fulfillment.completed",
+      fulfillmentId,
+      updated.organizationId,
+      {
+        fromStatus: current.status,
+        toStatus: "COMPLETED",
+        dispatchId,
+        agentId,
+      },
+    );
+
+    return this.toContract(updated);
+  }
+
   async create(
     command: CreateFulfillmentCommand,
     context: PolicyContext,
