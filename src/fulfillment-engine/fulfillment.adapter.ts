@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type {
   EntityRef,
   PolicyContext,
@@ -414,7 +415,7 @@ export class FulfillmentAdapter implements FulfillmentPort {
         aggregateType: "FULFILLMENT",
         aggregateId,
         eventType,
-        payload,
+        payload: payload as Prisma.InputJsonValue,
         status: "PENDING",
       },
     });
