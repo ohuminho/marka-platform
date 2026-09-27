@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 type Agent = {
@@ -25,7 +25,7 @@ export default function DeliveryAgentManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
+  const load = async () => {
     if (!activeOrganization?.id || !hasPermission("DELIVERY_AGENT_MANAGE")) {
       setLoading(false);
       return;
@@ -52,7 +52,7 @@ export default function DeliveryAgentManagement() {
     } finally {
       setLoading(false);
     }
-  }, [activeOrganization?.id, hasPermission]);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
