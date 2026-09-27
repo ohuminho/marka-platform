@@ -1,5 +1,7 @@
 import { prisma } from "@/database/client/prisma";
 
+import { inventoryService } from "@/services/inventory/inventory.service";
+
 import {
   PaymentService,
   type PaymentResult,
@@ -203,28 +205,13 @@ export class CheckoutService {
           },
         });
 
-        for (const item of preparedItems) {
-          const updated = await database.product.updateMany({
-            where: {
-              id: item.productId,
-              status: "ACTIVE",
-              stock: {
-                gte: item.quantity,
-              },
-            },
-            data: {
-              stock: {
-                decrement: item.quantity,
-              },
-            },
-          });
-
-          if (updated.count !== 1) {
-            throw new Error(
-              `Stock changed while checking out product "${item.productId}".`,
-            );
-          }
-        }
+        await inventoryService.reserveWithinTransaction(
+          database,
+          preparedItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+        );
 
         await database.cart.update({
           where: {
@@ -270,12 +257,41 @@ export class CheckoutService {
         userAgent: input.userAgent,
       });
     } catch (error) {
-      /*
-       * The order intentionally remains PENDING.
-       *
-       * This is recoverable through the existing payment
-       * API and avoids inventing a second financial engine.
-       */
+      try {
+        await prisma.$transaction(async (database) => {
+          await inventoryService.releaseWithinTransaction(
+            database,
+            preparedItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+            })),
+          );
+
+          await database.cart.update({
+            where: {
+              id: cartId,
+            },
+            data: {
+              status: "ACTIVE",
+            },
+          });
+        });
+      } catch (rollbackError) {
+        console.error(
+          "[CHECKOUT_INVENTORY_ROLLBACK_ERROR]",
+          {
+            orderId: order.id,
+            userId,
+            error,
+            rollbackError,
+          },
+        );
+
+        throw new Error(
+          `Order ${order.id} was created, but payment creation and inventory rollback both failed.`,
+        );
+      }
+
       console.error(
         "[CHECKOUT_PAYMENT_INTENT_ERROR]",
         {
