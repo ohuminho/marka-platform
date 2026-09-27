@@ -11,6 +11,7 @@ import type {
   FulfillmentStatus,
 } from "@/fulfillment-engine/fulfillment.contracts";
 import { prisma } from "@/database/client/prisma";
+import { dispatchAdapter } from "@/dispatch-engine/dispatch.adapter";
 
 export interface CreateFulfillmentCommand {
   organizationId: string;
@@ -44,7 +45,8 @@ export class FulfillmentAdapter implements FulfillmentPort {
     });
 
     if (existing) {
-      return this.toContract(existing);
+      const ensured = await this.ensureDeliveryDispatch(existing);
+      return this.toContract(ensured);
     }
 
     const request = await prisma.$transaction(
@@ -82,6 +84,8 @@ export class FulfillmentAdapter implements FulfillmentPort {
       },
     );
 
+    const fulfilled = await this.ensureDeliveryDispatch(request);
+
     await this.recordEvent(
       "fulfillment.requested",
       request.id,
@@ -93,7 +97,178 @@ export class FulfillmentAdapter implements FulfillmentPort {
       },
     );
 
-    return this.toContract(request);
+    return this.toContract(fulfilled);
+  }
+
+  private async ensureDeliveryDispatch(request: {
+    id: string;
+    organizationId: string;
+    orderId: string;
+    pickupType: string;
+    pickupId: string;
+    destinationType: string;
+    destinationId: string;
+    metadata: Prisma.JsonValue | null;
+    status: string;
+    assignedAgentId: string | null;
+    exceptionCode: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    if (
+      request.pickupType !== "STORE" ||
+      request.destinationType !== "CUSTOMER"
+    ) {
+      return request;
+    }
+
+    const metadata = this.jsonRecord(request.metadata);
+    const delivery = this.jsonRecord(metadata.delivery);
+    const latitude = Number(delivery.latitude);
+    const longitude = Number(delivery.longitude);
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) {
+      return request;
+    }
+
+    if (
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      await this.recordEvent(
+        "fulfillment.dispatch.invalid_destination",
+        request.id,
+        request.organizationId,
+        {
+          orderId: request.orderId,
+          latitude,
+          longitude,
+        },
+      );
+      return request;
+    }
+
+    const store = await prisma.store.findUnique({
+      where: {
+        id: request.pickupId,
+      },
+      select: {
+        id: true,
+        latitude: true,
+        longitude: true,
+      },
+    });
+
+    if (
+      !store ||
+      store.latitude === null ||
+      store.longitude === null
+    ) {
+      return request;
+    }
+
+    const existingDispatch =
+      await prisma.dispatchRequest.findUnique({
+        where: {
+          subjectType_subjectId: {
+            subjectType: "FULFILLMENT",
+            subjectId: request.id,
+          },
+        },
+      });
+
+    if (existingDispatch) {
+      return request;
+    }
+
+    try {
+      const dispatch =
+        await dispatchAdapter.createRequest({
+          organizationId: request.organizationId,
+          serviceType: "DELIVERY",
+          subject: {
+            type: "FULFILLMENT",
+            id: request.id,
+          },
+          origin: {
+            latitude: Number(store.latitude),
+            longitude: Number(store.longitude),
+          },
+          destination: {
+            latitude,
+            longitude,
+          },
+          candidatePolicyRef: "DELIVERY_STANDARD",
+          metadata: {
+            source: "FULFILLMENT_REQUESTED",
+            orderId: request.orderId,
+            fulfillmentId: request.id,
+            deliveryAddress:
+              typeof delivery.address === "string"
+                ? delivery.address
+                : null,
+            deliveryInstructions:
+              typeof delivery.instructions === "string"
+                ? delivery.instructions
+                : null,
+          },
+        });
+
+      return prisma.fulfillmentRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          metadata: {
+            ...metadata,
+            dispatchRequestId: dispatch.id,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    } catch (error) {
+      const racedDispatch =
+        await prisma.dispatchRequest.findUnique({
+          where: {
+            subjectType_subjectId: {
+              subjectType: "FULFILLMENT",
+              subjectId: request.id,
+            },
+          },
+        });
+
+      if (racedDispatch) {
+        return request;
+      }
+
+      console.error(
+        "[FULFILLMENT_DISPATCH_CREATE_ERROR]",
+        {
+          fulfillmentId: request.id,
+          orderId: request.orderId,
+          error,
+        },
+      );
+
+      await this.recordEvent(
+        "fulfillment.dispatch.create_failed",
+        request.id,
+        request.organizationId,
+        {
+          orderId: request.orderId,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unknown dispatch creation error.",
+        },
+      );
+
+      return request;
+    }
   }
 
   async assign(
