@@ -15,6 +15,7 @@ import { accountService } from "@/services/accounts/account.service";
 import { financialAllocationService } from "@/services/finance/allocation/financial-allocation.service";
 
 import { transactionService } from "@/services/transactions/transaction.service";
+import { fulfillmentAdapter } from "@/fulfillment-engine/fulfillment.adapter";
 
 import { getPaymentProviderConfig } from "@/config/payment-provider.config";
 
@@ -403,6 +404,14 @@ export class PaymentService {
               },
             });
 
+          await this.finalizeOrderAfterPayment({
+            orderId: completed.payment.orderId,
+            userId: input.userId,
+            paymentId: completed.payment.id,
+            organizationId,
+            correlationId: input.correlationId,
+          });
+
           await this.financialAuditService.recordPayment({
             organizationId,
             actorUserId:
@@ -483,6 +492,13 @@ export class PaymentService {
       payment.status ===
       PaymentStatus.COMPLETED
     ) {
+      await this.finalizeOrderAfterPayment({
+        orderId: payment.orderId,
+        userId: input.userId,
+        paymentId: payment.id,
+        correlationId: input.correlationId,
+      });
+
       return this.toResult(payment);
     }
 
@@ -977,6 +993,128 @@ export class PaymentService {
       );
 
     return result.responseBody as PaymentResult;
+  }
+
+  private async finalizeOrderAfterPayment(input: {
+    orderId: string | null;
+    userId: string;
+    paymentId: string;
+    organizationId?: string;
+    correlationId?: string;
+  }): Promise<void> {
+    if (!input.orderId) {
+      throw new Error(
+        "Completed payment is not associated with an order.",
+      );
+    }
+
+    const organizationId =
+      input.organizationId ??
+      (
+        await prisma.organizationMembership.findFirst({
+          where: {
+            userId: input.userId,
+            status: "ACTIVE",
+            organization: {
+              status: "ACTIVE",
+            },
+          },
+          select: {
+            organizationId: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        })
+      )?.organizationId;
+
+    if (!organizationId) {
+      throw new Error(
+        "Active organization membership not found.",
+      );
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        id: input.orderId,
+        userId: input.userId,
+      },
+      select: {
+        id: true,
+        status: true,
+        items: {
+          select: {
+            storeId: true,
+            product: {
+              select: {
+                store: {
+                  select: {
+                    id: true,
+                    location: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error("Order not found.");
+    }
+
+    const storeIds = [
+      ...new Set(
+        order.items
+          .map(
+            (item) =>
+              item.storeId ??
+              item.product.store.id,
+          ),
+      ),
+    ];
+
+    if (storeIds.length !== 1) {
+      throw new Error(
+        "Order cannot be fulfilled because it does not resolve to exactly one store.",
+      );
+    }
+
+    if (order.status === "PENDING") {
+      await prisma.order.updateMany({
+        where: {
+          id: order.id,
+          userId: input.userId,
+          status: "PENDING",
+        },
+        data: {
+          status: "CONFIRMED",
+        },
+      });
+    }
+
+    await fulfillmentAdapter.request(
+      {
+        organizationId,
+        orderId: order.id,
+        pickup: {
+          type: "STORE",
+          id: storeIds[0],
+        },
+        destination: {
+          type: "CUSTOMER",
+          id: input.userId,
+        },
+        metadata: {
+          source: "ORDER_PAYMENT_CONFIRMED",
+          paymentId: input.paymentId,
+          storeLocation:
+            order.items[0]?.product.store.location ?? null,
+        },
+      },
+      input.correlationId,
+    );
   }
 
   async getPayment(
