@@ -205,6 +205,13 @@ export class DispatchAdapter implements DispatchPort {
       await this.requireRequest(requestId);
 
     if (
+      request.status === "ACCEPTED" &&
+      request.acceptedAgentId === agentId
+    ) {
+      return this.toContract(request);
+    }
+
+    if (
       request.status !== "ASSIGNED" &&
       request.status !== "OFFERED"
     ) {
@@ -222,41 +229,43 @@ export class DispatchAdapter implements DispatchPort {
       );
     }
 
-    if (request.serviceType === "DELIVERY") {
-      const candidate = await prisma.dispatchCandidate.findFirst({
-        where: {
-          dispatchRequestId: requestId,
-          agentId,
-          available: true,
-        },
-        select: { id: true },
-      });
+    const updated = await prisma.$transaction(async (database) => {
+      if (request.serviceType === "DELIVERY") {
+        const candidate = await database.dispatchCandidate.findFirst({
+          where: {
+            dispatchRequestId: requestId,
+            agentId,
+            available: true,
+          },
+          select: { id: true },
+        });
 
-      if (!candidate) {
-        throw new Error(
-          "Delivery agent is not an active dispatch candidate.",
-        );
+        if (!candidate) {
+          throw new Error(
+            "Delivery agent is not an active dispatch candidate.",
+          );
+        }
+
+        const claimed = await database.deliveryAgent.updateMany({
+          where: {
+            id: agentId,
+            organizationId: request.organizationId,
+            status: "ACTIVE",
+            availability: "AVAILABLE",
+          },
+          data: {
+            availability: "BUSY",
+          },
+        });
+
+        if (claimed.count !== 1) {
+          throw new Error(
+            "Delivery agent is not available.",
+          );
+        }
       }
 
-      const agent = await prisma.deliveryAgent.findFirst({
-        where: {
-          id: agentId,
-          organizationId: request.organizationId,
-          status: "ACTIVE",
-          availability: "AVAILABLE",
-        },
-        select: { id: true },
-      });
-
-      if (!agent) {
-        throw new Error(
-          "Delivery agent is not available.",
-        );
-      }
-    }
-
-    const updated =
-      await prisma.dispatchRequest.update({
+      const updatedRequest = await database.dispatchRequest.update({
         where: {
           id: requestId,
         },
@@ -266,12 +275,71 @@ export class DispatchAdapter implements DispatchPort {
         },
       });
 
-    if (request.serviceType === "DELIVERY") {
-      await prisma.deliveryAgent.update({
-        where: { id: agentId },
-        data: { availability: "BUSY" },
-      });
-    }
+      if (
+        request.serviceType === "DELIVERY" &&
+        request.subjectType === "FULFILLMENT"
+      ) {
+        const fulfillment = await database.fulfillmentRequest.findUnique({
+          where: {
+            id: request.subjectId,
+          },
+          select: {
+            id: true,
+            status: true,
+            organizationId: true,
+          },
+        });
+
+        if (!fulfillment) {
+          throw new Error("Fulfillment not found for delivery dispatch.");
+        }
+
+        if (fulfillment.organizationId !== request.organizationId) {
+          throw new Error(
+            "Fulfillment organization does not match dispatch organization.",
+          );
+        }
+
+        if (
+          fulfillment.status !== "REQUESTED" &&
+          fulfillment.status !== "ASSIGNED"
+        ) {
+          throw new Error(
+            "Fulfillment cannot be assigned from its current state.",
+          );
+        }
+
+        await database.fulfillmentAssignment.upsert({
+          where: {
+            fulfillmentId: fulfillment.id,
+          },
+          create: {
+            id: crypto.randomUUID(),
+            fulfillmentId: fulfillment.id,
+            agentId,
+            assignedAt: new Date(),
+            acceptedAt: new Date(),
+          },
+          update: {
+            agentId,
+            acceptedAt: new Date(),
+          },
+        });
+
+        await database.fulfillmentRequest.update({
+          where: {
+            id: fulfillment.id,
+          },
+          data: {
+            status: "ASSIGNED",
+            assignedAgentId: agentId,
+            exceptionCode: null,
+          },
+        });
+      }
+
+      return updatedRequest;
+    });
 
     await this.recordEvent(
       "dispatch.accepted",
