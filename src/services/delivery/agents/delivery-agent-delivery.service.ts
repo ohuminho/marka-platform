@@ -43,26 +43,6 @@ export interface DeliveryAgentDeliveryListResult {
   scope: DeliveryAgentDeliveryScope;
 }
 
-const ACTIVE_FULFILLMENT_STATUSES: Prisma.FulfillmentStatus[] = [
-  "ASSIGNED",
-  "PREPARING",
-  "READY_FOR_PICKUP",
-  "PICKED_UP",
-  "IN_TRANSIT",
-  "EXCEPTION",
-];
-
-const HISTORY_FULFILLMENT_STATUSES: Prisma.FulfillmentStatus[] = [
-  "COMPLETED",
-  "CANCELLED",
-];
-
-const HISTORY_DISPATCH_STATUSES: Prisma.DispatchStatus[] = [
-  "COMPLETED",
-  "CANCELLED",
-  "EXPIRED",
-];
-
 export class DeliveryAgentDeliveryService {
   async list(
     input: DeliveryAgentDeliveryListInput,
@@ -81,9 +61,20 @@ export class DeliveryAgentDeliveryService {
 
     const fulfillmentWhere: Prisma.FulfillmentRequestWhereInput =
       scope === "ACTIVE"
-        ? { status: { in: ACTIVE_FULFILLMENT_STATUSES } }
+        ? {
+            status: {
+              in: [
+                "ASSIGNED",
+                "PREPARING",
+                "READY_FOR_PICKUP",
+                "PICKED_UP",
+                "IN_TRANSIT",
+                "EXCEPTION",
+              ],
+            },
+          }
         : scope === "HISTORY"
-          ? { status: { in: HISTORY_FULFILLMENT_STATUSES } }
+          ? { status: { in: ["COMPLETED", "CANCELLED"] } }
           : {};
 
     const dispatchWhere: Prisma.DispatchRequestWhereInput = {
@@ -93,7 +84,7 @@ export class DeliveryAgentDeliveryService {
       ...(scope === "ACTIVE"
         ? { status: "ACCEPTED" }
         : scope === "HISTORY"
-          ? { status: { in: HISTORY_DISPATCH_STATUSES } }
+          ? { status: { in: ["COMPLETED", "CANCELLED", "EXPIRED"] } }
           : {}),
     };
 
