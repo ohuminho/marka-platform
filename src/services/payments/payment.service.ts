@@ -404,13 +404,15 @@ export class PaymentService {
               },
             });
 
-          await this.finalizeOrderAfterPayment({
-            orderId: completed.payment.orderId,
-            userId: input.userId,
-            paymentId: completed.payment.id,
-            organizationId,
-            correlationId: input.correlationId,
-          });
+          if (nextStatus === PaymentStatus.COMPLETED) {
+            await this.finalizeOrderAfterPayment({
+              orderId: updated.orderId,
+              userId: input.userId,
+              paymentId: updated.id,
+              organizationId,
+              correlationId: input.correlationId,
+            });
+          }
 
           await this.financialAuditService.recordPayment({
             organizationId,
