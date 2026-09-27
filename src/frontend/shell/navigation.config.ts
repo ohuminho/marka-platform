@@ -186,6 +186,16 @@ export const NavigationConfig = {
         },
 
         {
+          title: "Delivery Agents",
+          route: "/app/admin/delivery-agents",
+          description:
+            "Manage delivery operations and agents",
+          permissions: [
+            "DELIVERY_AGENT_MANAGE",
+          ],
+        },
+
+        {
           title: "Reports",
           route: "/app/admin/reports",
           description:
