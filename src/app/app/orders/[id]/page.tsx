@@ -107,6 +107,31 @@ function isConfirmablePayment(
   );
 }
 
+const DELIVERY_STAGES = [
+  "ASSIGNED",
+  "PREPARING",
+  "READY_FOR_PICKUP",
+  "PICKED_UP",
+  "IN_TRANSIT",
+  "COMPLETED",
+] as const;
+
+function deliveryStageIndex(
+  fulfillmentStatus: string | undefined
+) {
+  if (!fulfillmentStatus) {
+    return -1;
+  }
+
+  if (fulfillmentStatus === "EXCEPTION") {
+    return DELIVERY_STAGES.indexOf("IN_TRANSIT");
+  }
+
+  return DELIVERY_STAGES.indexOf(
+    fulfillmentStatus as (typeof DELIVERY_STAGES)[number]
+  );
+}
+
 export default function OrderDetailPage({
   params,
 }: OrderPageProps) {
@@ -423,7 +448,56 @@ export default function OrderDetailPage({
             </h2>
 
             {order.fulfillment ? (
-              <div className="mt-5 space-y-3 text-sm">
+              <div className="mt-5 space-y-5 text-sm">
+                <div className="space-y-3">
+                  {DELIVERY_STAGES.map((stage, index) => {
+                    const currentIndex = deliveryStageIndex(
+                      order.fulfillment?.status
+                    );
+                    const completed = currentIndex >= index;
+                    const current =
+                      order.fulfillment?.status === stage;
+
+                    return (
+                      <div
+                        key={stage}
+                        className="flex items-center gap-3"
+                      >
+                        <div
+                          className={[
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs",
+                            completed
+                              ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+                              : "border-white/10 bg-white/5 text-white/30",
+                          ].join(" ")}
+                        >
+                          {completed ? "✓" : index + 1}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={
+                              current
+                                ? "font-medium text-white"
+                                : completed
+                                  ? "text-white/70"
+                                  : "text-white/35"
+                            }
+                          >
+                            {label(stage)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {order.fulfillment.exceptionCode ? (
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-300">
+                    Delivery exception: {order.fulfillment.exceptionCode}
+                  </div>
+                ) : null}
+
+                <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-white/50">Fulfillment</span>
                   <span>{label(order.fulfillment.status)}</span>
@@ -457,11 +531,6 @@ export default function OrderDetailPage({
                   </div>
                 )}
 
-                {order.fulfillment.exceptionCode ? (
-                  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-300">
-                    {order.fulfillment.exceptionCode}
-                  </div>
-                ) : null}
               </div>
             ) : (
               <p className="mt-4 text-sm text-white/40">
