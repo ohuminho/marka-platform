@@ -40,14 +40,18 @@ export default function VendorSales() {
   }
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("marka.activeOrganizationId");
-    if (stored) {
-      setOrganizationId(stored);
-      void load(stored, "");
-    } else {
-      setLoading(false);
-      setError("Select an active organization first.");
-    }
+    const timer = window.setTimeout(() => {
+      const stored = window.localStorage.getItem("marka.activeOrganizationId");
+      if (stored) {
+        setOrganizationId(stored);
+        void load(stored, "");
+      } else {
+        setLoading(false);
+        setError("Select an active organization first.");
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   function changeStatus(value: string) {
