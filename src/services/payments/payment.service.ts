@@ -1052,6 +1052,10 @@ export class PaymentService {
       select: {
         id: true,
         status: true,
+        deliveryAddress: true,
+        deliveryLatitude: true,
+        deliveryLongitude: true,
+        deliveryInstructions: true,
         items: {
           select: {
             storeId: true,
@@ -1121,6 +1125,12 @@ export class PaymentService {
           paymentId: input.paymentId,
           storeLocation:
             order.items[0]?.product.store.location ?? null,
+          delivery: {
+            address: order.deliveryAddress,
+            latitude: order.deliveryLatitude,
+            longitude: order.deliveryLongitude,
+            instructions: order.deliveryInstructions,
+          },
         },
       },
       input.correlationId,
