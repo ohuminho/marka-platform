@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { AuthorizationService } from "@/core/authorization/authorization.service";
+import { Permissions } from "@/core/authorization/permissions.catalog";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
@@ -21,6 +23,11 @@ export async function GET(request: Request) {
     const offset = Number(url.searchParams.get("offset") ?? 0);
 
     if (!organizationId) return NextResponse.json({ message: "Organization is required.", code: "ORGANIZATION_REQUIRED" }, { status: 400 });
+
+    const authorization = new AuthorizationService();
+    if (!(await authorization.hasPermission(session.userId, Permissions.ORDER_READ, organizationId))) {
+      return NextResponse.json({ message: "You do not have permission to view vendor sales.", code: "VENDOR_SALES_FORBIDDEN" }, { status: 403 });
+    }
 
     const membership = await prisma.organizationMembership.findFirst({
       where: { organizationId, userId: session.userId, status: "ACTIVE", organization: { status: "ACTIVE" } },
