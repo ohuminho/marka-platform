@@ -532,6 +532,7 @@ export default function OrderDetailPage({
                 )}
 
               </div>
+            </div>
             ) : (
               <p className="mt-4 text-sm text-white/40">
                 Delivery fulfillment has not been created yet.
