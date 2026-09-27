@@ -27,6 +27,12 @@ export interface CheckoutInput {
   paymentIdempotencyKey: string;
   provider?: string;
   metadata?: Record<string, unknown>;
+  delivery?: {
+    address: string;
+    latitude: number;
+    longitude: number;
+    instructions?: string;
+  };
   correlationId?: string;
   requestId?: string;
   ipAddress?: string;
@@ -56,6 +62,30 @@ export class CheckoutService {
       throw new Error(
         "Payment idempotency key is required.",
       );
+    }
+
+    if (!input.delivery) {
+      throw new Error("Delivery destination is required.");
+    }
+
+    if (!input.delivery.address.trim()) {
+      throw new Error("Delivery address is required.");
+    }
+
+    if (
+      !Number.isFinite(input.delivery.latitude) ||
+      input.delivery.latitude < -90 ||
+      input.delivery.latitude > 90
+    ) {
+      throw new Error("Delivery latitude is invalid.");
+    }
+
+    if (
+      !Number.isFinite(input.delivery.longitude) ||
+      input.delivery.longitude < -180 ||
+      input.delivery.longitude > 180
+    ) {
+      throw new Error("Delivery longitude is invalid.");
     }
 
     const cart = await prisma.cart.findFirst({
@@ -151,6 +181,10 @@ export class CheckoutService {
             status: "PENDING",
             total: subtotal,
             currency: cart.currency,
+            deliveryAddress: input.delivery.address.trim(),
+            deliveryLatitude: input.delivery.latitude,
+            deliveryLongitude: input.delivery.longitude,
+            deliveryInstructions: input.delivery.instructions?.trim() || null,
             items: {
               create: preparedItems.map((item) => ({
                 productId: item.productId,
