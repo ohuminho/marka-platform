@@ -486,6 +486,37 @@ export class FulfillmentAdapter implements FulfillmentPort {
     });
   }
 
+  async retryDeliveryDispatch(
+    fulfillmentId: string,
+  ): Promise<FulfillmentRequest> {
+    if (!fulfillmentId.trim()) {
+      throw new Error("Fulfillment is required.");
+    }
+
+    const request = await prisma.fulfillmentRequest.findUnique({
+      where: {
+        id: fulfillmentId,
+      },
+    });
+
+    if (!request) {
+      throw new Error("Fulfillment not found.");
+    }
+
+    const fulfilled = await this.ensureDeliveryDispatch(request);
+
+    await this.recordEvent(
+      "fulfillment.dispatch.retry_requested",
+      request.id,
+      request.organizationId,
+      {
+        orderId: request.orderId,
+      },
+    );
+
+    return this.toContract(fulfilled);
+  }
+
   async get(
     fulfillmentId: string,
   ): Promise<FulfillmentRequest | null> {
