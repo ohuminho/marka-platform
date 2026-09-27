@@ -33,6 +33,7 @@ interface DeliveryTracking {
     latitude: number | null;
     longitude: number | null;
     lastLocationAt: string | null;
+    locationFresh: boolean;
   } | null;
 }
 
@@ -549,8 +550,13 @@ export default function OrderDetailPage({
                       <span>{label(tracking.agent.transportMode)}</span>
                     </div>
                     {tracking.agent.latitude !== null && tracking.agent.longitude !== null ? (
-                      <div className="mt-2 text-xs text-white/50">
-                        Live location: {tracking.agent.latitude.toFixed(5)}, {tracking.agent.longitude.toFixed(5)}
+                      <div className="mt-2 space-y-1 text-xs">
+                        <div className={tracking.agent.locationFresh ? "text-emerald-300" : "text-amber-300"}>
+                          {tracking.agent.locationFresh ? "Live location" : "Location may be stale"}
+                        </div>
+                        <div className="text-white/50">
+                          {tracking.agent.latitude.toFixed(5)}, {tracking.agent.longitude.toFixed(5)}
+                        </div>
                       </div>
                     ) : (
                       <div className="mt-2 text-xs text-white/40">
