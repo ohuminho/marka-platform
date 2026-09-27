@@ -33,6 +33,34 @@ interface OrderDetail {
   updatedAt: string;
   items: OrderItem[];
   payments: OrderPayment[];
+  fulfillment: {
+    id: string;
+    status: string;
+    assignedAgentId: string | null;
+    exceptionCode: string | null;
+    assignment: {
+      agentId: string;
+      assignedAt: string;
+      acceptedAt: string | null;
+    } | null;
+  } | null;
+  dispatch: {
+    id: string;
+    status: string;
+    serviceType: string;
+    assignedAgentId: string | null;
+    origin: {
+      latitude: number;
+      longitude: number;
+    };
+    destination: {
+      latitude: number;
+      longitude: number;
+    } | null;
+    candidatePolicyRef: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
 }
 
 interface OrderPageProps {
@@ -387,6 +415,59 @@ export default function OrderDetailPage({
             <p className="mt-3 text-sm text-white/40">
               {label(order.status)}
             </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            <h2 className="text-xl font-semibold">
+              Delivery
+            </h2>
+
+            {order.fulfillment ? (
+              <div className="mt-5 space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-white/50">Fulfillment</span>
+                  <span>{label(order.fulfillment.status)}</span>
+                </div>
+
+                {order.dispatch ? (
+                  <>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-white/50">Dispatch</span>
+                      <span>{label(order.dispatch.status)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-white/50">Service</span>
+                      <span>{label(order.dispatch.serviceType)}</span>
+                    </div>
+
+                    {order.dispatch.assignedAgentId ? (
+                      <div className="break-all text-xs text-white/40">
+                        Agent: {order.dispatch.assignedAgentId}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-white/40">
+                        Awaiting delivery agent assignment.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xs text-white/40">
+                    Delivery dispatch is waiting for operational configuration or recovery.
+                  </div>
+                )}
+
+                {order.fulfillment.exceptionCode ? (
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-300">
+                    {order.fulfillment.exceptionCode}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-white/40">
+                Delivery fulfillment has not been created yet.
+              </p>
+            )}
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
