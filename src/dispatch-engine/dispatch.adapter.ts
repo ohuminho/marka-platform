@@ -230,6 +230,8 @@ export class DispatchAdapter implements DispatchPort {
     }
 
     const updated = await prisma.$transaction(async (database) => {
+      let deliveryAgentClaimed = false;
+
       if (request.serviceType === "DELIVERY") {
         const candidate = await database.dispatchCandidate.findFirst({
           where: {
@@ -263,16 +265,59 @@ export class DispatchAdapter implements DispatchPort {
             "Delivery agent is not available.",
           );
         }
+
+        deliveryAgentClaimed = true;
+
+        await database.dispatchCandidate.updateMany({
+          where: {
+            id: candidate.id,
+            available: true,
+          },
+          data: {
+            available: false,
+          },
+        });
       }
 
-      const updatedRequest = await database.dispatchRequest.update({
+      const accepted = await database.dispatchRequest.updateMany({
         where: {
           id: requestId,
+          status: {
+            in: ["ASSIGNED", "OFFERED"],
+          },
+          OR: [
+            { assignedAgentId: null },
+            { assignedAgentId: agentId },
+          ],
         },
         data: {
           status: "ACCEPTED",
           acceptedAgentId: agentId,
         },
+      });
+
+      if (accepted.count !== 1) {
+        if (deliveryAgentClaimed) {
+          await database.deliveryAgent.updateMany({
+            where: {
+              id: agentId,
+              organizationId: request.organizationId,
+              status: "ACTIVE",
+              availability: "BUSY",
+            },
+            data: {
+              availability: "AVAILABLE",
+            },
+          });
+        }
+
+        throw new Error(
+          "Dispatch request was accepted by another agent.",
+        );
+      }
+
+      const updatedRequest = await database.dispatchRequest.findUniqueOrThrow({
+        where: { id: requestId },
       });
 
       if (
