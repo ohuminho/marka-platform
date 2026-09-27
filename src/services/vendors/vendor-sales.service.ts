@@ -74,6 +74,73 @@ export class VendorSalesService {
       offset: safeOffset,
     };
   }
+
+  async updateSaleStatus({
+    userId,
+    organizationId,
+    orderId,
+    status,
+  }: {
+    userId: string;
+    organizationId: string;
+    orderId: string;
+    status: OrderStatus;
+  }) {
+    const vendor = await prisma.vendor.findFirst({
+      where: { ownerId: userId, organizationId },
+      select: { id: true },
+    });
+
+    if (!vendor) throw new Error("VENDOR_NOT_FOUND");
+
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        items: { some: { vendorId: vendor.id } },
+      },
+      select: {
+        id: true,
+        status: true,
+        fulfillment: { select: { id: true, status: true } },
+      },
+    });
+
+    if (!order) throw new Error("ORDER_NOT_FOUND");
+
+    const allowed: Record<string, string[]> = {
+      PENDING: ["CONFIRMED", "CANCELLED"],
+      CONFIRMED: ["PROCESSING", "CANCELLED"],
+      PROCESSING: [],
+      SHIPPED: [],
+      DELIVERED: [],
+      CANCELLED: [],
+    };
+
+    if (!allowed[order.status]?.includes(status)) {
+      throw new Error(`INVALID_VENDOR_ORDER_TRANSITION:${order.status}:${status}`);
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { status },
+      select: {
+        id: true,
+        status: true,
+        total: true,
+        currency: true,
+        updatedAt: true,
+      },
+    });
+
+    return {
+      id: updated.id,
+      status: updated.status,
+      total: Number(updated.total),
+      currency: updated.currency,
+      updatedAt: updated.updatedAt,
+      fulfillment: order.fulfillment,
+    };
+  }
 }
 
 export const vendorSalesService = new VendorSalesService();
