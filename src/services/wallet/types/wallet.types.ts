@@ -38,7 +38,7 @@ export interface WalletSummary {
   heldBalanceMinor: string;
   availableBalanceMinor: string;
   currency: string;
-  status: "ACTIVE" | "SUSPENDED" | "CLOSED";
+  status: "ACTIVE" | "FROZEN" | "CLOSED";
 }
 
 export interface WalletTransaction {
