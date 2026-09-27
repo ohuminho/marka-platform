@@ -538,6 +538,33 @@ export default function OrderDetailPage({
                   })}
                 </div>
 
+                {tracking?.agent ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-white/50">Delivery agent</span>
+                      <span>{tracking.agent.displayName || "Assigned agent"}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-4">
+                      <span className="text-white/50">Transport</span>
+                      <span>{label(tracking.agent.transportMode)}</span>
+                    </div>
+                    {tracking.agent.latitude !== null && tracking.agent.longitude !== null ? (
+                      <div className="mt-2 text-xs text-white/50">
+                        Live location: {tracking.agent.latitude.toFixed(5)}, {tracking.agent.longitude.toFixed(5)}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-xs text-white/40">
+                        Waiting for the agent's first location update.
+                      </div>
+                    )}
+                    {tracking.agent.lastLocationAt ? (
+                      <div className="mt-1 text-xs text-white/30">
+                        Last update: {formatDate(tracking.agent.lastLocationAt)}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {order.fulfillment.exceptionCode ? (
                   <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-300">
                     Delivery exception: {order.fulfillment.exceptionCode}
