@@ -6,14 +6,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { AuthorizationService } from "@/core/authorization/authorization.service";
 import { Permissions } from "@/core/authorization/permissions.catalog";
-import { vendorSalesService } from "@/services/vendors/vendor-sales.service";
-
-import { AuthorizationService } from "@/core/authorization/authorization.service";
-import { Permissions } from "@/core/authorization/permissions.catalog";
-import { AuthConfig } from "@/core/authentication/auth.config";
-import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
-import { vendorSalesService } from "@/services/vendors/vendor-sales.service";
 
 export async function GET(request: Request) {
   try {
