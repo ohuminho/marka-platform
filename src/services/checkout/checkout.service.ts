@@ -64,26 +64,28 @@ export class CheckoutService {
       );
     }
 
-    if (!input.delivery) {
+    const delivery = input.delivery;
+
+    if (!delivery) {
       throw new Error("Delivery destination is required.");
     }
 
-    if (!input.delivery.address.trim()) {
+    if (!delivery.address.trim()) {
       throw new Error("Delivery address is required.");
     }
 
     if (
-      !Number.isFinite(input.delivery.latitude) ||
-      input.delivery.latitude < -90 ||
-      input.delivery.latitude > 90
+      !Number.isFinite(delivery.latitude) ||
+      delivery.latitude < -90 ||
+      delivery.latitude > 90
     ) {
       throw new Error("Delivery latitude is invalid.");
     }
 
     if (
-      !Number.isFinite(input.delivery.longitude) ||
-      input.delivery.longitude < -180 ||
-      input.delivery.longitude > 180
+      !Number.isFinite(delivery.longitude) ||
+      delivery.longitude < -180 ||
+      delivery.longitude > 180
     ) {
       throw new Error("Delivery longitude is invalid.");
     }
@@ -181,10 +183,10 @@ export class CheckoutService {
             status: "PENDING",
             total: subtotal,
             currency: cart.currency,
-            deliveryAddress: input.delivery.address.trim(),
-            deliveryLatitude: input.delivery.latitude,
-            deliveryLongitude: input.delivery.longitude,
-            deliveryInstructions: input.delivery.instructions?.trim() || null,
+            deliveryAddress: delivery.address.trim(),
+            deliveryLatitude: delivery.latitude,
+            deliveryLongitude: delivery.longitude,
+            deliveryInstructions: delivery.instructions?.trim() || null,
             items: {
               create: preparedItems.map((item) => ({
                 productId: item.productId,
