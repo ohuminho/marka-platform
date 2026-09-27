@@ -126,18 +126,27 @@ export class DeliveryAgentService {
   ) {
     const agent = await prisma.deliveryAgent.findUnique({
       where: { id: agentId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, organizationId: true },
     });
 
     if (!agent) {
       throw new Error("DELIVERY_AGENT_NOT_FOUND");
     }
 
-    if (status === "ACTIVE") {
-      return prisma.deliveryAgent.update({
-        where: { id: agentId },
-        data: { status, availability: "OFFLINE" },
+    if (status !== "ACTIVE") {
+      const activeDelivery = await prisma.dispatchRequest.findFirst({
+        where: {
+          organizationId: agent.organizationId,
+          serviceType: "DELIVERY",
+          status: "ACCEPTED",
+          acceptedAgentId: agentId,
+        },
+        select: { id: true },
       });
+
+      if (activeDelivery) {
+        throw new Error("DELIVERY_AGENT_HAS_ACTIVE_DELIVERY");
+      }
     }
 
     return prisma.deliveryAgent.update({
