@@ -28,34 +28,8 @@ export class DeliveryAgentOfferService {
     const limit = Math.min(Math.max(input.limit ?? 20, 1), 50);
     const offset = Math.max(input.offset ?? 0, 0);
 
-    const where = {
-      agentId: input.agentId,
-      available: true,
-    };
-
-    const [candidates, total] = await Promise.all([
-      prisma.dispatchCandidate.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: offset,
-        take: limit,
-        select: {
-          dispatchRequestId: true,
-          distanceMeters: true,
-          score: true,
-          createdAt: true,
-        },
-      }),
-      prisma.dispatchCandidate.count({ where }),
-    ]);
-
-    const dispatchRequestIds = candidates.map(
-      (candidate) => candidate.dispatchRequestId,
-    );
-
-    const dispatchRequests = await prisma.dispatchRequest.findMany({
+    const eligibleDispatches = await prisma.dispatchRequest.findMany({
       where: {
-        id: { in: dispatchRequestIds },
         organizationId: input.organizationId,
         serviceType: "DELIVERY",
         status: { in: ["OFFERED", "ASSIGNED"] },
@@ -70,6 +44,41 @@ export class DeliveryAgentOfferService {
         destinationLongitude: true,
       },
     });
+
+    const eligibleDispatchIds = eligibleDispatches.map((dispatch) => dispatch.id);
+    if (eligibleDispatchIds.length === 0) {
+      return { items: [], total: 0, limit, offset };
+    }
+
+    const candidateWhere = {
+      agentId: input.agentId,
+      available: true,
+      dispatchRequestId: { in: eligibleDispatchIds },
+    };
+
+    const [candidates, total] = await Promise.all([
+      prisma.dispatchCandidate.findMany({
+        where: candidateWhere,
+        orderBy: { createdAt: "desc" },
+        skip: offset,
+        take: limit,
+        select: {
+          dispatchRequestId: true,
+          distanceMeters: true,
+          score: true,
+          createdAt: true,
+        },
+      }),
+      prisma.dispatchCandidate.count({ where: candidateWhere }),
+    ]);
+
+    const dispatchRequestIds = candidates.map(
+      (candidate) => candidate.dispatchRequestId,
+    );
+
+    const dispatchRequests = eligibleDispatches.filter((dispatch) =>
+      dispatchRequestIds.includes(dispatch.id),
+    );
 
     const dispatchById = new Map(
       dispatchRequests.map((dispatch) => [dispatch.id, dispatch]),
