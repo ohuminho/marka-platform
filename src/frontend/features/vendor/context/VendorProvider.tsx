@@ -18,6 +18,8 @@ interface Vendor {
   store?: {
     id: string;
     name: string;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
   };
 }
 
