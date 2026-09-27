@@ -92,6 +92,36 @@ export class InventoryService {
     }
   }
 
+
+
+  async consumeWithinTransaction(
+    database: Prisma.TransactionClient,
+    items: InventoryReservationItem[],
+  ): Promise<void> {
+    for (const item of items) {
+      if (!item.productId.trim() || !Number.isInteger(item.quantity) || item.quantity <= 0) {
+        throw new Error("Inventory consumption item is invalid.");
+      }
+
+      const updatedInventory = await database.inventory.updateMany({
+        where: {
+          productId: item.productId,
+          reserved: { gte: item.quantity },
+        },
+        data: {
+          reserved: { decrement: item.quantity },
+          version: { increment: 1 },
+        },
+      });
+
+      if (updatedInventory.count !== 1) {
+        throw new Error(
+          `Inventory reservation could not be consumed for product "${item.productId}".`,
+        );
+      }
+    }
+  }
+
   async releaseWithinTransaction(
     database: Prisma.TransactionClient,
     items: InventoryReservationItem[],
