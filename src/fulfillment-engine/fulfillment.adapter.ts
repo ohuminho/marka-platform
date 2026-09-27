@@ -527,7 +527,7 @@ export class FulfillmentAdapter implements FulfillmentPort {
   }
 
   private jsonRecord(
-    value: Prisma.JsonValue | null | undefined,
+    value: unknown,
   ): Record<string, unknown> {
     if (
       typeof value !== "object" ||
