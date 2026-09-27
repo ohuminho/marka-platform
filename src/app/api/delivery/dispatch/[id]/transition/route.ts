@@ -7,7 +7,6 @@ import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { fulfillmentAdapter } from "@/fulfillment-engine/fulfillment.adapter";
 import type { FulfillmentStatus } from "@/fulfillment-engine/fulfillment.contracts";
-import { dispatchAdapter } from "@/dispatch-engine/dispatch.adapter";
 
 const schema = z.object({
   status: z.enum([
@@ -133,15 +132,23 @@ export async function POST(
     }
 
     const status = parsed.data.status as FulfillmentStatus;
+
+    if (status === "COMPLETED") {
+      const fulfillment =
+        await fulfillmentAdapter.completeDeliveryDispatch(
+          dispatch.id,
+          dispatch.subjectId,
+          agent.id,
+        );
+
+      return NextResponse.json({ fulfillment });
+    }
+
     const fulfillment = await fulfillmentAdapter.transition(
       dispatch.subjectId,
       status,
       parsed.data.reason,
     );
-
-    if (status === "COMPLETED") {
-      await dispatchAdapter.complete(dispatch.id);
-    }
 
     return NextResponse.json({ fulfillment });
   } catch (error) {
