@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type {
   DispatchCandidate,
   DispatchPort,
@@ -42,7 +43,7 @@ export class DispatchAdapter implements DispatchPort {
         status: "CREATED",
         candidatePolicyRef:
           input.candidatePolicyRef,
-        metadata: input.metadata,
+        metadata: input.metadata as Prisma.InputJsonValue | undefined,
       },
     });
 
@@ -381,7 +382,7 @@ export class DispatchAdapter implements DispatchPort {
                   available:
                     candidate.available,
                   metadata:
-                    candidate.metadata,
+                    candidate.metadata as Prisma.InputJsonValue,
                 }),
               ),
             });
@@ -575,7 +576,7 @@ export class DispatchAdapter implements DispatchPort {
         aggregateType: "DISPATCH",
         aggregateId,
         eventType,
-        payload,
+        payload: payload as Prisma.InputJsonValue,
         status: "PENDING",
       },
     });
