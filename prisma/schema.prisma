@@ -902,6 +902,8 @@ model Store {
   logo        String?
   banner      String?
   location    String?
+  latitude    Decimal?    @db.Decimal(10, 7)
+  longitude   Decimal?    @db.Decimal(10, 7)
   rating      Decimal     @default(0) @db.Decimal(5, 2)
   status      StoreStatus @default(ACTIVE)
 
@@ -1611,6 +1613,7 @@ model DispatchRequest {
   @@index([organizationId, status])
   @@index([serviceType, status])
   @@index([subjectId])
+  @@unique([subjectType, subjectId])
   @@index([assignedAgentId])
 }
 
