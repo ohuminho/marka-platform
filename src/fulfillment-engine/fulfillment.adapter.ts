@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { OrderStatus, Prisma } from "@prisma/client";
 import type {
   EntityRef,
   PolicyContext,
