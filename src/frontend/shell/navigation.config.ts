@@ -71,6 +71,16 @@ export const NavigationConfig = {
         },
 
         {
+          title: "Available Deliveries",
+          route: "/app/delivery-agent/offers",
+          description:
+            "Review and accept delivery offers",
+          permissions: [
+            "DELIVERY_AGENT_OPERATE",
+          ],
+        },
+
+        {
           title: "My Deliveries",
           route: "/app/delivery-agent/deliveries",
           description:
