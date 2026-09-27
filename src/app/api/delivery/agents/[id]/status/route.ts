@@ -47,6 +47,22 @@ export async function PATCH(
     return NextResponse.json({ agent: updated });
   } catch (error) {
     const code = error instanceof Error ? error.message : "DELIVERY_AGENT_STATUS_UPDATE_FAILED";
-    return NextResponse.json({ message: "Unable to update delivery agent status.", code }, { status: code === "DELIVERY_AGENT_NOT_FOUND" ? 404 : 500 });
+    const status =
+      code === "DELIVERY_AGENT_NOT_FOUND"
+        ? 404
+        : code === "DELIVERY_AGENT_HAS_ACTIVE_DELIVERY"
+          ? 409
+          : 500;
+
+    return NextResponse.json(
+      {
+        message:
+          code === "DELIVERY_AGENT_HAS_ACTIVE_DELIVERY"
+            ? "Delivery agent has an active delivery and cannot be deactivated."
+            : "Unable to update delivery agent status.",
+        code,
+      },
+      { status },
+    );
   }
 }
