@@ -60,6 +60,15 @@ export class DeliveryAgentService {
     });
   }
 
+  async getByUser(userId: string, organizationId: string) {
+    return prisma.deliveryAgent.findFirst({
+      where: {
+        userId,
+        organizationId,
+      },
+    });
+  }
+
   async updateLocation(input: UpdateDeliveryAgentLocationInput) {
     this.validateCoordinates(input.latitude, input.longitude);
 
