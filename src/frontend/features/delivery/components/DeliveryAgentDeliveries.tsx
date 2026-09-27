@@ -43,6 +43,20 @@ function label(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+type TransitionStatus = "PREPARING" | "READY_FOR_PICKUP" | "PICKED_UP" | "IN_TRANSIT" | "COMPLETED" | "EXCEPTION";
+
+function nextActions(status: string): Array<{ status: TransitionStatus; label: string }> {
+  switch (status) {
+    case "ASSIGNED": return [{ status: "PREPARING", label: "Start preparing" }];
+    case "PREPARING": return [{ status: "READY_FOR_PICKUP", label: "Ready for pickup" }];
+    case "READY_FOR_PICKUP": return [{ status: "PICKED_UP", label: "Picked up" }];
+    case "PICKED_UP": return [{ status: "IN_TRANSIT", label: "Start delivery" }];
+    case "IN_TRANSIT": return [{ status: "COMPLETED", label: "Complete delivery" }, { status: "EXCEPTION", label: "Report exception" }];
+    case "EXCEPTION": return [{ status: "IN_TRANSIT", label: "Resume delivery" }];
+    default: return [];
+  }
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-PT", {
     dateStyle: "short",
@@ -62,6 +76,7 @@ export default function DeliveryAgentDeliveries() {
   const [scope, setScope] = useState<Scope>("ACTIVE");
   const [data, setData] = useState<ResponseData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -102,6 +117,33 @@ export default function DeliveryAgentDeliveries() {
       window.clearTimeout(initialLoadTimer);
     };
   }, [load]);
+
+  const transition = useCallback(
+    async (delivery: Delivery, status: TransitionStatus) => {
+      let reason: string | undefined;
+      if (status === "EXCEPTION") {
+        reason = window.prompt("Describe the delivery exception:")?.trim();
+        if (!reason) return;
+      }
+      setActionId(delivery.dispatchId);
+      setError(null);
+      try {
+        const response = await fetch(`/api/delivery/dispatch/${delivery.dispatchId}/transition`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status, reason }),
+        });
+        const body = (await response.json()) as { message?: string };
+        if (!response.ok) throw new Error(body.message ?? "Unable to transition delivery.");
+        await load();
+      } catch (requestError) {
+        setError(requestError instanceof Error ? requestError.message : "Unable to transition delivery.");
+      } finally {
+        setActionId(null);
+      }
+    },
+    [load],
+  );
 
   const summary = useMemo(() => {
     const items = data?.deliveries ?? [];
@@ -197,7 +239,10 @@ export default function DeliveryAgentDeliveries() {
           )}
 
           {!loading &&
-            data?.deliveries.map((delivery) => (
+            data?.deliveries.map((delivery) => {
+              const actions = scope === "ACTIVE" ? nextActions(delivery.fulfillmentStatus) : [];
+
+              return (
               <article
                 key={delivery.dispatchId}
                 className="rounded-2xl border border-white/[0.06] bg-black/15 p-5"
@@ -248,8 +293,24 @@ export default function DeliveryAgentDeliveries() {
                     <p className="mt-1 text-[10px] text-white/30">Fulfillment: {delivery.fulfillmentId}</p>
                   </div>
                 </div>
+                {actions.length > 0 && (
+                  <div className="mt-5 flex flex-wrap gap-2 border-t border-white/[0.05] pt-4">
+                    {actions.map((action) => (
+                      <button
+                        key={action.status}
+                        type="button"
+                        onClick={() => void transition(delivery, action.status)}
+                        disabled={actionId !== null}
+                        className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/55 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {actionId === delivery.dispatchId ? "Processing..." : action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </article>
-            ))}
+              );
+            })}
         </div>
       </section>
     </div>
