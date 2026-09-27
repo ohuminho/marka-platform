@@ -81,7 +81,7 @@ export default function VendorSales() {
         </div>
         <select
           value={status}
-          onChange={(event) => changeStatus(event.target.value)}
+          onChange={(event) => setStatus(event.target.value)}
           className="rounded-xl border border-white/10 bg-black/30 px-4 py-3"
           aria-label="Filter sales by order status"
         >
