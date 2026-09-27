@@ -17,7 +17,6 @@ type Sale = {
 export default function VendorSales() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [total, setTotal] = useState(0);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,17 +41,13 @@ export default function VendorSales() {
   }
 
   useEffect(() => {
-    const orgId = activeOrganization?.id;
-    if (!orgId) {
-      setLoading(false);
-      setError("Select an active organization first.");
-      return;
+    if (activeOrganization?.id) {
+      void load(activeOrganization.id, status);
     }
-    setOrganizationId(orgId);
-    void load(orgId, status);
   }, [activeOrganization?.id, status]);
 
   async function updateStatus(orderId: string, nextStatus: "CONFIRMED" | "PROCESSING" | "CANCELLED") {
+    const organizationId = activeOrganization?.id;
     if (!organizationId) return;
     setError("");
     try {
@@ -74,6 +69,8 @@ export default function VendorSales() {
 
   return (
     <section className="space-y-6">
+      {!activeOrganization ? <div className="rounded-xl border border-white/10 p-4 text-white/50">Select an active organization first.</div> : null}
+
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-4xl font-semibold">Sales</h1>
