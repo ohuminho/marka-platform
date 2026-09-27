@@ -1,4 +1,5 @@
 import { prisma } from "@/database/client/prisma";
+import type { OrderStatus } from "@prisma/client";
 
 export class VendorSalesService {
   async listSales({
@@ -26,12 +27,8 @@ export class VendorSalesService {
     const normalizedStatus = status?.trim().toUpperCase();
 
     const where = {
-      items: {
-        some: {
-          vendorId: vendor.id,
-          ...(normalizedStatus ? { order: { status: normalizedStatus as never } } : {}),
-        },
-      },
+      items: { some: { vendorId: vendor.id } },
+      ...(normalizedStatus ? { status: normalizedStatus as OrderStatus } : {}),
     };
 
     const [orders, total] = await prisma.$transaction([
