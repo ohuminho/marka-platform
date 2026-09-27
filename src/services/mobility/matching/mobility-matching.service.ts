@@ -2,7 +2,6 @@ import {
   MobilityAvailabilityStatus,
   MobilityDriverStatus,
   MobilityVehicleStatus,
-  Prisma,
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
@@ -66,7 +65,7 @@ export class MobilityMatchingService {
                 input.vehicleTypes.length > 0
                   ? {
                       type: {
-                        in: input.vehicleTypes as Prisma.MobilityVehicleType[],
+                        in: input.vehicleTypes as Array<"CAR" | "MOTORCYCLE" | "VAN" | "MINIBUS" | "BUS" | "COACH" | "TRUCK" | "OTHER">,
                       },
                     }
                   : {}),
