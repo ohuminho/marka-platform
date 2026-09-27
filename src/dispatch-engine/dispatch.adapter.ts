@@ -375,8 +375,63 @@ export class DispatchAdapter implements DispatchPort {
       );
     }
 
-    const updated =
-      await prisma.dispatchRequest.update({
+    const updated = await prisma.$transaction(async (database) => {
+      if (
+        request.serviceType === "DELIVERY" &&
+        request.acceptedAgentId
+      ) {
+        await database.deliveryAgent.updateMany({
+          where: {
+            id: request.acceptedAgentId,
+            organizationId: request.organizationId,
+            availability: "BUSY",
+          },
+          data: {
+            availability: "AVAILABLE",
+          },
+        });
+
+        if (request.subjectType === "FULFILLMENT") {
+          const fulfillment =
+            await database.fulfillmentRequest.findUnique({
+              where: { id: request.subjectId },
+              select: {
+                id: true,
+                organizationId: true,
+              },
+            });
+
+          if (fulfillment) {
+            if (
+              fulfillment.organizationId !==
+              request.organizationId
+            ) {
+              throw new Error(
+                "Fulfillment organization does not match dispatch organization.",
+              );
+            }
+
+            await database.fulfillmentAssignment.delete({
+              where: {
+                fulfillmentId: fulfillment.id,
+              },
+            });
+
+            await database.fulfillmentRequest.update({
+              where: {
+                id: fulfillment.id,
+              },
+              data: {
+                status: "REQUESTED",
+                assignedAgentId: null,
+                exceptionCode: null,
+              },
+            });
+          }
+        }
+      }
+
+      return database.dispatchRequest.update({
         where: {
           id: requestId,
         },
@@ -389,6 +444,7 @@ export class DispatchAdapter implements DispatchPort {
           },
         },
       });
+    });
 
     await this.recordEvent(
       "dispatch.reassigned",
@@ -461,8 +517,24 @@ export class DispatchAdapter implements DispatchPort {
       );
     }
 
-    const updated =
-      await prisma.dispatchRequest.update({
+    const updated = await prisma.$transaction(async (database) => {
+      if (
+        request.serviceType === "DELIVERY" &&
+        request.acceptedAgentId
+      ) {
+        await database.deliveryAgent.updateMany({
+          where: {
+            id: request.acceptedAgentId,
+            organizationId: request.organizationId,
+            availability: "BUSY",
+          },
+          data: {
+            availability: "AVAILABLE",
+          },
+        });
+      }
+
+      return database.dispatchRequest.update({
         where: {
           id: requestId,
         },
@@ -475,6 +547,7 @@ export class DispatchAdapter implements DispatchPort {
             : undefined,
         },
       });
+    });
 
     await this.recordEvent(
       "dispatch.cancelled",
@@ -502,8 +575,24 @@ export class DispatchAdapter implements DispatchPort {
       );
     }
 
-    const updated =
-      await prisma.dispatchRequest.update({
+    const updated = await prisma.$transaction(async (database) => {
+      if (
+        request.serviceType === "DELIVERY" &&
+        request.acceptedAgentId
+      ) {
+        await database.deliveryAgent.updateMany({
+          where: {
+            id: request.acceptedAgentId,
+            organizationId: request.organizationId,
+            availability: "BUSY",
+          },
+          data: {
+            availability: "AVAILABLE",
+          },
+        });
+      }
+
+      return database.dispatchRequest.update({
         where: {
           id: requestId,
         },
@@ -511,6 +600,7 @@ export class DispatchAdapter implements DispatchPort {
           status: "EXPIRED",
         },
       });
+    });
 
     return this.toContract(updated);
   }
