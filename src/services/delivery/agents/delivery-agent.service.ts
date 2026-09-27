@@ -16,8 +16,6 @@ export interface UpdateDeliveryAgentLocationInput {
 
 export class DeliveryAgentService {
   async register(input: RegisterDeliveryAgentInput) {
-    this.validateCoordinates(undefined, undefined);
-
     if (!input.organizationId.trim()) {
       throw new Error("DELIVERY_AGENT_ORGANIZATION_REQUIRED");
     }
@@ -119,6 +117,32 @@ export class DeliveryAgentService {
     return prisma.deliveryAgent.update({
       where: { id: agentId },
       data: { availability },
+    });
+  }
+
+  async updateStatus(
+    agentId: string,
+    status: "PENDING" | "ACTIVE" | "SUSPENDED" | "BLOCKED" | "INACTIVE",
+  ) {
+    const agent = await prisma.deliveryAgent.findUnique({
+      where: { id: agentId },
+      select: { id: true, status: true },
+    });
+
+    if (!agent) {
+      throw new Error("DELIVERY_AGENT_NOT_FOUND");
+    }
+
+    if (status === "ACTIVE") {
+      return prisma.deliveryAgent.update({
+        where: { id: agentId },
+        data: { status, availability: "OFFLINE" },
+      });
+    }
+
+    return prisma.deliveryAgent.update({
+      where: { id: agentId },
+      data: { status, availability: "OFFLINE" },
     });
   }
 
