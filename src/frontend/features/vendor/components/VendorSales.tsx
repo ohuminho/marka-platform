@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 type Sale = {
   id: string;
@@ -20,6 +21,7 @@ export default function VendorSales() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { activeOrganization, hasPermission } = useAuth();
 
   async function load(orgId: string, selectedStatus: string) {
     setLoading(true);
@@ -40,24 +42,35 @@ export default function VendorSales() {
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const stored = window.localStorage.getItem("marka.activeOrganizationId");
-      if (stored) {
-        setOrganizationId(stored);
-        void load(stored, "");
-      } else {
-        setLoading(false);
-        setError("Select an active organization first.");
-      }
-    }, 0);
+    const orgId = activeOrganization?.id;
+    if (!orgId) {
+      setLoading(false);
+      setError("Select an active organization first.");
+      return;
+    }
+    setOrganizationId(orgId);
+    void load(orgId, status);
+  }, [activeOrganization?.id, status]);
 
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  function changeStatus(value: string) {
-    setStatus(value);
-    if (organizationId) void load(organizationId, value);
+  async function updateStatus(orderId: string, nextStatus: "CONFIRMED" | "PROCESSING" | "CANCELLED") {
+    if (!organizationId) return;
+    setError("");
+    try {
+      const response = await fetch("/api/vendor/sales", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ organizationId, orderId, status: nextStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "Unable to update order.");
+      await load(organizationId, status);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update order.");
+    }
   }
+
+
 
   return (
     <section className="space-y-6">
@@ -115,6 +128,22 @@ export default function VendorSales() {
                     </div>
                   ))}
                 </div>
+                {hasPermission("ORDER_MANAGE") ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {sale.status === "PENDING" ? (
+                      <>
+                        <button type="button" onClick={() => void updateStatus(sale.id, "CONFIRMED")} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">Confirm</button>
+                        <button type="button" onClick={() => void updateStatus(sale.id, "CANCELLED")} className="rounded-lg border border-red-500/20 px-3 py-2 text-sm text-red-200 hover:bg-red-500/10">Cancel</button>
+                      </>
+                    ) : null}
+                    {sale.status === "CONFIRMED" ? (
+                      <>
+                        <button type="button" onClick={() => void updateStatus(sale.id, "PROCESSING")} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">Start processing</button>
+                        <button type="button" onClick={() => void updateStatus(sale.id, "CANCELLED")} className="rounded-lg border border-red-500/20 px-3 py-2 text-sm text-red-200 hover:bg-red-500/10">Cancel</button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
                 {sale.fulfillment ? (
                   <div className="mt-4 text-sm text-white/50">
                     Fulfillment: {sale.fulfillment.status}
