@@ -31,12 +31,6 @@ export class DeliveryAgentOfferService {
     const where = {
       agentId: input.agentId,
       available: true,
-      dispatchRequest: {
-        organizationId: input.organizationId,
-        serviceType: "DELIVERY" as const,
-        status: { in: ["OFFERED", "ASSIGNED"] as const },
-        subjectType: "FULFILLMENT",
-      },
     };
 
     const [candidates, total] = await Promise.all([
@@ -50,21 +44,38 @@ export class DeliveryAgentOfferService {
           distanceMeters: true,
           score: true,
           createdAt: true,
-          dispatchRequest: {
-            select: {
-              subjectId: true,
-              originLatitude: true,
-              originLongitude: true,
-              destinationLatitude: true,
-              destinationLongitude: true,
-            },
-          },
         },
       }),
       prisma.dispatchCandidate.count({ where }),
     ]);
 
-    const fulfillmentIds = candidates.map((candidate) => candidate.dispatchRequest.subjectId);
+    const dispatchRequestIds = candidates.map(
+      (candidate) => candidate.dispatchRequestId,
+    );
+
+    const dispatchRequests = await prisma.dispatchRequest.findMany({
+      where: {
+        id: { in: dispatchRequestIds },
+        organizationId: input.organizationId,
+        serviceType: "DELIVERY",
+        status: { in: ["OFFERED", "ASSIGNED"] },
+        subjectType: "FULFILLMENT",
+      },
+      select: {
+        id: true,
+        subjectId: true,
+        originLatitude: true,
+        originLongitude: true,
+        destinationLatitude: true,
+        destinationLongitude: true,
+      },
+    });
+
+    const dispatchById = new Map(
+      dispatchRequests.map((dispatch) => [dispatch.id, dispatch]),
+    );
+
+    const fulfillmentIds = dispatchRequests.map((dispatch) => dispatch.subjectId);
     const fulfillments = await prisma.fulfillmentRequest.findMany({
       where: {
         id: { in: fulfillmentIds },
@@ -111,15 +122,17 @@ export class DeliveryAgentOfferService {
     const items: DeliveryAgentOfferItem[] = [];
 
     for (const candidate of candidates) {
-      const fulfillment = fulfillmentById.get(candidate.dispatchRequest.subjectId);
+      const dispatch = dispatchById.get(candidate.dispatchRequestId);
+      if (!dispatch) continue;
+
+      const fulfillment = fulfillmentById.get(dispatch.subjectId);
       const order = fulfillment ? orderById.get(fulfillment.orderId) : undefined;
       if (!fulfillment || !order) continue;
 
       const storeId = order.items[0]?.storeId;
-      const pickup = candidate.dispatchRequest;
 
       items.push({
-        dispatchId: candidate.dispatchRequestId,
+        dispatchId: dispatch.id,
         fulfillmentId: fulfillment.id,
         orderId: fulfillment.orderId,
         distanceMeters: candidate.distanceMeters ?? undefined,
@@ -127,14 +140,15 @@ export class DeliveryAgentOfferService {
         createdAt: candidate.createdAt,
         store: storeId ? storeById.get(storeId) : undefined,
         pickup: {
-          latitude: Number(pickup.originLatitude),
-          longitude: Number(pickup.originLongitude),
+          latitude: Number(dispatch.originLatitude),
+          longitude: Number(dispatch.originLongitude),
         },
         destination:
-          pickup.destinationLatitude !== null && pickup.destinationLongitude !== null
+          dispatch.destinationLatitude !== null &&
+          dispatch.destinationLongitude !== null
             ? {
-                latitude: Number(pickup.destinationLatitude),
-                longitude: Number(pickup.destinationLongitude),
+                latitude: Number(dispatch.destinationLatitude),
+                longitude: Number(dispatch.destinationLongitude),
                 address: order.deliveryAddress ?? undefined,
               }
             : undefined,
