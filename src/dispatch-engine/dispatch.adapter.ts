@@ -10,6 +10,7 @@ import type {
   GeoPoint,
 } from "@/core/domain/contracts";
 import { prisma } from "@/database/client/prisma";
+import { deliveryMatchingService } from "@/services/delivery/matching/delivery-matching.service";
 
 export interface CreateDispatchRequestInput {
   organizationId: string;
@@ -90,6 +91,48 @@ export class DispatchAdapter implements DispatchPort {
           status: "SEARCHING",
         },
       });
+
+      if (
+        stored.serviceType === "DELIVERY" &&
+        stored.destinationLatitude !== null &&
+        stored.destinationLongitude !== null
+      ) {
+        const candidates =
+          await deliveryMatchingService.findCandidates({
+            organizationId: stored.organizationId,
+            pickupLatitude: Number(stored.originLatitude),
+            pickupLongitude: Number(stored.originLongitude),
+          });
+
+        await this.setCandidates(
+          stored.id,
+          candidates.map((candidate) => ({
+            agentId: candidate.agentId,
+            score: candidate.score,
+            distanceMeters: candidate.distanceMeters,
+            available: true,
+            metadata: candidate.metadata,
+          })),
+        );
+
+        const refreshed =
+          await prisma.dispatchRequest.findUnique({
+            where: { id: stored.id },
+            include: { candidates: true },
+          });
+
+        if (!refreshed) {
+          throw new Error("Dispatch request not found after candidate discovery.");
+        }
+
+        return refreshed.candidates.map((candidate) => ({
+          agentId: candidate.agentId,
+          score: candidate.score ?? undefined,
+          distanceMeters: candidate.distanceMeters ?? undefined,
+          available: candidate.available,
+          metadata: this.jsonRecord(candidate.metadata),
+        }));
+      }
     }
 
     return stored.candidates.map(
