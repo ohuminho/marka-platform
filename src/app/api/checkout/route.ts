@@ -190,6 +190,20 @@ export async function POST(request: Request) {
     }
 
     if (
+      message.includes(
+        "multiple stores. Multi-store checkout is not yet supported",
+      )
+    ) {
+      return NextResponse.json(
+        {
+          message,
+          code: "MULTI_STORE_CHECKOUT_UNSUPPORTED",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (
       message.startsWith(
         "Insufficient stock for product",
       )
