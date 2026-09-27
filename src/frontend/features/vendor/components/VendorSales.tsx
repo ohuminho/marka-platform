@@ -42,7 +42,7 @@ export default function VendorSales() {
 
   useEffect(() => {
     if (activeOrganization?.id) {
-      void load(activeOrganization.id, status);
+      queueMicrotask(() => void load(activeOrganization.id, status));
     }
   }, [activeOrganization?.id, status]);
 
