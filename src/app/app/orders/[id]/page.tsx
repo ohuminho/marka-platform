@@ -23,6 +23,19 @@ interface OrderPayment {
   providerPaymentId: string | null;
 }
 
+interface DeliveryTracking {
+  dispatchId: string;
+  status: string;
+  fulfillmentStatus: string | null;
+  agent: {
+    displayName: string | null;
+    transportMode: string;
+    latitude: number | null;
+    longitude: number | null;
+    lastLocationAt: string | null;
+  } | null;
+}
+
 interface OrderDetail {
   id: string;
   userId: string;
@@ -44,6 +57,7 @@ interface OrderDetail {
       acceptedAt: string | null;
     } | null;
   } | null;
+  deliveryTracking: DeliveryTracking | null;
   dispatch: {
     id: string;
     status: string;
@@ -153,6 +167,9 @@ export default function OrderDetailPage({
   const [paymentError, setPaymentError] =
     useState<string | null>(null);
 
+  const [tracking, setTracking] =
+    useState<DeliveryTracking | null>(null);
+
   const loadOrder = async (
     active = true
   ) => {
@@ -192,6 +209,7 @@ export default function OrderDetailPage({
 
     if (active) {
       setOrder(data);
+      setTracking(data.deliveryTracking ?? null);
     }
   };
 
@@ -227,6 +245,35 @@ export default function OrderDetailPage({
       active = false;
     };
   }, [params]);
+
+
+  useEffect(() => {
+    if (!tracking || tracking.status === "COMPLETED" || tracking.status === "CANCELLED") {
+      return;
+    }
+
+    const refresh = async () => {
+      try {
+        const resolvedParams = await params;
+        const id = resolvedParams.id.trim();
+        const response = await fetch(
+          `/api/orders/${encodeURIComponent(id)}/delivery-tracking`,
+          { credentials: "include", cache: "no-store" },
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.tracking) setTracking(data.tracking);
+      } catch (error) {
+        console.error("[DELIVERY_TRACKING_REFRESH_ERROR]", error);
+      }
+    };
+
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, 10000);
+
+    return () => window.clearInterval(timer);
+  }, [params, tracking?.status]);
 
   const confirmPayment = async (
     payment: OrderPayment
