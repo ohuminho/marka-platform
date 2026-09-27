@@ -222,6 +222,39 @@ export class DispatchAdapter implements DispatchPort {
       );
     }
 
+    if (request.serviceType === "DELIVERY") {
+      const candidate = await prisma.dispatchCandidate.findFirst({
+        where: {
+          dispatchRequestId: requestId,
+          agentId,
+          available: true,
+        },
+        select: { id: true },
+      });
+
+      if (!candidate) {
+        throw new Error(
+          "Delivery agent is not an active dispatch candidate.",
+        );
+      }
+
+      const agent = await prisma.deliveryAgent.findFirst({
+        where: {
+          id: agentId,
+          organizationId: request.organizationId,
+          status: "ACTIVE",
+          availability: "AVAILABLE",
+        },
+        select: { id: true },
+      });
+
+      if (!agent) {
+        throw new Error(
+          "Delivery agent is not available.",
+        );
+      }
+    }
+
     const updated =
       await prisma.dispatchRequest.update({
         where: {
@@ -232,6 +265,13 @@ export class DispatchAdapter implements DispatchPort {
           acceptedAgentId: agentId,
         },
       });
+
+    if (request.serviceType === "DELIVERY") {
+      await prisma.deliveryAgent.update({
+        where: { id: agentId },
+        data: { availability: "BUSY" },
+      });
+    }
 
     await this.recordEvent(
       "dispatch.accepted",
