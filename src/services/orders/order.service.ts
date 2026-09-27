@@ -263,6 +263,11 @@ export class OrderService {
         include: {
           items: true,
           payments: true,
+          fulfillment: {
+            include: {
+              assignment: true,
+            },
+          },
         },
       });
 
@@ -271,6 +276,30 @@ export class OrderService {
         "Order not found."
       );
     }
+
+    const dispatch = order.fulfillment
+      ? await prisma.dispatchRequest.findUnique({
+          where: {
+            subjectType_subjectId: {
+              subjectType: "FULFILLMENT",
+              subjectId: order.fulfillment.id,
+            },
+          },
+          select: {
+            id: true,
+            status: true,
+            serviceType: true,
+            assignedAgentId: true,
+            originLatitude: true,
+            originLongitude: true,
+            destinationLatitude: true,
+            destinationLongitude: true,
+            candidatePolicyRef: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        })
+      : null;
 
     return {
       id: order.id,
@@ -304,6 +333,56 @@ export class OrderService {
               Number(item.subtotal),
           })
         ),
+      fulfillment: order.fulfillment
+        ? {
+            id: order.fulfillment.id,
+            status: order.fulfillment.status,
+            assignedAgentId:
+              order.fulfillment.assignedAgentId,
+            exceptionCode:
+              order.fulfillment.exceptionCode,
+            assignment:
+              order.fulfillment.assignment
+                ? {
+                    agentId:
+                      order.fulfillment.assignment.agentId,
+                    assignedAt:
+                      order.fulfillment.assignment.assignedAt,
+                    acceptedAt:
+                      order.fulfillment.assignment.acceptedAt,
+                  }
+                : null,
+          }
+        : null,
+      dispatch: dispatch
+        ? {
+            id: dispatch.id,
+            status: dispatch.status,
+            serviceType: dispatch.serviceType,
+            assignedAgentId:
+              dispatch.assignedAgentId,
+            origin: {
+              latitude:
+                Number(dispatch.originLatitude),
+              longitude:
+                Number(dispatch.originLongitude),
+            },
+            destination:
+              dispatch.destinationLatitude !== null &&
+              dispatch.destinationLongitude !== null
+                ? {
+                    latitude:
+                      Number(dispatch.destinationLatitude),
+                    longitude:
+                      Number(dispatch.destinationLongitude),
+                  }
+                : null,
+            candidatePolicyRef:
+              dispatch.candidatePolicyRef,
+            createdAt: dispatch.createdAt,
+            updatedAt: dispatch.updatedAt,
+          }
+        : null,
       payments:
         order.payments.map(
           (payment) => ({
