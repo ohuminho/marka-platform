@@ -58,6 +58,10 @@ export default function CartPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [paymentIdempotencyKey, setPaymentIdempotencyKey] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryLatitude, setDeliveryLatitude] = useState("");
+  const [deliveryLongitude, setDeliveryLongitude] = useState("");
+  const [deliveryInstructions, setDeliveryInstructions] = useState("");
 
   const loadCart = useCallback(async () => {
     try {
@@ -133,6 +137,24 @@ export default function CartPage() {
       return;
     }
 
+    if (!deliveryAddress.trim()) {
+      setError("Informe o endereço de entrega.");
+      return;
+    }
+
+    const latitude = Number(deliveryLatitude);
+    const longitude = Number(deliveryLongitude);
+
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      setError("Informe uma latitude de entrega válida.");
+      return;
+    }
+
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      setError("Informe uma longitude de entrega válida.");
+      return;
+    }
+
     try {
       setCheckingOut(true);
       setError(null);
@@ -153,6 +175,12 @@ export default function CartPage() {
         body: JSON.stringify({
           cartId: cart.id,
           paymentIdempotencyKey: idempotencyKey,
+          delivery: {
+            address: deliveryAddress.trim(),
+            latitude,
+            longitude,
+            instructions: deliveryInstructions.trim() || undefined,
+          },
         }),
       });
 
@@ -339,6 +367,44 @@ export default function CartPage() {
                   {formatMoney(total, currency)}
                 </span>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-gray-100 pt-5">
+            <h3 className="text-sm font-semibold text-gray-900">Entrega</h3>
+            <div className="mt-3 space-y-3">
+              <input
+                type="text"
+                value={deliveryAddress}
+                onChange={(event) => setDeliveryAddress(event.target.value)}
+                placeholder="Endereço de entrega"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  step="any"
+                  value={deliveryLatitude}
+                  onChange={(event) => setDeliveryLatitude(event.target.value)}
+                  placeholder="Latitude"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                />
+                <input
+                  type="number"
+                  step="any"
+                  value={deliveryLongitude}
+                  onChange={(event) => setDeliveryLongitude(event.target.value)}
+                  placeholder="Longitude"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                />
+              </div>
+              <textarea
+                value={deliveryInstructions}
+                onChange={(event) => setDeliveryInstructions(event.target.value)}
+                placeholder="Instruções de entrega (opcional)"
+                rows={3}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+              />
             </div>
           </div>
 
