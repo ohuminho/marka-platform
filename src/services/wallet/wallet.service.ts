@@ -1,7 +1,4 @@
-import {
-  AccountStatus,
-  TransactionDirection,
-} from "@prisma/client";
+
 
 import { prisma } from "@/database/client/prisma";
 import { accountService } from "@/services/accounts/account.service";
