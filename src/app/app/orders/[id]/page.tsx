@@ -554,7 +554,7 @@ export default function OrderDetailPage({
                       </div>
                     ) : (
                       <div className="mt-2 text-xs text-white/40">
-                        Waiting for the agent's first location update.
+                        Waiting for the agent&apos;s first location update.
                       </div>
                     )}
                     {tracking.agent.lastLocationAt ? (
