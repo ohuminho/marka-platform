@@ -223,7 +223,7 @@ export class FulfillmentAdapter implements FulfillmentPort {
       });
 
       const orderStatusByFulfillmentStatus: Partial<
-        Record<FulfillmentStatus, "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED">
+        Record<FulfillmentStatus, OrderStatus>
       > = {
         PREPARING: "PROCESSING",
         READY_FOR_PICKUP: "PROCESSING",
@@ -237,14 +237,14 @@ export class FulfillmentAdapter implements FulfillmentPort {
         orderStatusByFulfillmentStatus[status];
 
       if (nextOrderStatus) {
-        const allowedCurrentStatuses =
-          nextOrderStatus === "CANCELLED"
-            ? ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED"]
-            : nextOrderStatus === "SHIPPED"
-              ? ["CONFIRMED", "PROCESSING"]
-              : nextOrderStatus === "DELIVERED"
-                ? ["SHIPPED", "PROCESSING"]
-                : ["CONFIRMED", "PROCESSING"];
+        const allowedCurrentStatuses: OrderStatus[] =
+          nextOrderStatus === OrderStatus.CANCELLED
+            ? [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED]
+            : nextOrderStatus === OrderStatus.SHIPPED
+              ? [OrderStatus.CONFIRMED, OrderStatus.PROCESSING]
+              : nextOrderStatus === OrderStatus.DELIVERED
+                ? [OrderStatus.SHIPPED, OrderStatus.PROCESSING]
+                : [OrderStatus.CONFIRMED, OrderStatus.PROCESSING];
 
         await database.order.updateMany({
           where: {
