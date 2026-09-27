@@ -89,6 +89,16 @@ export class CheckoutService {
       throw new Error("Cart is empty.");
     }
 
+    const storeIds = new Set(
+      cart.items.map((item) => item.product.storeId),
+    );
+
+    if (storeIds.size > 1) {
+      throw new Error(
+        "Cart contains products from multiple stores. Multi-store checkout is not yet supported.",
+      );
+    }
+
     const preparedItems = cart.items.map((item) => {
       if (item.quantity <= 0) {
         throw new Error(
