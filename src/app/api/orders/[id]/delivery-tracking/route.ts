@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
-import { SessionService } from "@/core/authentication/sessions/session.service";
+import { SessionService } from "@/core/auth/sessions/session.service";
 import { customerDeliveryTrackingService } from "@/services/delivery/customer-delivery-tracking.service";
 
 export async function GET(
