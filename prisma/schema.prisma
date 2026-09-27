@@ -407,6 +407,29 @@ enum DispatchStatus {
   EXPIRED
 }
 
+enum DeliveryAgentStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  INACTIVE
+}
+
+enum DeliveryAgentAvailabilityStatus {
+  OFFLINE
+  AVAILABLE
+  BUSY
+  SUSPENDED
+}
+
+enum DeliveryTransportMode {
+  WALK
+  BICYCLE
+  MOTORCYCLE
+  CAR
+  VAN
+}
+
 model MobilityDriver {
   id             String               @id @default(uuid())
   organizationId String
@@ -691,6 +714,7 @@ model Organization {
 
   fulfillmentRequests FulfillmentRequest[]
   dispatchRequests    DispatchRequest[]
+  deliveryAgents      DeliveryAgent[]
 
   @@index([tenantId])
   @@index([status])
@@ -730,6 +754,7 @@ model User {
 
   mobilityDriver MobilityDriver? @relation("MobilityDriverUser")
   mobilityRides  MobilityRide[]  @relation("MobilityRideRider")
+  deliveryAgent  DeliveryAgent? @relation("DeliveryAgentUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1582,6 +1607,33 @@ model FulfillmentAssignment {
   acceptedAt    DateTime?
 
   fulfillment FulfillmentRequest @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+}
+
+model DeliveryAgent {
+  id             String                         @id @default(uuid())
+  organizationId String
+  userId         String                         @unique
+  status         DeliveryAgentStatus            @default(PENDING)
+  availability   DeliveryAgentAvailabilityStatus @default(OFFLINE)
+  transportMode  DeliveryTransportMode
+  displayName    String?
+  phone          String?
+  latitude       Decimal?                       @db.Decimal(10, 7)
+  longitude      Decimal?                       @db.Decimal(10, 7)
+  lastLocationAt DateTime?
+  metadata       Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("DeliveryAgentUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([availability])
+  @@index([transportMode])
+  @@index([lastLocationAt])
 }
 
 model DispatchRequest {
