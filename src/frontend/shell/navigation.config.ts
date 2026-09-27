@@ -69,6 +69,16 @@ export const NavigationConfig = {
             "ORDER_READ",
           ],
         },
+
+        {
+          title: "My Deliveries",
+          route: "/app/delivery-agent/deliveries",
+          description:
+            "Operate and track assigned deliveries",
+          permissions: [
+            "DELIVERY_AGENT_OPERATE",
+          ],
+        },
       ],
     },
   ],
