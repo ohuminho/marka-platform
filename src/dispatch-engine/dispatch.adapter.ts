@@ -413,15 +413,28 @@ export class DispatchAdapter implements DispatchPort {
       );
     }
 
-    const updated =
-      await prisma.dispatchRequest.update({
-        where: {
-          id: requestId,
-        },
-        data: {
-          status: "COMPLETED",
-        },
+    const updated = await prisma.$transaction(async (database) => {
+      const completed = await database.dispatchRequest.update({
+        where: { id: requestId },
+        data: { status: "COMPLETED" },
       });
+
+      if (
+        request.serviceType === "DELIVERY" &&
+        request.acceptedAgentId
+      ) {
+        await database.deliveryAgent.updateMany({
+          where: {
+            id: request.acceptedAgentId,
+            organizationId: request.organizationId,
+            availability: "BUSY",
+          },
+          data: { availability: "AVAILABLE" },
+        });
+      }
+
+      return completed;
+    });
 
     await this.recordEvent(
       "dispatch.completed",
