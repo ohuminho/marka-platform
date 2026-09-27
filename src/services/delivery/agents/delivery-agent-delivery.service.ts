@@ -1,4 +1,5 @@
 import { prisma } from "@/database/client/prisma";
+import { Prisma } from "@prisma/client";
 
 export type DeliveryAgentDeliveryScope = "ACTIVE" | "HISTORY" | "ALL";
 
@@ -42,19 +43,25 @@ export interface DeliveryAgentDeliveryListResult {
   scope: DeliveryAgentDeliveryScope;
 }
 
-const ACTIVE_FULFILLMENT_STATUSES = [
+const ACTIVE_FULFILLMENT_STATUSES: Prisma.FulfillmentStatus[] = [
   "ASSIGNED",
   "PREPARING",
   "READY_FOR_PICKUP",
   "PICKED_UP",
   "IN_TRANSIT",
   "EXCEPTION",
-] as const;
+];
 
-const HISTORY_FULFILLMENT_STATUSES = [
+const HISTORY_FULFILLMENT_STATUSES: Prisma.FulfillmentStatus[] = [
   "COMPLETED",
   "CANCELLED",
-] as const;
+];
+
+const HISTORY_DISPATCH_STATUSES: Prisma.DispatchStatus[] = [
+  "COMPLETED",
+  "CANCELLED",
+  "EXPIRED",
+];
 
 export class DeliveryAgentDeliveryService {
   async list(
@@ -72,21 +79,21 @@ export class DeliveryAgentDeliveryService {
     const limit = Math.min(Math.max(input.limit ?? 20, 1), 50);
     const offset = Math.max(input.offset ?? 0, 0);
 
-    const fulfillmentWhere =
+    const fulfillmentWhere: Prisma.FulfillmentRequestWhereInput =
       scope === "ACTIVE"
         ? { status: { in: ACTIVE_FULFILLMENT_STATUSES } }
         : scope === "HISTORY"
           ? { status: { in: HISTORY_FULFILLMENT_STATUSES } }
           : {};
 
-    const dispatchWhere = {
+    const dispatchWhere: Prisma.DispatchRequestWhereInput = {
       organizationId: input.organizationId,
-      serviceType: "DELIVERY" as const,
+      serviceType: "DELIVERY",
       acceptedAgentId: input.agentId,
       ...(scope === "ACTIVE"
-        ? { status: "ACCEPTED" as const }
+        ? { status: "ACCEPTED" }
         : scope === "HISTORY"
-          ? { status: { in: ["COMPLETED", "CANCELLED", "EXPIRED"] as const } }
+          ? { status: { in: HISTORY_DISPATCH_STATUSES } }
           : {}),
     };
 
@@ -101,14 +108,10 @@ export class DeliveryAgentDeliveryService {
           subjectType: true,
           subjectId: true,
           status: true,
-          acceptedAgentId: true,
           updatedAt: true,
-          createdAt: true,
         },
       }),
-      prisma.dispatchRequest.count({
-        where: dispatchWhere,
-      }),
+      prisma.dispatchRequest.count({ where: dispatchWhere }),
     ]);
 
     const fulfillmentIds = dispatches
@@ -116,13 +119,7 @@ export class DeliveryAgentDeliveryService {
       .map((dispatch) => dispatch.subjectId);
 
     if (fulfillmentIds.length === 0) {
-      return {
-        items: [],
-        total,
-        limit,
-        offset,
-        scope,
-      };
+      return { items: [], total, limit, offset, scope };
     }
 
     const fulfillments = await prisma.fulfillmentRequest.findMany({
@@ -138,43 +135,57 @@ export class DeliveryAgentDeliveryService {
         status: true,
         exceptionCode: true,
         updatedAt: true,
-        order: {
-          select: {
-            id: true,
-            status: true,
-            total: true,
-            currency: true,
-            deliveryAddress: true,
-            deliveryLatitude: true,
-            deliveryLongitude: true,
-            deliveryInstructions: true,
-            items: {
-              select: {
-                storeId: true,
+      },
+    });
+
+    const orderIds = Array.from(
+      new Set(fulfillments.map((fulfillment) => fulfillment.orderId)),
+    );
+
+    const orders =
+      orderIds.length > 0
+        ? await prisma.order.findMany({
+            where: { id: { in: orderIds } },
+            select: {
+              id: true,
+              status: true,
+              total: true,
+              currency: true,
+              deliveryAddress: true,
+              deliveryLatitude: true,
+              deliveryLongitude: true,
+              deliveryInstructions: true,
+              items: {
+                select: { storeId: true },
+                take: 1,
               },
-              take: 1,
             },
-          },
-        },
-        assignment: {
-          select: {
-            acceptedAt: true,
-          },
-        },
+          })
+        : [];
+
+    const assignments = await prisma.fulfillmentAssignment.findMany({
+      where: {
+        fulfillmentId: { in: fulfillmentIds },
+        agentId: input.agentId,
+      },
+      select: {
+        fulfillmentId: true,
+        acceptedAt: true,
       },
     });
 
     const fulfillmentById = new Map(
-      fulfillments.map((fulfillment) => [
-        fulfillment.id,
-        fulfillment,
-      ]),
+      fulfillments.map((fulfillment) => [fulfillment.id, fulfillment]),
+    );
+    const orderById = new Map(orders.map((order) => [order.id, order]));
+    const assignmentByFulfillmentId = new Map(
+      assignments.map((assignment) => [assignment.fulfillmentId, assignment]),
     );
 
     const storeIds = Array.from(
       new Set(
-        fulfillments.flatMap((fulfillment) =>
-          fulfillment.order.items
+        orders.flatMap((order) =>
+          order.items
             .map((item) => item.storeId)
             .filter((storeId): storeId is string => Boolean(storeId)),
         ),
@@ -184,20 +195,12 @@ export class DeliveryAgentDeliveryService {
     const stores =
       storeIds.length > 0
         ? await prisma.store.findMany({
-            where: {
-              id: { in: storeIds },
-            },
-            select: {
-              id: true,
-              name: true,
-            },
+            where: { id: { in: storeIds } },
+            select: { id: true, name: true },
           })
         : [];
 
-    const storeById = new Map(
-      stores.map((store) => [store.id, store]),
-    );
-
+    const storeById = new Map(stores.map((store) => [store.id, store]));
     const items: DeliveryAgentDeliveryItem[] = [];
 
     for (const dispatch of dispatches) {
@@ -206,11 +209,18 @@ export class DeliveryAgentDeliveryService {
       }
 
       const fulfillment = fulfillmentById.get(dispatch.subjectId);
-      if (!fulfillment || !fulfillment.assignment?.acceptedAt) {
+      const assignment = fulfillment
+        ? assignmentByFulfillmentId.get(fulfillment.id)
+        : undefined;
+      const order = fulfillment
+        ? orderById.get(fulfillment.orderId)
+        : undefined;
+
+      if (!fulfillment || !assignment?.acceptedAt || !order) {
         continue;
       }
 
-      const storeId = fulfillment.order.items[0]?.storeId;
+      const storeId = order.items[0]?.storeId;
       const store = storeId ? storeById.get(storeId) : undefined;
 
       items.push({
@@ -220,39 +230,31 @@ export class DeliveryAgentDeliveryService {
         dispatchStatus: dispatch.status,
         fulfillmentStatus: fulfillment.status,
         exceptionCode: fulfillment.exceptionCode ?? undefined,
-        acceptedAt: fulfillment.assignment.acceptedAt,
+        acceptedAt: assignment.acceptedAt,
         updatedAt:
           dispatch.updatedAt > fulfillment.updatedAt
             ? dispatch.updatedAt
             : fulfillment.updatedAt,
         order: {
-          status: fulfillment.order.status,
-          total: fulfillment.order.total.toString(),
-          currency: fulfillment.order.currency,
-          deliveryAddress:
-            fulfillment.order.deliveryAddress ?? undefined,
+          status: order.status,
+          total: order.total.toString(),
+          currency: order.currency,
+          deliveryAddress: order.deliveryAddress ?? undefined,
           deliveryLatitude:
-            fulfillment.order.deliveryLatitude === null
+            order.deliveryLatitude === null
               ? undefined
-              : Number(fulfillment.order.deliveryLatitude),
+              : Number(order.deliveryLatitude),
           deliveryLongitude:
-            fulfillment.order.deliveryLongitude === null
+            order.deliveryLongitude === null
               ? undefined
-              : Number(fulfillment.order.deliveryLongitude),
-          deliveryInstructions:
-            fulfillment.order.deliveryInstructions ?? undefined,
+              : Number(order.deliveryLongitude),
+          deliveryInstructions: order.deliveryInstructions ?? undefined,
         },
         store,
       });
     }
 
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      scope,
-    };
+    return { items, total, limit, offset, scope };
   }
 }
 
