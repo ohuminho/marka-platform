@@ -526,6 +526,20 @@ export class FulfillmentAdapter implements FulfillmentPort {
     }
   }
 
+  private jsonRecord(
+    value: Prisma.JsonValue | null | undefined,
+  ): Record<string, unknown> {
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      Array.isArray(value)
+    ) {
+      return {};
+    }
+
+    return value as Record<string, unknown>;
+  }
+
   private toContract(
     request: {
       id: string;
