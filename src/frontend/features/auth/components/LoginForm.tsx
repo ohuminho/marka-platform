@@ -283,7 +283,7 @@ export default function LoginForm() {
         )}
 
         {message && (
-          <div className="rounded-2xl border border-[var(--theme-border)] bg-white/[0.05] px-4 py-3 text-sm leading-5 text-[var(--theme-text-muted)]">
+          <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.05] px-4 py-3 text-sm leading-5 text-[var(--theme-text-muted)]">
             {message}
           </div>
         )}
