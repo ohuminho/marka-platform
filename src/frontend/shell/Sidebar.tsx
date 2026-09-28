@@ -402,7 +402,7 @@ export default function Sidebar() {
                     text-[9px]
                     uppercase
                     tracking-[0.25em]
-                    text-[var(--theme-text)]/30
+                    text-[color-mix(in_srgb,var(--theme-text)_30%,transparent)]
                   "
                 >
                   Global Platform
@@ -423,7 +423,7 @@ export default function Sidebar() {
                 font-semibold
                 uppercase
                 tracking-[0.25em]
-                text-[var(--theme-text)]/25
+                text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
               "
             >
               Organization
@@ -451,7 +451,7 @@ export default function Sidebar() {
                   py-2.5
                   pr-8
                   text-[11px]
-                  text-[var(--theme-text)]/70
+                  text-[color-mix(in_srgb,var(--theme-text)_70%,transparent)]
                   outline-none
                   transition
                   focus:border-white/20
@@ -483,7 +483,7 @@ export default function Sidebar() {
                   top-1/2
                   -translate-y-1/2
                   text-[9px]
-                  text-[var(--theme-text)]/30
+                  text-[color-mix(in_srgb,var(--theme-text)_30%,transparent)]
                 "
               >
                 ▼
@@ -491,7 +491,7 @@ export default function Sidebar() {
             </div>
 
             {activeOrganization && (
-              <p className="mt-2 truncate text-[9px] text-[var(--theme-text)]/20">
+              <p className="mt-2 truncate text-[9px] text-[color-mix(in_srgb,var(--theme-text)_20%,transparent)]">
                 {activeOrganization.slug}
               </p>
             )}
@@ -527,7 +527,7 @@ export default function Sidebar() {
                     font-semibold
                     uppercase
                     tracking-[0.28em]
-                    text-[var(--theme-text)]/25
+                    text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
                   "
                 >
                   {section.group}
@@ -573,7 +573,7 @@ export default function Sidebar() {
                             ${
                               isActive
                                 ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-text)] shadow-[0_12px_35px_rgba(0,0,0,0.22)]"
-                                : "border-transparent text-[var(--theme-text)]/45 hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)] hover:text-[var(--theme-text)]/80"
+                                : "border-transparent text-[color-mix(in_srgb,var(--theme-text)_45%,transparent)] hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)] hover:text-[color-mix(in_srgb,var(--theme-text)_80%,transparent)]"
                             }
                           `}
                         >
@@ -608,7 +608,7 @@ export default function Sidebar() {
                               ${
                                 isActive
                                   ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-text)]"
-                                  : "border-[var(--theme-border)] bg-[var(--theme-text)]/[0.02] text-[var(--theme-text)]/35 group-hover:border-[var(--theme-border)] group-hover:text-[var(--theme-text)]/65"
+                                  : "border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-text)_2%,transparent)] text-[color-mix(in_srgb,var(--theme-text)_35%,transparent)] group-hover:border-[var(--theme-border)] group-hover:text-[color-mix(in_srgb,var(--theme-text)_65%,transparent)]"
                               }
                             `}
                           >
@@ -630,7 +630,7 @@ export default function Sidebar() {
                                 ${
                                   isActive
                                     ? "text-[var(--theme-text)]"
-                                    : "text-[var(--theme-text)]/55 group-hover:text-[var(--theme-text)]/85"
+                                    : "text-[color-mix(in_srgb,var(--theme-text)_55%,transparent)] group-hover:text-[color-mix(in_srgb,var(--theme-text)_85%,transparent)]"
                                 }
                               `}
                             >
@@ -645,9 +645,9 @@ export default function Sidebar() {
                                 block
                                 truncate
                                 text-[10px]
-                                text-[var(--theme-text)]/25
+                                text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
                                 transition-colors
-                                group-hover:text-[var(--theme-text)]/35
+                                group-hover:text-[color-mix(in_srgb,var(--theme-text)_35%,transparent)]
                               "
                             >
                               {
@@ -667,7 +667,7 @@ export default function Sidebar() {
           {sections.length ===
             0 && (
             <div className="px-3">
-              <p className="text-[11px] leading-5 text-[var(--theme-text)]/30">
+              <p className="text-[11px] leading-5 text-[color-mix(in_srgb,var(--theme-text)_30%,transparent)]">
                 No operational capabilities
                 are available for the active
                 organization.
@@ -709,7 +709,7 @@ export default function Sidebar() {
                 text-[9px]
                 uppercase
                 tracking-[0.25em]
-                text-[var(--theme-text)]/25
+                text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
               "
             >
               MARKA Status
@@ -726,13 +726,13 @@ export default function Sidebar() {
                 "
               />
 
-              <span className="text-[11px] text-[var(--theme-text)]/50">
+              <span className="text-[11px] text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]">
                 Platform operational
               </span>
             </div>
 
             {authorization.organizationId && (
-              <p className="relative mt-2 truncate text-[9px] text-[var(--theme-text)]/20">
+              <p className="relative mt-2 truncate text-[9px] text-[color-mix(in_srgb,var(--theme-text)_20%,transparent)]">
                 {authorization.roles.join(
                   " · "
                 )}
