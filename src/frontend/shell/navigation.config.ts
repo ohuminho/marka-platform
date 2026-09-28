@@ -59,6 +59,11 @@ export const NavigationConfig = {
           route: "/app/account",
           description: "Identity, session and access context",
         },
+        {
+          title: "Compliance",
+          route: "/app/compliance",
+          description: "KYC, KYD, KYB and verification status",
+        },
       ],
     },
 
@@ -222,6 +227,15 @@ export const NavigationConfig = {
             "System management",
           permissions: [
             "SYSTEM_ADMIN",
+          ],
+        },
+        {
+          title: "Compliance",
+          route: "/app/admin/compliance",
+          description:
+            "Review KYC, KYD, KYB and compliance cases",
+          permissions: [
+            "ADMIN_ACCESS",
           ],
         },
         {
