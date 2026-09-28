@@ -11,7 +11,7 @@ export default function LoginPage() {
         flex
         items-center
         justify-center
-        bg-black
+        bg-[var(--theme-background)]
       "
     >
 
