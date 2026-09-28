@@ -66,7 +66,7 @@ function formatDate(value: string) {
 
 function Status({ value }: { value: string }) {
   return (
-    <span className="inline-flex rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/55">
+    <span className="inline-flex rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--theme-text)]/55">
       {label(value)}
     </span>
   );
@@ -158,17 +158,17 @@ export default function DeliveryAgentDeliveries() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025] px-6 py-8 shadow-[0_30px_100px_rgba(0,0,0,0.25)] sm:px-9 sm:py-10 lg:px-12">
-        <div className="absolute -right-40 -top-40 h-[30rem] w-[30rem] rounded-full bg-white/[0.035] blur-[110px]" />
+      <section className="relative overflow-hidden rounded-[2rem] border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.025] px-6 py-8 shadow-[0_30px_100px_rgba(0,0,0,0.25)] sm:px-9 sm:py-10 lg:px-12">
+        <div className="absolute -right-40 -top-40 h-[30rem] w-[30rem] rounded-full bg-[var(--theme-surface-strong)]/[0.035] blur-[110px]" />
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-white/30">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-[var(--theme-text)]/30">
               Delivery Operations
             </p>
-            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-5xl">
+            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-[var(--theme-text)] sm:text-5xl">
               My Deliveries
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/40">
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--theme-text)]/40">
               Entregas atribuídas a este agente, com estado operacional e contexto do pedido.
             </p>
           </div>
@@ -177,7 +177,7 @@ export default function DeliveryAgentDeliveries() {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/50 transition hover:border-white/20 hover:text-white disabled:opacity-40"
+            className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text)]/50 transition hover:border-[var(--theme-border)] hover:text-[var(--theme-text)] disabled:opacity-40"
           >
             {loading ? "Loading..." : "Refresh"}
           </button>
@@ -185,27 +185,27 @@ export default function DeliveryAgentDeliveries() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.035] px-5 py-4 text-xs text-white/55">
+        <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] px-5 py-4 text-xs text-[var(--theme-text)]/55">
           {error}
         </div>
       )}
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
-          <p className="text-[9px] uppercase tracking-[0.25em] text-white/25">Total</p>
-          <p className="mt-3 text-3xl font-medium text-white/90">{summary.total}</p>
+        <div className="rounded-2xl border border-white/[0.07] bg-[var(--theme-surface-strong)]/[0.025] p-5">
+          <p className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text)]/25">Total</p>
+          <p className="mt-3 text-3xl font-medium text-[var(--theme-text)]/90">{summary.total}</p>
         </div>
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
-          <p className="text-[9px] uppercase tracking-[0.25em] text-white/25">Visible exceptions</p>
-          <p className="mt-3 text-3xl font-medium text-white/90">{summary.exceptions}</p>
+        <div className="rounded-2xl border border-white/[0.07] bg-[var(--theme-surface-strong)]/[0.025] p-5">
+          <p className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text)]/25">Visible exceptions</p>
+          <p className="mt-3 text-3xl font-medium text-[var(--theme-text)]/90">{summary.exceptions}</p>
         </div>
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
-          <p className="text-[9px] uppercase tracking-[0.25em] text-white/25">Completed shown</p>
-          <p className="mt-3 text-3xl font-medium text-white/90">{summary.completed}</p>
+        <div className="rounded-2xl border border-white/[0.07] bg-[var(--theme-surface-strong)]/[0.025] p-5">
+          <p className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text)]/25">Completed shown</p>
+          <p className="mt-3 text-3xl font-medium text-[var(--theme-text)]/90">{summary.completed}</p>
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] border border-white/[0.07] bg-white/[0.02] p-5 sm:p-6">
+      <section className="rounded-[1.75rem] border border-white/[0.07] bg-[var(--theme-surface-strong)]/[0.02] p-5 sm:p-6">
         <div className="flex flex-wrap gap-2">
           {(["ACTIVE", "HISTORY"] as const).map((value) => (
             <button
@@ -214,8 +214,8 @@ export default function DeliveryAgentDeliveries() {
               onClick={() => setScope(value)}
               className={`rounded-full border px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.18em] transition ${
                 scope === value
-                  ? "border-white/20 bg-white text-black"
-                  : "border-white/10 bg-white/[0.035] text-white/45 hover:text-white"
+                  ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-background)]"
+                  : "border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] text-[var(--theme-text)]/45 hover:text-[var(--theme-text)]"
               }`}
             >
               {value === "ACTIVE" ? "Active" : "History"}
@@ -225,13 +225,13 @@ export default function DeliveryAgentDeliveries() {
 
         <div className="mt-6 space-y-3">
           {loading && (
-            <div className="rounded-xl border border-white/[0.05] bg-black/15 px-4 py-8 text-center text-xs text-white/25">
+            <div className="rounded-xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] px-4 py-8 text-center text-xs text-[var(--theme-text)]/25">
               Loading deliveries...
             </div>
           )}
 
           {!loading && data?.deliveries.length === 0 && (
-            <div className="rounded-xl border border-white/[0.05] bg-black/15 px-4 py-10 text-center text-xs text-white/25">
+            <div className="rounded-xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] px-4 py-10 text-center text-xs text-[var(--theme-text)]/25">
               {scope === "ACTIVE"
                 ? "No active deliveries assigned."
                 : "No delivery history available."}
@@ -245,7 +245,7 @@ export default function DeliveryAgentDeliveries() {
               return (
               <article
                 key={delivery.dispatchId}
-                className="rounded-2xl border border-white/[0.06] bg-black/15 p-5"
+                className="rounded-2xl border border-white/[0.06] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] p-5"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
@@ -256,52 +256,52 @@ export default function DeliveryAgentDeliveries() {
                         <Status value={delivery.exceptionCode} />
                       )}
                     </div>
-                    <h2 className="mt-3 text-sm font-medium text-white/75">
+                    <h2 className="mt-3 text-sm font-medium text-[var(--theme-text)]/75">
                       {delivery.store?.name ?? "Store"} · Order {delivery.orderId.slice(0, 8)}
                     </h2>
-                    <p className="mt-1 text-[10px] text-white/25">
+                    <p className="mt-1 text-[10px] text-[var(--theme-text)]/25">
                       Accepted {formatDate(delivery.acceptedAt)} · Updated {formatDate(delivery.updatedAt)}
                     </p>
                   </div>
 
                   <div className="text-left lg:text-right">
-                    <p className="text-lg font-medium text-white/80">
+                    <p className="text-lg font-medium text-[var(--theme-text)]/80">
                       {delivery.order.total} {delivery.order.currency}
                     </p>
-                    <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-white/20">
+                    <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
                       Order {label(delivery.order.status)}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
-                    <p className="text-[9px] uppercase tracking-[0.18em] text-white/20">Destination</p>
-                    <p className="mt-2 text-xs leading-5 text-white/55">
+                  <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.02] p-4">
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">Destination</p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--theme-text)]/55">
                       {delivery.order.deliveryAddress ?? "Address unavailable"}
                     </p>
                     {delivery.order.deliveryInstructions && (
-                      <p className="mt-2 text-[10px] text-white/25">
+                      <p className="mt-2 text-[10px] text-[var(--theme-text)]/25">
                         {delivery.order.deliveryInstructions}
                       </p>
                     )}
                   </div>
 
-                  <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
-                    <p className="text-[9px] uppercase tracking-[0.18em] text-white/20">References</p>
-                    <p className="mt-2 text-[10px] text-white/30">Dispatch: {delivery.dispatchId}</p>
-                    <p className="mt-1 text-[10px] text-white/30">Fulfillment: {delivery.fulfillmentId}</p>
+                  <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.02] p-4">
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">References</p>
+                    <p className="mt-2 text-[10px] text-[var(--theme-text)]/30">Dispatch: {delivery.dispatchId}</p>
+                    <p className="mt-1 text-[10px] text-[var(--theme-text)]/30">Fulfillment: {delivery.fulfillmentId}</p>
                   </div>
                 </div>
                 {actions.length > 0 && (
-                  <div className="mt-5 flex flex-wrap gap-2 border-t border-white/[0.05] pt-4">
+                  <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--theme-border)] pt-4">
                     {actions.map((action) => (
                       <button
                         key={action.status}
                         type="button"
                         onClick={() => void transition(delivery, action.status)}
                         disabled={actionId !== null}
-                        className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/55 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.04] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]/55 transition hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface-strong)]/[0.07] hover:text-[var(--theme-text)] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {actionId === delivery.dispatchId ? "Processing..." : action.label}
                       </button>
