@@ -138,9 +138,15 @@ export default function ProductGrid() {
 
   return (
     <div>
-      <MarketplaceSearch
-        onSearch={setSearch}
-      />
+      <div className="flex flex-col gap-4 border-b border-[var(--theme-border)] pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Discover</p>
+          <h2 className="marka-editorial mt-1 text-3xl text-[var(--theme-text)]">Escolhas para si.</h2>
+        </div>
+        <div className="w-full lg:max-w-md">
+          <MarketplaceSearch onSearch={setSearch} />
+        </div>
+      </div>
 
       <MarketplaceFilters
         verifiedOnly={verifiedOnly}
@@ -150,8 +156,10 @@ export default function ProductGrid() {
       />
 
       {loading ? (
-        <div className="mt-10 text-sm text-[var(--theme-text-muted)]">
-          {t.loadingMarketplace}
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="aspect-[4/4.3] animate-pulse rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)]" />
+          ))}
         </div>
       ) : error ? (
         <div
@@ -161,8 +169,12 @@ export default function ProductGrid() {
           {error}
         </div>
       ) : products.length === 0 ? (
-        <div className="mt-10 text-sm text-[var(--theme-text-muted)]">
-          {t.noProducts}
+        <div className="mt-10 overflow-hidden rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-8 sm:p-12">
+          <div className="max-w-xl">
+            <p className="marka-kicker">MARKA MARKETPLACE</p>
+            <h3 className="marka-editorial mt-4 text-4xl text-[var(--theme-text)]">A sua próxima descoberta começa aqui.</h3>
+            <p className="mt-4 text-sm leading-7 text-[var(--theme-text-muted)]">{t.noProducts}</p>
+          </div>
         </div>
       ) : (
         <div className="mt-10 grid gap-x-5 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">
