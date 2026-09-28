@@ -174,16 +174,16 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-md px-6">
       <div className="mb-10 text-center">
-        <div className="mb-3 text-3xl font-semibold tracking-[0.28em] text-white">
+        <div className="mb-3 text-3xl font-semibold tracking-[0.28em] text-[var(--theme-text)]">
           MARKA
         </div>
 
-        <p className="text-sm tracking-wide text-white/45">
+        <p className="text-sm tracking-wide text-[var(--theme-text-muted)]">
           Global Digital Economy
         </p>
       </div>
 
-      <div className="mb-8 flex rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+      <div className="mb-8 flex rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-1">
         <button
           type="button"
           onClick={() =>
@@ -191,8 +191,8 @@ export default function LoginForm() {
           }
           className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
             mode === "login"
-              ? "bg-white text-black"
-              : "text-white/55 hover:text-white"
+              ? "bg-[var(--theme-text)] text-[var(--theme-background)]"
+              : "text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"
           }`}
         >
           Sign in
@@ -205,8 +205,8 @@ export default function LoginForm() {
           }
           className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium transition ${
             mode === "register"
-              ? "bg-white text-black"
-              : "text-white/55 hover:text-white"
+              ? "bg-[var(--theme-text)] text-[var(--theme-background)]"
+              : "text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"
           }`}
         >
           Create account
@@ -227,7 +227,7 @@ export default function LoginForm() {
             }
             required
             autoComplete="name"
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+            className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
           />
         )}
 
@@ -240,7 +240,7 @@ export default function LoginForm() {
           }
           required
           autoComplete="email"
-          className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+          className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
         />
 
         <input
@@ -256,7 +256,7 @@ export default function LoginForm() {
               ? "new-password"
               : "current-password"
           }
-          className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+          className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
         />
 
         {isRegistering && (
@@ -271,19 +271,19 @@ export default function LoginForm() {
             }
             required
             autoComplete="new-password"
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-white/30"
+            className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
           />
         )}
 
         {isRegistering && (
-          <p className="px-1 text-xs leading-5 text-white/40">
+          <p className="px-1 text-xs leading-5 text-[var(--theme-text-faint)]">
             Your password must contain at
             least 12 characters.
           </p>
         )}
 
         {message && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm leading-5 text-white/70">
+          <div className="rounded-2xl border border-[var(--theme-border)] bg-white/[0.05] px-4 py-3 text-sm leading-5 text-[var(--theme-text-muted)]">
             {message}
           </div>
         )}
@@ -293,7 +293,7 @@ export default function LoginForm() {
           disabled={
             loading || resending
           }
-          className="w-full rounded-2xl bg-white py-4 font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-2xl bg-[var(--theme-text)] py-4 font-medium text-[var(--theme-background)] transition hover:bg-[var(--theme-accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading
             ? isRegistering
@@ -315,7 +315,7 @@ export default function LoginForm() {
             disabled={
               loading || resending
             }
-            className="mt-4 w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 text-sm font-medium text-white/70 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-4 w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] py-3.5 text-sm font-medium text-[var(--theme-text-muted)] transition hover:bg-[var(--theme-surface-strong)] hover:text-[var(--theme-text)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {resending
               ? "Sending verification email..."
@@ -323,7 +323,7 @@ export default function LoginForm() {
           </button>
         )}
 
-      <p className="mt-8 text-center text-xs leading-5 text-white/30">
+      <p className="mt-8 text-center text-xs leading-5 text-[var(--theme-text-faint)]">
         By continuing, you agree to use MARKA
         responsibly and securely.
       </p>
