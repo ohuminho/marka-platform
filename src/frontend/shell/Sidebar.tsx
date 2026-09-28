@@ -317,7 +317,7 @@ export default function Sidebar() {
         top-0
         hidden
         h-screen
-        w-[286px]
+        w-[248px]
         shrink-0
         overflow-y-auto
         border-r
@@ -330,7 +330,7 @@ export default function Sidebar() {
       "
     >
       <div className="flex h-full flex-col">
-        <div className="px-3">
+        <div className="px-2">
           <Link
             href="/app"
             className="
@@ -389,7 +389,7 @@ export default function Sidebar() {
                     bg-clip-text
                     text-[17px]
                     font-semibold
-                    tracking-[0.2em]
+                    tracking-[0.22em]
                     text-transparent
                   "
                 >
@@ -413,7 +413,7 @@ export default function Sidebar() {
         </div>
 
         {organizations.length > 0 && (
-          <div className="mt-6 px-3">
+          <div className="mt-5 px-2">
             <label
               htmlFor="marka-active-organization"
               className="
@@ -511,7 +511,7 @@ export default function Sidebar() {
         />
 
         <nav
-          className="flex-1 space-y-8"
+          className="flex-1 space-y-6"
           aria-label="MARKA navigation"
         >
           {sections.map(
@@ -533,7 +533,7 @@ export default function Sidebar() {
                   {section.group}
                 </p>
 
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {section.items.map(
                     (item) => {
                       const isActive =
@@ -625,7 +625,7 @@ export default function Sidebar() {
                               className={`
                                 block
                                 truncate
-                                text-[13px]
+                                text-[12px]
                                 font-medium
                                 ${
                                   isActive
@@ -644,7 +644,7 @@ export default function Sidebar() {
                                 mt-0.5
                                 block
                                 truncate
-                                text-[10px]
+                                text-[9px]
                                 text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
                                 transition-colors
                                 group-hover:text-[color-mix(in_srgb,var(--theme-text)_35%,transparent)]
@@ -676,7 +676,7 @@ export default function Sidebar() {
           )}
         </nav>
 
-        <div className="mt-8">
+        <div className="mt-5">
           <div
             className="
               relative
