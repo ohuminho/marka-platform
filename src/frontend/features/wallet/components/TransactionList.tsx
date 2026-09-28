@@ -105,9 +105,9 @@ export default function TransactionList({
       className="
         rounded-3xl
         p-8
-        bg-white/5
+        bg-[var(--theme-surface-strong)]/5
         border
-        border-white/10
+        border-[var(--theme-border)]
       "
     >
       <h3
@@ -120,11 +120,11 @@ export default function TransactionList({
       </h3>
 
       {loading ? (
-        <p className="text-neutral-400 mt-4">
+        <p className="text-[var(--theme-text-muted)] mt-4">
           Loading transactions...
         </p>
       ) : transactions.length === 0 ? (
-        <p className="text-neutral-400 mt-4">
+        <p className="text-[var(--theme-text-muted)] mt-4">
           No transactions yet.
         </p>
       ) : (
@@ -147,8 +147,8 @@ export default function TransactionList({
                     gap-4
                     rounded-2xl
                     border
-                    border-white/10
-                    bg-white/5
+                    border-[var(--theme-border)]
+                    bg-[var(--theme-surface-strong)]/5
                     p-4
                   "
                 >
