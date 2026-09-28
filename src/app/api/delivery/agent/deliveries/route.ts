@@ -17,7 +17,9 @@ function getToken(request: Request): string | null {
   );
 }
 
-function parseScope(value: string | null): DeliveryAgentDeliveryScope {
+function parseScope(
+  value: string | null,
+): DeliveryAgentDeliveryScope {
   if (value === "HISTORY" || value === "ALL") {
     return value;
   }
@@ -34,6 +36,7 @@ function parsePositiveInteger(
   }
 
   const parsed = Number(value);
+
   if (!Number.isInteger(parsed) || parsed < 0) {
     return fallback;
   }
@@ -108,23 +111,32 @@ export async function GET(request: Request) {
     }
 
     const url = new URL(request.url);
-    const scope = parseScope(url.searchParams.get("scope"));
+
+    const scope = parseScope(
+      url.searchParams.get("scope"),
+    );
+
     const limit = Math.min(
-      parsePositiveInteger(url.searchParams.get("limit"), 20),
+      parsePositiveInteger(
+        url.searchParams.get("limit"),
+        20,
+      ),
       50,
     );
+
     const offset = parsePositiveInteger(
       url.searchParams.get("offset"),
       0,
     );
 
-    const result = await deliveryAgentDeliveryService.list({
-      agentId: agent.id,
-      organizationId: agent.organizationId,
-      scope,
-      limit,
-      offset,
-    });
+    const result =
+      await deliveryAgentDeliveryService.list({
+        agentId: agent.id,
+        organizationId: agent.organizationId,
+        scope,
+        limit,
+        offset,
+      });
 
     return NextResponse.json({
       deliveries: result.items,
@@ -143,7 +155,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       {
-        message: "Unable to load delivery agent deliveries.",
+        message:
+          "Unable to load delivery agent deliveries.",
         code,
       },
       { status: 500 },
