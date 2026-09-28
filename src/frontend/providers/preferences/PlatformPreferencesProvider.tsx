@@ -23,6 +23,8 @@ const isTheme = (value: string | null): value is PlatformTheme =>
 const isLanguage = (value: string | null): value is PlatformLanguage =>
   value === "pt" || value === "en" || value === "fr" || value === "zh" || value === "ar" || value === "os";
 
+const isRtlLanguage = (language: PlatformLanguage) => language === "ar";
+
 export function PlatformPreferencesProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<PlatformTheme>("obsidian");
   const [language, setLanguageState] = useState<PlatformLanguage>("pt");
@@ -31,9 +33,7 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
     const storedTheme = window.localStorage.getItem(THEME_KEY);
     const storedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
     // The persisted values are client-only; hydration must complete before applying them.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isTheme(storedTheme)) setThemeState(storedTheme);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
   }, []);
 
@@ -44,6 +44,8 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
 
   useEffect(() => {
     document.documentElement.lang = language;
+    document.documentElement.dir = isRtlLanguage(language) ? "rtl" : "ltr";
+    document.documentElement.dataset.language = language;
     window.localStorage.setItem(LANGUAGE_KEY, language);
   }, [language]);
 
