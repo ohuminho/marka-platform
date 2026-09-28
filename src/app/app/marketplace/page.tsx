@@ -1,4 +1,5 @@
 import ProductGrid from "@/frontend/features/marketplace/components/ProductGrid";
+import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 
 
 export default function MarketplacePage() {
@@ -8,8 +9,11 @@ export default function MarketplacePage() {
 
     <main className="
       min-h-screen
+      space-y-8
       p-8
     ">
+
+      <RoleContextSummary />
 
 
       <section className="
