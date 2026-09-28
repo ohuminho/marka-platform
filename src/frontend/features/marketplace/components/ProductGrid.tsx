@@ -161,7 +161,7 @@ export default function ProductGrid() {
           {error}
         </div>
       ) : products.length === 0 ? (
-        <div className="mt-10 text-white/50">
+        <div className="mt-10 text-sm text-[var(--theme-text-muted)]">
           {t.noProducts}
         </div>
       ) : (
