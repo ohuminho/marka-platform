@@ -258,29 +258,25 @@ export default function Sidebar() {
   const role =
     user?.role || "CUSTOMER";
 
-  const configuredSections =
-    NavigationConfig[
+  const configuredSections: NavigationSection[] =
+    (NavigationConfig[
       role as keyof typeof NavigationConfig
     ] ||
-    NavigationConfig.CUSTOMER;
+      NavigationConfig.CUSTOMER) as NavigationSection[];
 
   const sections: NavigationSection[] =
-    configuredSections.map((section) => ({
+    configuredSections
+      .map((section) => ({
         ...section,
+        items: section.items.filter((item) => {
+          const permissions = item.permissions;
 
-        items:
-          section.items.filter((item) => {
-            const permissions =
-              "permissions" in item
-                ? item.permissions
-                : undefined;
-
-            return (
-              !permissions ||
-              permissions.length === 0 ||
-              hasAnyPermission(permissions)
-            );
-          }),
+          return (
+            !permissions ||
+            permissions.length === 0 ||
+            hasAnyPermission(permissions)
+          );
+        }),
       }))
       .filter(
         (section) =>
