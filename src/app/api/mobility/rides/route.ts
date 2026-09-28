@@ -18,11 +18,11 @@ const mobilityRideService =
   new MobilityRideService();
 
 export async function POST(
-  request: Request
+  request: Request,
 ) {
   const authentication =
     await authenticateMobilityRequest(
-      request
+      request,
     );
 
   if (!authentication.ok) {
@@ -50,12 +50,12 @@ export async function POST(
     const idempotencyKey =
       getIdempotencyKey(
         request,
-        body
+        body,
       );
 
     const requestContext =
       getRequestContext(
-        request
+        request,
       );
 
     if (!serviceType) {
@@ -63,13 +63,12 @@ export async function POST(
         {
           message:
             "Mobility service type is required.",
-
           code:
             "MOBILITY_SERVICE_TYPE_REQUIRED",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -78,19 +77,18 @@ export async function POST(
         {
           message:
             "Idempotency key is required.",
-
           code:
             "IDEMPOTENCY_KEY_REQUIRED",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
     const safetyMode =
       normalizeSafetyMode(
-        body?.safetyMode
+        body?.safetyMode,
       );
 
     if (!safetyMode) {
@@ -98,13 +96,12 @@ export async function POST(
         {
           message:
             "safetyMode must be STANDARD, TRUSTED, or CHILD.",
-
           code:
             "INVALID_SAFETY_MODE",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -124,12 +121,12 @@ export async function POST(
 
         pickupLatitude:
           Number(
-            body?.pickupLatitude
+            body?.pickupLatitude,
           ),
 
         pickupLongitude:
           Number(
-            body?.pickupLongitude
+            body?.pickupLongitude,
           ),
 
         pickupAddress:
@@ -140,12 +137,12 @@ export async function POST(
 
         dropoffLatitude:
           Number(
-            body?.dropoffLatitude
+            body?.dropoffLatitude,
           ),
 
         dropoffLongitude:
           Number(
-            body?.dropoffLongitude
+            body?.dropoffLongitude,
           ),
 
         dropoffAddress:
@@ -156,7 +153,7 @@ export async function POST(
 
         stops:
           Array.isArray(
-            body?.stops
+            body?.stops,
           )
             ? body.stops
             : undefined,
@@ -167,7 +164,7 @@ export async function POST(
             typeof body.metadata ===
               "object" &&
             !Array.isArray(
-              body.metadata
+              body.metadata,
             )
               ? body.metadata
               : {}
@@ -211,17 +208,16 @@ export async function POST(
     return NextResponse.json(
       {
         ride,
-
         orchestration,
       },
       {
         status: 201,
-      }
+      },
     );
   } catch (error) {
     console.error(
       "[MOBILITY_RIDE_CREATE_API_ERROR]",
-      error
+      error,
     );
 
     const message =
@@ -234,23 +230,22 @@ export async function POST(
         message:
           message ||
           "Unable to create Mobility ride.",
-
         code:
           "MOBILITY_RIDE_CREATION_FAILED",
       },
       {
         status: 400,
-      }
+      },
     );
   }
 }
 
 export async function GET(
-  request: Request
+  request: Request,
 ) {
   const authentication =
     await authenticateMobilityRequest(
-      request
+      request,
     );
 
   if (!authentication.ok) {
@@ -261,7 +256,7 @@ export async function GET(
     const ride =
       await mobilityRideService.getActiveRideForRider(
         authentication.session
-          .userId
+          .userId,
       );
 
     if (
@@ -276,7 +271,7 @@ export async function GET(
         },
         {
           status: 200,
-        }
+        },
       );
     }
 
@@ -285,39 +280,36 @@ export async function GET(
         ? await mobilityLifecycleService.get(
             authentication.session
               .organizationId,
-
-            ride.id
+            ride.id,
           )
         : null;
 
     return NextResponse.json({
       ride,
-
       orchestration,
     });
   } catch (error) {
     console.error(
       "[MOBILITY_ACTIVE_RIDE_API_ERROR]",
-      error
+      error,
     );
 
     return NextResponse.json(
       {
         message:
           "Unable to retrieve active Mobility ride.",
-
         code:
           "MOBILITY_ACTIVE_RIDE_RETRIEVAL_FAILED",
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }
 
 function normalizeSafetyMode(
-  value: unknown
+  value: unknown,
 ): MobilitySafetyMode | null {
   if (
     typeof value !==
