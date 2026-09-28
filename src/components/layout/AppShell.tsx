@@ -6,7 +6,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-[var(--theme-background)] text-[var(--theme-text)]">
       {children}
     </div>
   );
