@@ -10,10 +10,10 @@ type Metrics = { revenue?: { current?: number; currency?: string }; sales?: { to
 function AnalyticsContent() {
   const { vendor, loading: vendorLoading } = useVendor();
   const [metrics, setMetrics] = useState<Metrics>();
-  const loading = vendorLoading || (!!vendor?.id && !metrics);
+  const vendorId = vendor?.id ?? null;
+  const loading = vendorLoading || (vendorId !== null && !metrics);
 
   useEffect(() => {
-    const vendorId = vendor?.id ?? null;
     if (vendorId === null) return;
     let cancelled = false;
     async function load() {
@@ -27,7 +27,7 @@ function AnalyticsContent() {
     }
     void load();
     return () => { cancelled = true; };
-  }, [vendor?.id, vendorLoading]);
+  }, [vendorId, vendorLoading]);
 
   const cards = [
     ["Revenue", metrics?.revenue?.current != null ? String(metrics.revenue.current) + " " + (metrics.revenue.currency ?? "AOA") : "—"],
