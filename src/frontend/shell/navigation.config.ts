@@ -233,6 +233,28 @@ export const NavigationConfig = {
     },
   ],
 
+  DRIVER: [
+    {
+      group: "Mobility",
+      items: [
+        { title: "Driver Workspace", route: "/app/driver", description: "Driver operational workspace" },
+        { title: "Mobility", route: "/app/mobility", description: "Trips, dispatch and settlement" },
+        { title: "Account", route: "/app/account", description: "Identity, session and access context" },
+      ],
+    },
+  ],
+  DELIVERY_AGENT: [
+    {
+      group: "Delivery",
+      items: [
+        { title: "Workspace", route: "/app/delivery-agent", description: "Delivery operations" },
+        { title: "Available Deliveries", route: "/app/delivery-agent/offers", description: "Review and accept delivery offers", permissions: ["DELIVERY_AGENT_OPERATE"] },
+        { title: "My Deliveries", route: "/app/delivery-agent/deliveries", description: "Operate assigned deliveries", permissions: ["DELIVERY_AGENT_OPERATE"] },
+        { title: "Account", route: "/app/account", description: "Identity, session and access context" },
+      ],
+    },
+  ],
+
   SUPER_ADMIN: [
     {
       group: "Control Center",
