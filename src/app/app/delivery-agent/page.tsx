@@ -9,8 +9,8 @@ export default function DeliveryAgentPage() {
         <main className="space-y-8">
           <RoleContextSummary />
           <header>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--theme-text)]/30">Delivery</p>
-            <h1 className="mt-2 text-3xl font-semibold text-[var(--theme-text)]">Delivery Agent Workspace</h1>
+            <p className="marka-kicker">MARKA / DELIVERY</p>
+            <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)]">Delivery Agent Workspace</h1>
             <p className="mt-2 text-sm text-[var(--theme-text)]/45">Operational entry point for delivery agents.</p>
           </header>
           <div className="grid gap-4 md:grid-cols-2">
