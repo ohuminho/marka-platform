@@ -32,7 +32,7 @@ export default function MarkaHero() {
             -translate-x-1/2
             -translate-y-1/2
             rounded-full
-            bg-white/[0.035]
+            bg-[var(--theme-surface-strong)]/[0.035]
             blur-[120px]
           "
         />
@@ -50,7 +50,7 @@ export default function MarkaHero() {
             -translate-y-1/2
             rounded-full
             border
-            border-white/[0.055]
+            border-[var(--theme-border)]
           "
         />
 
@@ -67,7 +67,7 @@ export default function MarkaHero() {
             -translate-y-1/2
             rounded-full
             border
-            border-white/[0.025]
+            border-[var(--theme-border)]
           "
         />
 
@@ -93,12 +93,12 @@ export default function MarkaHero() {
               font-medium
               uppercase
               tracking-[0.42em]
-              text-white/35
+              text-[var(--theme-text)]/35
             "
           >
-            <span className="h-px w-10 bg-white/15" />
+            <span className="h-px w-10 bg-[var(--theme-surface-strong)]/15" />
             <span>Global Digital Economy</span>
-            <span className="h-px w-10 bg-white/15" />
+            <span className="h-px w-10 bg-[var(--theme-surface-strong)]/15" />
           </div>
 
           <div className="relative">
@@ -109,7 +109,7 @@ export default function MarkaHero() {
                 inset-x-0
                 bottom-1
                 h-8
-                bg-white/10
+                bg-[var(--theme-surface-strong)]/10
                 blur-3xl
               "
             />
@@ -119,9 +119,9 @@ export default function MarkaHero() {
                 relative
                 select-none
                 bg-gradient-to-b
-                from-white
-                via-neutral-300
-                to-neutral-600
+                from-[var(--theme-text)]
+                via-[var(--theme-text-muted)]
+                to-[var(--theme-text-faint)]
                 bg-clip-text
                 text-[clamp(5rem,17vw,13rem)]
                 font-semibold
@@ -147,7 +147,7 @@ export default function MarkaHero() {
                 text-2xl
                 font-light
                 tracking-[-0.025em]
-                text-white/85
+                text-[var(--theme-text)]/85
                 sm:text-3xl
                 lg:text-4xl
               "
@@ -162,7 +162,7 @@ export default function MarkaHero() {
                 max-w-2xl
                 text-sm
                 leading-7
-                text-white/40
+                text-[var(--theme-text)]/40
                 sm:text-base
                 sm:leading-8
               "
@@ -195,13 +195,13 @@ export default function MarkaHero() {
                 overflow-hidden
                 rounded-full
                 border
-                border-white/20
-                bg-white
+                border-[var(--theme-border)]
+                bg-[var(--theme-surface-strong)]
                 px-8
                 text-sm
                 font-semibold
                 tracking-wide
-                text-black
+                text-[var(--theme-background)]
                 shadow-[0_20px_60px_rgba(255,255,255,0.08)]
                 transition-all
                 duration-500
@@ -251,19 +251,19 @@ export default function MarkaHero() {
                 justify-center
                 rounded-full
                 border
-                border-white/[0.12]
-                bg-white/[0.025]
+                border-[var(--theme-border)]
+                bg-[var(--theme-surface-strong)]/[0.025]
                 px-8
                 text-sm
                 font-medium
                 tracking-wide
-                text-white/75
+                text-[var(--theme-text)]/75
                 backdrop-blur-xl
                 transition-all
                 duration-300
                 hover:border-white/25
-                hover:bg-white/[0.06]
-                hover:text-white
+                hover:bg-[var(--theme-surface-strong)]/[0.06]
+                hover:text-[var(--theme-text)]
               "
             >
               Explore the ecosystem
@@ -278,8 +278,8 @@ export default function MarkaHero() {
               overflow-hidden
               rounded-2xl
               border
-              border-white/[0.07]
-              bg-white/[0.02]
+              border-[var(--theme-border)]
+              bg-[var(--theme-surface-strong)]/[0.02]
               backdrop-blur-xl
               sm:grid-cols-3
             "
@@ -298,7 +298,7 @@ export default function MarkaHero() {
                   text-left
                   ${
                     index > 0
-                      ? "border-t border-white/[0.07] sm:border-l sm:border-t-0"
+                      ? "border-t border-[var(--theme-border)] sm:border-l sm:border-t-0"
                       : ""
                   }
                 `}
@@ -309,7 +309,7 @@ export default function MarkaHero() {
                     font-semibold
                     uppercase
                     tracking-[0.25em]
-                    text-white/35
+                    text-[var(--theme-text)]/35
                   "
                 >
                   {title}
@@ -319,7 +319,7 @@ export default function MarkaHero() {
                   className="
                     mt-2
                     text-xs
-                    text-white/55
+                    text-[var(--theme-text)]/55
                   "
                 >
                   {description}
@@ -334,7 +334,7 @@ export default function MarkaHero() {
               text-[9px]
               uppercase
               tracking-[0.35em]
-              text-white/20
+              text-[var(--theme-text)]/20
             "
           >
             African born · Globally built
