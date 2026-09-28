@@ -2,10 +2,30 @@ import { prisma } from "@/database/client/prisma";
 import type { ComplianceSubjectType } from "@prisma/client";
 import type { ComplianceProfileView } from "./compliance.types";
 
-function toView(profile: Awaited<ReturnType<typeof prisma.complianceProfile.findUnique>> & {
-  documents?: Array<any>;
-  cases?: Array<any>;
-}): ComplianceProfileView | null {
+type ComplianceDocumentRow = {
+  id: string;
+  documentType: string;
+  status: ComplianceProfileView["documents"][number]["status"];
+  expiresAt: Date | null;
+  rejectionReason: string | null;
+};
+
+type ComplianceCaseRow = {
+  id: string;
+  status: ComplianceProfileView["cases"][number]["status"];
+  reason: string;
+  decision: string | null;
+  notes: string | null;
+};
+
+type ComplianceProfileRow = Awaited<
+  ReturnType<typeof prisma.complianceProfile.findUnique>
+> & {
+  documents?: ComplianceDocumentRow[];
+  cases?: ComplianceCaseRow[];
+};
+
+function toView(profile: ComplianceProfileRow): ComplianceProfileView | null {
   if (!profile) return null;
   return {
     id: profile.id,
