@@ -30,7 +30,10 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_KEY);
     const storedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
+    // The persisted values are client-only; hydration must complete before applying them.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isTheme(storedTheme)) setThemeState(storedTheme);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
   }, []);
 
