@@ -165,7 +165,7 @@ export default function DeliveryAgentDeliveries() {
             <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-[var(--theme-text)]/30">
               Delivery Operations
             </p>
-            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-[var(--theme-text)] sm:text-5xl">
+            <h1 className="mt-5 marka-editorial text-4xl text-[var(--theme-text)] sm:text-5xl">
               My Deliveries
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--theme-text)]/40">
@@ -231,7 +231,7 @@ export default function DeliveryAgentDeliveries() {
           )}
 
           {!loading && data?.deliveries.length === 0 && (
-            <div className="rounded-xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] px-4 py-10 text-center text-xs text-[var(--theme-text)]/25">
+            <div className="rounded-xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] px-4 rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-12 text-center text-xs text-[var(--theme-text)]/45">
               {scope === "ACTIVE"
                 ? "No active deliveries assigned."
                 : "No delivery history available."}
