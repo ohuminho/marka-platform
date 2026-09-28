@@ -26,7 +26,7 @@ const isLanguage = (value: string | null): value is PlatformLanguage =>
 const isRtlLanguage = (language: PlatformLanguage) => language === "ar";
 
 export function PlatformPreferencesProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<PlatformTheme>("obsidian");
+  const [theme, setThemeState] = useState<PlatformTheme>("pearl");
   const [language, setLanguageState] = useState<PlatformLanguage>("pt");
 
   useEffect(() => {
