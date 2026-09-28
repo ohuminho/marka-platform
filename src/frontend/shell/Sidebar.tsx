@@ -443,18 +443,19 @@ export default function Sidebar() {
                 className="
                   w-full
                   appearance-none
-                  rounded-xl
-                  border
-                  border-[var(--theme-border)]
-                  bg-[var(--theme-surface)]
-                  px-3
+                  rounded-[10px]
+                  border-0
+                  border-b
+                  border-[color-mix(in_srgb,var(--theme-border)_82%,transparent)]
+                  bg-transparent
+                  px-0
                   py-2.5
                   pr-8
                   text-[11px]
                   text-[color-mix(in_srgb,var(--theme-text)_70%,transparent)]
                   outline-none
                   transition
-                  focus:border-white/20
+                  focus:border-[var(--theme-accent)]
                   disabled:cursor-wait
                   disabled:opacity-50
                 "
@@ -479,7 +480,7 @@ export default function Sidebar() {
                 className="
                   pointer-events-none
                   absolute
-                  right-3
+                  right-1
                   top-1/2
                   -translate-y-1/2
                   text-[9px]
@@ -491,7 +492,7 @@ export default function Sidebar() {
             </div>
 
             {activeOrganization && (
-              <p className="mt-2 truncate text-[9px] text-[color-mix(in_srgb,var(--theme-text)_20%,transparent)]">
+              <p className="mt-1.5 truncate text-[8px] uppercase tracking-[0.14em] text-[color-mix(in_srgb,var(--theme-text)_20%,transparent)]">
                 {activeOrganization.slug}
               </p>
             )}
@@ -521,8 +522,8 @@ export default function Sidebar() {
               >
                 <p
                   className="
-                    mb-3
-                    px-3
+                    mb-2
+                    px-2
                     text-[9px]
                     font-semibold
                     uppercase
