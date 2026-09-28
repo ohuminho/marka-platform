@@ -426,6 +426,12 @@ export class OrderService {
         currency: true,
         createdAt: true,
         updatedAt: true,
+        items: {
+          select: {
+            productId: true,
+            quantity: true,
+          },
+        },
       },
     });
 
@@ -443,15 +449,33 @@ export class OrderService {
       throw new Error("INVALID_ORDER_STATUS_TRANSITION");
     }
 
-    const updated = await prisma.order.updateMany({
-      where: {
-        id: orderId,
-        status: existingOrder.status,
+    const updated = await prisma.$transaction(
+      async (database) => {
+        if (status === OrderStatus.CANCELLED) {
+          await inventoryService.releaseWithinTransaction(
+            database,
+            existingOrder.items,
+          );
+        }
+
+        if (status === OrderStatus.SHIPPED) {
+          await inventoryService.consumeWithinTransaction(
+            database,
+            existingOrder.items,
+          );
+        }
+
+        return database.order.updateMany({
+          where: {
+            id: orderId,
+            status: existingOrder.status,
+          },
+          data: {
+            status: status as unknown as PrismaOrderStatus,
+          },
+        });
       },
-      data: {
-        status: status as unknown as PrismaOrderStatus,
-      },
-    });
+    );
 
     if (updated.count !== 1) {
       throw new Error("ORDER_STATUS_CONCURRENT_UPDATE");
