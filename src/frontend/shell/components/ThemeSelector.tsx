@@ -3,11 +3,11 @@
 import { usePlatformPreferences, type PlatformTheme } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
-const themes: { value: PlatformTheme; labelKey: "themeObsidian" | "themeGraphite" | "themeSilver" | "themeAurora" }[] = [
+const themes: { value: PlatformTheme; labelKey: "themeObsidian" | "themeGraphite" | "themeSilver" | "themeAurora" | "themePearl" }[] = [
   { value: "obsidian", labelKey: "themeObsidian" },
   { value: "graphite", labelKey: "themeGraphite" },
   { value: "silver", labelKey: "themeSilver" },
-  { value: "aurora", labelKey: "themeAurora" },
+  { value: "aurora", labelKey: "themeAurora" },\n  { value: "pearl", labelKey: "themePearl" },
 ];
 
 export default function ThemeSelector() {
