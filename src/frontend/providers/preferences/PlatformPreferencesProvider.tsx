@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type PlatformTheme = "obsidian" | "graphite" | "silver" | "aurora";
-export type PlatformLanguage = "pt" | "en" | "fr";
+export type PlatformLanguage = "pt" | "en" | "fr" | "zh" | "ar" | "os";
 
 type PlatformPreferences = {
   theme: PlatformTheme;
@@ -21,7 +21,7 @@ const isTheme = (value: string | null): value is PlatformTheme =>
   value === "obsidian" || value === "graphite" || value === "silver" || value === "aurora";
 
 const isLanguage = (value: string | null): value is PlatformLanguage =>
-  value === "pt" || value === "en" || value === "fr";
+  value === "pt" || value === "en" || value === "fr" || value === "zh" || value === "ar" || value === "os";
 
 export function PlatformPreferencesProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<PlatformTheme>("obsidian");
@@ -45,12 +45,7 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
   }, [language]);
 
   const value = useMemo(
-    () => ({
-      theme,
-      language,
-      setTheme: setThemeState,
-      setLanguage: setLanguageState,
-    }),
+    () => ({ theme, language, setTheme: setThemeState, setLanguage: setLanguageState }),
     [theme, language]
   );
 
