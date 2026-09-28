@@ -416,24 +416,19 @@ export class OrderService {
       );
     }
 
-    const allowedStatuses =
-      new Set<OrderStatus>([
-        OrderStatus.PENDING,
-        OrderStatus.CONFIRMED,
-        OrderStatus.PROCESSING,
-        OrderStatus.SHIPPED,
-        OrderStatus.DELIVERED,
-        OrderStatus.CANCELLED,
-      ]);
+    const transitions: Record<OrderStatus, OrderStatus[]> = {
+      [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+      [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+      [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+      [OrderStatus.DELIVERED]: [],
+      [OrderStatus.CANCELLED]: [],
+      [OrderStatus.REFUNDED]: [],
+    };
 
-    if (
-      !allowedStatuses.has(status)
-    ) {
-      throw new Error(
-        `Unsupported order status: ${status}.`
-      );
+    if (!transitions[status]) {
+      throw new Error('Unsupported order status: ' + status + '.');
     }
-
     const existingOrder =
       await prisma.order.findUnique({
         where: {
@@ -451,9 +446,16 @@ export class OrderService {
       );
     }
 
-    const prismaStatus =
-      status as unknown as PrismaOrderStatus;
+    const currentStatus = existingOrder.status as unknown as OrderStatus;
+    const nextStatuses = transitions[currentStatus] ?? [];
 
+    if (!nextStatuses.includes(status)) {
+      throw new Error(
+        'Invalid order transition: ' + currentStatus + ' -> ' + status + '.',
+      );
+    }
+
+    const prismaStatus = status as unknown as PrismaOrderStatus;
     const updatedOrder =
       await prisma.order.update({
         where: {
