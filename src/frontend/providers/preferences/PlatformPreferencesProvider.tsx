@@ -12,7 +12,7 @@ type PlatformPreferences = {
   setLanguage: (language: PlatformLanguage) => void;
 };
 
-const THEME_KEY = "marka.platform.theme";
+const THEME_KEY = "marka.platform.theme.v2";
 const LANGUAGE_KEY = "marka.platform.language";
 
 const context = createContext<PlatformPreferences | null>(null);
