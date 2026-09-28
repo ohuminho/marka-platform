@@ -21,10 +21,12 @@ interface RouteContext {
 
 export async function POST(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
-    await authenticateMobilityRequest(request);
+    await authenticateMobilityRequest(
+      request,
+    );
 
   if (!authentication.ok) {
     return authentication.response;
@@ -57,7 +59,7 @@ export async function POST(
           code:
             "RIDE_NOT_FOUND",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -72,7 +74,7 @@ export async function POST(
           code:
             "RIDE_ORGANIZATION_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -87,7 +89,7 @@ export async function POST(
           code:
             "TRIP_SHARE_OWNER_REQUIRED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -109,7 +111,7 @@ export async function POST(
           code:
             "TRIP_SHARE_RECIPIENT_REQUIRED",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -125,7 +127,7 @@ export async function POST(
 
       if (
         Number.isNaN(
-          parsed.getTime()
+          parsed.getTime(),
         )
       ) {
         return NextResponse.json(
@@ -135,7 +137,7 @@ export async function POST(
             code:
               "INVALID_TRIP_SHARE_EXPIRATION",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -166,12 +168,12 @@ export async function POST(
       {
         share,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error(
       "[MOBILITY_TRIP_SHARE_CREATE_API_ERROR]",
-      error
+      error,
     );
 
     const message =
@@ -185,7 +187,7 @@ export async function POST(
         code:
           "MOBILITY_TRIP_SHARE_CREATION_FAILED",
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 }
