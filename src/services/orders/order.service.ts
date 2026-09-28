@@ -9,7 +9,6 @@ import {
 } from "./types/order.types";
 
 export class OrderService {
-  private readonly auditService = new AuditService();
   async createOrder(
     input: CreateOrderInput
   ) {
@@ -409,113 +408,85 @@ export class OrderService {
 
   async updateOrderStatus(
     orderId: string,
-    status: OrderStatus,
-    actorUserId?: string,
+    status: OrderStatus
   ) {
     if (!orderId.trim()) {
-      throw new Error("Order id is required.");
+      throw new Error(
+        "Order id is required."
+      );
     }
 
-    const existingOrder = await prisma.order.findUnique({
-      where: { id: orderId },
-      select: {
-        id: true,
-        userId: true,
-        status: true,
-        total: true,
-        currency: true,
-        createdAt: true,
-        updatedAt: true,
-        items: {
-          select: {
-            productId: true,
-            quantity: true,
-          },
+    const allowedStatuses =
+      new Set<OrderStatus>([
+        OrderStatus.PENDING,
+        OrderStatus.CONFIRMED,
+        OrderStatus.PROCESSING,
+        OrderStatus.SHIPPED,
+        OrderStatus.DELIVERED,
+        OrderStatus.CANCELLED,
+      ]);
+
+    if (
+      !allowedStatuses.has(status)
+    ) {
+      throw new Error(
+        `Unsupported order status: ${status}.`
+      );
+    }
+
+    const existingOrder =
+      await prisma.order.findUnique({
+        where: {
+          id: orderId,
         },
-      },
-    });
+        select: {
+          id: true,
+          status: true,
+        },
+      });
 
     if (!existingOrder) {
-      throw new Error("Order not found.");
+      throw new Error(
+        "Order not found."
+      );
     }
 
-    const currentStatus = existingOrder.status as unknown as OrderStatus;
-    try {
-      transitionOrderStatus(currentStatus, status);
-    } catch (error) {
-      if (error instanceof OrderTransitionError) {
-        throw error;
-      }
-      throw new Error("INVALID_ORDER_STATUS_TRANSITION");
-    }
+    const prismaStatus =
+      status as unknown as PrismaOrderStatus;
 
-    const updated = await prisma.$transaction(
-      async (database) => {
-        if (status === OrderStatus.CANCELLED) {
-          await inventoryService.releaseWithinTransaction(
-            database,
-            existingOrder.items,
-          );
-        }
-
-        if (status === OrderStatus.SHIPPED) {
-          await inventoryService.consumeWithinTransaction(
-            database,
-            existingOrder.items,
-          );
-        }
-
-        return database.order.updateMany({
-          where: {
-            id: orderId,
-            status: existingOrder.status,
-          },
-          data: {
-            status: status as unknown as PrismaOrderStatus,
-          },
-        });
-      },
-    );
-
-    if (updated.count !== 1) {
-      throw new Error("ORDER_STATUS_CONCURRENT_UPDATE");
-    }
-
-    await this.auditService.log(
-      "ORDER_STATUS_CHANGED",
-      actorUserId,
-      {
-        orderId,
-        from: currentStatus,
-        to: status,
-      },
-    );
-
-    const updatedOrder = await prisma.order.findUnique({
-      where: { id: orderId },
-      select: {
-        id: true,
-        userId: true,
-        status: true,
-        total: true,
-        currency: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    if (!updatedOrder) {
-      throw new Error("Order not found after status update.");
-    }
+    const updatedOrder =
+      await prisma.order.update({
+        where: {
+          id: orderId,
+        },
+        data: {
+          status: prismaStatus,
+        },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          total: true,
+          currency: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
     return {
       id: updatedOrder.id,
-      userId: updatedOrder.userId,
-      status: updatedOrder.status as unknown as OrderStatus,
-      total: Number(updatedOrder.total),
-      currency: updatedOrder.currency,
-      createdAt: updatedOrder.createdAt,
-      updatedAt: updatedOrder.updatedAt,
+      userId:
+        updatedOrder.userId,
+      status:
+        updatedOrder.status as OrderStatus,
+      total:
+        Number(updatedOrder.total),
+      currency:
+        updatedOrder.currency,
+      createdAt:
+        updatedOrder.createdAt,
+      updatedAt:
+        updatedOrder.updatedAt,
     };
   }
 }
