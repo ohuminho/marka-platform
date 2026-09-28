@@ -123,7 +123,7 @@ export default function WalletDashboard() {
             Wallet
           </h1>
 
-          <p className="text-neutral-400">
+          <p className="text-[var(--theme-text-muted)]">
             Loading financial account...
           </p>
         </header>
@@ -153,7 +153,7 @@ export default function WalletDashboard() {
             Unable to load wallet
           </p>
 
-          <p className="mt-2 text-sm text-neutral-400">
+          <p className="mt-2 text-sm text-[var(--theme-text-muted)]">
             {error}
           </p>
         </div>
@@ -172,7 +172,7 @@ export default function WalletDashboard() {
           Wallet
         </h1>
 
-        <p className="text-neutral-400">
+        <p className="text-[var(--theme-text-muted)]">
           Your MARKA financial account
         </p>
       </header>
