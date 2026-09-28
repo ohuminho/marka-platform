@@ -28,7 +28,7 @@ export interface AuthUser {
   profile: AuthUserProfile | null;
 }
 
-export interface AuthOrganization {
+export interface AuthSession {\n  id: string;\n  expiresAt: string;\n  createdAt: string;\n  lastSeenAt: string;\n}\n\nexport interface AuthOrganization {
   id: string;
   name: string;
   slug: string;
