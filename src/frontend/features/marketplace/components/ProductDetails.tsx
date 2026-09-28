@@ -196,7 +196,7 @@ export default function ProductDetails({
 
     return (
 
-      <div className="text-white/50">
+      <div className="text-[var(--theme-text)]/50">
 
         Loading product...
 
@@ -212,7 +212,7 @@ export default function ProductDetails({
 
     return (
 
-      <div className="text-white/50">
+      <div className="text-[var(--theme-text)]/50">
 
         Product not found.
 
@@ -239,7 +239,7 @@ export default function ProductDetails({
         <div className="
           aspect-square
           rounded-2xl
-          bg-white/10
+          bg-[var(--theme-surface-strong)]/10
           flex
           items-center
           justify-center
@@ -268,7 +268,7 @@ export default function ProductDetails({
 
               :
 
-              <span className="text-white/40">
+              <span className="text-[var(--theme-text)]/40">
 
                 Product Image
 
@@ -315,7 +315,7 @@ export default function ProductDetails({
 
           <p className="
             mt-6
-            text-white/50
+            text-[var(--theme-text)]/50
           ">
 
             {product.description ??
@@ -375,11 +375,11 @@ export default function ProductDetails({
               mt-8
               w-full
               rounded-2xl
-              bg-white
+              bg-[var(--theme-surface-strong)]
               px-6
               py-4
               font-semibold
-              text-black
+              text-[var(--theme-background)]
               transition
               disabled:opacity-50
             "
@@ -409,7 +409,7 @@ export default function ProductDetails({
               <p className="
                 mt-4
                 text-sm
-                text-white/60
+                text-[var(--theme-text)]/60
               ">
 
                 {message}
