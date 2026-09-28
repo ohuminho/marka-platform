@@ -20,45 +20,64 @@ const schema = z.object({
   phone: z.string().trim().max(40).optional(),
 });
 
-function getSessionToken(request: Request): string | null {
+function getSessionToken(
+  request: Request,
+): string | null {
   return (
     request.headers
       .get("cookie")
-      ?.match(/(?:^|;\s*)marka_session=([^;]+)/)?.[1] ?? null
+      ?.match(/(?:^|;\s*)marka_session=([^;]+)/)?.[1] ??
+    null
   );
 }
 
 export async function POST(request: Request) {
   try {
     const token = getSessionToken(request);
+
     if (!token) {
       return NextResponse.json(
-        { message: "Authentication required.", code: "AUTHENTICATION_REQUIRED" },
+        {
+          message: "Authentication required.",
+          code: "AUTHENTICATION_REQUIRED",
+        },
         { status: 401 },
       );
     }
 
-    const session = await new SessionService().validate(token);
+    const session =
+      await new SessionService().validate(token);
+
     if (!session) {
       return NextResponse.json(
-        { message: "Invalid or expired session.", code: "INVALID_SESSION" },
+        {
+          message: "Invalid or expired session.",
+          code: "INVALID_SESSION",
+        },
         { status: 401 },
       );
     }
 
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(
+      await request.json(),
+    );
+
     if (!parsed.success) {
       return NextResponse.json(
         {
-          message: "Invalid delivery agent registration data.",
+          message:
+            "Invalid delivery agent registration data.",
           code: "INVALID_DELIVERY_AGENT_DATA",
-          errors: parsed.error.flatten().fieldErrors,
+          errors:
+            parsed.error.flatten().fieldErrors,
         },
         { status: 400 },
       );
     }
 
-    const authorization = new AuthorizationService();
+    const authorization =
+      new AuthorizationService();
+
     if (
       !(await authorization.hasPermission(
         session.userId,
@@ -68,16 +87,23 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          message: "You do not have permission to manage delivery agents.",
+          message:
+            "You do not have permission to manage delivery agents.",
           code: "DELIVERY_AGENT_MANAGE_FORBIDDEN",
         },
         { status: 403 },
       );
     }
 
-    const agent = await deliveryAgentService.register(parsed.data);
+    const agent =
+      await deliveryAgentService.register(
+        parsed.data,
+      );
 
-    return NextResponse.json({ agent }, { status: 201 });
+    return NextResponse.json(
+      { agent },
+      { status: 201 },
+    );
   } catch (error) {
     const code =
       error instanceof Error
@@ -85,14 +111,17 @@ export async function POST(request: Request) {
         : "DELIVERY_AGENT_REGISTRATION_FAILED";
 
     const status =
-      code === "DELIVERY_AGENT_ALREADY_REGISTERED" ||
-      code === "DELIVERY_AGENT_USER_NOT_IN_ORGANIZATION"
+      code ===
+        "DELIVERY_AGENT_ALREADY_REGISTERED" ||
+      code ===
+        "DELIVERY_AGENT_USER_NOT_IN_ORGANIZATION"
         ? 409
         : 500;
 
     return NextResponse.json(
       {
-        message: "Unable to register delivery agent.",
+        message:
+          "Unable to register delivery agent.",
         code,
       },
       { status },
