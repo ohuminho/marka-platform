@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 import { useEffect, useState } from "react";
 
 interface OrderSummary {
@@ -139,8 +140,10 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-8">
-        <section className="mb-10">
+      <main className="min-h-screen space-y-8 p-8">
+        <RoleContextSummary />
+
+      <section className="mb-10">
           <h1 className="text-4xl font-semibold">
             Orders
           </h1>
