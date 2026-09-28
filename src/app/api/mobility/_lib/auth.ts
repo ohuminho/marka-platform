@@ -11,7 +11,7 @@ export interface MobilityApiSession {
 }
 
 export async function authenticateMobilityRequest(
-  request: Request
+  request: Request,
 ): Promise<
   | {
       ok: true;
@@ -25,7 +25,7 @@ export async function authenticateMobilityRequest(
   const cookieStore = await cookies();
 
   const token = cookieStore.get(
-    AuthConfig.cookies.name
+    AuthConfig.cookies.name,
   )?.value;
 
   if (!token) {
@@ -36,14 +36,15 @@ export async function authenticateMobilityRequest(
           message: "Authentication required.",
           code: "AUTHENTICATION_REQUIRED",
         },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
 
   const sessionService = new SessionService();
 
-  const session = await sessionService.validate(token);
+  const session =
+    await sessionService.validate(token);
 
   if (!session) {
     return {
@@ -53,7 +54,7 @@ export async function authenticateMobilityRequest(
           message: "Invalid or expired session.",
           code: "INVALID_SESSION",
         },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
@@ -83,7 +84,7 @@ export async function authenticateMobilityRequest(
           message: "User account is not available.",
           code: "USER_ACCOUNT_UNAVAILABLE",
         },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
@@ -102,7 +103,7 @@ export async function authenticateMobilityRequest(
             "X-Organization-Id header is required.",
           code: "ORGANIZATION_ID_REQUIRED",
         },
-        { status: 400 }
+        { status: 400 },
       ),
     };
   }
@@ -130,10 +131,9 @@ export async function authenticateMobilityRequest(
         {
           message:
             "User is not an active member of the specified organization.",
-          code:
-            "ORGANIZATION_ACCESS_DENIED",
+          code: "ORGANIZATION_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       ),
     };
   }
@@ -150,7 +150,7 @@ export async function authenticateMobilityRequest(
 
 export function getIdempotencyKey(
   request: Request,
-  body?: unknown
+  body?: unknown,
 ): string {
   if (
     body &&
@@ -176,7 +176,7 @@ export function getIdempotencyKey(
 }
 
 export function getRequestContext(
-  request: Request
+  request: Request,
 ) {
   return {
     requestId:
