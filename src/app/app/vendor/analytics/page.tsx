@@ -10,10 +10,10 @@ type Metrics = { revenue?: { current?: number; currency?: string }; sales?: { to
 function AnalyticsContent() {
   const { vendor, loading: vendorLoading } = useVendor();
   const [metrics, setMetrics] = useState<Metrics>();
-  const [loading, setLoading] = useState(true);
+  const loading = vendorLoading || (!!vendor?.id && !metrics);
 
   useEffect(() => {
-    if (!vendor?.id) { setLoading(vendorLoading); return; }
+    if (!vendor?.id) return;
     let cancelled = false;
     async function load() {
       try {
@@ -22,7 +22,7 @@ function AnalyticsContent() {
         const data = (await response.json()) as Metrics;
         if (!cancelled) setMetrics(data);
       } catch { if (!cancelled) setMetrics(undefined); }
-      finally { if (!cancelled) setLoading(false); }
+      finally { /* loading is derived from vendor context and metrics */ }
     }
     void load();
     return () => { cancelled = true; };
