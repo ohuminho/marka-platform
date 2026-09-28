@@ -119,7 +119,8 @@ export default function WalletDashboard() {
     return (
       <div className="space-y-8">
         <header>
-          <h1 className="text-5xl font-semibold">
+          <p className="marka-kicker">MARKA WALLET</p>
+          <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)]">
             Wallet
           </h1>
 
@@ -135,7 +136,8 @@ export default function WalletDashboard() {
     return (
       <div className="space-y-8">
         <header>
-          <h1 className="text-5xl font-semibold">
+          <p className="marka-kicker">MARKA WALLET</p>
+        <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)]">
             Wallet
           </h1>
         </header>
@@ -162,7 +164,15 @@ export default function WalletDashboard() {
   }
 
   if (!wallet) {
-    return null;
+    return (
+      <div className="overflow-hidden rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-8 sm:p-10">
+        <p className="marka-kicker">MARKA WALLET</p>
+        <h1 className="marka-editorial mt-4 text-4xl text-[var(--theme-text)]">A sua conta financeira.</h1>
+        <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--theme-text-muted)]">
+          O contexto financeiro desta organização ainda não está disponível para esta conta.
+        </p>
+      </div>
+    );
   }
 
   return (
