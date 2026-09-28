@@ -36,9 +36,7 @@ export async function GET(
     return authentication.response;
   }
 
-  const {
-    id: rideId,
-  } =
+  const { id: rideId } =
     await context.params;
 
   if (!rideId.trim()) {
@@ -157,9 +155,7 @@ export async function POST(
     return authentication.response;
   }
 
-  const {
-    id: rideId,
-  } =
+  const { id: rideId } =
     await context.params;
 
   if (!rideId.trim()) {
