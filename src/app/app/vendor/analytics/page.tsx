@@ -13,8 +13,8 @@ function AnalyticsContent() {
   const loading = vendorLoading || (!!vendor?.id && !metrics);
 
   useEffect(() => {
-    const vendorId = vendor?.id;
-    if (!vendorId) return;
+    const vendorId = vendor?.id ?? null;
+    if (vendorId === null) return;
     let cancelled = false;
     async function load() {
       try {
