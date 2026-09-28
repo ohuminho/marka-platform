@@ -1,4 +1,6 @@
 import { prisma } from "@/database/client/prisma";
+import { orderService } from "@/services/orders/order.service";
+import { OrderTransitionError } from "@/services/orders/order.state-machine";
 import type { OrderStatus } from "@prisma/client";
 
 export class VendorSalesService {
@@ -107,39 +109,28 @@ export class VendorSalesService {
 
     if (!order) throw new Error("ORDER_NOT_FOUND");
 
-    const allowed: Record<string, string[]> = {
-      PENDING: ["CONFIRMED", "CANCELLED"],
-      CONFIRMED: ["PROCESSING", "CANCELLED"],
-      PROCESSING: [],
-      SHIPPED: [],
-      DELIVERED: [],
-      CANCELLED: [],
-    };
+    try {
+      const updated = await orderService.updateOrderStatus(
+        order.id,
+        status as unknown as import("@/services/orders/types/order.types").OrderStatus,
+        userId,
+      );
 
-    if (!allowed[order.status]?.includes(status)) {
-      throw new Error(`INVALID_VENDOR_ORDER_TRANSITION:${order.status}:${status}`);
+      return {
+        ...updated,
+        fulfillment: order.fulfillment,
+      };
+    } catch (error) {
+      if (error instanceof OrderTransitionError) {
+        throw new Error(
+          "INVALID_VENDOR_ORDER_TRANSITION:" +
+          order.status +
+          ":" +
+          status,
+        );
+      }
+      throw error;
     }
-
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data: { status },
-      select: {
-        id: true,
-        status: true,
-        total: true,
-        currency: true,
-        updatedAt: true,
-      },
-    });
-
-    return {
-      id: updated.id,
-      status: updated.status,
-      total: Number(updated.total),
-      currency: updated.currency,
-      updatedAt: updated.updatedAt,
-      fulfillment: order.fulfillment,
-    };
   }
 }
 
