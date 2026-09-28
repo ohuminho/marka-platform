@@ -321,8 +321,8 @@ export default function Sidebar() {
         shrink-0
         overflow-y-auto
         border-r
-        border-white/[0.07]
-        bg-black/45
+        border-[var(--theme-border)]
+        bg-[color-mix(in_srgb,var(--theme-background)_82%,transparent)]
         px-5
         py-7
         backdrop-blur-3xl
@@ -354,8 +354,8 @@ export default function Sidebar() {
                   overflow-hidden
                   rounded-xl
                   border
-                  border-white/15
-                  bg-white/[0.035]
+                  border-[var(--theme-border)]
+                  bg-[var(--theme-surface)]
                   shadow-[0_10px_30px_rgba(0,0,0,0.4)]
                 "
               >
@@ -373,7 +373,7 @@ export default function Sidebar() {
                     text-sm
                     font-semibold
                     tracking-[0.16em]
-                    text-white
+                    text-[var(--theme-text)]
                   "
                 >
                   M
@@ -384,8 +384,8 @@ export default function Sidebar() {
                 <p
                   className="
                     bg-gradient-to-b
-                    from-white
-                    to-neutral-500
+                    from-[var(--theme-text)]
+                    to-[var(--theme-text-muted)]
                     bg-clip-text
                     text-[17px]
                     font-semibold
@@ -402,7 +402,7 @@ export default function Sidebar() {
                     text-[9px]
                     uppercase
                     tracking-[0.25em]
-                    text-white/30
+                    text-[var(--theme-text)]/30
                   "
                 >
                   Global Platform
@@ -423,7 +423,7 @@ export default function Sidebar() {
                 font-semibold
                 uppercase
                 tracking-[0.25em]
-                text-white/25
+                text-[var(--theme-text)]/25
               "
             >
               Organization
@@ -445,13 +445,13 @@ export default function Sidebar() {
                   appearance-none
                   rounded-xl
                   border
-                  border-white/[0.08]
-                  bg-white/[0.035]
+                  border-[var(--theme-border)]
+                  bg-[var(--theme-surface)]
                   px-3
                   py-2.5
                   pr-8
                   text-[11px]
-                  text-white/70
+                  text-[var(--theme-text)]/70
                   outline-none
                   transition
                   focus:border-white/20
@@ -483,7 +483,7 @@ export default function Sidebar() {
                   top-1/2
                   -translate-y-1/2
                   text-[9px]
-                  text-white/30
+                  text-[var(--theme-text)]/30
                 "
               >
                 ▼
@@ -491,7 +491,7 @@ export default function Sidebar() {
             </div>
 
             {activeOrganization && (
-              <p className="mt-2 truncate text-[9px] text-white/20">
+              <p className="mt-2 truncate text-[9px] text-[var(--theme-text)]/20">
                 {activeOrganization.slug}
               </p>
             )}
@@ -505,7 +505,7 @@ export default function Sidebar() {
             h-px
             bg-gradient-to-r
             from-transparent
-            via-white/10
+            via-[var(--theme-border)]
             to-transparent
           "
         />
@@ -527,7 +527,7 @@ export default function Sidebar() {
                     font-semibold
                     uppercase
                     tracking-[0.28em]
-                    text-white/25
+                    text-[var(--theme-text)]/25
                   "
                 >
                   {section.group}
@@ -572,8 +572,8 @@ export default function Sidebar() {
                             duration-300
                             ${
                               isActive
-                                ? "border-white/[0.12] bg-white/[0.07] text-white shadow-[0_12px_35px_rgba(0,0,0,0.22)]"
-                                : "border-transparent text-white/45 hover:border-white/[0.07] hover:bg-white/[0.035] hover:text-white/80"
+                                ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-text)] shadow-[0_12px_35px_rgba(0,0,0,0.22)]"
+                                : "border-transparent text-[var(--theme-text)]/45 hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)] hover:text-[var(--theme-text)]/80"
                             }
                           `}
                         >
@@ -587,7 +587,7 @@ export default function Sidebar() {
                                 h-7
                                 w-px
                                 -translate-y-1/2
-                                bg-white
+                                bg-[var(--theme-text)]
                                 shadow-[0_0_12px_rgba(255,255,255,0.7)]
                               "
                             />
@@ -607,8 +607,8 @@ export default function Sidebar() {
                               duration-300
                               ${
                                 isActive
-                                  ? "border-white/15 bg-white/[0.08] text-white"
-                                  : "border-white/[0.06] bg-white/[0.02] text-white/35 group-hover:border-white/10 group-hover:text-white/65"
+                                  ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-text)]"
+                                  : "border-[var(--theme-border)] bg-[var(--theme-text)]/[0.02] text-[var(--theme-text)]/35 group-hover:border-[var(--theme-border)] group-hover:text-[var(--theme-text)]/65"
                               }
                             `}
                           >
@@ -629,8 +629,8 @@ export default function Sidebar() {
                                 font-medium
                                 ${
                                   isActive
-                                    ? "text-white"
-                                    : "text-white/55 group-hover:text-white/85"
+                                    ? "text-[var(--theme-text)]"
+                                    : "text-[var(--theme-text)]/55 group-hover:text-[var(--theme-text)]/85"
                                 }
                               `}
                             >
@@ -645,9 +645,9 @@ export default function Sidebar() {
                                 block
                                 truncate
                                 text-[10px]
-                                text-white/25
+                                text-[var(--theme-text)]/25
                                 transition-colors
-                                group-hover:text-white/35
+                                group-hover:text-[var(--theme-text)]/35
                               "
                             >
                               {
@@ -667,7 +667,7 @@ export default function Sidebar() {
           {sections.length ===
             0 && (
             <div className="px-3">
-              <p className="text-[11px] leading-5 text-white/30">
+              <p className="text-[11px] leading-5 text-[var(--theme-text)]/30">
                 No operational capabilities
                 are available for the active
                 organization.
@@ -683,8 +683,8 @@ export default function Sidebar() {
               overflow-hidden
               rounded-2xl
               border
-              border-white/[0.07]
-              bg-white/[0.025]
+              border-[var(--theme-border)]
+              bg-[var(--theme-surface)]
               px-4
               py-4
             "
@@ -698,7 +698,7 @@ export default function Sidebar() {
                 h-24
                 w-24
                 rounded-full
-                bg-white/[0.04]
+                bg-[var(--theme-surface)]
                 blur-2xl
               "
             />
@@ -709,7 +709,7 @@ export default function Sidebar() {
                 text-[9px]
                 uppercase
                 tracking-[0.25em]
-                text-white/25
+                text-[var(--theme-text)]/25
               "
             >
               MARKA Status
@@ -721,18 +721,18 @@ export default function Sidebar() {
                   h-1.5
                   w-1.5
                   rounded-full
-                  bg-white
+                  bg-[var(--theme-text)]
                   shadow-[0_0_10px_rgba(255,255,255,0.7)]
                 "
               />
 
-              <span className="text-[11px] text-white/50">
+              <span className="text-[11px] text-[var(--theme-text)]/50">
                 Platform operational
               </span>
             </div>
 
             {authorization.organizationId && (
-              <p className="relative mt-2 truncate text-[9px] text-white/20">
+              <p className="relative mt-2 truncate text-[9px] text-[var(--theme-text)]/20">
                 {authorization.roles.join(
                   " · "
                 )}
