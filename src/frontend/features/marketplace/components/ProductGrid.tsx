@@ -8,6 +8,8 @@ import {
 import ProductCard from "./ProductCard";
 import MarketplaceSearch from "./MarketplaceSearch";
 import MarketplaceFilters from "./MarketplaceFilters";
+import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
+import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
 import {
   MarketplaceProduct,
@@ -18,6 +20,8 @@ type MarketplaceProductsResponse = {
 };
 
 export default function ProductGrid() {
+  const { language } = usePlatformPreferences();
+  const t = usePlatformTranslation(language);
   const [
     products,
     setProducts,
@@ -147,7 +151,7 @@ export default function ProductGrid() {
 
       {loading ? (
         <div className="mt-10 text-white/50">
-          Loading marketplace...
+          {t.loadingMarketplace}
         </div>
       ) : error ? (
         <div
@@ -158,7 +162,7 @@ export default function ProductGrid() {
         </div>
       ) : products.length === 0 ? (
         <div className="mt-10 text-white/50">
-          No products found.
+          {t.noProducts}
         </div>
       ) : (
         <div className="mt-10 grid gap-6 md:grid-cols-3">
