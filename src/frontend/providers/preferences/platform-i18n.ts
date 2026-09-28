@@ -1,36 +1,12 @@
 import type { PlatformLanguage } from "./PlatformPreferencesProvider";
 
 export const platformTranslations = {
-  pt: {
-    executiveWorkspace: "Espaço Executivo", globalPlatform: "Plataforma Global", search: "Pesquisar MARKA",
-    account: "Conta", user: "Utilizador MARKA", theme: "Tema", language: "Idioma",
-    themeObsidian: "Obsidian", themeGraphite: "Graphite", themeSilver: "Silver", themeAurora: "Aurora",
-  },
-  en: {
-    executiveWorkspace: "Executive Workspace", globalPlatform: "Global Platform", search: "Search MARKA",
-    account: "Account", user: "MARKA User", theme: "Theme", language: "Language",
-    themeObsidian: "Obsidian", themeGraphite: "Graphite", themeSilver: "Silver", themeAurora: "Aurora",
-  },
-  fr: {
-    executiveWorkspace: "Espace Exécutif", globalPlatform: "Plateforme Globale", search: "Rechercher MARKA",
-    account: "Compte", user: "Utilisateur MARKA", theme: "Thème", language: "Langue",
-    themeObsidian: "Obsidienne", themeGraphite: "Graphite", themeSilver: "Argent", themeAurora: "Aurore",
-  },
-  zh: {
-    executiveWorkspace: "执行工作区", globalPlatform: "全球平台", search: "搜索 MARKA",
-    account: "账户", user: "MARKA 用户", theme: "主题", language: "语言",
-    themeObsidian: "黑曜石", themeGraphite: "石墨", themeSilver: "银色", themeAurora: "极光",
-  },
-  ar: {
-    executiveWorkspace: "مساحة العمل التنفيذية", globalPlatform: "المنصة العالمية", search: "البحث في MARKA",
-    account: "الحساب", user: "مستخدم MARKA", theme: "المظهر", language: "اللغة",
-    themeObsidian: "أوبسيديان", themeGraphite: "غرافيت", themeSilver: "فضي", themeAurora: "الشفق",
-  },
-  os: {
-    executiveWorkspace: "Omukalo wOshigwana", globalPlatform: "Oshikandjo shOshigwana", search: "Londula MARKA",
-    account: "Akaunti", user: "Omukwatithi wa MARKA", theme: "Omushindo", language: "Olyelyo",
-    themeObsidian: "Obsidian", themeGraphite: "Graphite", themeSilver: "Silver", themeAurora: "Aurora",
-  },
+  pt: { executiveWorkspace:"Espaço Executivo", globalPlatform:"Plataforma Global", search:"Pesquisar MARKA", account:"Conta", user:"Utilizador MARKA", theme:"Tema", language:"Idioma", themeObsidian:"Obsidian", themeGraphite:"Graphite", themeSilver:"Silver", themeAurora:"Aurora", themePearl:"Pérola", marketplaceTitle:"MARKA Marketplace", marketplaceSubtitle:"Produtos selecionados de vendedores digitais de confiança.", marketplaceSearch:"Pesquisar produtos, lojas e categorias...", verifiedVendors:"Vendedores verificados", latest:"Mais recentes", priceLowHigh:"Preço: menor para maior", priceHighLow:"Preço: maior para menor", noProducts:"Nenhum produto encontrado.", loadingMarketplace:"A carregar o marketplace...", product:"Produto", stock:"Stock", addToCart:"Adicionar ao carrinho", premiumMarketplace:"Comércio global, curado com confiança." },
+  en: { executiveWorkspace:"Executive Workspace", globalPlatform:"Global Platform", search:"Search MARKA", account:"Account", user:"MARKA User", theme:"Theme", language:"Language", themeObsidian:"Obsidian", themeGraphite:"Graphite", themeSilver:"Silver", themeAurora:"Aurora", themePearl:"Pearl", marketplaceTitle:"MARKA Marketplace", marketplaceSubtitle:"Curated products from trusted digital vendors.", marketplaceSearch:"Search products, stores and categories...", verifiedVendors:"Verified vendors", latest:"Latest", priceLowHigh:"Price: Low to High", priceHighLow:"Price: High to Low", noProducts:"No products found.", loadingMarketplace:"Loading marketplace...", product:"Product", stock:"Stock", addToCart:"Add to cart", premiumMarketplace:"Global commerce, curated for trust." },
+  fr: { executiveWorkspace:"Espace Exécutif", globalPlatform:"Plateforme Globale", search:"Rechercher MARKA", account:"Compte", user:"Utilisateur MARKA", theme:"Thème", language:"Langue", themeObsidian:"Obsidienne", themeGraphite:"Graphite", themeSilver:"Argent", themeAurora:"Aurore", themePearl:"Perle", marketplaceTitle:"Marketplace MARKA", marketplaceSubtitle:"Produits sélectionnés auprès de vendeurs numériques de confiance.", marketplaceSearch:"Rechercher des produits, boutiques et catégories...", verifiedVendors:"Vendeurs vérifiés", latest:"Plus récents", priceLowHigh:"Prix : croissant", priceHighLow:"Prix : décroissant", noProducts:"Aucun produit trouvé.", loadingMarketplace:"Chargement du marketplace...", product:"Produit", stock:"Stock", addToCart:"Ajouter au panier", premiumMarketplace:"Commerce mondial, sélectionné avec confiance." },
+  zh: { executiveWorkspace:"执行工作区", globalPlatform:"全球平台", search:"搜索 MARKA", account:"账户", user:"MARKA 用户", theme:"主题", language:"语言", themeObsidian:"黑曜石", themeGraphite:"石墨", themeSilver:"银色", themeAurora:"极光", themePearl:"珍珠", marketplaceTitle:"MARKA 商城", marketplaceSubtitle:"精选可信数字商户商品。", marketplaceSearch:"搜索商品、商店和分类...", verifiedVendors:"已认证商户", latest:"最新", priceLowHigh:"价格从低到高", priceHighLow:"价格从高到低", noProducts:"未找到商品。", loadingMarketplace:"正在加载商城...", product:"商品", stock:"库存", addToCart:"加入购物车", premiumMarketplace:"全球商业，精选可信。" },
+  ar: { executiveWorkspace:"مساحة العمل التنفيذية", globalPlatform:"المنصة العالمية", search:"البحث في MARKA", account:"الحساب", user:"مستخدم MARKA", theme:"المظهر", language:"اللغة", themeObsidian:"أوبسيديان", themeGraphite:"غرافيت", themeSilver:"فضي", themeAurora:"الشفق", themePearl:"لؤلؤي", marketplaceTitle:"سوق MARKA", marketplaceSubtitle:"منتجات مختارة من تجار رقميين موثوقين.", marketplaceSearch:"ابحث عن المنتجات والمتاجر والفئات...", verifiedVendors:"تجار موثقون", latest:"الأحدث", priceLowHigh:"السعر: من الأقل إلى الأعلى", priceHighLow:"السعر: من الأعلى إلى الأقل", noProducts:"لم يتم العثور على منتجات.", loadingMarketplace:"جارٍ تحميل السوق...", product:"منتج", stock:"المخزون", addToCart:"أضف إلى السلة", premiumMarketplace:"تجارة عالمية، مختارة بثقة." },
+  os: { executiveWorkspace:"Omukalo wOshigwana", globalPlatform:"Oshikandjo shOshigwana", search:"Londula MARKA", account:"Akaunti", user:"Omukwatithi wa MARKA", theme:"Omushindo", language:"Olyelyo", themeObsidian:"Obsidian", themeGraphite:"Graphite", themeSilver:"Silver", themeAurora:"Aurora", themePearl:"Ombili", marketplaceTitle:"MARKA Marketplace", marketplaceSubtitle:"Omitumba dhiinwa poovendor digital va nawa.", marketplaceSearch:"Londula omitumba, omashop na categories...", verifiedVendors:"Omapoovendor wa verified", latest:"Ombinga yape", priceLowHigh:"Oimaliwa: sha pumbwa", priceHighLow:"Oimaliwa: sha dula", noProducts:"Kape na product i li nawa.", loadingMarketplace:"Tate load-a marketplace...", product:"Product", stock:"Stock", addToCart:"Tula koshi cart", premiumMarketplace:"Oshilonga shoshigwana, sha holoka na trust." },
 } satisfies Record<PlatformLanguage, Record<string, string>>;
 
 export function usePlatformTranslation(language: PlatformLanguage) {
