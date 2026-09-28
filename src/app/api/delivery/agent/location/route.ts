@@ -14,7 +14,8 @@ const schema = z.object({
 
 function getToken(request: Request): string | null {
   return (
-    request.headers.get("cookie")
+    request.headers
+      .get("cookie")
       ?.match(/(?:^|;\s*)marka_session=([^;]+)/)?.[1] ?? null
   );
 }
@@ -22,34 +23,115 @@ function getToken(request: Request): string | null {
 export async function PATCH(request: Request) {
   try {
     const token = getToken(request);
-    if (!token) return NextResponse.json({message:"Authentication required.",code:"AUTHENTICATION_REQUIRED"},{status:401});
 
-    const session = await new SessionService().validate(token);
-    if (!session) return NextResponse.json({message:"Invalid or expired session.",code:"INVALID_SESSION"},{status:401});
-
-    const agent = await prisma.deliveryAgent.findFirst({
-      where: { userId: session.userId },
-      select: { id:true, organizationId:true },
-    });
-    if (!agent) return NextResponse.json({message:"Delivery agent not found.",code:"DELIVERY_AGENT_NOT_FOUND"},{status:404});
-
-    const authorization = new AuthorizationService();
-    if (!(await authorization.hasPermission(session.userId, Permissions.DELIVERY_AGENT_OPERATE, agent.organizationId))) {
-      return NextResponse.json({message:"You do not have permission to operate as a delivery agent.",code:"DELIVERY_AGENT_OPERATION_FORBIDDEN"},{status:403});
+    if (!token) {
+      return NextResponse.json(
+        {
+          message: "Authentication required.",
+          code: "AUTHENTICATION_REQUIRED",
+        },
+        { status: 401 },
+      );
     }
 
-    const parsed=schema.safeParse(await request.json());
-    if(!parsed.success) return NextResponse.json({message:"Invalid delivery agent location.",code:"INVALID_DELIVERY_AGENT_LOCATION",errors:parsed.error.flatten().fieldErrors},{status:400});
+    const session = await new SessionService().validate(token);
 
-    const updated=await deliveryAgentService.updateLocation({
-      agentId:agent.id,
-      latitude:parsed.data.latitude,
-      longitude:parsed.data.longitude,
+    if (!session) {
+      return NextResponse.json(
+        {
+          message: "Invalid or expired session.",
+          code: "INVALID_SESSION",
+        },
+        { status: 401 },
+      );
+    }
+
+    const agent = await prisma.deliveryAgent.findFirst({
+      where: {
+        userId: session.userId,
+      },
+      select: {
+        id: true,
+        organizationId: true,
+      },
     });
-    return NextResponse.json({agent:updated});
-  } catch(error) {
-    const code=error instanceof Error ? error.message : "DELIVERY_AGENT_LOCATION_UPDATE_FAILED";
-    const status=code.startsWith("INVALID_DELIVERY_AGENT_") ? 400 : 500;
-    return NextResponse.json({message:"Unable to update delivery agent location.",code},{status});
+
+    if (!agent) {
+      return NextResponse.json(
+        {
+          message: "Delivery agent not found.",
+          code: "DELIVERY_AGENT_NOT_FOUND",
+        },
+        { status: 404 },
+      );
+    }
+
+    const authorization = new AuthorizationService();
+
+    if (
+      !(await authorization.hasPermission(
+        session.userId,
+        Permissions.DELIVERY_AGENT_OPERATE,
+        agent.organizationId,
+      ))
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            "You do not have permission to operate as a delivery agent.",
+          code: "DELIVERY_AGENT_OPERATION_FORBIDDEN",
+        },
+        { status: 403 },
+      );
+    }
+
+    const parsed = schema.safeParse(
+      await request.json(),
+    );
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          message:
+            "Invalid delivery agent location.",
+          code: "INVALID_DELIVERY_AGENT_LOCATION",
+          errors:
+            parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    const updated =
+      await deliveryAgentService.updateLocation({
+        agentId: agent.id,
+        latitude: parsed.data.latitude,
+        longitude: parsed.data.longitude,
+      });
+
+    return NextResponse.json({
+      agent: updated,
+    });
+  } catch (error) {
+    const code =
+      error instanceof Error
+        ? error.message
+        : "DELIVERY_AGENT_LOCATION_UPDATE_FAILED";
+
+    const status =
+      code.startsWith("INVALID_DELIVERY_AGENT_")
+        ? 400
+        : code === "DELIVERY_AGENT_NOT_ACTIVE"
+          ? 409
+          : 500;
+
+    return NextResponse.json(
+      {
+        message:
+          "Unable to update delivery agent location.",
+        code,
+      },
+      { status },
+    );
   }
 }
