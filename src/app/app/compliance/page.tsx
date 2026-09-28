@@ -49,8 +49,8 @@ export default function CompliancePage() {
   return (
     <main className="mx-auto max-w-6xl space-y-8 p-6">
       <header>
-        <p className="text-sm font-medium text-[var(--theme-muted)]">Trust & Compliance</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--theme-text)]">Identity & Compliance</h1>
+        <p className="marka-kicker">MARKA / TRUST</p>
+        <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-5xl">Identity & Compliance</h1>
         <p className="mt-2 max-w-3xl text-[var(--theme-muted)]">
           Manage KYC, KYD and KYB requirements and track verification status.
         </p>
@@ -60,7 +60,7 @@ export default function CompliancePage() {
         {(["KYC", "KYD", "KYB"] as const).map((type) => {
           const profile = profiles.find((item) => item.subjectType === type);
           return (
-            <article key={type} className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
+            <article key={type} className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
               <p className="text-sm text-[var(--theme-muted)]">{type}</p>
               <h2 className="mt-2 text-xl font-semibold text-[var(--theme-text)]">
                 {type === "KYC" ? "Customer" : type === "KYD" ? "Driver" : "Business"}
@@ -80,7 +80,7 @@ export default function CompliancePage() {
         })}
       </section>
 
-      <section className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
+      <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
         <h2 className="text-xl font-semibold text-[var(--theme-text)]">Documents</h2>
         {loading ? (
           <p className="mt-4 text-sm text-[var(--theme-muted)]">Loading…</p>
@@ -98,7 +98,7 @@ export default function CompliancePage() {
         )}
       </section>
 
-      <section className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
+      <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
         <h2 className="text-xl font-semibold text-[var(--theme-text)]">Compliance FAQ</h2>
         <div className="mt-4 divide-y divide-[var(--theme-border)]">
           {faqs.map(([question, answer]) => (
