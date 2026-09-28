@@ -4,12 +4,12 @@ export default function PremiumCard({ children, className = "" }: { children: Re
   return (
     <section
       className={`
-        rounded-3xl
+        rounded-[1.25rem]
         border border-[var(--theme-border)]
-        bg-[var(--theme-surface-strong)]
-        backdrop-blur-2xl
-        shadow-2xl
-        p-8
+        bg-[var(--theme-surface)]
+        backdrop-blur-xl
+        p-6
+        transition-colors duration-300
         ${className}
       `}
     >
