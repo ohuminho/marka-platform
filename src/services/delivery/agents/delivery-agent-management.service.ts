@@ -7,20 +7,35 @@ export interface DeliveryAgentManagementListInput {
 }
 
 export class DeliveryAgentManagementService {
-  async list(input: DeliveryAgentManagementListInput) {
+  async list(
+    input: DeliveryAgentManagementListInput,
+  ) {
     if (!input.organizationId.trim()) {
-      throw new Error("DELIVERY_AGENT_ORGANIZATION_REQUIRED");
+      throw new Error(
+        "DELIVERY_AGENT_ORGANIZATION_REQUIRED",
+      );
     }
 
-    const limit = Math.min(Math.max(input.limit ?? 50, 1), 100);
-    const offset = Math.max(input.offset ?? 0, 0);
+    const limit = Math.min(
+      Math.max(input.limit ?? 50, 1),
+      100,
+    );
 
-    const where = { organizationId: input.organizationId };
+    const offset = Math.max(
+      input.offset ?? 0,
+      0,
+    );
+
+    const where = {
+      organizationId: input.organizationId,
+    };
 
     const [agents, total] = await Promise.all([
       prisma.deliveryAgent.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: {
+          createdAt: "desc",
+        },
         skip: offset,
         take: limit,
         select: {
@@ -43,7 +58,9 @@ export class DeliveryAgentManagementService {
           },
         },
       }),
-      prisma.deliveryAgent.count({ where }),
+      prisma.deliveryAgent.count({
+        where,
+      }),
     ]);
 
     return {
