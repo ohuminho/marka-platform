@@ -150,13 +150,13 @@ export default function ProductGrid() {
       />
 
       {loading ? (
-        <div className="mt-10 text-white/50">
+        <div className="mt-10 text-sm text-[var(--theme-text-muted)]">
           {t.loadingMarketplace}
         </div>
       ) : error ? (
         <div
           role="alert"
-          className="mt-10 rounded-xl border border-white/10 bg-white/5 p-6 text-white/70"
+          className="mt-10 rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 text-sm text-[var(--theme-text-muted)]"
         >
           {error}
         </div>
@@ -165,7 +165,7 @@ export default function ProductGrid() {
           {t.noProducts}
         </div>
       ) : (
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-10 grid gap-x-5 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">
           {products.map((product) => (
             <ProductCard
               key={product.id}
