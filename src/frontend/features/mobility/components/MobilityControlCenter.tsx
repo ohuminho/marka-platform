@@ -916,7 +916,7 @@ export default function MobilityControlCenter() {
                         text-[9px]
                         ${
                           current
-                            ? "border-white/25 bg-[var(--theme-surface-strong)] text-[var(--theme-background)]"
+                            ? "border-[var(--theme-accent-strong)] bg-[var(--theme-text)] text-[var(--theme-background)]"
                             : reached
                               ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-text)]"
                               : "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text-faint)]"
