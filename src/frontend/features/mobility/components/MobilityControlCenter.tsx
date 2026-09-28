@@ -299,10 +299,10 @@ function StatusPill({
         tracking-[0.14em]
         ${
           positive
-            ? "border-white/15 bg-white/[0.08] text-white/75"
+            ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[color-mix(in_srgb,var(--theme-text)_75%,transparent)]"
             : warning
-              ? "border-white/10 bg-white/[0.04] text-white/50"
-              : "border-white/[0.07] bg-black/20 text-white/35"
+              ? "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]"
+              : "border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_20%,transparent)] text-[color-mix(in_srgb,var(--theme-text)_35%,transparent)]"
         }
       `}
     >
@@ -325,7 +325,7 @@ function MetricCard({
       className="
         rounded-2xl
         border
-        border-white/[0.07]
+        border-[var(--theme-border)]
         bg-white/[0.025]
         p-5
       "
@@ -336,7 +336,7 @@ function MetricCard({
           font-semibold
           uppercase
           tracking-[0.25em]
-          text-white/25
+          text-[var(--theme-text)]/25
         "
       >
         {label}
@@ -348,13 +348,13 @@ function MetricCard({
           text-3xl
           font-medium
           tracking-[-0.04em]
-          text-white/90
+          text-[var(--theme-text)]/90
         "
       >
         {value}
       </p>
 
-      <p className="mt-2 text-[10px] text-white/25">
+      <p className="mt-2 text-[10px] text-[var(--theme-text)]/25">
         {detail}
       </p>
     </div>
@@ -602,7 +602,7 @@ export default function MobilityControlCenter() {
                 font-semibold
                 uppercase
                 tracking-[0.32em]
-                text-white/30
+                text-[var(--theme-text)]/30
               "
             >
               <span className="h-px w-8 bg-white/20" />
@@ -616,7 +616,7 @@ export default function MobilityControlCenter() {
                 font-semibold
                 leading-[0.95]
                 tracking-[-0.045em]
-                text-white
+                text-[var(--theme-text)]
                 sm:text-5xl
               "
             >
@@ -625,7 +625,7 @@ export default function MobilityControlCenter() {
               One operational view.
             </h1>
 
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/40">
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-[var(--theme-text)]/40">
               O frontend está agora ligado ao ciclo operacional real da
               Mobility: safety, pricing, matching, dispatch, lifecycle,
               payment, settlement e financial recovery.
@@ -640,7 +640,7 @@ export default function MobilityControlCenter() {
                 gap-2
                 rounded-full
                 border
-                border-white/10
+                border-[var(--theme-border)]
                 bg-white/[0.035]
                 px-4
                 py-2
@@ -648,7 +648,7 @@ export default function MobilityControlCenter() {
                 font-semibold
                 uppercase
                 tracking-[0.2em]
-                text-white/50
+                text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]
               "
             >
               <span className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
@@ -664,7 +664,7 @@ export default function MobilityControlCenter() {
               className="
                 rounded-full
                 border
-                border-white/10
+                border-[var(--theme-border)]
                 bg-white/[0.035]
                 px-4
                 py-2
@@ -672,10 +672,10 @@ export default function MobilityControlCenter() {
                 font-semibold
                 uppercase
                 tracking-[0.18em]
-                text-white/45
+                text-[var(--theme-text)]/45
                 transition
                 hover:border-white/20
-                hover:text-white
+                hover:text-[var(--theme-text)]
               "
             >
               Refresh
@@ -689,12 +689,12 @@ export default function MobilityControlCenter() {
           className="
             rounded-2xl
             border
-            border-white/10
+            border-[var(--theme-border)]
             bg-white/[0.035]
             px-5
             py-4
             text-xs
-            text-white/55
+            text-[var(--theme-text)]/55
           "
         >
           {error}
@@ -703,11 +703,11 @@ export default function MobilityControlCenter() {
 
       <section>
         <div className="mb-5">
-          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/25">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text)]/25">
             Operational intelligence
           </p>
 
-          <h2 className="mt-2 text-xl font-medium text-white/85">
+          <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
             Mobility in real time
           </h2>
         </div>
@@ -763,16 +763,16 @@ export default function MobilityControlCenter() {
       <section>
         <div className="mb-5 flex items-end justify-between">
           <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/25">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text)]/25">
               Engine registry
             </p>
 
-            <h2 className="mt-2 text-xl font-medium text-white/85">
+            <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
               Runtime architecture
             </h2>
           </div>
 
-          <span className="text-[9px] uppercase tracking-[0.2em] text-white/20">
+          <span className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text)]/20">
             {ENGINE_REGISTRY.length} engines
           </span>
         </div>
@@ -791,7 +791,7 @@ export default function MobilityControlCenter() {
                   className="
                     rounded-2xl
                     border
-                    border-white/[0.07]
+                    border-[var(--theme-border)]
                     bg-white/[0.02]
                     p-5
                     transition
@@ -801,11 +801,11 @@ export default function MobilityControlCenter() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[9px] uppercase tracking-[0.18em] text-white/20">
+                      <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">
                         {engine.layer}
                       </p>
 
-                      <h3 className="mt-2 text-sm font-medium text-white/75">
+                      <h3 className="mt-2 text-sm font-medium text-[color-mix(in_srgb,var(--theme-text)_75%,transparent)]">
                         {engine.name}
                       </h3>
                     </div>
@@ -820,7 +820,7 @@ export default function MobilityControlCenter() {
                         justify-center
                         rounded-full
                         border
-                        border-white/10
+                        border-[var(--theme-border)]
                         bg-white/[0.035]
                       "
                     >
@@ -839,11 +839,11 @@ export default function MobilityControlCenter() {
                     </span>
                   </div>
 
-                  <p className="mt-4 text-[11px] leading-5 text-white/30">
+                  <p className="mt-4 text-[11px] leading-5 text-[var(--theme-text)]/30">
                     {engine.description}
                   </p>
 
-                  <p className="mt-4 text-[8px] font-semibold uppercase tracking-[0.2em] text-white/20">
+                  <p className="mt-4 text-[8px] font-semibold uppercase tracking-[0.2em] text-[var(--theme-text)]/20">
                     {connected
                       ? "Integrated"
                       : "Unavailable"}
@@ -860,18 +860,18 @@ export default function MobilityControlCenter() {
           className="
             rounded-[1.75rem]
             border
-            border-white/[0.07]
+            border-[var(--theme-border)]
             bg-white/[0.02]
             p-6
           "
         >
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/25">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text)]/25">
                 Ride lifecycle
               </p>
 
-              <h2 className="mt-2 text-xl font-medium text-white/85">
+              <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
                 Operational pipeline
               </h2>
             </div>
@@ -918,8 +918,8 @@ export default function MobilityControlCenter() {
                           current
                             ? "border-white/25 bg-white text-black"
                             : reached
-                              ? "border-white/15 bg-white/[0.08] text-white/65"
-                              : "border-white/[0.06] bg-white/[0.02] text-white/20"
+                              ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-text)]/65"
+                              : "border-white/[0.06] bg-white/[0.02] text-[var(--theme-text)]/20"
                         }
                       `}
                     >
@@ -945,10 +945,10 @@ export default function MobilityControlCenter() {
                         tracking-[0.14em]
                         ${
                           current
-                            ? "text-white"
+                            ? "text-[var(--theme-text)]"
                             : reached
-                              ? "text-white/55"
-                              : "text-white/20"
+                              ? "text-[var(--theme-text)]/55"
+                              : "text-[var(--theme-text)]/20"
                         }
                       `}
                     >
@@ -968,20 +968,20 @@ export default function MobilityControlCenter() {
           className="
             rounded-[1.75rem]
             border
-            border-white/[0.07]
+            border-[var(--theme-border)]
             bg-white/[0.02]
             p-6
           "
         >
-          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/25">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text)]/25">
             Mobility request
           </p>
 
-          <h2 className="mt-2 text-xl font-medium text-white/85">
+          <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
             Start a real ride lifecycle
           </h2>
 
-          <p className="mt-3 text-xs leading-5 text-white/30">
+          <p className="mt-3 text-xs leading-5 text-[var(--theme-text)]/30">
             A criação passa pelo Ride Engine e pelo Lifecycle
             Orchestrator. As coordenadas podem ser preenchidas posteriormente
             quando o mapa estiver ligado.
@@ -989,7 +989,7 @@ export default function MobilityControlCenter() {
 
           <div className="mt-6 space-y-4">
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-white/25">
+              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text)]/25">
                 Service type
               </span>
 
@@ -1005,11 +1005,11 @@ export default function MobilityControlCenter() {
                   w-full
                   rounded-xl
                   border
-                  border-white/10
+                  border-[var(--theme-border)]
                   bg-black/30
                   px-4
                   text-xs
-                  text-white
+                  text-[var(--theme-text)]
                   outline-none
                 "
               >
@@ -1024,7 +1024,7 @@ export default function MobilityControlCenter() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-white/25">
+              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text)]/25">
                 Safety mode
               </span>
 
@@ -1041,11 +1041,11 @@ export default function MobilityControlCenter() {
                   w-full
                   rounded-xl
                   border
-                  border-white/10
+                  border-[var(--theme-border)]
                   bg-black/30
                   px-4
                   text-xs
-                  text-white
+                  text-[var(--theme-text)]
                   outline-none
                 "
               >
@@ -1064,7 +1064,7 @@ export default function MobilityControlCenter() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-white/25">
+              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text)]/25">
                 Pickup
               </span>
 
@@ -1081,19 +1081,19 @@ export default function MobilityControlCenter() {
                   w-full
                   rounded-xl
                   border
-                  border-white/10
+                  border-[var(--theme-border)]
                   bg-black/30
                   px-4
                   text-xs
-                  text-white
+                  text-[var(--theme-text)]
                   outline-none
-                  placeholder:text-white/20
+                  placeholder:text-[var(--theme-text)]/20
                 "
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-white/25">
+              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text)]/25">
                 Destination
               </span>
 
@@ -1110,13 +1110,13 @@ export default function MobilityControlCenter() {
                   w-full
                   rounded-xl
                   border
-                  border-white/10
+                  border-[var(--theme-border)]
                   bg-black/30
                   px-4
                   text-xs
-                  text-white
+                  text-[var(--theme-text)]
                   outline-none
-                  placeholder:text-white/20
+                  placeholder:text-[var(--theme-text)]/20
                 "
               />
             </label>
@@ -1153,13 +1153,13 @@ export default function MobilityControlCenter() {
                 mt-5
                 rounded-xl
                 border
-                border-white/[0.07]
-                bg-black/20
+                border-[var(--theme-border)]
+                bg-[color-mix(in_srgb,var(--theme-background)_20%,transparent)]
                 p-4
               "
             >
               <div className="flex items-center justify-between">
-                <span className="text-[9px] uppercase tracking-[0.18em] text-white/25">
+                <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/25">
                   Created
                 </span>
 
@@ -1170,7 +1170,7 @@ export default function MobilityControlCenter() {
                 />
               </div>
 
-              <p className="mt-3 text-sm text-white/65">
+              <p className="mt-3 text-sm text-[var(--theme-text)]/65">
                 {activeRide.ride.reference ??
                   activeRide.ride.id}
               </p>
@@ -1184,23 +1184,23 @@ export default function MobilityControlCenter() {
           className="
             rounded-[1.75rem]
             border
-            border-white/[0.07]
+            border-[var(--theme-border)]
             bg-white/[0.02]
             p-6
           "
         >
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/25">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text)]/25">
                 Recent rides
               </p>
 
-              <h2 className="mt-2 text-xl font-medium text-white/85">
+              <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
                 Mobility activity
               </h2>
             </div>
 
-            <span className="text-[9px] uppercase tracking-[0.18em] text-white/20">
+            <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">
               Live
             </span>
           </div>
@@ -1231,16 +1231,16 @@ export default function MobilityControlCenter() {
                       py-3
                       text-left
                       transition
-                      hover:border-white/10
+                      hover:border-[var(--theme-border)]
                       hover:bg-white/[0.03]
                     "
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-xs text-white/65">
+                      <p className="truncate text-xs text-[var(--theme-text)]/65">
                         {ride.reference}
                       </p>
 
-                      <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-white/20">
+                      <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-[var(--theme-text)]/20">
                         {ride.serviceType} ·{" "}
                         {formatDate(
                           ride.createdAt,
@@ -1254,7 +1254,7 @@ export default function MobilityControlCenter() {
                       />
 
                       {ride.currentStep && (
-                        <span className="text-[8px] uppercase tracking-[0.12em] text-white/20">
+                        <span className="text-[8px] uppercase tracking-[0.12em] text-[var(--theme-text)]/20">
                           {formatStep(
                             ride.currentStep,
                           )}
@@ -1265,7 +1265,7 @@ export default function MobilityControlCenter() {
                 ),
               )
             ) : (
-              <p className="py-8 text-center text-xs text-white/20">
+              <p className="py-8 text-center text-xs text-[var(--theme-text)]/20">
                 No Mobility rides yet.
               </p>
             )}
@@ -1276,17 +1276,17 @@ export default function MobilityControlCenter() {
           className="
             rounded-[1.75rem]
             border
-            border-white/[0.07]
+            border-[var(--theme-border)]
             bg-white/[0.02]
             p-6
           "
         >
           <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/25">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text)]/25">
               Orchestration events
             </p>
 
-            <h2 className="mt-2 text-xl font-medium text-white/85">
+            <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
               Lifecycle activity
             </h2>
           </div>
@@ -1307,7 +1307,7 @@ export default function MobilityControlCenter() {
                     "
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs text-white/55">
+                      <p className="text-xs text-[var(--theme-text)]/55">
                         {event.action}
                       </p>
 
@@ -1319,7 +1319,7 @@ export default function MobilityControlCenter() {
                     </div>
 
                     <div className="mt-2 flex items-center justify-between gap-3">
-                      <p className="text-[9px] uppercase tracking-[0.12em] text-white/20">
+                      <p className="text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text)]/20">
                         {formatStep(
                           event.fromStep,
                         )}{" "}
@@ -1329,7 +1329,7 @@ export default function MobilityControlCenter() {
                         )}
                       </p>
 
-                      <p className="text-[9px] text-white/15">
+                      <p className="text-[9px] text-[var(--theme-text)]/15">
                         {formatDate(
                           event.createdAt,
                         )}
@@ -1339,7 +1339,7 @@ export default function MobilityControlCenter() {
                 ),
               )
             ) : (
-              <p className="py-8 text-center text-xs text-white/20">
+              <p className="py-8 text-center text-xs text-[var(--theme-text)]/20">
                 No orchestration events yet.
               </p>
             )}
@@ -1351,18 +1351,18 @@ export default function MobilityControlCenter() {
         className="
           rounded-[1.75rem]
           border
-          border-white/[0.07]
+          border-[var(--theme-border)]
           bg-white/[0.02]
           p-6
         "
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/25">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text)]/25">
               Financial layer
             </p>
 
-            <h2 className="mt-2 text-xl font-medium text-white/85">
+            <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
               Payment and settlement visibility
             </h2>
           </div>
@@ -1400,10 +1400,10 @@ export default function MobilityControlCenter() {
 
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
-            <p className="text-[9px] uppercase tracking-[0.16em] text-white/20">
+            <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Payment
             </p>
-            <p className="mt-2 text-sm text-white/65">
+            <p className="mt-2 text-sm text-[var(--theme-text)]/65">
               {
                 overview?.metrics.payments
                   .collected ?? 0
@@ -1413,10 +1413,10 @@ export default function MobilityControlCenter() {
           </div>
 
           <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
-            <p className="text-[9px] uppercase tracking-[0.16em] text-white/20">
+            <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Settlement
             </p>
-            <p className="mt-2 text-sm text-white/65">
+            <p className="mt-2 text-sm text-[var(--theme-text)]/65">
               {
                 overview?.metrics.settlements
                   .completed ?? 0
@@ -1426,19 +1426,19 @@ export default function MobilityControlCenter() {
           </div>
 
           <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
-            <p className="text-[9px] uppercase tracking-[0.16em] text-white/20">
+            <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Cash obligation
             </p>
-            <p className="mt-2 text-sm text-white/65">
+            <p className="mt-2 text-sm text-[var(--theme-text)]/65">
               Financial obligation
             </p>
           </div>
 
           <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
-            <p className="text-[9px] uppercase tracking-[0.16em] text-white/20">
+            <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Recovery
             </p>
-            <p className="mt-2 text-sm text-white/65">
+            <p className="mt-2 text-sm text-[var(--theme-text)]/65">
               {
                 overview?.metrics.orchestration
                   .recoveryRequired ?? 0
@@ -1458,17 +1458,17 @@ export default function MobilityControlCenter() {
               items-center
               rounded-full
               border
-              border-white/10
+              border-[var(--theme-border)]
               bg-white/[0.035]
               px-5
               text-[9px]
               font-semibold
               uppercase
               tracking-[0.18em]
-              text-white/55
+              text-[var(--theme-text)]/55
               transition
               hover:border-white/20
-              hover:text-white
+              hover:text-[var(--theme-text)]
             "
           >
             Open selected ride
