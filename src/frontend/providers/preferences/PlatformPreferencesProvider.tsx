@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type PlatformTheme = "obsidian" | "graphite" | "silver" | "aurora" | "pearl";
+export type PlatformTheme = "pearl" | "obsidian" | "noir" | "sable" | "silver" | "midnight";
 export type PlatformLanguage = "pt" | "en" | "fr" | "zh" | "ar" | "os";
 
 type PlatformPreferences = {
@@ -18,7 +18,7 @@ const LANGUAGE_KEY = "marka.platform.language";
 const context = createContext<PlatformPreferences | null>(null);
 
 const isTheme = (value: string | null): value is PlatformTheme =>
-  value === "obsidian" || value === "graphite" || value === "silver" || value === "aurora" || value === "pearl";
+  value === "pearl" || value === "obsidian" || value === "noir" || value === "sable" || value === "silver" || value === "midnight";
 
 const isLanguage = (value: string | null): value is PlatformLanguage =>
   value === "pt" || value === "en" || value === "fr" || value === "zh" || value === "ar" || value === "os";
