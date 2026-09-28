@@ -28,7 +28,14 @@ export interface AuthUser {
   profile: AuthUserProfile | null;
 }
 
-export interface AuthSession {\n  id: string;\n  expiresAt: string;\n  createdAt: string;\n  lastSeenAt: string;\n}\n\nexport interface AuthOrganization {
+export interface AuthSession {
+  id: string;
+  expiresAt: string;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+export interface AuthOrganization {
   id: string;
   name: string;
   slug: string;
@@ -42,6 +49,7 @@ export interface AuthorizationState {
 
 interface AuthContextType {
   user?: AuthUser;
+  session?: AuthSession;
   organizations: AuthOrganization[];
   activeOrganization?: AuthOrganization;
   authorization: AuthorizationState;
@@ -93,6 +101,9 @@ export function AuthProvider({
   const [user, setUser] =
     useState<AuthUser>();
 
+  const [session, setSession] =
+    useState<AuthSession>();
+
   const [organizations, setOrganizations] =
     useState<AuthOrganization[]>([]);
 
@@ -125,6 +136,7 @@ export function AuthProvider({
 
       if (!response.ok) {
         setUser(undefined);
+        setSession(undefined);
         setOrganizations([]);
         setAuthorization(
           emptyAuthorization
@@ -136,6 +148,7 @@ export function AuthProvider({
         await response.json();
 
       setUser(data.user);
+      setSession(data.session);
       setOrganizations(
         Array.isArray(data.organizations)
           ? data.organizations
@@ -166,6 +179,7 @@ export function AuthProvider({
       );
 
       setUser(undefined);
+      setSession(undefined);
       setOrganizations([]);
       setAuthorization(
         emptyAuthorization
@@ -221,6 +235,7 @@ export function AuthProvider({
         if (!response.ok) {
           if (mounted) {
             setUser(undefined);
+            setSession(undefined);
             setOrganizations([]);
             setAuthorization(
               emptyAuthorization
@@ -246,6 +261,7 @@ export function AuthProvider({
             : [];
 
         setUser(data.user);
+        setSession(data.session);
         setOrganizations(
           nextOrganizations
         );
@@ -306,6 +322,10 @@ export function AuthProvider({
             if (mounted) {
               setUser(
                 organizationData.user
+              );
+
+              setSession(
+                organizationData.session
               );
 
               setOrganizations(
@@ -378,6 +398,7 @@ export function AuthProvider({
 
         if (mounted) {
           setUser(undefined);
+          setSession(undefined);
           setOrganizations([]);
           setAuthorization(
             emptyAuthorization
@@ -443,6 +464,7 @@ export function AuthProvider({
     <AuthContext.Provider
       value={{
         user,
+        session,
         organizations,
         activeOrganization,
         authorization,
