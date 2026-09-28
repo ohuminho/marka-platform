@@ -17,24 +17,29 @@ interface RouteContext {
 
 export async function GET(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
-    await authenticateMobilityRequest(request);
+    await authenticateMobilityRequest(
+      request,
+    );
 
   if (!authentication.ok) {
     return authentication.response;
   }
 
-  const { id } = await context.params;
+  const { id } =
+    await context.params;
 
   if (!id?.trim()) {
     return NextResponse.json(
       {
-        message: "Driver id is required.",
-        code: "DRIVER_ID_REQUIRED",
+        message:
+          "Driver id is required.",
+        code:
+          "DRIVER_ID_REQUIRED",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -44,7 +49,8 @@ export async function GET(
         organizationId:
           authentication.session.organizationId,
 
-        driverId: id,
+        driverId:
+          id,
 
         actorUserId:
           authentication.session.userId,
@@ -58,7 +64,7 @@ export async function GET(
   } catch (error) {
     console.error(
       "[MOBILITY_DRIVER_SAFETY_API_ERROR]",
-      error
+      error,
     );
 
     const message =
@@ -69,9 +75,10 @@ export async function GET(
     return NextResponse.json(
       {
         message,
-        code: "MOBILITY_DRIVER_SAFETY_EVALUATION_FAILED",
+        code:
+          "MOBILITY_DRIVER_SAFETY_EVALUATION_FAILED",
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 }
