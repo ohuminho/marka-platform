@@ -30,11 +30,11 @@ const mobilityRideService =
 
 export async function GET(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
     await authenticateMobilityRequest(
-      request
+      request,
     );
 
   if (!authentication.ok) {
@@ -49,20 +49,19 @@ export async function GET(
       {
         message:
           "Ride id is required.",
-
         code:
           "RIDE_ID_REQUIRED",
       },
       {
         status: 400,
-      }
+      },
     );
   }
 
   try {
     const ride =
       await mobilityRideService.getById(
-        id
+        id,
       );
 
     if (!ride) {
@@ -70,13 +69,12 @@ export async function GET(
         {
           message:
             "Mobility ride not found.",
-
           code:
             "RIDE_NOT_FOUND",
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
@@ -89,13 +87,12 @@ export async function GET(
         {
           message:
             "Mobility ride does not belong to the specified organization.",
-
           code:
             "RIDE_ORGANIZATION_ACCESS_DENIED",
         },
         {
           status: 403,
-        }
+        },
       );
     }
 
@@ -117,13 +114,12 @@ export async function GET(
         {
           message:
             "You do not have access to this Mobility ride.",
-
           code:
             "RIDE_ACCESS_DENIED",
         },
         {
           status: 403,
-        }
+        },
       );
     }
 
@@ -131,43 +127,40 @@ export async function GET(
       await mobilityLifecycleService.get(
         authentication.session
           .organizationId,
-
-        ride.id
+        ride.id,
       );
 
     return NextResponse.json({
       ride,
-
       orchestration,
     });
   } catch (error) {
     console.error(
       "[MOBILITY_RIDE_GET_API_ERROR]",
-      error
+      error,
     );
 
     return NextResponse.json(
       {
         message:
           "Unable to retrieve Mobility ride.",
-
         code:
           "MOBILITY_RIDE_RETRIEVAL_FAILED",
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }
 
 export async function PATCH(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
     await authenticateMobilityRequest(
-      request
+      request,
     );
 
   if (!authentication.ok) {
@@ -182,13 +175,12 @@ export async function PATCH(
       {
         message:
           "Ride id is required.",
-
         code:
           "RIDE_ID_REQUIRED",
       },
       {
         status: 400,
-      }
+      },
     );
   }
 
@@ -207,20 +199,19 @@ export async function PATCH(
       typeof parsed !==
         "object" ||
       Array.isArray(
-        parsed
+        parsed,
       )
     ) {
       return NextResponse.json(
         {
           message:
             "Request body must be an object.",
-
           code:
             "INVALID_REQUEST_BODY",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -234,13 +225,12 @@ export async function PATCH(
       {
         message:
           "Invalid JSON request body.",
-
         code:
           "INVALID_JSON_BODY",
       },
       {
         status: 400,
-      }
+      },
     );
   }
 
@@ -255,12 +245,12 @@ export async function PATCH(
   const idempotencyKey =
     getIdempotencyKey(
       request,
-      body
+      body,
     );
 
   const requestContext =
     getRequestContext(
-      request
+      request,
     );
 
   if (!action) {
@@ -268,13 +258,12 @@ export async function PATCH(
       {
         message:
           "Mobility ride action is required.",
-
         code:
           "RIDE_ACTION_REQUIRED",
       },
       {
         status: 400,
-      }
+      },
     );
   }
 
@@ -283,19 +272,18 @@ export async function PATCH(
       {
         message:
           "Idempotency key is required.",
-
         code:
           "IDEMPOTENCY_KEY_REQUIRED",
       },
       {
         status: 400,
-      }
+      },
     );
   }
 
   const ride =
     await mobilityRideService.getById(
-      id
+      id,
     );
 
   if (!ride) {
@@ -303,13 +291,12 @@ export async function PATCH(
       {
         message:
           "Mobility ride not found.",
-
         code:
           "RIDE_NOT_FOUND",
       },
       {
         status: 404,
-      }
+      },
     );
   }
 
@@ -322,13 +309,12 @@ export async function PATCH(
       {
         message:
           "Mobility ride organization access denied.",
-
         code:
           "RIDE_ORGANIZATION_ACCESS_DENIED",
       },
       {
         status: 403,
-      }
+      },
     );
   }
 
@@ -353,7 +339,7 @@ export async function PATCH(
 
   if (
     riderActions.has(
-      action
+      action,
     ) &&
     !isRider
   ) {
@@ -361,13 +347,12 @@ export async function PATCH(
       {
         message:
           "Only the rider can perform this action.",
-
         code:
           "RIDER_ACTION_REQUIRED",
       },
       {
         status: 403,
-      }
+      },
     );
   }
 
@@ -385,7 +370,7 @@ export async function PATCH(
 
   if (
     driverActions.has(
-      action
+      action,
     ) &&
     !isDriver
   ) {
@@ -393,20 +378,19 @@ export async function PATCH(
       {
         message:
           "Only the assigned driver can perform this action.",
-
         code:
           "DRIVER_ACTION_REQUIRED",
       },
       {
         status: 403,
-      }
+      },
     );
   }
 
   try {
     const lifecycleAction =
       normalizeLifecycleAction(
-        action
+        action,
       );
 
     if (!lifecycleAction) {
@@ -414,22 +398,21 @@ export async function PATCH(
         {
           message:
             `Unsupported Mobility ride action: ${action}.`,
-
           code:
             "UNSUPPORTED_RIDE_ACTION",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
     const safetyMode =
       normalizeSafetyMode(
-        body.safetyMode
+        body.safetyMode,
       ) ??
       readSafetyMode(
-        ride.metadata
+        ride.metadata,
       );
 
     if (!safetyMode) {
@@ -437,13 +420,12 @@ export async function PATCH(
         {
           message:
             "Invalid safety mode.",
-
           code:
             "INVALID_SAFETY_MODE",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -462,13 +444,12 @@ export async function PATCH(
           {
             message:
               "Cancellation reason is required.",
-
             code:
               "RIDE_CANCELLATION_REASON_REQUIRED",
           },
           {
             status: 400,
-          }
+          },
         );
       }
     }
@@ -481,13 +462,13 @@ export async function PATCH(
     ) {
       const finalFareMinor =
         parseBigInt(
-          body.finalFareMinor
+          body.finalFareMinor,
         );
 
       const estimatedFareMinor =
         parseBigInt(
           body.estimatedFareMinor ??
-            body.finalFareMinor
+            body.finalFareMinor,
         );
 
       if (
@@ -500,13 +481,12 @@ export async function PATCH(
           {
             message:
               "finalFareMinor and estimatedFareMinor must be valid non-negative integers.",
-
             code:
               "INVALID_MOBILITY_FARE",
           },
           {
             status: 400,
-          }
+          },
         );
       }
 
@@ -528,13 +508,12 @@ export async function PATCH(
           {
             message:
               "Payment method must be CASH or DIGITAL.",
-
             code:
               "INVALID_MOBILITY_PAYMENT_METHOD",
           },
           {
             status: 400,
-          }
+          },
         );
       }
 
@@ -553,9 +532,7 @@ export async function PATCH(
       const settlementCompletionIdempotencyKey =
         typeof body.settlementCompletionIdempotencyKey ===
         "string"
-          ? body
-              .settlementCompletionIdempotencyKey
-              .trim()
+          ? body.settlementCompletionIdempotencyKey.trim()
           : `${idempotencyKey}:settlement-complete`;
 
       if (
@@ -567,13 +544,12 @@ export async function PATCH(
           {
             message:
               "Payment and settlement idempotency keys are required.",
-
             code:
               "FINANCIAL_IDEMPOTENCY_KEYS_REQUIRED",
           },
           {
             status: 400,
-          }
+          },
         );
       }
 
@@ -581,7 +557,7 @@ export async function PATCH(
         body.availableDigitalProceedsMinor !==
         undefined
           ? parseBigInt(
-              body.availableDigitalProceedsMinor
+              body.availableDigitalProceedsMinor,
             )
           : undefined;
 
@@ -595,13 +571,12 @@ export async function PATCH(
           {
             message:
               "availableDigitalProceedsMinor must be a valid non-negative integer for DIGITAL payments.",
-
             code:
               "INVALID_DIGITAL_PROCEEDS",
           },
           {
             status: 400,
-          }
+          },
         );
       }
 
@@ -638,7 +613,7 @@ export async function PATCH(
 
           metadata:
             isRecord(
-              body.metadata
+              body.metadata,
             )
               ? body.metadata
               : undefined,
@@ -670,7 +645,7 @@ export async function PATCH(
 
           pricingSnapshot:
             isRecord(
-              body.pricingSnapshot
+              body.pricingSnapshot,
             )
               ? body.pricingSnapshot
               : undefined,
@@ -681,7 +656,7 @@ export async function PATCH(
           ride:
             result.ride ??
             await mobilityRideService.getById(
-              id
+              id,
             ),
 
           orchestration:
@@ -695,7 +670,7 @@ export async function PATCH(
             result.recoveryRequired
               ? 202
               : 200,
-        }
+        },
       );
     }
 
@@ -732,7 +707,7 @@ export async function PATCH(
 
         metadata:
           isRecord(
-            body.metadata
+            body.metadata,
           )
             ? body.metadata
             : undefined,
@@ -752,7 +727,7 @@ export async function PATCH(
         ride:
           result.ride ??
           await mobilityRideService.getById(
-            id
+            id,
           ),
 
         orchestration:
@@ -763,12 +738,12 @@ export async function PATCH(
           result.recoveryRequired
             ? 202
             : 200,
-      }
+      },
     );
   } catch (error) {
     console.error(
       "[MOBILITY_RIDE_LIFECYCLE_API_ERROR]",
-      error
+      error,
     );
 
     const message =
@@ -779,19 +754,18 @@ export async function PATCH(
     return NextResponse.json(
       {
         message,
-
         code:
           "MOBILITY_RIDE_LIFECYCLE_ACTION_FAILED",
       },
       {
         status: 409,
-      }
+      },
     );
   }
 }
 
 function normalizeLifecycleAction(
-  action: string
+  action: string,
 ): MobilityLifecycleAction | null {
   switch (action) {
     case "START_SEARCH":
@@ -835,7 +809,7 @@ function normalizeLifecycleAction(
 }
 
 function normalizeSafetyMode(
-  value: unknown
+  value: unknown,
 ): MobilitySafetyMode | null {
   if (
     typeof value !==
@@ -864,11 +838,11 @@ function normalizeSafetyMode(
 }
 
 function readSafetyMode(
-  metadata: unknown
+  metadata: unknown,
 ): MobilitySafetyMode | null {
   if (
     !isRecord(
-      metadata
+      metadata,
     )
   ) {
     return "STANDARD";
@@ -876,14 +850,14 @@ function readSafetyMode(
 
   return (
     normalizeSafetyMode(
-      metadata.safetyMode
+      metadata.safetyMode,
     ) ??
     "STANDARD"
   );
 }
 
 function isRecord(
-  value: unknown
+  value: unknown,
 ): value is Record<
   string,
   unknown
@@ -893,13 +867,13 @@ function isRecord(
       "object" &&
     value !== null &&
     !Array.isArray(
-      value
+      value,
     )
   );
 }
 
 function parseBigInt(
-  value: unknown
+  value: unknown,
 ): bigint | null {
   if (
     typeof value ===
@@ -916,7 +890,7 @@ function parseBigInt(
     "number"
   ) {
     return Number.isSafeInteger(
-      value
+      value,
     ) && value >= 0
       ? BigInt(value)
       : null;
@@ -926,12 +900,12 @@ function parseBigInt(
     typeof value ===
       "string" &&
     /^[0-9]+$/.test(
-      value.trim()
+      value.trim(),
     )
   ) {
     try {
       return BigInt(
-        value.trim()
+        value.trim(),
       );
     } catch {
       return null;
