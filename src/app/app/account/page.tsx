@@ -44,14 +44,14 @@ export default function AccountPage() {
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-lg font-semibold text-[var(--theme-text)]">
             {initials(user.profile?.displayName || user.name)}
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.24em] text-[var(--theme-text-muted)]">MARKA Account</p>
-            <h1 className="mt-1 text-2xl font-semibold text-[var(--theme-text)]">{user.profile?.displayName || user.name}</h1>
+            <p className="marka-kicker">MARKA / ACCOUNT</p>
+            <h1 className="marka-editorial mt-2 text-3xl text-[var(--theme-text)]">{user.profile?.displayName || user.name}</h1>
             <p className="mt-1 text-sm text-[var(--theme-text-muted)]">{user.email}</p>
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function AccountPage() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
+        <article className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
           <h2 className="text-sm font-semibold text-[var(--theme-text)]">Identity</h2>
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
             {[
@@ -81,7 +81,7 @@ export default function AccountPage() {
           </dl>
         </article>
 
-        <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
+        <article className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
           <h2 className="text-sm font-semibold text-[var(--theme-text)]">Active context</h2>
           <dl className="mt-5 grid gap-4">
             <div>
@@ -101,7 +101,7 @@ export default function AccountPage() {
           </dl>
         </article>
 
-        <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:col-span-2">
+        <article className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:col-span-2">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-sm font-semibold text-[var(--theme-text)]">Session</h2>
@@ -125,7 +125,7 @@ export default function AccountPage() {
           </div>
         </article>
 
-        <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:col-span-2">
+        <article className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:col-span-2">
           <h2 className="text-sm font-semibold text-[var(--theme-text)]">Permissions</h2>
           <div className="mt-5 space-y-4">
             {permissionGroups.length ? permissionGroups.map(([group, permissions]) => (
@@ -139,7 +139,7 @@ export default function AccountPage() {
           </div>
         </article>
 
-        <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:col-span-2">
+        <article className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:col-span-2">
           <h2 className="text-sm font-semibold text-[var(--theme-text)]">Organizations</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {organizations.map((organization) => (
