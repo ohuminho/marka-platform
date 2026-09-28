@@ -402,9 +402,9 @@ export default function OrderDetailPage({
   if (loading) {
     return (
       <main className="min-h-screen p-8">
-        <div className="h-8 w-40 animate-pulse rounded bg-white/10" />
+        <div className="h-8 w-40 animate-pulse rounded bg-[var(--theme-surface-strong)]/10" />
 
-        <div className="mt-8 h-48 animate-pulse rounded-3xl bg-white/5" />
+        <div className="mt-8 h-48 animate-pulse rounded-3xl bg-[var(--theme-surface-strong)]/5" />
       </main>
     );
   }
@@ -414,7 +414,7 @@ export default function OrderDetailPage({
       <main className="min-h-screen p-8">
         <Link
           href="/app/orders"
-          className="text-sm text-white/50 hover:text-white"
+          className="text-sm text-[var(--theme-text)]/50 hover:text-[var(--theme-text)]"
         >
           ← Back to Orders
         </Link>
@@ -424,13 +424,13 @@ export default function OrderDetailPage({
             Unable to load order
           </h1>
 
-          <p className="mt-3 text-white/50">
+          <p className="mt-3 text-[var(--theme-text)]/50">
             {error ??
               "The requested order could not be found."}
           </p>
 
           {orderId && (
-            <p className="mt-4 break-all font-mono text-xs text-white/30">
+            <p className="mt-4 break-all font-mono text-xs text-[var(--theme-text)]/30">
               {orderId}
             </p>
           )}
@@ -445,13 +445,13 @@ export default function OrderDetailPage({
 
       <Link
         href="/app/orders"
-        className="text-sm text-white/50 hover:text-white"
+        className="text-sm text-[var(--theme-text)]/50 hover:text-[var(--theme-text)]"
       >
         ← Back to Orders
       </Link>
 
       <header className="mt-8">
-        <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--theme-text)]/40">
           Order
         </p>
 
@@ -459,7 +459,7 @@ export default function OrderDetailPage({
           {order.id}
         </h1>
 
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/50">
+        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-[var(--theme-text)]/50">
           <span>
             {label(order.status)}
           </span>
@@ -492,7 +492,7 @@ export default function OrderDetailPage({
       </header>
 
       <section className="mt-10 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/5 p-6">
           <h2 className="text-xl font-semibold">
             Items
           </h2>
@@ -502,7 +502,7 @@ export default function OrderDetailPage({
               (item) => (
                 <div
                   key={item.id}
-                  className="rounded-2xl border border-white/10 p-4"
+                  className="rounded-2xl border border-[var(--theme-border)] p-4"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -510,7 +510,7 @@ export default function OrderDetailPage({
                         Product
                       </p>
 
-                      <p className="mt-1 break-all font-mono text-xs text-white/40">
+                      <p className="mt-1 break-all font-mono text-xs text-[var(--theme-text)]/40">
                         {item.productId}
                       </p>
                     </div>
@@ -523,7 +523,7 @@ export default function OrderDetailPage({
                     </p>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-4 text-xs text-white/40">
+                  <div className="mt-4 flex flex-wrap gap-4 text-xs text-[var(--theme-text)]/40">
                     <span>
                       Quantity:{" "}
                       {item.quantity}
@@ -544,8 +544,8 @@ export default function OrderDetailPage({
         </div>
 
         <aside className="space-y-6">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+          <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/5 p-6">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--theme-text)]/40">
               Order Total
             </p>
 
@@ -556,12 +556,12 @@ export default function OrderDetailPage({
               )}
             </p>
 
-            <p className="mt-3 text-sm text-white/40">
+            <p className="mt-3 text-sm text-[var(--theme-text)]/40">
               {label(order.status)}
             </p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/5 p-6">
             <h2 className="text-xl font-semibold">
               Delivery
             </h2>
@@ -587,7 +587,7 @@ export default function OrderDetailPage({
                             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs",
                             completed
                               ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
-                              : "border-white/10 bg-white/5 text-white/30",
+                              : "border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/5 text-[var(--theme-text)]/30",
                           ].join(" ")}
                         >
                           {completed ? "✓" : index + 1}
@@ -596,10 +596,10 @@ export default function OrderDetailPage({
                           <p
                             className={
                               current
-                                ? "font-medium text-white"
+                                ? "font-medium text-[var(--theme-text)]"
                                 : completed
-                                  ? "text-white/70"
-                                  : "text-white/35"
+                                  ? "text-[var(--theme-text)]/70"
+                                  : "text-[var(--theme-text)]/35"
                             }
                           >
                             {label(stage)}
@@ -611,13 +611,13 @@ export default function OrderDetailPage({
                 </div>
 
                 {tracking?.agent ? (
-                  <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                  <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)]/10 p-4">
                     <div className="flex items-center justify-between gap-4">
-                      <span className="text-white/50">Delivery agent</span>
+                      <span className="text-[var(--theme-text)]/50">Delivery agent</span>
                       <span>{tracking.agent.displayName || "Assigned agent"}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-4">
-                      <span className="text-white/50">Transport</span>
+                      <span className="text-[var(--theme-text)]/50">Transport</span>
                       <span>{label(tracking.agent.transportMode)}</span>
                     </div>
                     {tracking.agent.latitude !== null && tracking.agent.longitude !== null ? (
@@ -625,17 +625,17 @@ export default function OrderDetailPage({
                         <div className={tracking.agent.locationFresh ? "text-emerald-300" : "text-amber-300"}>
                           {tracking.agent.locationFresh ? "Live location" : "Location may be stale"}
                         </div>
-                        <div className="text-white/50">
+                        <div className="text-[var(--theme-text)]/50">
                           {tracking.agent.latitude.toFixed(5)}, {tracking.agent.longitude.toFixed(5)}
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-2 text-xs text-white/40">
+                      <div className="mt-2 text-xs text-[var(--theme-text)]/40">
                         Waiting for the agent&apos;s first location update.
                       </div>
                     )}
                     {tracking.agent.lastLocationAt ? (
-                      <div className="mt-1 text-xs text-white/30">
+                      <div className="mt-1 text-xs text-[var(--theme-text)]/30">
                         Last update: {formatDate(tracking.agent.lastLocationAt)}
                       </div>
                     ) : null}
@@ -650,34 +650,34 @@ export default function OrderDetailPage({
 
                 <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-white/50">Fulfillment</span>
+                  <span className="text-[var(--theme-text)]/50">Fulfillment</span>
                   <span>{label(order.fulfillment.status)}</span>
                 </div>
 
                 {order.dispatch ? (
                   <>
                     <div className="flex items-center justify-between gap-4">
-                      <span className="text-white/50">Dispatch</span>
+                      <span className="text-[var(--theme-text)]/50">Dispatch</span>
                       <span>{label(order.dispatch.status)}</span>
                     </div>
 
                     <div className="flex items-center justify-between gap-4">
-                      <span className="text-white/50">Service</span>
+                      <span className="text-[var(--theme-text)]/50">Service</span>
                       <span>{label(order.dispatch.serviceType)}</span>
                     </div>
 
                     {order.dispatch.assignedAgentId ? (
-                      <div className="break-all text-xs text-white/40">
+                      <div className="break-all text-xs text-[var(--theme-text)]/40">
                         Agent: {order.dispatch.assignedAgentId}
                       </div>
                     ) : (
-                      <div className="text-xs text-white/40">
+                      <div className="text-xs text-[var(--theme-text)]/40">
                         Awaiting delivery agent assignment.
                       </div>
                     )}
                   </>
                 ) : (
-                  <div className="text-xs text-white/40">
+                  <div className="text-xs text-[var(--theme-text)]/40">
                     Delivery dispatch is waiting for operational configuration or recovery.
                   </div>
                 )}
@@ -685,13 +685,13 @@ export default function OrderDetailPage({
               </div>
             </div>
             ) : (
-              <p className="mt-4 text-sm text-white/40">
+              <p className="mt-4 text-sm text-[var(--theme-text)]/40">
                 Delivery fulfillment has not been created yet.
               </p>
             )}
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/5 p-6">
             <h2 className="text-xl font-semibold">
               Payments
             </h2>
@@ -704,7 +704,7 @@ export default function OrderDetailPage({
 
             {order.payments.length ===
             0 ? (
-              <p className="mt-4 text-sm text-white/40">
+              <p className="mt-4 text-sm text-[var(--theme-text)]/40">
                 No payment recorded for this order yet.
               </p>
             ) : (
@@ -723,10 +723,10 @@ export default function OrderDetailPage({
                     return (
                       <div
                         key={payment.id}
-                        className="rounded-2xl border border-white/10 p-4"
+                        className="rounded-2xl border border-[var(--theme-border)] p-4"
                       >
                         <div className="flex items-center justify-between gap-4">
-                          <span className="text-sm text-white/50">
+                          <span className="text-sm text-[var(--theme-text)]/50">
                             {label(
                               payment.status
                             )}
@@ -741,14 +741,14 @@ export default function OrderDetailPage({
                         </div>
 
                         {payment.provider && (
-                          <p className="mt-2 text-xs text-white/30">
+                          <p className="mt-2 text-xs text-[var(--theme-text)]/30">
                             Provider:{" "}
                             {payment.provider}
                           </p>
                         )}
 
                         {payment.providerPaymentId && (
-                          <p className="mt-1 break-all font-mono text-[11px] text-white/20">
+                          <p className="mt-1 break-all font-mono text-[11px] text-[var(--theme-text)]/20">
                             {payment.providerPaymentId}
                           </p>
                         )}
@@ -772,7 +772,7 @@ export default function OrderDetailPage({
                                 payment
                               )
                             }
-                            className="mt-4 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="mt-4 w-full rounded-xl bg-[var(--theme-surface-strong)] px-4 py-3 text-sm font-semibold text-[var(--theme-background)] transition hover:bg-[var(--theme-surface-strong)]/90 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             {confirming
                               ? "Confirming payment..."
