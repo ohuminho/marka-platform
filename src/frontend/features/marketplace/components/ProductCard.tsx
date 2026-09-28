@@ -47,9 +47,9 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
 
         <div className="mt-5 flex items-center justify-between border-t border-[var(--theme-border)] pt-4">
           <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">{t.stock}: {product.stock}</span>
-          <button type="button" className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-text)] px-4 py-2 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-85">
-            {t.addToCart}
-          </button>
+          <span className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">
+            {product.status}
+          </span>
         </div>
       </div>
     </article>
