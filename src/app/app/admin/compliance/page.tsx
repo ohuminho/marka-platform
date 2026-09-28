@@ -15,10 +15,14 @@ export default function AdminCompliancePage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const load = async () => {
     const response = await fetch("/api/compliance/review", { credentials: "include", cache: "no-store" });
-    if (response.ok) setProfiles((await response.json()).profiles ?? []);
+    if (!response.ok) return [] as Profile[];
+    const data = (await response.json()) as { profiles?: Profile[] };
+    return data.profiles ?? [];
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void load().then(setProfiles);
+  }, []);
 
   const review = async (id: string, status: "VERIFIED" | "REJECTED") => {
     const response = await fetch("/api/compliance/review", {
@@ -27,7 +31,7 @@ export default function AdminCompliancePage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
-    if (response.ok) load();
+    if (response.ok) void load().then(setProfiles);
   };
 
   return (
