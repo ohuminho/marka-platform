@@ -269,14 +269,18 @@ export default function Sidebar() {
         ...section,
 
         items:
-          section.items.filter(
-            (item) =>
-              !item.permissions ||
-              item.permissions.length === 0 ||
-              hasAnyPermission(
-                item.permissions
-              )
-          ),
+          section.items.filter((item) => {
+            const permissions =
+              "permissions" in item
+                ? item.permissions
+                : undefined;
+
+            return (
+              !permissions ||
+              permissions.length === 0 ||
+              hasAnyPermission(permissions)
+            );
+          }),
       }))
       .filter(
         (section) =>
