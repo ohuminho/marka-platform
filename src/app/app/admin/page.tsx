@@ -1,11 +1,13 @@
 import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
+import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 
 export default function AdminPage() {
   return (
     <DynamicBackground>
       <AppShell>
         <main className="space-y-8">
+          <RoleContextSummary />
           <header>
             <p className="text-[10px] uppercase tracking-[0.28em] text-white/30">Administration</p>
             <h1 className="mt-2 text-3xl font-semibold text-white">MARKA Admin Center</h1>
