@@ -144,7 +144,7 @@ export default function OrdersPage() {
         <RoleContextSummary />
 
       <section className="mb-10">
-          <h1 className="text-4xl font-semibold">
+          <h1 className="marka-editorial text-4xl text-[var(--theme-text)]">
             Orders
           </h1>
 
@@ -227,7 +227,7 @@ export default function OrdersPage() {
       {orders.length === 0 ? (
         <section
           className="
-            rounded-3xl
+            rounded-[1.5rem]
             border
             border-[var(--theme-border)]
             bg-[var(--theme-surface-strong)]/5
@@ -235,7 +235,7 @@ export default function OrdersPage() {
             text-center
           "
         >
-          <h2 className="text-2xl font-semibold">
+          <h2 className="marka-editorial text-3xl text-[var(--theme-text)]">
             No orders yet
           </h2>
 
