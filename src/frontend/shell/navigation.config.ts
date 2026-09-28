@@ -30,35 +30,28 @@ export const NavigationConfig = {
         {
           title: "Overview",
           route: "/app",
-          description:
-            "Your MARKA command experience",
+          description: "Your MARKA command experience",
         },
         {
           title: "Marketplace",
           route: "/app/marketplace",
-          description:
-            "Discover products, services and stores",
+          description: "Discover products, services and stores",
         },
         {
           title: "Cart",
           route: "/app/cart",
-          description:
-            "Review items before checkout",
+          description: "Review items before checkout",
         },
         {
           title: "Mobility",
           route: "/app/mobility",
-          description:
-            "Rides, safety, dispatch and financial flow",
+          description: "Rides, safety, dispatch and financial flow",
         },
         {
           title: "Wallet",
           route: "/app/wallet",
-          description:
-            "Manage your digital finance",
-          permissions: [
-            "WALLET_READ",
-          ],
+          description: "Manage your digital finance",
+          permissions: ["WALLET_READ"],
         },
         {
           title: "Account",
@@ -72,43 +65,30 @@ export const NavigationConfig = {
         },
       ],
     },
-
     {
       group: "Activity",
       items: [
         {
           title: "Orders",
           route: "/app/orders",
-          description:
-            "Track purchases and transactions",
-          permissions: [
-            "ORDER_READ",
-          ],
+          description: "Track purchases and transactions",
+          permissions: ["ORDER_READ"],
         },
-
         {
           title: "Available Deliveries",
           route: "/app/delivery-agent/offers",
-          description:
-            "Review and accept delivery offers",
-          permissions: [
-            "DELIVERY_AGENT_OPERATE",
-          ],
+          description: "Review and accept delivery offers",
+          permissions: ["DELIVERY_AGENT_OPERATE"],
         },
-
         {
           title: "My Deliveries",
           route: "/app/delivery-agent/deliveries",
-          description:
-            "Operate and track assigned deliveries",
-          permissions: [
-            "DELIVERY_AGENT_OPERATE",
-          ],
+          description: "Operate and track assigned deliveries",
+          permissions: ["DELIVERY_AGENT_OPERATE"],
         },
       ],
     },
   ],
-
   VENDOR: [
     {
       group: "Business",
@@ -116,51 +96,31 @@ export const NavigationConfig = {
         {
           title: "Command Center",
           route: "/app/vendor",
-          description:
-            "Your business command center",
-          permissions: [
-            "VENDOR_MANAGE",
-          ],
+          description: "Your business command center",
+          permissions: ["VENDOR_MANAGE"],
         },
-
         {
           title: "Mobility",
           route: "/app/mobility",
-          description:
-            "Mobility operations and settlements",
+          description: "Mobility operations and settlements",
         },
-
         {
           title: "Products",
           route: "/app/vendor/products",
-          description:
-            "Manage your catalogue",
-          permissions: [
-            "PRODUCT_CREATE",
-            "PRODUCT_UPDATE",
-            "PRODUCT_DELETE",
-          ],
+          description: "Manage your catalogue",
+          permissions: ["PRODUCT_CREATE", "PRODUCT_UPDATE", "PRODUCT_DELETE"],
         },
-
         {
           title: "Sales",
           route: "/app/vendor/sales",
-          description:
-            "Monitor commercial activity",
-          permissions: [
-            "ORDER_READ",
-            "ORDER_MANAGE",
-          ],
+          description: "Monitor commercial activity",
+          permissions: ["ORDER_READ", "ORDER_MANAGE"],
         },
-
         {
           title: "Analytics",
           route: "/app/vendor/analytics",
-          description:
-            "Business intelligence and insights",
-          permissions: [
-            "VENDOR_MANAGE",
-          ],
+          description: "Business intelligence and insights",
+          permissions: ["VENDOR_MANAGE"],
         },
         {
           title: "Account",
@@ -175,7 +135,6 @@ export const NavigationConfig = {
       ],
     },
   ],
-
   ADMIN: [
     {
       group: "Administration",
@@ -183,71 +142,44 @@ export const NavigationConfig = {
         {
           title: "Overview",
           route: "/app/admin",
-          description:
-            "Platform overview",
-          permissions: [
-            "ADMIN_ACCESS",
-          ],
+          description: "Platform overview",
+          permissions: ["ADMIN_ACCESS"],
         },
-
         {
           title: "Mobility",
           route: "/app/mobility",
-          description:
-            "Mobility operational control",
-          permissions: [
-            "ADMIN_ACCESS",
-          ],
+          description: "Mobility operational control",
+          permissions: ["ADMIN_ACCESS"],
         },
-
         {
           title: "Users",
           route: "/app/admin/users",
-          description:
-            "Manage the MARKA community",
-          permissions: [
-            "USER_READ",
-            "USER_UPDATE",
-          ],
+          description: "Manage the MARKA community",
+          permissions: ["USER_READ", "USER_UPDATE"],
         },
-
         {
           title: "Delivery Agents",
           route: "/app/admin/delivery-agents",
-          description:
-            "Manage delivery operations and agents",
-          permissions: [
-            "DELIVERY_AGENT_MANAGE",
-          ],
+          description: "Manage delivery operations and agents",
+          permissions: ["DELIVERY_AGENT_MANAGE"],
         },
-
         {
           title: "Reports",
           route: "/app/admin/reports",
-          description:
-            "Platform intelligence",
-          permissions: [
-            "ADMIN_ACCESS",
-          ],
+          description: "Platform intelligence",
+          permissions: ["ADMIN_ACCESS"],
         },
-
         {
           title: "System",
           route: "/app/admin/system",
-          description:
-            "System management",
-          permissions: [
-            "SYSTEM_ADMIN",
-          ],
+          description: "System management",
+          permissions: ["SYSTEM_ADMIN"],
         },
         {
           title: "Compliance",
           route: "/app/admin/compliance",
-          description:
-            "Review KYC, KYD, KYB and compliance cases",
-          permissions: [
-            "ADMIN_ACCESS",
-          ],
+          description: "Review KYC, KYD, KYB and compliance cases",
+          permissions: ["ADMIN_ACCESS"],
         },
         {
           title: "Account",
@@ -257,7 +189,6 @@ export const NavigationConfig = {
       ],
     },
   ],
-
   DRIVER: [
     {
       group: "Mobility",
@@ -281,7 +212,6 @@ export const NavigationConfig = {
       ],
     },
   ],
-
   SUPER_ADMIN: [
     {
       group: "Control Center",
@@ -289,21 +219,20 @@ export const NavigationConfig = {
         {
           title: "Everything",
           route: "/app/super-admin",
-          description:
-            "Global platform control",
-          permissions: [
-            "SYSTEM_ADMIN",
-          ],
+          description: "Global platform control",
+          permissions: ["SYSTEM_ADMIN"],
         },
-
         {
           title: "Mobility",
           route: "/app/mobility",
-          description:
-            "Global Mobility control",
-          permissions: [
-            "ADMIN_ACCESS",
-          ],
+          description: "Global Mobility control",
+          permissions: ["ADMIN_ACCESS"],
+        },
+        {
+          title: "Compliance",
+          route: "/app/admin/compliance",
+          description: "Global KYC, KYD, KYB and compliance review",
+          permissions: ["SYSTEM_ADMIN"],
         },
         {
           title: "Account",
@@ -313,7 +242,4 @@ export const NavigationConfig = {
       ],
     },
   ],
-} satisfies Record<
-  string,
-  NavigationSection[]
->;
+} satisfies Record<string, NavigationSection[]>;
