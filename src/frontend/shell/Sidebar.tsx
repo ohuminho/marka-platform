@@ -11,6 +11,7 @@ import {
   NavigationConfig,
   type NavigationSection,
 } from "./navigation.config";
+import type { PermissionAction } from "@/core/authorization/permissions.catalog";
 
 const icons: Record<
   string,
@@ -269,7 +270,7 @@ export default function Sidebar() {
       .map((section) => ({
         ...section,
         items: section.items.filter((item) => {
-          const navigationItem = item as NavigationSection["items"][number];
+          const navigationItem = item as { permissions?: PermissionAction[] };
           const permissions = navigationItem.permissions;
 
           return (
