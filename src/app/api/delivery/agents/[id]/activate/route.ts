@@ -6,56 +6,83 @@ import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { deliveryAgentService } from "@/services/delivery/agents/delivery-agent.service";
 
-function getSessionToken(request: Request): string | null {
+function getSessionToken(
+  request: Request,
+): string | null {
   return (
     request.headers
       .get("cookie")
-      ?.match(/(?:^|;\s*)marka_session=([^;]+)/)?.[1] ?? null
+      ?.match(/(?:^|;\s*)marka_session=([^;]+)/)?.[1] ??
+    null
   );
 }
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ id: string }> },
+  context: {
+    params: Promise<{ id: string }>;
+  },
 ) {
   try {
     const token = getSessionToken(request);
+
     if (!token) {
       return NextResponse.json(
-        { message: "Authentication required.", code: "AUTHENTICATION_REQUIRED" },
+        {
+          message: "Authentication required.",
+          code: "AUTHENTICATION_REQUIRED",
+        },
         { status: 401 },
       );
     }
 
-    const session = await new SessionService().validate(token);
+    const session =
+      await new SessionService().validate(token);
+
     if (!session) {
       return NextResponse.json(
-        { message: "Invalid or expired session.", code: "INVALID_SESSION" },
+        {
+          message: "Invalid or expired session.",
+          code: "INVALID_SESSION",
+        },
         { status: 401 },
       );
     }
 
     const { id } = await context.params;
+
     if (!id) {
       return NextResponse.json(
-        { message: "Delivery agent ID is required.", code: "DELIVERY_AGENT_ID_REQUIRED" },
+        {
+          message: "Delivery agent ID is required.",
+          code: "DELIVERY_AGENT_ID_REQUIRED",
+        },
         { status: 400 },
       );
     }
 
-    const agent = await prisma.deliveryAgent.findUnique({
-      where: { id },
-      select: { id: true, organizationId: true },
-    });
+    const agent =
+      await prisma.deliveryAgent.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          organizationId: true,
+        },
+      });
 
     if (!agent) {
       return NextResponse.json(
-        { message: "Delivery agent not found.", code: "DELIVERY_AGENT_NOT_FOUND" },
+        {
+          message: "Delivery agent not found.",
+          code: "DELIVERY_AGENT_NOT_FOUND",
+        },
         { status: 404 },
       );
     }
 
-    const authorization = new AuthorizationService();
+    const authorization =
+      new AuthorizationService();
+
     if (
       !(await authorization.hasPermission(
         session.userId,
@@ -65,16 +92,22 @@ export async function POST(
     ) {
       return NextResponse.json(
         {
-          message: "You do not have permission to manage delivery agents.",
+          message:
+            "You do not have permission to manage delivery agents.",
           code: "DELIVERY_AGENT_MANAGE_FORBIDDEN",
         },
         { status: 403 },
       );
     }
 
-    const updated = await deliveryAgentService.activate(agent.id);
+    const updated =
+      await deliveryAgentService.activate(
+        agent.id,
+      );
 
-    return NextResponse.json({ agent: updated });
+    return NextResponse.json({
+      agent: updated,
+    });
   } catch (error) {
     const code =
       error instanceof Error
@@ -82,11 +115,14 @@ export async function POST(
         : "DELIVERY_AGENT_ACTIVATION_FAILED";
 
     const status =
-      code === "DELIVERY_AGENT_NOT_FOUND" ? 404 : 500;
+      code === "DELIVERY_AGENT_NOT_FOUND"
+        ? 404
+        : 500;
 
     return NextResponse.json(
       {
-        message: "Unable to activate delivery agent.",
+        message:
+          "Unable to activate delivery agent.",
         code,
       },
       { status },
