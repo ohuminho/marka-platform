@@ -3,7 +3,12 @@ import { prisma } from "@/database/client/prisma";
 export interface RegisterDeliveryAgentInput {
   organizationId: string;
   userId: string;
-  transportMode: "WALK" | "BICYCLE" | "MOTORCYCLE" | "CAR" | "VAN";
+  transportMode:
+    | "WALK"
+    | "BICYCLE"
+    | "MOTORCYCLE"
+    | "CAR"
+    | "VAN";
   displayName?: string;
   phone?: string;
 }
@@ -15,35 +20,53 @@ export interface UpdateDeliveryAgentLocationInput {
 }
 
 export class DeliveryAgentService {
-  async register(input: RegisterDeliveryAgentInput) {
+  async register(
+    input: RegisterDeliveryAgentInput,
+  ) {
     if (!input.organizationId.trim()) {
-      throw new Error("DELIVERY_AGENT_ORGANIZATION_REQUIRED");
+      throw new Error(
+        "DELIVERY_AGENT_ORGANIZATION_REQUIRED",
+      );
     }
 
     if (!input.userId.trim()) {
-      throw new Error("DELIVERY_AGENT_USER_REQUIRED");
+      throw new Error(
+        "DELIVERY_AGENT_USER_REQUIRED",
+      );
     }
 
-    const existing = await prisma.deliveryAgent.findUnique({
-      where: { userId: input.userId },
-      select: { id: true },
-    });
+    const existing =
+      await prisma.deliveryAgent.findUnique({
+        where: {
+          userId: input.userId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
     if (existing) {
-      throw new Error("DELIVERY_AGENT_ALREADY_REGISTERED");
+      throw new Error(
+        "DELIVERY_AGENT_ALREADY_REGISTERED",
+      );
     }
 
-    const membership = await prisma.organizationMembership.findFirst({
-      where: {
-        organizationId: input.organizationId,
-        userId: input.userId,
-        status: "ACTIVE",
-      },
-      select: { id: true },
-    });
+    const membership =
+      await prisma.organizationMembership.findFirst({
+        where: {
+          organizationId: input.organizationId,
+          userId: input.userId,
+          status: "ACTIVE",
+        },
+        select: {
+          id: true,
+        },
+      });
 
     if (!membership) {
-      throw new Error("DELIVERY_AGENT_USER_NOT_IN_ORGANIZATION");
+      throw new Error(
+        "DELIVERY_AGENT_USER_NOT_IN_ORGANIZATION",
+      );
     }
 
     return prisma.deliveryAgent.create({
@@ -52,13 +75,20 @@ export class DeliveryAgentService {
         organizationId: input.organizationId,
         userId: input.userId,
         transportMode: input.transportMode,
-        displayName: input.displayName?.trim() || undefined,
-        phone: input.phone?.trim() || undefined,
+        displayName:
+          input.displayName?.trim() ||
+          undefined,
+        phone:
+          input.phone?.trim() ||
+          undefined,
       },
     });
   }
 
-  async getByUser(userId: string, organizationId: string) {
+  async getByUser(
+    userId: string,
+    organizationId: string,
+  ) {
     return prisma.deliveryAgent.findFirst({
       where: {
         userId,
@@ -67,24 +97,41 @@ export class DeliveryAgentService {
     });
   }
 
-  async updateLocation(input: UpdateDeliveryAgentLocationInput) {
-    this.validateCoordinates(input.latitude, input.longitude);
+  async updateLocation(
+    input: UpdateDeliveryAgentLocationInput,
+  ) {
+    this.validateCoordinates(
+      input.latitude,
+      input.longitude,
+    );
 
-    const agent = await prisma.deliveryAgent.findUnique({
-      where: { id: input.agentId },
-      select: { id: true, status: true },
-    });
+    const agent =
+      await prisma.deliveryAgent.findUnique({
+        where: {
+          id: input.agentId,
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
 
     if (!agent) {
-      throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      throw new Error(
+        "DELIVERY_AGENT_NOT_FOUND",
+      );
     }
 
     if (agent.status !== "ACTIVE") {
-      throw new Error("DELIVERY_AGENT_NOT_ACTIVE");
+      throw new Error(
+        "DELIVERY_AGENT_NOT_ACTIVE",
+      );
     }
 
     return prisma.deliveryAgent.update({
-      where: { id: input.agentId },
+      where: {
+        id: input.agentId,
+      },
       data: {
         latitude: input.latitude,
         longitude: input.longitude,
@@ -101,72 +148,123 @@ export class DeliveryAgentService {
       | "BUSY"
       | "SUSPENDED",
   ) {
-    const agent = await prisma.deliveryAgent.findUnique({
-      where: { id: agentId },
-      select: { id: true, status: true },
-    });
+    const agent =
+      await prisma.deliveryAgent.findUnique({
+        where: {
+          id: agentId,
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
 
     if (!agent) {
-      throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      throw new Error(
+        "DELIVERY_AGENT_NOT_FOUND",
+      );
     }
 
-    if (agent.status !== "ACTIVE" && availability !== "OFFLINE") {
-      throw new Error("DELIVERY_AGENT_NOT_ACTIVE");
+    if (
+      agent.status !== "ACTIVE" &&
+      availability !== "OFFLINE"
+    ) {
+      throw new Error(
+        "DELIVERY_AGENT_NOT_ACTIVE",
+      );
     }
 
     return prisma.deliveryAgent.update({
-      where: { id: agentId },
-      data: { availability },
+      where: {
+        id: agentId,
+      },
+      data: {
+        availability,
+      },
     });
   }
 
   async updateStatus(
     agentId: string,
-    status: "PENDING" | "ACTIVE" | "SUSPENDED" | "BLOCKED" | "INACTIVE",
+    status:
+      | "PENDING"
+      | "ACTIVE"
+      | "SUSPENDED"
+      | "BLOCKED"
+      | "INACTIVE",
   ) {
-    const agent = await prisma.deliveryAgent.findUnique({
-      where: { id: agentId },
-      select: { id: true, status: true, organizationId: true },
-    });
+    const agent =
+      await prisma.deliveryAgent.findUnique({
+        where: {
+          id: agentId,
+        },
+        select: {
+          id: true,
+          status: true,
+          organizationId: true,
+        },
+      });
 
     if (!agent) {
-      throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      throw new Error(
+        "DELIVERY_AGENT_NOT_FOUND",
+      );
     }
 
     if (status !== "ACTIVE") {
-      const activeDelivery = await prisma.dispatchRequest.findFirst({
-        where: {
-          organizationId: agent.organizationId,
-          serviceType: "DELIVERY",
-          status: "ACCEPTED",
-          acceptedAgentId: agentId,
-        },
-        select: { id: true },
-      });
+      const activeDelivery =
+        await prisma.dispatchRequest.findFirst({
+          where: {
+            organizationId:
+              agent.organizationId,
+            serviceType: "DELIVERY",
+            status: "ACCEPTED",
+            acceptedAgentId: agentId,
+          },
+          select: {
+            id: true,
+          },
+        });
 
       if (activeDelivery) {
-        throw new Error("DELIVERY_AGENT_HAS_ACTIVE_DELIVERY");
+        throw new Error(
+          "DELIVERY_AGENT_HAS_ACTIVE_DELIVERY",
+        );
       }
     }
 
     return prisma.deliveryAgent.update({
-      where: { id: agentId },
-      data: { status, availability: "OFFLINE" },
+      where: {
+        id: agentId,
+      },
+      data: {
+        status,
+        availability: "OFFLINE",
+      },
     });
   }
 
   async activate(agentId: string) {
-    const agent = await prisma.deliveryAgent.findUnique({
-      where: { id: agentId },
-      select: { id: true },
-    });
+    const agent =
+      await prisma.deliveryAgent.findUnique({
+        where: {
+          id: agentId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
     if (!agent) {
-      throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      throw new Error(
+        "DELIVERY_AGENT_NOT_FOUND",
+      );
     }
 
     return prisma.deliveryAgent.update({
-      where: { id: agentId },
+      where: {
+        id: agentId,
+      },
       data: {
         status: "ACTIVE",
         availability: "OFFLINE",
@@ -178,7 +276,10 @@ export class DeliveryAgentService {
     latitude: number | undefined,
     longitude: number | undefined,
   ): void {
-    if (latitude === undefined && longitude === undefined) {
+    if (
+      latitude === undefined &&
+      longitude === undefined
+    ) {
       return;
     }
 
@@ -188,7 +289,9 @@ export class DeliveryAgentService {
       latitude < -90 ||
       latitude > 90
     ) {
-      throw new Error("INVALID_DELIVERY_AGENT_LATITUDE");
+      throw new Error(
+        "INVALID_DELIVERY_AGENT_LATITUDE",
+      );
     }
 
     if (
@@ -197,9 +300,12 @@ export class DeliveryAgentService {
       longitude < -180 ||
       longitude > 180
     ) {
-      throw new Error("INVALID_DELIVERY_AGENT_LONGITUDE");
+      throw new Error(
+        "INVALID_DELIVERY_AGENT_LONGITUDE",
+      );
     }
   }
 }
 
-export const deliveryAgentService = new DeliveryAgentService();
+export const deliveryAgentService =
+  new DeliveryAgentService();
