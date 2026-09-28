@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import PremiumCard from "@/design-system/components/cards/PremiumCard";
 import MetricDisplay from "@/design-system/components/data-display/MetricDisplay";
 import FadeIn from "@/design-system/motion/FadeIn";
@@ -33,11 +34,11 @@ const ecosystem = [
   },
 ];
 
-export default function ExecutiveDashboard() {
+type DashboardMetrics = { activeUsers: number; completedTransactions: number; revenueMinor: string; revenueCurrency: string; activeMarkets: number; };\n\nexport default function ExecutiveDashboard() {
   const { user, activeOrganization, authorization, loading } = useAuth();
   const displayName = user?.profile?.displayName || user?.name || "MARKA user";
   const primaryRole = authorization.roles[0] || user?.role || "CUSTOMER";
-  const formatRole = (role: string) => role.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (character) => character.toUpperCase());
+  const formatRole = (role: string) => role.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (character) => character.toUpperCase());\n  const [metrics, setMetrics] = useState<DashboardMetrics>();\n\n  useEffect(() => {\n    if (loading) return;\n    const organizationId = authorization.organizationId;\n    const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";\n    fetch(`/api/dashboard/summary${query}`, { credentials: "include", cache: "no-store" })\n      .then((response) => (response.ok ? response.json() : undefined))\n      .then((data) => setMetrics(data?.metrics))\n      .catch((error) => console.error("[DASHBOARD_METRICS_ERROR]", error));\n  }, [authorization.organizationId, loading]);\n\n  const formatMoney = (minor: string, currency: string) => {\n    const value = Number(minor) / 100;\n    return `${currency} ${value.toLocaleString("pt-AO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;\n  };
 
   return (
     <FadeIn>
