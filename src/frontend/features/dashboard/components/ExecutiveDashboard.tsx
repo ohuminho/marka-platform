@@ -34,11 +34,29 @@ const ecosystem = [
   },
 ];
 
-type DashboardMetrics = { activeUsers: number; completedTransactions: number; revenueMinor: string; revenueCurrency: string; activeMarkets: number; };\n\nexport default function ExecutiveDashboard() {
+type DashboardMetrics = { activeUsers: number; completedTransactions: number; revenueMinor: string; revenueCurrency: string; activeMarkets: number; };
+
+export default function ExecutiveDashboard() {
   const { user, activeOrganization, authorization, loading } = useAuth();
   const displayName = user?.profile?.displayName || user?.name || "MARKA user";
   const primaryRole = authorization.roles[0] || user?.role || "CUSTOMER";
-  const formatRole = (role: string) => role.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (character) => character.toUpperCase());\n  const [metrics, setMetrics] = useState<DashboardMetrics>();\n\n  useEffect(() => {\n    if (loading) return;\n    const organizationId = authorization.organizationId;\n    const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";\n    fetch(`/api/dashboard/summary${query}`, { credentials: "include", cache: "no-store" })\n      .then((response) => (response.ok ? response.json() : undefined))\n      .then((data) => setMetrics(data?.metrics))\n      .catch((error) => console.error("[DASHBOARD_METRICS_ERROR]", error));\n  }, [authorization.organizationId, loading]);\n\n  const formatMoney = (minor: string, currency: string) => {\n    const value = Number(minor) / 100;\n    return `${currency} ${value.toLocaleString("pt-AO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;\n  };
+  const formatRole = (role: string) => role.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (character) => character.toUpperCase());
+  const [metrics, setMetrics] = useState<DashboardMetrics>();
+
+  useEffect(() => {
+    if (loading) return;
+    const organizationId = authorization.organizationId;
+    const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";
+    fetch(`/api/dashboard/summary${query}`, { credentials: "include", cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : undefined))
+      .then((data) => setMetrics(data?.metrics))
+      .catch((error) => console.error("[DASHBOARD_METRICS_ERROR]", error));
+  }, [authorization.organizationId, loading]);
+
+  const formatMoney = (minor: string, currency: string) => {
+    const value = Number(minor) / 100;
+    return `${currency} ${value.toLocaleString("pt-AO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   return (
     <FadeIn>
@@ -260,7 +278,7 @@ type DashboardMetrics = { activeUsers: number; completedTransactions: number; re
               <PremiumCard>
                 <MetricDisplay
                   label="Active Users"
-                  value="0"
+                  value={metrics ? metrics.activeUsers.toLocaleString("pt-AO") : "—"}
                 />
               </PremiumCard>
             </FadeIn>
@@ -269,7 +287,7 @@ type DashboardMetrics = { activeUsers: number; completedTransactions: number; re
               <PremiumCard>
                 <MetricDisplay
                   label="Transactions"
-                  value="0"
+                  value={metrics ? metrics.completedTransactions.toLocaleString("pt-AO") : "—"}
                 />
               </PremiumCard>
             </FadeIn>
@@ -278,7 +296,7 @@ type DashboardMetrics = { activeUsers: number; completedTransactions: number; re
               <PremiumCard>
                 <MetricDisplay
                   label="Revenue"
-                  value="AOA 0"
+                  value={metrics ? formatMoney(metrics.revenueMinor, metrics.revenueCurrency) : "—"}
                 />
               </PremiumCard>
             </FadeIn>
@@ -287,7 +305,7 @@ type DashboardMetrics = { activeUsers: number; completedTransactions: number; re
               <PremiumCard>
                 <MetricDisplay
                   label="Markets"
-                  value="1"
+                  value={metrics ? metrics.activeMarkets.toLocaleString("pt-AO") : "—"}
                 />
               </PremiumCard>
             </FadeIn>
