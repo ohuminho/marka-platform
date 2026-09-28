@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
+
 interface OrderItem {
   id: string;
   productId: string;
@@ -438,7 +440,9 @@ export default function OrderDetailPage({
   }
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen space-y-8 p-8">
+      <RoleContextSummary />
+
       <Link
         href="/app/orders"
         className="text-sm text-white/50 hover:text-white"
