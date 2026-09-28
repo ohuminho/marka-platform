@@ -1,11 +1,20 @@
 export default function UserMenu() {
   return (
-    <div className="flex items-center gap-3 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2">
-      <div className="h-10 w-10 rounded-full bg-[var(--theme-surface-strong)]" />
-      <div className="hidden md:block">
-        <p className="text-sm text-[var(--theme-text)]">Account</p>
-        <p className="text-xs text-[var(--theme-text-muted)]">MARKA User</p>
-      </div>
-    </div>
+    <button
+      type="button"
+      title="Account"
+      className="group flex h-10 items-center gap-2 rounded-[13px] border border-transparent bg-transparent px-1.5 transition-all duration-200 hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-accent)] sm:pl-2"
+    >
+      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] border border-[color-mix(in_srgb,var(--theme-accent)_26%,var(--theme-border))] bg-[linear-gradient(145deg,color-mix(in_srgb,var(--theme-accent)_14%,var(--theme-surface)),var(--theme-surface))] text-[10px] font-semibold tracking-[0.12em] text-[var(--theme-text)]">
+        M
+      </span>
+      <span className="hidden max-w-24 text-left md:block">
+        <span className="block truncate text-[10px] font-medium tracking-[0.08em] text-[var(--theme-text)]">ACCOUNT</span>
+        <span className="mt-0.5 block truncate text-[9px] text-[var(--theme-text-faint)]">MARKA User</span>
+      </span>
+      <svg aria-hidden="true" viewBox="0 0 20 20" className="hidden h-3.5 w-3.5 text-[var(--theme-text-faint)] md:block" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <path d="m5 7.5 5 5 5-5" />
+      </svg>
+    </button>
   );
 }
