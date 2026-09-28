@@ -287,14 +287,15 @@ export default function CartPage() {
       <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
         <RoleContextSummary />
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-[var(--theme-text)]">Carrinho</h1>
+          <p className="marka-kicker">MARKA CART</p>
+          <h1 className="marka-editorial mt-2 text-4xl text-[var(--theme-text)]">Carrinho</h1>
           <p className="mt-1 text-sm text-[var(--theme-text-muted)]">
             Revise os produtos antes de finalizar a compra.
           </p>
         </div>
 
-        <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] p-8 text-center shadow-sm">
-          <h2 className="text-lg font-semibold text-[var(--theme-text)]">
+        <div className="overflow-hidden rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-10 text-center shadow-none">
+          <h2 className="marka-editorial text-3xl text-[var(--theme-text)]">
             O carrinho está vazio
           </h2>
 
