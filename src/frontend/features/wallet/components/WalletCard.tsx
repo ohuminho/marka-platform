@@ -11,128 +11,44 @@ export default function WalletCard({
   availableBalanceMinor?: string;
   currency?: string;
 }) {
-  const formatMoney = (
-    minor: string
-  ) => {
-    const value =
-      Number(minor) / 100;
-
-    return new Intl.NumberFormat(
-      undefined,
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }
-    ).format(
-      Number.isFinite(value)
-        ? value
-        : 0
-    );
+  const formatMoney = (minor: string) => {
+    const value = Number(minor) / 100;
+    return new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number.isFinite(value) ? value : 0);
   };
 
   return (
-    <div
-      className="
-        rounded-3xl
-        p-8
-        bg-white/10
-        backdrop-blur-2xl
-        border
-        border-white/10
-      "
-    >
-      <p className="text-neutral-400">
-        MARKA Wallet
-      </p>
+    <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-8 backdrop-blur-2xl">
+      <p className="text-[var(--theme-text-muted)]">MARKA Wallet</p>
 
-      <h2
-        className="
-          text-5xl
-          font-semibold
-          mt-4
-        "
-      >
-        {formatMoney(
-          availableBalanceMinor
-        )}{" "}
-        {currency}
+      <h2 className="mt-4 text-5xl font-semibold">
+        {formatMoney(availableBalanceMinor)} {currency}
       </h2>
 
-      <div
-        className="
-          grid
-          grid-cols-2
-          gap-4
-          mt-8
-        "
-      >
+      <div className="mt-8 grid grid-cols-2 gap-4">
         <div>
-          <p className="text-sm text-neutral-400">
-            Total balance
-          </p>
-
-          <p className="mt-1 font-medium">
-            {formatMoney(
-              balanceMinor
-            )}{" "}
-            {currency}
-          </p>
+          <p className="text-sm text-[var(--theme-text-muted)]">Total balance</p>
+          <p className="mt-1 font-medium">{formatMoney(balanceMinor)} {currency}</p>
         </div>
-
         <div>
-          <p className="text-sm text-neutral-400">
-            Held
-          </p>
-
-          <p className="mt-1 font-medium">
-            {formatMoney(
-              heldBalanceMinor
-            )}{" "}
-            {currency}
-          </p>
+          <p className="text-sm text-[var(--theme-text-muted)]">Held</p>
+          <p className="mt-1 font-medium">{formatMoney(heldBalanceMinor)} {currency}</p>
         </div>
       </div>
 
       <div className="mt-8 flex gap-4">
-        <button
-          type="button"
-          disabled
-          title="Deposits are processed through the MARKA Payment flow."
-          className="
-            px-5
-            py-3
-            rounded-full
-            bg-white
-            text-black
-            opacity-50
-            cursor-not-allowed
-          "
-        >
+        <button type="button" disabled title="Deposits are processed through the MARKA Payment flow." className="cursor-not-allowed rounded-full bg-[var(--theme-accent)] px-5 py-3 text-[var(--theme-background)] opacity-50">
           Deposit
         </button>
-
-        <button
-          type="button"
-          disabled
-          title="Withdrawals are processed through the MARKA Settlement flow."
-          className="
-            px-5
-            py-3
-            rounded-full
-            bg-white/10
-            border
-            border-white/20
-            opacity-50
-            cursor-not-allowed
-          "
-        >
+        <button type="button" disabled title="Withdrawals are processed through the MARKA Settlement flow." className="cursor-not-allowed rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-5 py-3 opacity-50">
           Withdraw
         </button>
       </div>
 
-      <p className="mt-5 text-sm text-neutral-500">
-        Payments and withdrawals are processed
-        through MARKA&apos;s financial rails.
+      <p className="mt-5 text-sm text-[var(--theme-text-faint)]">
+        Payments and withdrawals are processed through MARKA&apos;s financial rails.
       </p>
     </div>
   );
