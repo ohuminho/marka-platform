@@ -142,10 +142,10 @@ export default function PaymentHistory() {
   }, [loadPayments]);
 
   return (
-    <section className="rounded-2xl border bg-[var(--theme-surface)] p-6 shadow-sm">
+    <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 shadow-none">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">
+          <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">
             Payment history
           </h2>
 
@@ -165,7 +165,7 @@ export default function PaymentHistory() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-[var(--theme-text-muted)]">
+        <div className="rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] p-10 text-center text-sm text-[var(--theme-text-muted)]">
           Loading payment history...
         </div>
       ) : error ? (
