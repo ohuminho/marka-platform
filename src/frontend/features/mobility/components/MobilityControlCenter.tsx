@@ -326,7 +326,7 @@ function MetricCard({
         rounded-2xl
         border
         border-[var(--theme-border)]
-        bg-white/[0.025]
+        bg-[var(--theme-surface-strong)]/[0.025]
         p-5
       "
     >
@@ -567,7 +567,7 @@ export default function MobilityControlCenter() {
           rounded-[2rem]
           border
           border-white/[0.08]
-          bg-white/[0.025]
+          bg-[var(--theme-surface-strong)]/[0.025]
           px-6
           py-8
           shadow-[0_30px_100px_rgba(0,0,0,0.25)]
@@ -586,7 +586,7 @@ export default function MobilityControlCenter() {
             h-[32rem]
             w-[32rem]
             rounded-full
-            bg-white/[0.035]
+            bg-[var(--theme-surface-strong)]/[0.035]
             blur-[110px]
           "
         />
@@ -605,7 +605,7 @@ export default function MobilityControlCenter() {
                 text-[var(--theme-text)]/30
               "
             >
-              <span className="h-px w-8 bg-white/20" />
+              <span className="h-px w-8 bg-[var(--theme-surface-strong)]/20" />
               Mobility Control Center
             </div>
 
@@ -641,7 +641,7 @@ export default function MobilityControlCenter() {
                 rounded-full
                 border
                 border-[var(--theme-border)]
-                bg-white/[0.035]
+                bg-[var(--theme-surface-strong)]/[0.035]
                 px-4
                 py-2
                 text-[9px]
@@ -651,7 +651,7 @@ export default function MobilityControlCenter() {
                 text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]
               "
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--theme-surface-strong)] shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
               Live
             </span>
 
@@ -665,7 +665,7 @@ export default function MobilityControlCenter() {
                 rounded-full
                 border
                 border-[var(--theme-border)]
-                bg-white/[0.035]
+                bg-[var(--theme-surface-strong)]/[0.035]
                 px-4
                 py-2
                 text-[9px]
@@ -674,7 +674,7 @@ export default function MobilityControlCenter() {
                 tracking-[0.18em]
                 text-[var(--theme-text)]/45
                 transition
-                hover:border-white/20
+                hover:border-[var(--theme-border)]
                 hover:text-[var(--theme-text)]
               "
             >
@@ -690,7 +690,7 @@ export default function MobilityControlCenter() {
             rounded-2xl
             border
             border-[var(--theme-border)]
-            bg-white/[0.035]
+            bg-[var(--theme-surface-strong)]/[0.035]
             px-5
             py-4
             text-xs
@@ -792,11 +792,11 @@ export default function MobilityControlCenter() {
                     rounded-2xl
                     border
                     border-[var(--theme-border)]
-                    bg-white/[0.02]
+                    bg-[var(--theme-surface-strong)]/[0.02]
                     p-5
                     transition
                     hover:border-white/[0.14]
-                    hover:bg-white/[0.035]
+                    hover:bg-[var(--theme-surface-strong)]/[0.035]
                   "
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -821,7 +821,7 @@ export default function MobilityControlCenter() {
                         rounded-full
                         border
                         border-[var(--theme-border)]
-                        bg-white/[0.035]
+                        bg-[var(--theme-surface-strong)]/[0.035]
                       "
                     >
                       <span
@@ -831,8 +831,8 @@ export default function MobilityControlCenter() {
                           rounded-full
                           ${
                             connected
-                              ? "bg-white shadow-[0_0_9px_rgba(255,255,255,0.8)]"
-                              : "bg-white/20"
+                              ? "bg-[var(--theme-surface-strong)] shadow-[0_0_9px_rgba(255,255,255,0.8)]"
+                              : "bg-[var(--theme-surface-strong)]/20"
                           }
                         `}
                       />
@@ -861,7 +861,7 @@ export default function MobilityControlCenter() {
             rounded-[1.75rem]
             border
             border-[var(--theme-border)]
-            bg-white/[0.02]
+            bg-[var(--theme-surface-strong)]/[0.02]
             p-6
           "
         >
@@ -916,10 +916,10 @@ export default function MobilityControlCenter() {
                         text-[9px]
                         ${
                           current
-                            ? "border-white/25 bg-white text-black"
+                            ? "border-white/25 bg-[var(--theme-surface-strong)] text-[var(--theme-background)]"
                             : reached
                               ? "border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-[var(--theme-text)]/65"
-                              : "border-white/[0.06] bg-white/[0.02] text-[var(--theme-text)]/20"
+                              : "border-white/[0.06] bg-[var(--theme-surface-strong)]/[0.02] text-[var(--theme-text)]/20"
                         }
                       `}
                     >
@@ -932,8 +932,8 @@ export default function MobilityControlCenter() {
                         w-5
                         ${
                           reached
-                            ? "bg-white/25"
-                            : "bg-white/[0.06]"
+                            ? "bg-[var(--theme-surface-strong)]/25"
+                            : "bg-[var(--theme-surface-strong)]/[0.06]"
                         }
                       `}
                     />
@@ -969,7 +969,7 @@ export default function MobilityControlCenter() {
             rounded-[1.75rem]
             border
             border-[var(--theme-border)]
-            bg-white/[0.02]
+            bg-[var(--theme-surface-strong)]/[0.02]
             p-6
           "
         >
@@ -1006,7 +1006,7 @@ export default function MobilityControlCenter() {
                   rounded-xl
                   border
                   border-[var(--theme-border)]
-                  bg-black/30
+                  bg-[var(--theme-background)]/30
                   px-4
                   text-xs
                   text-[var(--theme-text)]
@@ -1042,7 +1042,7 @@ export default function MobilityControlCenter() {
                   rounded-xl
                   border
                   border-[var(--theme-border)]
-                  bg-black/30
+                  bg-[var(--theme-background)]/30
                   px-4
                   text-xs
                   text-[var(--theme-text)]
@@ -1082,7 +1082,7 @@ export default function MobilityControlCenter() {
                   rounded-xl
                   border
                   border-[var(--theme-border)]
-                  bg-black/30
+                  bg-[var(--theme-background)]/30
                   px-4
                   text-xs
                   text-[var(--theme-text)]
@@ -1111,7 +1111,7 @@ export default function MobilityControlCenter() {
                   rounded-xl
                   border
                   border-[var(--theme-border)]
-                  bg-black/30
+                  bg-[var(--theme-background)]/30
                   px-4
                   text-xs
                   text-[var(--theme-text)]
@@ -1128,13 +1128,13 @@ export default function MobilityControlCenter() {
                 h-12
                 w-full
                 rounded-full
-                bg-white
+                bg-[var(--theme-surface-strong)]
                 px-6
                 text-[10px]
                 font-semibold
                 uppercase
                 tracking-[0.18em]
-                text-black
+                text-[var(--theme-background)]
                 transition
                 hover:scale-[1.01]
                 disabled:cursor-not-allowed
@@ -1185,7 +1185,7 @@ export default function MobilityControlCenter() {
             rounded-[1.75rem]
             border
             border-[var(--theme-border)]
-            bg-white/[0.02]
+            bg-[var(--theme-surface-strong)]/[0.02]
             p-6
           "
         >
@@ -1226,13 +1226,13 @@ export default function MobilityControlCenter() {
                       rounded-xl
                       border
                       border-white/[0.05]
-                      bg-black/15
+                      bg-[var(--theme-background)]/15
                       px-4
                       py-3
                       text-left
                       transition
                       hover:border-[var(--theme-border)]
-                      hover:bg-white/[0.03]
+                      hover:bg-[var(--theme-surface-strong)]/[0.03]
                     "
                   >
                     <div className="min-w-0">
@@ -1277,7 +1277,7 @@ export default function MobilityControlCenter() {
             rounded-[1.75rem]
             border
             border-[var(--theme-border)]
-            bg-white/[0.02]
+            bg-[var(--theme-surface-strong)]/[0.02]
             p-6
           "
         >
@@ -1301,7 +1301,7 @@ export default function MobilityControlCenter() {
                       rounded-xl
                       border
                       border-white/[0.05]
-                      bg-black/15
+                      bg-[var(--theme-background)]/15
                       px-4
                       py-3
                     "
@@ -1352,7 +1352,7 @@ export default function MobilityControlCenter() {
           rounded-[1.75rem]
           border
           border-[var(--theme-border)]
-          bg-white/[0.02]
+          bg-[var(--theme-surface-strong)]/[0.02]
           p-6
         "
       >
@@ -1399,7 +1399,7 @@ export default function MobilityControlCenter() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
+          <div className="rounded-xl border border-white/[0.05] bg-[var(--theme-background)]/15 p-4">
             <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Payment
             </p>
@@ -1412,7 +1412,7 @@ export default function MobilityControlCenter() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
+          <div className="rounded-xl border border-white/[0.05] bg-[var(--theme-background)]/15 p-4">
             <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Settlement
             </p>
@@ -1425,7 +1425,7 @@ export default function MobilityControlCenter() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
+          <div className="rounded-xl border border-white/[0.05] bg-[var(--theme-background)]/15 p-4">
             <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Cash obligation
             </p>
@@ -1434,7 +1434,7 @@ export default function MobilityControlCenter() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/[0.05] bg-black/15 p-4">
+          <div className="rounded-xl border border-white/[0.05] bg-[var(--theme-background)]/15 p-4">
             <p className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
               Recovery
             </p>
@@ -1459,7 +1459,7 @@ export default function MobilityControlCenter() {
               rounded-full
               border
               border-[var(--theme-border)]
-              bg-white/[0.035]
+              bg-[var(--theme-surface-strong)]/[0.035]
               px-5
               text-[9px]
               font-semibold
@@ -1467,7 +1467,7 @@ export default function MobilityControlCenter() {
               tracking-[0.18em]
               text-[var(--theme-text)]/55
               transition
-              hover:border-white/20
+              hover:border-[var(--theme-border)]
               hover:text-[var(--theme-text)]
             "
           >
