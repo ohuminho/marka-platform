@@ -4,6 +4,7 @@ import Link from "next/link";
 import PremiumCard from "@/design-system/components/cards/PremiumCard";
 import MetricDisplay from "@/design-system/components/data-display/MetricDisplay";
 import FadeIn from "@/design-system/motion/FadeIn";
+import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 const ecosystem = [
   {
@@ -33,6 +34,11 @@ const ecosystem = [
 ];
 
 export default function ExecutiveDashboard() {
+  const { user, activeOrganization, authorization, loading } = useAuth();
+  const displayName = user?.profile?.displayName || user?.name || "MARKA user";
+  const primaryRole = authorization.roles[0] || user?.role || "CUSTOMER";
+  const formatRole = (role: string) => role.replaceAll("_", " ").toLowerCase().replace(/\\b\\w/g, (character) => character.toUpperCase());
+
   return (
     <FadeIn>
       <div className="space-y-10">
