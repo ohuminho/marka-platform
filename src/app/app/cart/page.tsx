@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 
 type CartItem = {
   id: string;
