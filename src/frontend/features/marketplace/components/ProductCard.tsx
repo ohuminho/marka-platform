@@ -16,7 +16,10 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
         {product.image ? (
           <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]" />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-[var(--theme-text-faint)]">{t.product}</div>
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+            <span className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text-faint)]">MARKA</span>
+            <span className="marka-editorial text-2xl text-[var(--theme-text-muted)]">{t.product}</span>
+          </div>
         )}
         <div className="absolute inset-x-3 top-3 flex items-center justify-between">
           <span className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-header)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-muted)] backdrop-blur-xl">
