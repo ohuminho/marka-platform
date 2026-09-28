@@ -5,7 +5,7 @@ import { prisma } from "@/database/client/prisma";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(AuthConfig.cookies.name)?.value;
@@ -36,34 +36,22 @@ export async function GET(request: NextRequest) {
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const organizationId =
-      request.nextUrl.searchParams.get("organizationId") ?? undefined;
-
     const [activeUsers, completedTransactions, completedPayments, activeStores] =
       await Promise.all([
-        prisma.user.count({
-          where: { status: "ACTIVE" },
-        }),
-        prisma.transaction.count({
-          where: { status: "COMPLETED" },
-        }),
+        prisma.user.count({ where: { status: "ACTIVE" } }),
+        prisma.transaction.count({ where: { status: "COMPLETED" } }),
         prisma.payment.aggregate({
-          where: {
-            status: "COMPLETED",
-            currency: "AOA",
-          },
+          where: { status: "COMPLETED", currency: "AOA" },
           _sum: { amountMinor: true },
         }),
-        prisma.store.count({
-          where: { status: "ACTIVE" },
-        }),
+        prisma.store.count({ where: { status: "ACTIVE" } }),
       ]);
 
     const revenueMinor = completedPayments._sum.amountMinor ?? BigInt(0);
 
     return Response.json({
-      scope: organizationId ? "organization" : "platform",
-      organizationId: organizationId ?? null,
+      scope: "platform",
+      organizationId: null,
       metrics: {
         activeUsers,
         completedTransactions,
@@ -82,7 +70,7 @@ export async function GET(request: NextRequest) {
             ? error.message
             : "Unable to load dashboard metrics.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
