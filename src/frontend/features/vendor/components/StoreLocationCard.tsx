@@ -72,10 +72,10 @@ export default function StoreLocationCard({
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/20 p-6">
+    <section className="rounded-2xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_20%,transparent)] p-6">
       <div className="mb-5">
         <h2 className="text-xl font-semibold">Localização da loja</h2>
-        <p className="mt-1 text-sm text-white/50">
+        <p className="mt-1 text-sm text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]">
           Necessária para calcular a origem do dispatch de delivery.
         </p>
       </div>
@@ -83,7 +83,7 @@ export default function StoreLocationCard({
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-2">
-            <span className="text-sm text-white/70">Latitude</span>
+            <span className="text-sm text-[color-mix(in_srgb,var(--theme-text)_70%,transparent)]">Latitude</span>
             <input
               name="latitude"
               type="number"
@@ -93,12 +93,12 @@ export default function StoreLocationCard({
               defaultValue={store.latitude ?? ""}
               placeholder="-8.8383"
               required
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/30"
+              className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 outline-none transition focus:border-white/30"
             />
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm text-white/70">Longitude</span>
+            <span className="text-sm text-[color-mix(in_srgb,var(--theme-text)_70%,transparent)]">Longitude</span>
             <input
               name="longitude"
               type="number"
@@ -108,7 +108,7 @@ export default function StoreLocationCard({
               defaultValue={store.longitude ?? ""}
               placeholder="13.2344"
               required
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/30"
+              className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 outline-none transition focus:border-white/30"
             />
           </label>
         </div>
@@ -117,7 +117,7 @@ export default function StoreLocationCard({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-[var(--theme-text)] px-5 py-3 text-sm font-semibold text-[var(--theme-background)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "A guardar..." : "Guardar localização"}
           </button>
