@@ -142,14 +142,14 @@ export default function PaymentHistory() {
   }, [loadPayments]);
 
   return (
-    <section className="rounded-2xl border bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border bg-[var(--theme-surface)] p-6 shadow-sm">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">
             Payment history
           </h2>
 
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-[var(--theme-text-muted)]">
             Recent payments associated with your orders.
           </p>
         </div>
@@ -165,7 +165,7 @@ export default function PaymentHistory() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-gray-500">
+        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-[var(--theme-text-muted)]">
           Loading payment history...
         </div>
       ) : error ? (
@@ -173,14 +173,14 @@ export default function PaymentHistory() {
           {error}
         </div>
       ) : payments.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-gray-500">
+        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-[var(--theme-text-muted)]">
           No payments found.
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
-              <tr className="border-b text-xs uppercase tracking-wide text-gray-500">
+              <tr className="border-b text-xs uppercase tracking-wide text-[var(--theme-text-muted)]">
                 <th className="px-3 py-3 font-medium">
                   Payment
                 </th>
@@ -219,7 +219,7 @@ export default function PaymentHistory() {
                     </div>
 
                     {payment.transactionId && (
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-[var(--theme-text-muted)]">
                         Transaction:{" "}
                         {payment.transactionId}
                       </div>
@@ -249,7 +249,7 @@ export default function PaymentHistory() {
                     )}
                   </td>
 
-                  <td className="px-3 py-4 text-gray-600">
+                  <td className="px-3 py-4 text-[var(--theme-text-muted)]">
                     {formatDate(
                       payment.createdAt,
                     )}
