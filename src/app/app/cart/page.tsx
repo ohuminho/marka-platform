@@ -27,6 +27,20 @@ type Cart = {
 
 type ApiResponse = {
   cart?: Cart;
+  id?: string;
+  userId?: string;
+  status?: string;
+  currency?: string;
+  items?: Array<{
+    id: string;
+    quantity: number;
+    product: {
+      id: string;
+      name: string;
+      price: string | number;
+      image?: string | null;
+    };
+  }>;
   error?: string;
   message?: string;
   orderId?: string;
@@ -83,7 +97,33 @@ export default function CartPage() {
         );
       }
 
-      setCart(data.cart ?? null);
+      const rawCart = data.cart ?? (
+        data.id && data.items
+          ? {
+              id: data.id,
+              userId: data.userId,
+              status: data.status,
+              currency: data.currency,
+              items: data.items.map((item) => ({
+                id: item.id,
+                quantity: item.quantity,
+                unitPrice: item.product.price,
+                subtotal: Number(item.product.price) * item.quantity,
+                product: {
+                  id: item.product.id,
+                  name: item.product.name,
+                  imageUrl: item.product.image ?? null,
+                },
+              })),
+            }
+          : null
+      );
+
+      if (!rawCart) {
+        throw new Error("Resposta de carrinho inválida.");
+      }
+
+      setCart(rawCart as Cart);
     } catch (err) {
       setError(
         err instanceof Error
