@@ -159,7 +159,7 @@ export default function TransactionList({
                       }
                     </p>
 
-                    <p className="text-sm text-neutral-500">
+                    <p className="text-sm text-[var(--theme-text-muted)]">
                       {
                         transaction.reference
                       }
@@ -183,7 +183,7 @@ export default function TransactionList({
                       )}
                     </p>
 
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-[var(--theme-text-muted)]">
                       {
                         transaction.status
                       }
