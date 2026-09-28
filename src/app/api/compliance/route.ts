@@ -38,7 +38,27 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     }
-    const profiles = await new ComplianceService().getForSubject(user.id);
+    const service = new ComplianceService();
+    const profiles = [
+      ...(await service.getForSubject(user.id, null, "KYC")),
+      ...(await service.getForSubject(user.id, null, "KYD")),
+    ];
+
+    const memberships = await prisma.organizationMembership.findMany({
+      where: { userId: user.id, status: "ACTIVE" },
+      select: { organizationId: true },
+    });
+
+    for (const membership of memberships) {
+      profiles.push(
+        ...(await service.getForSubject(
+          membership.organizationId,
+          membership.organizationId,
+          "KYB",
+        )),
+      );
+    }
+
     return NextResponse.json({ profiles });
   } catch (error) {
     console.error("[COMPLIANCE_GET_ERROR]", error);
@@ -69,10 +89,24 @@ export async function POST(request: Request) {
       }
     }
 
+    const organizationId = input.organizationId ?? null;
+
+    if (input.subjectType === "KYB" && !organizationId) {
+      return NextResponse.json(
+        { message: "An organization is required for KYB." },
+        { status: 400 },
+      );
+    }
+
+    const subjectId =
+      input.subjectType === "KYB"
+        ? organizationId!
+        : user.id;
+
     const profiles = await new ComplianceService().submit(
-      user.id,
+      subjectId,
       input.subjectType,
-      input.organizationId ?? null,
+      organizationId,
       input.countryCode ?? null,
       input.documents,
     );
