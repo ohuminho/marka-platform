@@ -12,7 +12,8 @@ export default function VendorOverview() {
   return (
     <div className="space-y-10">
       <header>
-        <h1 className="text-5xl font-semibold">
+        <p className="marka-kicker">MARKA / BUSINESS</p>
+        <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-5xl">
           Vendor Command Center
         </h1>
 
