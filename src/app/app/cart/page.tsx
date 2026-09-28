@@ -255,9 +255,9 @@ export default function CartPage() {
       <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
         <RoleContextSummary />
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-40 rounded bg-gray-200" />
-          <div className="h-24 rounded-lg bg-gray-200" />
-          <div className="h-24 rounded-lg bg-gray-200" />
+          <div className="h-8 w-40 rounded bg-[var(--theme-surface)]" />
+          <div className="h-24 rounded-lg bg-[var(--theme-surface)]" />
+          <div className="h-24 rounded-lg bg-[var(--theme-surface)]" />
         </div>
       </main>
     );
@@ -287,18 +287,18 @@ export default function CartPage() {
       <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
         <RoleContextSummary />
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Carrinho</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-[var(--theme-text)]">Carrinho</h1>
+          <p className="mt-1 text-sm text-[var(--theme-text-muted)]">
             Revise os produtos antes de finalizar a compra.
           </p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-[var(--theme-surface-strong)] p-8 text-center shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
+        <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] p-8 text-center shadow-sm">
+          <h2 className="text-lg font-semibold text-[var(--theme-text)]">
             O carrinho está vazio
           </h2>
 
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-[var(--theme-text-muted)]">
             Adicione produtos ao carrinho para iniciar uma compra.
           </p>
 
@@ -328,8 +328,8 @@ export default function CartPage() {
     <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
       <RoleContextSummary />
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Carrinho</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-[var(--theme-text)]">Carrinho</h1>
+        <p className="mt-1 text-sm text-[var(--theme-text-muted)]">
           Revise os produtos e finalize a sua compra.
         </p>
       </div>
@@ -345,10 +345,10 @@ export default function CartPage() {
           {cart.items.map((item) => (
             <article
               key={item.id}
-              className="rounded-xl border border-gray-200 bg-[var(--theme-surface-strong)] p-4 shadow-sm"
+              className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] p-4 shadow-sm"
             >
               <div className="flex gap-4">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--theme-surface)]">
                   {item.product?.imageUrl ? (
                     <img
                       src={item.product.imageUrl}
@@ -356,25 +356,25 @@ export default function CartPage() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="text-xs text-gray-400">Sem imagem</span>
+                    <span className="text-xs text-[var(--theme-text-faint)]">Sem imagem</span>
                   )}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate font-semibold text-gray-900">
+                  <h2 className="truncate font-semibold text-[var(--theme-text)]">
                     {item.product?.name || "Produto"}
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-[var(--theme-text-muted)]">
                     Quantidade: {item.quantity}
                   </p>
 
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-[var(--theme-text-muted)]">
                     Preço unitário:{" "}
                     {formatMoney(item.unitPrice, currency)}
                   </p>
 
-                  <p className="mt-2 font-semibold text-gray-900">
+                  <p className="mt-2 font-semibold text-[var(--theme-text)]">
                     {formatMoney(item.subtotal, currency)}
                   </p>
                 </div>
@@ -392,38 +392,38 @@ export default function CartPage() {
           ))}
         </section>
 
-        <aside className="h-fit rounded-xl border border-gray-200 bg-[var(--theme-surface-strong)] p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
+        <aside className="h-fit rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-[var(--theme-text)]">
             Resumo da compra
           </h2>
 
           <div className="mt-5 space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-gray-500">Subtotal</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-[var(--theme-text-muted)]">Subtotal</span>
+              <span className="font-medium text-[var(--theme-text)]">
                 {formatMoney(subtotal, currency)}
               </span>
             </div>
 
-            <div className="border-t border-gray-100 pt-3">
+            <div className="border-t border-[var(--theme-border)] pt-3">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-gray-900">Total</span>
-                <span className="text-lg font-bold text-gray-900">
+                <span className="font-semibold text-[var(--theme-text)]">Total</span>
+                <span className="text-lg font-bold text-[var(--theme-text)]">
                   {formatMoney(total, currency)}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 border-t border-gray-100 pt-5">
-            <h3 className="text-sm font-semibold text-gray-900">Entrega</h3>
+          <div className="mt-6 border-t border-[var(--theme-border)] pt-5">
+            <h3 className="text-sm font-semibold text-[var(--theme-text)]">Entrega</h3>
             <div className="mt-3 space-y-3">
               <input
                 type="text"
                 value={deliveryAddress}
                 onChange={(event) => setDeliveryAddress(event.target.value)}
                 placeholder="Endereço de entrega"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
               />
               <div className="grid grid-cols-2 gap-3">
                 <input
@@ -432,7 +432,7 @@ export default function CartPage() {
                   value={deliveryLatitude}
                   onChange={(event) => setDeliveryLatitude(event.target.value)}
                   placeholder="Latitude"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                  className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
                 />
                 <input
                   type="number"
@@ -440,7 +440,7 @@ export default function CartPage() {
                   value={deliveryLongitude}
                   onChange={(event) => setDeliveryLongitude(event.target.value)}
                   placeholder="Longitude"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                  className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
                 />
               </div>
               <textarea
@@ -448,7 +448,7 @@ export default function CartPage() {
                 onChange={(event) => setDeliveryInstructions(event.target.value)}
                 placeholder="Instruções de entrega (opcional)"
                 rows={3}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
               />
             </div>
           </div>
@@ -466,7 +466,7 @@ export default function CartPage() {
             type="button"
             onClick={() => router.push("/app/marketplace")}
             disabled={checkingOut}
-            className="mt-3 w-full rounded-md border border-gray-300 px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 w-full rounded-md border border-[var(--theme-border)] px-5 py-3 text-sm font-medium text-[var(--theme-text-muted)] hover:bg-[var(--theme-surface)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Continuar a comprar
           </button>
