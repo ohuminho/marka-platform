@@ -65,14 +65,14 @@ export default function DeliveryAgentOffers() {
     <div className="space-y-8">
       <section className="rounded-[2rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-8 sm:px-9 sm:py-10">
         <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-[color-mix(in_srgb,var(--theme-text)_30%,transparent)]">Delivery Operations</p>
-        <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-[var(--theme-text)] sm:text-5xl">Available Deliveries</h1>
+        <h1 className="mt-5 marka-editorial text-4xl text-[var(--theme-text)] sm:text-5xl">Available Deliveries</h1>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-[color-mix(in_srgb,var(--theme-text)_40%,transparent)]">Ofertas disponíveis para este agente. O aceite é processado pelo dispatch engine.</p>
       </section>
 
       {error && <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-4 text-xs text-[color-mix(in_srgb,var(--theme-text)_55%,transparent)]">{error}</div>}
 
       <section className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
-        {loading && <div className="py-10 text-center text-xs text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]">Loading offers...</div>}
+        {loading && <div className="rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-12 text-center text-xs text-[color-mix(in_srgb,var(--theme-text)_45%,transparent)]">Loading offers...</div>}
         {!loading && data?.offers.length === 0 && <div className="py-10 text-center text-xs text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]">No delivery offers available.</div>}
         {!loading && data?.offers.map((offer) => (
           <article key={offer.dispatchId} className="mb-3 rounded-2xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] p-5">
