@@ -76,7 +76,7 @@ export class MarketplaceService {
 
 
 
-    return prisma.product.findMany({
+    const products = await prisma.product.findMany({
 
       where: {
 
@@ -145,6 +145,31 @@ export class MarketplaceService {
 
 
     });
+
+
+    return products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      sku: product.sku,
+      image: product.image,
+      price: Number(product.price),
+      currency: product.currency,
+      stock: product.stock,
+      status: product.status,
+      store: {
+        id: product.store.id,
+        name: product.store.name,
+        rating: Number(product.store.rating),
+        verified: product.store.vendor.verified,
+      },
+      category: product.category
+        ? {
+            id: product.category.id,
+            name: product.category.name,
+          }
+        : null,
+    }));
 
 
   }
