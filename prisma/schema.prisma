@@ -1740,3 +1740,103 @@ model MobilityRideOrchestrationEvent {
   @@index([rideId])
   @@index([createdAt])
 }
+
+
+enum ComplianceSubjectType {
+  KYC
+  KYD
+  KYB
+}
+
+enum ComplianceStatus {
+  NOT_STARTED
+  PENDING
+  IN_REVIEW
+  VERIFIED
+  REJECTED
+  EXPIRED
+  SUSPENDED
+}
+
+enum ComplianceDocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum ComplianceCaseStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+model ComplianceProfile {
+  id             String                @id @default(uuid())
+  subjectType    ComplianceSubjectType
+  subjectId      String
+  organizationId String?
+  status         ComplianceStatus      @default(NOT_STARTED)
+  countryCode    String?
+  submittedAt    DateTime?
+  verifiedAt     DateTime?
+  expiresAt      DateTime?
+  rejectionReason String?
+  metadata       Json?
+
+  documents ComplianceDocument[]
+  cases     ComplianceCase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subjectType, subjectId, organizationId])
+  @@index([subjectId])
+  @@index([organizationId])
+  @@index([subjectType, status])
+}
+
+model ComplianceDocument {
+  id          String                   @id @default(uuid())
+  profileId   String
+  documentType String
+  documentRef String?
+  status      ComplianceDocumentStatus @default(PENDING)
+  issuedAt    DateTime?
+  expiresAt   DateTime?
+  reviewedAt  DateTime?
+  reviewedBy  String?
+  rejectionReason String?
+  metadata    Json?
+
+  profile ComplianceProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model ComplianceCase {
+  id          String               @id @default(uuid())
+  profileId   String
+  status      ComplianceCaseStatus @default(OPEN)
+  reason      String
+  assignedTo  String?
+  decision    String?
+  notes       String?
+  resolvedAt  DateTime?
+  metadata    Json?
+
+  profile ComplianceProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([status])
+  @@index([assignedTo])
+}
