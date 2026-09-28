@@ -269,7 +269,7 @@ export default function Sidebar() {
       .map((section) => ({
         ...section,
         items: section.items.filter((item) => {
-          const permissions = item.permissions;
+          const permissions = (item as NavigationSection["items"][number]).permissions;
 
           return (
             !permissions ||
