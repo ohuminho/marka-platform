@@ -17,6 +17,9 @@ html[data-theme="obsidian"] { --theme-background:#070707; --theme-header:rgba(8,
 html[data-theme="graphite"] { --theme-background:#101214; --theme-header:rgba(16,18,20,.78); --theme-surface:rgba(160,174,192,.07); --theme-border:rgba(180,194,210,.15); --theme-text:#edf2f7; --theme-text-muted:rgba(220,228,236,.62); --theme-text-faint:rgba(220,228,236,.32); --theme-accent:rgba(160,190,220,.45); }
 html[data-theme="silver"] { --theme-background:#161719; --theme-header:rgba(22,23,25,.8); --theme-surface:rgba(220,225,232,.08); --theme-border:rgba(225,230,236,.18); --theme-text:#f7f8fa; --theme-text-muted:rgba(236,239,244,.66); --theme-text-faint:rgba(236,239,244,.34); --theme-accent:rgba(230,235,242,.5); }
 html[data-theme="aurora"] { --theme-background:#080b12; --theme-header:rgba(8,11,18,.78); --theme-surface:rgba(90,150,255,.055); --theme-border:rgba(130,170,255,.16); --theme-text:#f2f6ff; --theme-text-muted:rgba(220,231,255,.64); --theme-text-faint:rgba(220,231,255,.32); --theme-accent:rgba(125,170,255,.55); }
+html[data-theme="pearl"] { --theme-background:#f4f1eb; --theme-header:rgba(255,255,255,.82); --theme-surface:rgba(255,255,255,.72); --theme-border:rgba(35,31,26,.12); --theme-text:#1b1916; --theme-text-muted:rgba(27,25,22,.62); --theme-text-faint:rgba(27,25,22,.38); --theme-accent:rgba(92,72,45,.48); }
+html[data-theme="pearl"] select, html[data-theme="pearl"] option { color-scheme: light; }
+html[data-theme="pearl"] body { background:radial-gradient(circle at 70% 0%, rgba(164,130,82,.13), transparent 34%), var(--theme-background); }
 
 @theme inline {
   --color-background: var(--theme-background);
