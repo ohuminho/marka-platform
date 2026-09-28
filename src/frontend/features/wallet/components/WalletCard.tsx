@@ -20,14 +20,14 @@ export default function WalletCard({
   };
 
   return (
-    <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-8 backdrop-blur-2xl">
-      <p className="text-[var(--theme-text-muted)]">MARKA Wallet</p>
+    <div className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-7 backdrop-blur-xl">
+      <p className="marka-kicker">MARKA Wallet</p>
 
-      <h2 className="mt-4 text-5xl font-semibold">
+      <h2 className="marka-editorial mt-5 text-5xl">
         {formatMoney(availableBalanceMinor)} {currency}
       </h2>
 
-      <div className="mt-8 grid grid-cols-2 gap-4">
+      <div className="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-[var(--theme-border)] bg-[var(--theme-border)]">
         <div>
           <p className="text-sm text-[var(--theme-text-muted)]">Total balance</p>
           <p className="mt-1 font-medium">{formatMoney(balanceMinor)} {currency}</p>
