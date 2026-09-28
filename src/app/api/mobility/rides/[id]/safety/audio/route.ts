@@ -21,10 +21,12 @@ interface RouteContext {
 
 export async function POST(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
-    await authenticateMobilityRequest(request);
+    await authenticateMobilityRequest(
+      request,
+    );
 
   if (!authentication.ok) {
     return authentication.response;
@@ -67,7 +69,7 @@ export async function POST(
           code:
             "RIDE_NOT_FOUND",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -82,7 +84,7 @@ export async function POST(
           code:
             "RIDE_ORGANIZATION_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -102,7 +104,7 @@ export async function POST(
           code:
             "RIDE_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -146,12 +148,12 @@ export async function POST(
     ) {
       const parsed =
         new Date(
-          body.retentionUntil
+          body.retentionUntil,
         );
 
       if (
         Number.isNaN(
-          parsed.getTime()
+          parsed.getTime(),
         )
       ) {
         return NextResponse.json(
@@ -161,7 +163,7 @@ export async function POST(
             code:
               "INVALID_AUDIO_RETENTION_DATE",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -194,12 +196,12 @@ export async function POST(
         audioSafety:
           session,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error(
       "[MOBILITY_AUDIO_SAFETY_API_ERROR]",
-      error
+      error,
     );
 
     const message =
@@ -213,7 +215,7 @@ export async function POST(
         code:
           "MOBILITY_AUDIO_SAFETY_OPERATION_FAILED",
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 }
