@@ -29,13 +29,13 @@ export default function CartButton() {
         aria-label="Cart"
         title="Cart"
         onClick={() => setOpen(true)}
-        className="group relative flex h-10 w-10 items-center justify-center rounded-[13px] border border-transparent bg-transparent text-[var(--theme-text-muted)] transition-all duration-200 hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)] hover:text-[var(--theme-text)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-accent)]"
+        className="group relative flex h-9 w-9 items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[var(--theme-text-muted)] transition-colors hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)]/55 hover:text-[var(--theme-text)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-accent)]"
       >
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px] transition-transform duration-200 group-hover:-translate-y-px" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round">
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[17px] w-[17px]" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="9" cy="20" r="1" /><circle cx="20" cy="20" r="1" /><path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6" />
         </svg>
         {count > 0 && (
-          <span className="absolute right-[5px] top-[5px] flex h-4 min-w-4 items-center justify-center rounded-full border border-[var(--theme-background)] bg-[var(--theme-accent-strong)] px-1 text-[8px] font-bold text-[var(--theme-background)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--theme-accent)_8%,transparent)]">
+          <span className="absolute right-[4px] top-[4px] flex h-3.5 min-w-3.5 items-center justify-center rounded-full border border-[var(--theme-background)] bg-[var(--theme-accent-strong)] px-1 text-[7px] font-bold text-[var(--theme-background)]">
             {count}
           </span>
         )}
