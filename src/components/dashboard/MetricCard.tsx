@@ -6,8 +6,8 @@ export default function MetricCard({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl bg-neutral-900 p-6 border border-neutral-800">
-      <p className="text-neutral-400 text-sm">
+    <div className="rounded-2xl bg-[var(--theme-surface)] p-6 border border-[var(--theme-border)]">
+      <p className="text-[var(--theme-text-muted)] text-sm">
         {title}
       </p>
 
