@@ -137,7 +137,7 @@ export default function CartDrawer() {
     return (
 
       <div className="
-        text-white/50
+        text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]
       ">
 
         Loading cart...
@@ -178,8 +178,8 @@ export default function CartDrawer() {
       w-full
       max-w-md
       border-l
-      border-white/10
-      bg-black/80
+      border-[var(--theme-border)]
+      bg-[color-mix(in_srgb,var(--theme-background)_80%,transparent)]
       backdrop-blur-2xl
       p-8
     ">
@@ -220,8 +220,8 @@ export default function CartDrawer() {
                   className="
                     rounded-2xl
                     border
-                    border-white/10
-                    bg-white/5
+                    border-[var(--theme-border)]
+                    bg-[var(--theme-surface)]
                     p-4
                   "
 
@@ -248,7 +248,7 @@ export default function CartDrawer() {
                       <p className="
                         mt-2
                         text-sm
-                        text-white/50
+                        text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]
                       ">
 
                         {item.product.price} AOA
@@ -270,7 +270,7 @@ export default function CartDrawer() {
 
                       className="
                         text-sm
-                        text-white/50
+                        text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]
                       "
 
                     >
@@ -309,7 +309,7 @@ export default function CartDrawer() {
                         w-8
                         rounded-full
                         border
-                        border-white/10
+                        border-[var(--theme-border)]
                       "
 
                     >
@@ -345,7 +345,7 @@ export default function CartDrawer() {
                         w-8
                         rounded-full
                         border
-                        border-white/10
+                        border-[var(--theme-border)]
                       "
 
                     >
@@ -367,7 +367,7 @@ export default function CartDrawer() {
             :
 
             <p className="
-              text-white/50
+              text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]
             ">
 
               Your cart is empty.
@@ -404,11 +404,11 @@ export default function CartDrawer() {
         <button className="
           w-full
           rounded-2xl
-          bg-white
+          bg-[var(--theme-text)]
           px-6
           py-4
           font-semibold
-          text-black
+          text-[var(--theme-background)]
         ">
 
           Checkout
