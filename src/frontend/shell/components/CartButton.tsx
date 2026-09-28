@@ -24,19 +24,25 @@ export default function CartButton() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="relative flex h-12 w-12 items-center justify-center rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] backdrop-blur-xl transition hover:bg-[var(--theme-surface-strong)]">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="9" cy="20" r="1" />
-          <circle cx="20" cy="20" r="1" />
-          <path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6" />
+      <button
+        type="button"
+        aria-label="Cart"
+        title="Cart"
+        onClick={() => setOpen(true)}
+        className="group relative flex h-10 w-10 items-center justify-center rounded-[13px] border border-transparent bg-transparent text-[var(--theme-text-muted)] transition-all duration-200 hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)] hover:text-[var(--theme-text)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-accent)]"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px] transition-transform duration-200 group-hover:-translate-y-px" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="20" r="1" /><circle cx="20" cy="20" r="1" /><path d="M1 1h4l2.6 13.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L23 6H6" />
         </svg>
         {count > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--theme-text)] px-1 text-xs font-semibold text-[var(--theme-background)]">{count}</span>
+          <span className="absolute right-[5px] top-[5px] flex h-4 min-w-4 items-center justify-center rounded-full border border-[var(--theme-background)] bg-[var(--theme-accent-strong)] px-1 text-[8px] font-bold text-[var(--theme-background)] shadow-[0_0_0_3px_color-mix(in_srgb,var(--theme-accent)_8%,transparent)]">
+            {count}
+          </span>
         )}
       </button>
 
       {open && (
-        <div onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--theme-background)_55%,transparent)]">
+        <div onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--theme-background)_62%,transparent)] backdrop-blur-[3px]">
           <div onClick={(event) => event.stopPropagation()} className="absolute right-0 top-0 z-50">
             <CartDrawer />
           </div>
