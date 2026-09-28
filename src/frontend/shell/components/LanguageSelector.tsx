@@ -17,17 +17,15 @@ export default function LanguageSelector() {
   const t = usePlatformTranslation(language);
 
   return (
-    <label className="group relative flex h-10 items-center rounded-[13px] border border-transparent bg-transparent transition-all hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)] focus-within:border-[var(--theme-accent)]">
-      <span className="pointer-events-none flex h-full items-center pl-2.5 text-[var(--theme-text-muted)]">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.7 2.5 4.1 5.5 4.1 9s-1.4 6.5-4.1 9c-2.7-2.5-4.1-5.5-4.1-9S9.3 5.5 12 3Z" />
-        </svg>
-      </span>
+    <label className="group relative flex h-9 w-9 items-center justify-center border border-transparent transition-colors hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)]/55 focus-within:border-[var(--theme-accent)]" title={t.language}>
+      <svg viewBox="0 0 24 24" className="pointer-events-none h-4 w-4 text-[var(--theme-text-muted)] transition-colors group-hover:text-[var(--theme-text)]" fill="none" stroke="currentColor" strokeWidth="1.35" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.7 2.5 4.1 5.5 4.1 9s-1.4 6.5-4.1 9c-2.7-2.5-4.1-6.5-4.1-9S9.3 5.5 12 3Z" />
+      </svg>
       <span className="sr-only">{t.language}</span>
-      <select aria-label={t.language} value={language} onChange={(event) => setLanguage(event.target.value as PlatformLanguage)} className="h-10 w-[42px] cursor-pointer appearance-none bg-transparent px-0 text-center text-[9px] font-semibold tracking-[0.1em] text-[var(--theme-text-muted)] outline-none">
+      <select aria-label={t.language} value={language} onChange={(event) => setLanguage(event.target.value as PlatformLanguage)} className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent text-[0px] outline-none">
         {languages.map((item) => <option key={item.value} value={item.value}>{item.label} — {item.name}</option>)}
       </select>
-      <svg aria-hidden="true" viewBox="0 0 20 20" className="mr-2 h-3 w-3 text-[var(--theme-text-faint)]" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="m5 7.5 5 5 5-5" /></svg>
+      <span className="pointer-events-none absolute -bottom-0.5 left-1/2 h-px w-2 -translate-x-1/2 bg-[var(--theme-accent)] opacity-0 transition-opacity group-focus-within:opacity-100" />
     </label>
   );
 }
