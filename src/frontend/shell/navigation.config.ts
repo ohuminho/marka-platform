@@ -54,6 +54,11 @@ export const NavigationConfig = {
             "WALLET_READ",
           ],
         },
+        {
+          title: "Account",
+          route: "/app/account",
+          description: "Identity, session and access context",
+        },
       ],
     },
 
@@ -146,6 +151,11 @@ export const NavigationConfig = {
             "VENDOR_MANAGE",
           ],
         },
+        {
+          title: "Account",
+          route: "/app/account",
+          description: "Identity, session and access context",
+        },
       ],
     },
   ],
@@ -214,6 +224,11 @@ export const NavigationConfig = {
             "SYSTEM_ADMIN",
           ],
         },
+        {
+          title: "Account",
+          route: "/app/account",
+          description: "Identity, session and access context",
+        },
       ],
     },
   ],
@@ -240,6 +255,11 @@ export const NavigationConfig = {
           permissions: [
             "ADMIN_ACCESS",
           ],
+        },
+        {
+          title: "Account",
+          route: "/app/account",
+          description: "Identity, session and access context",
         },
       ],
     },
