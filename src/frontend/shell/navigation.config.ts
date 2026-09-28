@@ -40,6 +40,12 @@ export const NavigationConfig = {
             "Discover products, services and stores",
         },
         {
+          title: "Cart",
+          route: "/app/cart",
+          description:
+            "Review items before checkout",
+        },
+        {
           title: "Mobility",
           route: "/app/mobility",
           description:
@@ -160,6 +166,11 @@ export const NavigationConfig = {
           title: "Account",
           route: "/app/account",
           description: "Identity, session and access context",
+        },
+        {
+          title: "Compliance",
+          route: "/app/compliance",
+          description: "KYC, KYD, KYB and verification status",
         },
       ],
     },
