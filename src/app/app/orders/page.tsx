@@ -148,7 +148,7 @@ export default function OrdersPage() {
             Orders
           </h1>
 
-          <p className="mt-3 text-white/50">
+          <p className="mt-3 text-[var(--theme-text)]/50">
             Loading your order history...
           </p>
         </section>
@@ -166,8 +166,8 @@ export default function OrdersPage() {
                 animate-pulse
                 rounded-3xl
                 border
-                border-white/10
-                bg-white/5
+                border-[var(--theme-border)]
+                bg-[var(--theme-surface-strong)]/5
               "
             />
           ))}
@@ -185,7 +185,7 @@ export default function OrdersPage() {
             Orders
           </h1>
 
-          <p className="mt-3 text-white/50">
+          <p className="mt-3 text-[var(--theme-text)]/50">
             Your purchases and order activity.
           </p>
         </section>
@@ -203,7 +203,7 @@ export default function OrdersPage() {
             Unable to load orders
           </p>
 
-          <p className="mt-2 text-sm text-white/50">
+          <p className="mt-2 text-sm text-[var(--theme-text)]/50">
             {error}
           </p>
         </div>
@@ -219,7 +219,7 @@ export default function OrdersPage() {
           Orders
         </h1>
 
-        <p className="mt-3 text-white/50">
+        <p className="mt-3 text-[var(--theme-text)]/50">
           Track your purchases and order activity.
         </p>
       </section>
@@ -229,8 +229,8 @@ export default function OrdersPage() {
           className="
             rounded-3xl
             border
-            border-white/10
-            bg-white/5
+            border-[var(--theme-border)]
+            bg-[var(--theme-surface-strong)]/5
             p-10
             text-center
           "
@@ -239,7 +239,7 @@ export default function OrdersPage() {
             No orders yet
           </h2>
 
-          <p className="mt-3 text-white/50">
+          <p className="mt-3 text-[var(--theme-text)]/50">
             Your marketplace purchases will appear here.
           </p>
 
@@ -249,14 +249,14 @@ export default function OrdersPage() {
               mt-6
               inline-flex
               rounded-full
-              bg-white
+              bg-[var(--theme-surface-strong)]
               px-6
               py-3
               text-sm
               font-semibold
-              text-black
+              text-[var(--theme-background)]
               transition
-              hover:bg-white/90
+              hover:bg-[var(--theme-surface-strong)]/90
             "
           >
             Explore Marketplace
@@ -272,12 +272,12 @@ export default function OrdersPage() {
                 block
                 rounded-3xl
                 border
-                border-white/10
-                bg-white/5
+                border-[var(--theme-border)]
+                bg-[var(--theme-surface-strong)]/5
                 p-6
                 transition
-                hover:border-white/20
-                hover:bg-white/[0.07]
+                hover:border-[var(--theme-border)]
+                hover:bg-[var(--theme-surface-strong)]/[0.07]
               "
             >
               <div
@@ -291,15 +291,15 @@ export default function OrdersPage() {
                 "
               >
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[var(--theme-text)]/40">
                     Order
                   </p>
 
-                  <p className="mt-2 break-all font-mono text-sm text-white/70">
+                  <p className="mt-2 break-all font-mono text-sm text-[var(--theme-text)]/70">
                     {order.id}
                   </p>
 
-                  <p className="mt-2 text-sm text-white/40">
+                  <p className="mt-2 text-sm text-[var(--theme-text)]/40">
                     {formatDate(
                       order.createdAt
                     )}
@@ -308,7 +308,7 @@ export default function OrdersPage() {
 
                 <div className="flex items-center justify-between gap-8 md:justify-end">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--theme-text)]/40">
                       Status
                     </p>
 
@@ -320,7 +320,7 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="text-right">
-                    <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--theme-text)]/40">
                       Total
                     </p>
 
