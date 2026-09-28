@@ -273,7 +273,7 @@ export default function CartPage() {
           <button
             type="button"
             onClick={() => void loadCart()}
-            className="mt-3 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className="mt-3 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-[var(--theme-text)] hover:bg-red-700"
           >
             Tentar novamente
           </button>
@@ -293,7 +293,7 @@ export default function CartPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-[var(--theme-surface-strong)] p-8 text-center shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">
             O carrinho está vazio
           </h2>
@@ -305,7 +305,7 @@ export default function CartPage() {
           <button
             type="button"
             onClick={() => router.push("/app/marketplace")}
-            className="mt-5 rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+            className="mt-5 rounded-md bg-[var(--theme-background)] px-5 py-2.5 text-sm font-medium text-[var(--theme-text)] hover:bg-[var(--theme-surface-strong)]"
           >
             Explorar marketplace
           </button>
@@ -345,7 +345,7 @@ export default function CartPage() {
           {cart.items.map((item) => (
             <article
               key={item.id}
-              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-gray-200 bg-[var(--theme-surface-strong)] p-4 shadow-sm"
             >
               <div className="flex gap-4">
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
@@ -392,7 +392,7 @@ export default function CartPage() {
           ))}
         </section>
 
-        <aside className="h-fit rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <aside className="h-fit rounded-xl border border-gray-200 bg-[var(--theme-surface-strong)] p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">
             Resumo da compra
           </h2>
@@ -457,7 +457,7 @@ export default function CartPage() {
             type="button"
             onClick={() => void checkout()}
             disabled={checkingOut || cart.items.length === 0}
-            className="mt-6 w-full rounded-md bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-6 w-full rounded-md bg-[var(--theme-background)] px-5 py-3 text-sm font-semibold text-[var(--theme-text)] transition hover:bg-[var(--theme-surface-strong)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {checkingOut ? "A processar..." : "Finalizar compra"}
           </button>
