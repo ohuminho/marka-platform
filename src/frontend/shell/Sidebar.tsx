@@ -9,6 +9,7 @@ import {
 
 import {
   NavigationConfig,
+  type NavigationSection,
 } from "./navigation.config";
 
 const icons: Record<
@@ -263,9 +264,8 @@ export default function Sidebar() {
     ] ||
     NavigationConfig.CUSTOMER;
 
-  const sections =
-    configuredSections
-      .map((section) => ({
+  const sections: NavigationSection[] =
+    configuredSections.map((section) => ({
         ...section,
 
         items:
