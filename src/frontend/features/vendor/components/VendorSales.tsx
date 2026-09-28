@@ -69,17 +69,17 @@ export default function VendorSales() {
 
   return (
     <section className="space-y-6">
-      {!activeOrganization ? <div className="rounded-xl border border-white/10 p-4 text-white/50">Select an active organization first.</div> : null}
+      {!activeOrganization ? <div className="rounded-xl border border-[var(--theme-border)] p-4 text-[var(--theme-text)]/50">Select an active organization first.</div> : null}
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-4xl font-semibold">Sales</h1>
-          <p className="mt-2 text-white/50">Orders containing your products.</p>
+          <p className="mt-2 text-[var(--theme-text)]/50">Orders containing your products.</p>
         </div>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value)}
-          className="rounded-xl border border-white/10 bg-black/30 px-4 py-3"
+          className="rounded-xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_30%,transparent)] px-4 py-3"
           aria-label="Filter sales by order status"
         >
           <option value="">All statuses</option>
@@ -94,30 +94,30 @@ export default function VendorSales() {
 
       {error ? <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-red-200">{error}</div> : null}
 
-      <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+      <div className="rounded-2xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_20%,transparent)] p-5">
         <div className="mb-5 flex items-center justify-between">
-          <span className="text-white/50">Orders</span>
-          <span className="text-white/60">{total}</span>
+          <span className="text-[var(--theme-text)]/50">Orders</span>
+          <span className="text-[var(--theme-text)]/60">{total}</span>
         </div>
         {loading ? (
-          <p className="text-white/50">Loading sales…</p>
+          <p className="text-[var(--theme-text)]/50">Loading sales…</p>
         ) : sales.length === 0 ? (
-          <p className="text-white/50">No sales found.</p>
+          <p className="text-[var(--theme-text)]/50">No sales found.</p>
         ) : (
           <div className="space-y-4">
             {sales.map((sale) => (
-              <article key={sale.id} className="rounded-xl border border-white/10 p-4">
+              <article key={sale.id} className="rounded-xl border border-[var(--theme-border)] p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium">{sale.id}</p>
-                    <p className="text-sm text-white/50">{new Date(sale.createdAt).toLocaleString()}</p>
+                    <p className="text-sm text-[var(--theme-text)]/50">{new Date(sale.createdAt).toLocaleString()}</p>
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="font-semibold">{sale.total.toLocaleString()} {sale.currency}</p>
-                    <p className="text-sm text-white/50">{sale.status}</p>
+                    <p className="text-sm text-[var(--theme-text)]/50">{sale.status}</p>
                   </div>
                 </div>
-                <div className="mt-4 space-y-2 text-sm text-white/70">
+                <div className="mt-4 space-y-2 text-sm text-[var(--theme-text)]/70">
                   {sale.items.map((item) => (
                     <div key={item.id} className="flex justify-between gap-4">
                       <span>{item.quantity} × {item.productName}</span>
@@ -129,20 +129,20 @@ export default function VendorSales() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     {sale.status === "PENDING" ? (
                       <>
-                        <button type="button" onClick={() => void updateStatus(sale.id, "CONFIRMED")} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">Confirm</button>
+                        <button type="button" onClick={() => void updateStatus(sale.id, "CONFIRMED")} className="rounded-lg border border-[var(--theme-border)] px-3 py-2 text-sm hover:bg-[var(--theme-surface-strong)]/5">Confirm</button>
                         <button type="button" onClick={() => void updateStatus(sale.id, "CANCELLED")} className="rounded-lg border border-red-500/20 px-3 py-2 text-sm text-red-200 hover:bg-red-500/10">Cancel</button>
                       </>
                     ) : null}
                     {sale.status === "CONFIRMED" ? (
                       <>
-                        <button type="button" onClick={() => void updateStatus(sale.id, "PROCESSING")} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">Start processing</button>
+                        <button type="button" onClick={() => void updateStatus(sale.id, "PROCESSING")} className="rounded-lg border border-[var(--theme-border)] px-3 py-2 text-sm hover:bg-[var(--theme-surface-strong)]/5">Start processing</button>
                         <button type="button" onClick={() => void updateStatus(sale.id, "CANCELLED")} className="rounded-lg border border-red-500/20 px-3 py-2 text-sm text-red-200 hover:bg-red-500/10">Cancel</button>
                       </>
                     ) : null}
                   </div>
                 ) : null}
                 {sale.fulfillment ? (
-                  <div className="mt-4 text-sm text-white/50">
+                  <div className="mt-4 text-sm text-[var(--theme-text)]/50">
                     Fulfillment: {sale.fulfillment.status}
                     {sale.fulfillment.exceptionCode ? ` · ${sale.fulfillment.exceptionCode}` : ""}
                   </div>
