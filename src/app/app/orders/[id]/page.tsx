@@ -87,7 +87,7 @@ interface OrderPageProps {
 }
 
 function formatMoney(
-  amountMinor: number,
+  amount: number,
   currency: string
 ) {
   return new Intl.NumberFormat(undefined, {
@@ -95,7 +95,7 @@ function formatMoney(
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  }).format(amount);
 }
 
 function formatDate(value: string) {
