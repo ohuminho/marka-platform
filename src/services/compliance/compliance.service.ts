@@ -39,12 +39,16 @@ export class ComplianceService {
   async getForSubject(
     subjectId: string,
     organizationId?: string | null,
+    subjectType?: ComplianceSubjectType,
   ): Promise<ComplianceProfileView[]> {
     const profiles = await prisma.complianceProfile.findMany({
       where: {
         subjectId,
         ...(organizationId
           ? { organizationId }
+          : {}),
+        ...(subjectType
+          ? { subjectType }
           : {}),
       },
       include: {
@@ -67,29 +71,35 @@ export class ComplianceService {
       expiresAt?: string;
     }>,
   ) {
-    const profile = await prisma.complianceProfile.upsert({
+    const existing = await prisma.complianceProfile.findFirst({
       where: {
-        subjectType_subjectId_organizationId: {
-          subjectType,
-          subjectId,
-          organizationId,
-        },
-      },
-      create: {
         subjectType,
         subjectId,
         organizationId,
-        countryCode,
-        status: "PENDING",
-        submittedAt: new Date(),
       },
-      update: {
-        countryCode,
-        status: "PENDING",
-        submittedAt: new Date(),
-        rejectionReason: null,
-      },
+      select: { id: true },
     });
+
+    const profile = existing
+      ? await prisma.complianceProfile.update({
+          where: { id: existing.id },
+          data: {
+            countryCode,
+            status: "PENDING",
+            submittedAt: new Date(),
+            rejectionReason: null,
+          },
+        })
+      : await prisma.complianceProfile.create({
+          data: {
+            subjectType,
+            subjectId,
+            organizationId,
+            countryCode,
+            status: "PENDING",
+            submittedAt: new Date(),
+          },
+        });
 
     if (documents.length) {
       await prisma.complianceDocument.createMany({
