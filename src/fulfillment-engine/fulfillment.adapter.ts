@@ -1028,3 +1028,172 @@ export class FulfillmentAdapter
     }
 
    
+
+    if (!input.pickup.id.trim()) {
+      throw new Error(
+        "Pickup location is required.",
+      );
+    }
+
+    if (!input.pickup.type.trim()) {
+      throw new Error(
+        "Pickup type is required.",
+      );
+    }
+
+    if (!input.destination.id.trim()) {
+      throw new Error(
+        "Destination is required.",
+      );
+    }
+
+    if (!input.destination.type.trim()) {
+      throw new Error(
+        "Destination type is required.",
+      );
+    }
+  }
+
+  private jsonRecord(
+    value: unknown,
+  ): Record<string, unknown> {
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      Array.isArray(value)
+    ) {
+      return {};
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private toContract(
+    request: {
+      id: string;
+      organizationId: string;
+      orderId: string;
+      pickupType: string;
+      pickupId: string;
+      destinationType: string;
+      destinationId: string;
+      status: string;
+      assignedAgentId: string | null;
+      exceptionCode: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+  ): FulfillmentRequest {
+    return {
+      id: request.id,
+      organizationId: request.organizationId,
+      status: request.status as FulfillmentStatus,
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt,
+      orderId: request.orderId,
+      pickup: {
+        id: request.pickupId,
+        type: request.pickupType,
+      },
+      destination: {
+        id: request.destinationId,
+        type: request.destinationType,
+      },
+      assignedAgentId:
+        request.assignedAgentId ?? undefined,
+      exceptionCode:
+        request.exceptionCode ?? undefined,
+    };
+  }
+
+  private isValidTransition(
+    current: FulfillmentStatus,
+    next: FulfillmentStatus,
+  ): boolean {
+    const transitions: Record<
+      FulfillmentStatus,
+      FulfillmentStatus[]
+    > = {
+      REQUESTED: [
+        "ASSIGNED",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      ASSIGNED: [
+        "PREPARING",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      PREPARING: [
+        "READY_FOR_PICKUP",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      READY_FOR_PICKUP: [
+        "PICKED_UP",
+        "CANCELLED",
+        "EXCEPTION",
+      ],
+      PICKED_UP: [
+        "IN_TRANSIT",
+        "EXCEPTION",
+      ],
+      IN_TRANSIT: [
+        "COMPLETED",
+        "EXCEPTION",
+      ],
+      COMPLETED: [],
+      EXCEPTION: [
+        "ASSIGNED",
+        "CANCELLED",
+      ],
+      CANCELLED: [],
+    };
+
+    return transitions[current].includes(next);
+  }
+
+  private eventTypeForStatus(
+    status: FulfillmentStatus,
+  ): string {
+    switch (status) {
+      case "ASSIGNED":
+        return "fulfillment.assigned";
+      case "PREPARING":
+        return "fulfillment.preparation.started";
+      case "PICKED_UP":
+        return "fulfillment.picked_up";
+      case "COMPLETED":
+        return "fulfillment.completed";
+      case "EXCEPTION":
+        return "fulfillment.exceptioned";
+      case "CANCELLED":
+        return "fulfillment.cancelled";
+      default:
+        return `fulfillment.${status.toLowerCase()}`;
+    }
+  }
+
+  private async recordEvent(
+    eventType: string,
+    aggregateId: string,
+    organizationId: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    await prisma.domainEvent.create({
+      data: {
+        eventKey: `${eventType}:${aggregateId}:${crypto.randomUUID()}`,
+        aggregateType: "FULFILLMENT",
+        aggregateId,
+        eventType,
+        payload: payload as Prisma.InputJsonValue,
+        status: "PENDING",
+      },
+    });
+
+    void organizationId;
+  }
+}
+
+export const fulfillmentAdapter =
+  new FulfillmentAdapter();
