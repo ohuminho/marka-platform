@@ -466,7 +466,7 @@ export default function Sidebar() {
                       value={
                         organization.id
                       }
-                      className="bg-neutral-950"
+                      className="bg-[var(--theme-background)]"
                     >
                       {organization.name}
                     </option>
