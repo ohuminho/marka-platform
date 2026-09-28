@@ -21,10 +21,12 @@ interface RouteContext {
 
 export async function GET(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
-    await authenticateMobilityRequest(request);
+    await authenticateMobilityRequest(
+      request,
+    );
 
   if (!authentication.ok) {
     return authentication.response;
@@ -41,7 +43,7 @@ export async function GET(
         code:
           "RIDE_ID_REQUIRED",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -71,7 +73,7 @@ export async function GET(
           code:
             "RIDE_NOT_FOUND",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -86,7 +88,7 @@ export async function GET(
           code:
             "RIDE_ORGANIZATION_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -106,13 +108,13 @@ export async function GET(
           code:
             "RIDE_SAFETY_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const safety =
       await mobilitySafetyService.getTripSafety(
-        id
+        id,
       );
 
     return NextResponse.json({
@@ -121,7 +123,7 @@ export async function GET(
   } catch (error) {
     console.error(
       "[MOBILITY_RIDE_SAFETY_GET_API_ERROR]",
-      error
+      error,
     );
 
     return NextResponse.json(
@@ -131,17 +133,19 @@ export async function GET(
         code:
           "MOBILITY_RIDE_SAFETY_RETRIEVAL_FAILED",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function POST(
   request: Request,
-  context: RouteContext
+  context: RouteContext,
 ) {
   const authentication =
-    await authenticateMobilityRequest(request);
+    await authenticateMobilityRequest(
+      request,
+    );
 
   if (!authentication.ok) {
     return authentication.response;
@@ -158,7 +162,7 @@ export async function POST(
         code:
           "RIDE_ID_REQUIRED",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -191,7 +195,7 @@ export async function POST(
           code:
             "RIDE_NOT_FOUND",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -206,7 +210,7 @@ export async function POST(
           code:
             "RIDE_ORGANIZATION_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -226,7 +230,7 @@ export async function POST(
           code:
             "RIDE_ACCESS_DENIED",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -247,7 +251,7 @@ export async function POST(
           code:
             "INVALID_SAFETY_MODE",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -290,12 +294,12 @@ export async function POST(
       {
         safety,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error(
       "[MOBILITY_RIDE_SAFETY_CREATE_API_ERROR]",
-      error
+      error,
     );
 
     const message =
@@ -309,7 +313,7 @@ export async function POST(
         code:
           "MOBILITY_RIDE_SAFETY_CONFIGURATION_FAILED",
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 }
