@@ -44,7 +44,8 @@ export class DispatchAdapter implements DispatchPort {
         status: "CREATED",
         candidatePolicyRef:
           input.candidatePolicyRef,
-        metadata: input.metadata as Prisma.InputJsonValue | undefined,
+        metadata:
+          input.metadata as Prisma.InputJsonValue | undefined,
       },
     });
 
@@ -99,9 +100,12 @@ export class DispatchAdapter implements DispatchPort {
       ) {
         const candidates =
           await deliveryMatchingService.findCandidates({
-            organizationId: stored.organizationId,
-            pickupLatitude: Number(stored.originLatitude),
-            pickupLongitude: Number(stored.originLongitude),
+            organizationId:
+              stored.organizationId,
+            pickupLatitude:
+              Number(stored.originLatitude),
+            pickupLongitude:
+              Number(stored.originLongitude),
           });
 
         await this.setCandidates(
@@ -109,7 +113,8 @@ export class DispatchAdapter implements DispatchPort {
           candidates.map((candidate) => ({
             agentId: candidate.agentId,
             score: candidate.score,
-            distanceMeters: candidate.distanceMeters,
+            distanceMeters:
+              candidate.distanceMeters,
             available: true,
             metadata: candidate.metadata,
           })),
@@ -117,21 +122,37 @@ export class DispatchAdapter implements DispatchPort {
 
         const refreshed =
           await prisma.dispatchRequest.findUnique({
-            where: { id: stored.id },
-            include: { candidates: true },
+            where: {
+              id: stored.id,
+            },
+            include: {
+              candidates: true,
+            },
           });
 
         if (!refreshed) {
-          throw new Error("Dispatch request not found after candidate discovery.");
+          throw new Error(
+            "Dispatch request not found after candidate discovery.",
+          );
         }
 
-        return refreshed.candidates.map((candidate) => ({
-          agentId: candidate.agentId,
-          score: candidate.score ?? undefined,
-          distanceMeters: candidate.distanceMeters ?? undefined,
-          available: candidate.available,
-          metadata: this.jsonRecord(candidate.metadata),
-        }));
+        return refreshed.candidates.map(
+          (candidate) => ({
+            agentId: candidate.agentId,
+            score:
+              candidate.score ??
+              undefined,
+            distanceMeters:
+              candidate.distanceMeters ??
+              undefined,
+            available:
+              candidate.available,
+            metadata:
+              this.jsonRecord(
+                candidate.metadata,
+              ),
+          }),
+        );
       }
     }
 
@@ -139,12 +160,17 @@ export class DispatchAdapter implements DispatchPort {
       (candidate) => ({
         agentId: candidate.agentId,
         score:
-          candidate.score ?? undefined,
+          candidate.score ??
+          undefined,
         distanceMeters:
-          candidate.distanceMeters ?? undefined,
-        available: candidate.available,
+          candidate.distanceMeters ??
+          undefined,
+        available:
+          candidate.available,
         metadata:
-          this.jsonRecord(candidate.metadata),
+          this.jsonRecord(
+            candidate.metadata,
+          ),
       }),
     );
   }
@@ -154,11 +180,15 @@ export class DispatchAdapter implements DispatchPort {
     agentId: string,
   ): Promise<DispatchRequest> {
     if (!agentId.trim()) {
-      throw new Error("Agent is required.");
+      throw new Error(
+        "Agent is required.",
+      );
     }
 
     const request =
-      await this.requireRequest(requestId);
+      await this.requireRequest(
+        requestId,
+      );
 
     if (
       request.status !== "CREATED" &&
@@ -190,7 +220,9 @@ export class DispatchAdapter implements DispatchPort {
       },
     );
 
-    return this.toContract(updated);
+    return this.toContract(
+      updated,
+    );
   }
 
   async accept(
@@ -198,17 +230,23 @@ export class DispatchAdapter implements DispatchPort {
     agentId: string,
   ): Promise<DispatchRequest> {
     if (!agentId.trim()) {
-      throw new Error("Agent is required.");
+      throw new Error(
+        "Agent is required.",
+      );
     }
 
     const request =
-      await this.requireRequest(requestId);
+      await this.requireRequest(
+        requestId,
+      );
 
     if (
       request.status === "ACCEPTED" &&
       request.acceptedAgentId === agentId
     ) {
-      return this.toContract(request);
+      return this.toContract(
+        request,
+      );
     }
 
     if (
@@ -229,224 +267,166 @@ export class DispatchAdapter implements DispatchPort {
       );
     }
 
-    const updated = await prisma.$transaction(async (database) => {
-      let deliveryAgentClaimed = false;
+    const updated =
+      await prisma.$transaction(
+        async (database) => {
+          let deliveryAgentClaimed =
+            false;
 
-      if (request.serviceType === "DELIVERY") {
-        const candidate = await database.dispatchCandidate.findFirst({
-          where: {
-            dispatchRequestId: requestId,
-            agentId,
-            available: true,
-          },
-          select: { id: true },
-        });
+          if (
+            request.serviceType ===
+            "DELIVERY"
+          ) {
+            const candidate =
+              await database.dispatchCandidate.findFirst({
+                where: {
+                  dispatchRequestId:
+                    requestId,
+                  agentId,
+                  available: true,
+                },
+                select: {
+                  id: true,
+                },
+              });
 
-        if (!candidate) {
-          throw new Error(
-            "Delivery agent is not an active dispatch candidate.",
-          );
-        }
+            if (!candidate) {
+              throw new Error(
+                "Delivery agent is not an active dispatch candidate.",
+              );
+            }
 
-        const claimed = await database.deliveryAgent.updateMany({
-          where: {
-            id: agentId,
-            organizationId: request.organizationId,
-            status: "ACTIVE",
-            availability: "AVAILABLE",
-          },
-          data: {
-            availability: "BUSY",
-          },
-        });
+            const claimed =
+              await database.deliveryAgent.updateMany({
+                where: {
+                  id: agentId,
+                  organizationId:
+                    request.organizationId,
+                  status: "ACTIVE",
+                  availability:
+                    "AVAILABLE",
+                },
+                data: {
+                  availability:
+                    "BUSY",
+                },
+              });
 
-        if (claimed.count !== 1) {
-          throw new Error(
-            "Delivery agent is not available.",
-          );
-        }
+            if (claimed.count !== 1) {
+              throw new Error(
+                "Delivery agent is not available.",
+              );
+            }
 
-        deliveryAgentClaimed = true;
+            deliveryAgentClaimed =
+              true;
 
-        await database.dispatchCandidate.updateMany({
-          where: {
-            id: candidate.id,
-            available: true,
-          },
-          data: {
-            available: false,
-          },
-        });
-      }
-
-      const accepted = await database.dispatchRequest.updateMany({
-        where: {
-          id: requestId,
-          status: {
-            in: ["ASSIGNED", "OFFERED"],
-          },
-          OR: [
-            { assignedAgentId: null },
-            { assignedAgentId: agentId },
-          ],
-        },
-        data: {
-          status: "ACCEPTED",
-          acceptedAgentId: agentId,
-        },
-      });
-
-      if (accepted.count !== 1) {
-        if (deliveryAgentClaimed) {
-          await database.deliveryAgent.updateMany({
-            where: {
-              id: agentId,
-              organizationId: request.organizationId,
-              status: "ACTIVE",
-              availability: "BUSY",
-            },
-            data: {
-              availability: "AVAILABLE",
-            },
-          });
-        }
-
-        throw new Error(
-          "Dispatch request was accepted by another agent.",
-        );
-      }
-
-      const updatedRequest = await database.dispatchRequest.findUniqueOrThrow({
-        where: { id: requestId },
-      });
-
-      if (
-        request.serviceType === "DELIVERY" &&
-        request.subjectType === "FULFILLMENT"
-      ) {
-        const fulfillment = await database.fulfillmentRequest.findUnique({
-          where: {
-            id: request.subjectId,
-          },
-          select: {
-            id: true,
-            status: true,
-            organizationId: true,
-          },
-        });
-
-        if (!fulfillment) {
-          throw new Error("Fulfillment not found for delivery dispatch.");
-        }
-
-        if (fulfillment.organizationId !== request.organizationId) {
-          throw new Error(
-            "Fulfillment organization does not match dispatch organization.",
-          );
-        }
-
-        if (
-          fulfillment.status !== "REQUESTED" &&
-          fulfillment.status !== "ASSIGNED"
-        ) {
-          throw new Error(
-            "Fulfillment cannot be assigned from its current state.",
-          );
-        }
-
-        await database.fulfillmentAssignment.upsert({
-          where: {
-            fulfillmentId: fulfillment.id,
-          },
-          create: {
-            id: crypto.randomUUID(),
-            fulfillmentId: fulfillment.id,
-            agentId,
-            assignedAt: new Date(),
-            acceptedAt: new Date(),
-          },
-          update: {
-            agentId,
-            acceptedAt: new Date(),
-          },
-        });
-
-        await database.fulfillmentRequest.update({
-          where: {
-            id: fulfillment.id,
-          },
-          data: {
-            status: "ASSIGNED",
-            assignedAgentId: agentId,
-            exceptionCode: null,
-          },
-        });
-      }
-
-      return updatedRequest;
-    });
-
-    await this.recordEvent(
-      "dispatch.accepted",
-      requestId,
-      {
-        agentId,
-      },
-    );
-
-    return this.toContract(updated);
-  }
-
-  async reassign(
-    requestId: string,
-    reason: string,
-  ): Promise<DispatchRequest> {
-    if (!reason.trim()) {
-      throw new Error(
-        "Reassignment reason is required.",
-      );
-    }
-
-    const request =
-      await this.requireRequest(requestId);
-
-    if (
-      request.status === "COMPLETED" ||
-      request.status === "CANCELLED" ||
-      request.status === "EXPIRED"
-    ) {
-      throw new Error(
-        "Dispatch request cannot be reassigned in its current state.",
-      );
-    }
-
-    const updated = await prisma.$transaction(async (database) => {
-      if (
-        request.serviceType === "DELIVERY" &&
-        request.acceptedAgentId
-      ) {
-        await database.deliveryAgent.updateMany({
-          where: {
-            id: request.acceptedAgentId,
-            organizationId: request.organizationId,
-            availability: "BUSY",
-          },
-          data: {
-            availability: "AVAILABLE",
-          },
-        });
-
-        if (request.subjectType === "FULFILLMENT") {
-          const fulfillment =
-            await database.fulfillmentRequest.findUnique({
-              where: { id: request.subjectId },
-              select: {
-                id: true,
-                organizationId: true,
+            await database.dispatchCandidate.updateMany(
+              {
+                where: {
+                  id: candidate.id,
+                  available: true,
+                },
+                data: {
+                  available: false,
+                },
               },
-            });
+            );
+          }
 
-          if (fulfillment) {
+          const accepted =
+            await database.dispatchRequest.updateMany(
+              {
+                where: {
+                  id: requestId,
+                  status: {
+                    in: [
+                      "ASSIGNED",
+                      "OFFERED",
+                    ],
+                  },
+                  OR: [
+                    {
+                      assignedAgentId:
+                        null,
+                    },
+                    {
+                      assignedAgentId:
+                        agentId,
+                    },
+                  ],
+                },
+                data: {
+                  status: "ACCEPTED",
+                  acceptedAgentId:
+                    agentId,
+                },
+              },
+            );
+
+          if (accepted.count !== 1) {
+            if (
+              deliveryAgentClaimed
+            ) {
+              await database.deliveryAgent.updateMany(
+                {
+                  where: {
+                    id: agentId,
+                    organizationId:
+                      request.organizationId,
+                    status: "ACTIVE",
+                    availability:
+                      "BUSY",
+                  },
+                  data: {
+                    availability:
+                      "AVAILABLE",
+                  },
+                },
+              );
+            }
+
+            throw new Error(
+              "Dispatch request was accepted by another agent.",
+            );
+          }
+
+          const updatedRequest =
+            await database.dispatchRequest.findUniqueOrThrow(
+              {
+                where: {
+                  id: requestId,
+                },
+              },
+            );
+
+          if (
+            request.serviceType ===
+              "DELIVERY" &&
+            request.subjectType ===
+              "FULFILLMENT"
+          ) {
+            const fulfillment =
+              await database.fulfillmentRequest.findUnique(
+                {
+                  where: {
+                    id: request.subjectId,
+                  },
+                  select: {
+                    id: true,
+                    status: true,
+                    organizationId:
+                      true,
+                  },
+                },
+              );
+
+            if (!fulfillment) {
+              throw new Error(
+                "Fulfillment not found for delivery dispatch.",
+              );
+            }
+
             if (
               fulfillment.organizationId !==
               request.organizationId
@@ -456,86 +436,313 @@ export class DispatchAdapter implements DispatchPort {
               );
             }
 
-            await database.fulfillmentAssignment.delete({
-              where: {
-                fulfillmentId: fulfillment.id,
-              },
-            });
+            if (
+              fulfillment.status !==
+                "REQUESTED" &&
+              fulfillment.status !==
+                "ASSIGNED"
+            ) {
+              throw new Error(
+                "Fulfillment cannot be assigned from its current state.",
+              );
+            }
 
-            await database.fulfillmentRequest.update({
+            await database.fulfillmentAssignment.upsert(
+              {
+                where: {
+                  fulfillmentId:
+                    fulfillment.id,
+                },
+                create: {
+                  id: crypto.randomUUID(),
+                  fulfillmentId:
+                    fulfillment.id,
+                  agentId,
+                  assignedAt:
+                    new Date(),
+                  acceptedAt:
+                    new Date(),
+                },
+                update: {
+                  agentId,
+                  acceptedAt:
+                    new Date(),
+                },
+              },
+            );
+
+            await database.fulfillmentRequest.update(
+              {
+                where: {
+                  id: fulfillment.id,
+                },
+                data: {
+                  status: "ASSIGNED",
+                  assignedAgentId:
+                    agentId,
+                  exceptionCode:
+                    null,
+                },
+              },
+            );
+          }
+
+          return updatedRequest;
+        },
+      );
+
+    await this.recordEvent(
+      "dispatch.accepted",
+      requestId,
+      {
+        agentId,
+      },
+    );
+
+    return this.toContract(
+      updated,
+    );
+  }
+
+  async reassign(
+    requestId: string,
+    reason: string,
+  ): Promise<DispatchRequest> {
+    const normalizedReason =
+      reason.trim();
+
+    if (!requestId.trim()) {
+      throw new Error(
+        "Dispatch request is required.",
+      );
+    }
+
+    if (!normalizedReason) {
+      throw new Error(
+        "Reassignment reason is required.",
+      );
+    }
+
+    const request =
+      await this.requireRequest(
+        requestId,
+      );
+
+    if (
+      request.status ===
+        "COMPLETED" ||
+      request.status ===
+        "CANCELLED" ||
+      request.status ===
+        "EXPIRED"
+    ) {
+      throw new Error(
+        "Dispatch request cannot be reassigned in its current state.",
+      );
+    }
+
+    const updated =
+      await prisma.$transaction(
+        async (database) => {
+          if (
+            request.serviceType ===
+              "DELIVERY" &&
+            request.acceptedAgentId
+          ) {
+            await database.deliveryAgent.updateMany(
+              {
+                where: {
+                  id:
+                    request.acceptedAgentId,
+                  organizationId:
+                    request.organizationId,
+                  availability:
+                    "BUSY",
+                },
+                data: {
+                  availability:
+                    "AVAILABLE",
+                },
+              },
+            );
+          }
+
+          if (
+            request.serviceType ===
+              "DELIVERY" &&
+            request.subjectType ===
+              "FULFILLMENT"
+          ) {
+            const fulfillment =
+              await database.fulfillmentRequest.findUnique(
+                {
+                  where: {
+                    id: request.subjectId,
+                  },
+                  select: {
+                    id: true,
+                    organizationId:
+                      true,
+                    status: true,
+                  },
+                },
+              );
+
+            if (!fulfillment) {
+              throw new Error(
+                "Fulfillment not found for delivery dispatch.",
+              );
+            }
+
+            if (
+              fulfillment.organizationId !==
+              request.organizationId
+            ) {
+              throw new Error(
+                "Fulfillment organization does not match dispatch organization.",
+              );
+            }
+
+            await database.fulfillmentAssignment.deleteMany(
+              {
+                where: {
+                  fulfillmentId:
+                    fulfillment.id,
+                },
+              },
+            );
+
+            if (
+              fulfillment.status !==
+                "COMPLETED" &&
+              fulfillment.status !==
+                "CANCELLED"
+            ) {
+              await database.fulfillmentRequest.update(
+                {
+                  where: {
+                    id: fulfillment.id,
+                  },
+                  data: {
+                    status:
+                      "REQUESTED",
+                    assignedAgentId:
+                      null,
+                    exceptionCode:
+                      null,
+                  },
+                },
+              );
+            }
+          }
+
+          const currentMetadata =
+            this.jsonRecord(
+              request.metadata,
+            );
+
+          return database.dispatchRequest.update(
+            {
               where: {
-                id: fulfillment.id,
+                id: requestId,
               },
               data: {
-                status: "REQUESTED",
-                assignedAgentId: null,
-                exceptionCode: null,
+                status:
+                  "REASSIGNING",
+                assignedAgentId:
+                  null,
+                acceptedAgentId:
+                  null,
+                metadata: {
+                  ...currentMetadata,
+                  reassignmentReason:
+                    normalizedReason,
+                  reassignedAt:
+                    new Date().toISOString(),
+                },
               },
-            });
-          }
-        }
-      }
-
-      return database.dispatchRequest.update({
-        where: {
-          id: requestId,
+            },
+          );
         },
-        data: {
-          status: "REASSIGNING",
-          assignedAgentId: null,
-          acceptedAgentId: null,
-          metadata: {
-            reassignmentReason: reason,
-          },
-        },
-      });
-    });
+      );
 
     await this.recordEvent(
       "dispatch.reassigned",
       requestId,
       {
-        reason,
+        reason:
+          normalizedReason,
+        previousAgentId:
+          request.acceptedAgentId ??
+          request.assignedAgentId ??
+          null,
       },
     );
 
-    return this.toContract(updated);
+    return this.toContract(
+      updated,
+    );
   }
 
   async complete(
     requestId: string,
   ): Promise<DispatchRequest> {
     const request =
-      await this.requireRequest(requestId);
+      await this.requireRequest(
+        requestId,
+      );
 
-    if (request.status !== "ACCEPTED") {
+    if (
+      request.status !==
+      "ACCEPTED"
+    ) {
       throw new Error(
         "Dispatch request cannot be completed in its current state.",
       );
     }
 
-    const updated = await prisma.$transaction(async (database) => {
-      const completed = await database.dispatchRequest.update({
-        where: { id: requestId },
-        data: { status: "COMPLETED" },
-      });
+    const updated =
+      await prisma.$transaction(
+        async (database) => {
+          const completed =
+            await database.dispatchRequest.update(
+              {
+                where: {
+                  id: requestId,
+                },
+                data: {
+                  status:
+                    "COMPLETED",
+                },
+              },
+            );
 
-      if (
-        request.serviceType === "DELIVERY" &&
-        request.acceptedAgentId
-      ) {
-        await database.deliveryAgent.updateMany({
-          where: {
-            id: request.acceptedAgentId,
-            organizationId: request.organizationId,
-            availability: "BUSY",
-          },
-          data: { availability: "AVAILABLE" },
-        });
-      }
+          if (
+            request.serviceType ===
+              "DELIVERY" &&
+            request.acceptedAgentId
+          ) {
+            await database.deliveryAgent.updateMany(
+              {
+                where: {
+                  id:
+                    request.acceptedAgentId,
+                  organizationId:
+                    request.organizationId,
+                  availability:
+                    "BUSY",
+                },
+                data: {
+                  availability:
+                    "AVAILABLE",
+                },
+              },
+            );
+          }
 
-      return completed;
-    });
+          return completed;
+        },
+      );
 
     await this.recordEvent(
       "dispatch.completed",
@@ -543,7 +750,9 @@ export class DispatchAdapter implements DispatchPort {
       {},
     );
 
-    return this.toContract(updated);
+    return this.toContract(
+      updated,
+    );
   }
 
   async cancel(
@@ -551,150 +760,201 @@ export class DispatchAdapter implements DispatchPort {
     reason?: string,
   ): Promise<DispatchRequest> {
     const request =
-      await this.requireRequest(requestId);
+      await this.requireRequest(
+        requestId,
+      );
 
     if (
-      request.status === "COMPLETED" ||
-      request.status === "CANCELLED"
+      request.status ===
+        "COMPLETED" ||
+      request.status ===
+        "CANCELLED"
     ) {
       throw new Error(
         "Dispatch request cannot be cancelled in its current state.",
       );
     }
 
-    const updated = await prisma.$transaction(async (database) => {
-      if (
-        request.serviceType === "DELIVERY" &&
-        request.acceptedAgentId
-      ) {
-        await database.deliveryAgent.updateMany({
-          where: {
-            id: request.acceptedAgentId,
-            organizationId: request.organizationId,
-            availability: "BUSY",
-          },
-          data: {
-            availability: "AVAILABLE",
-          },
-        });
-      }
+    const updated =
+      await prisma.$transaction(
+        async (database) => {
+          if (
+            request.serviceType ===
+              "DELIVERY" &&
+            request.acceptedAgentId
+          ) {
+            await database.deliveryAgent.updateMany(
+              {
+                where: {
+                  id:
+                    request.acceptedAgentId,
+                  organizationId:
+                    request.organizationId,
+                  availability:
+                    "BUSY",
+                },
+                data: {
+                  availability:
+                    "AVAILABLE",
+                },
+              },
+            );
+          }
 
-      return database.dispatchRequest.update({
-        where: {
-          id: requestId,
+          return database.dispatchRequest.update(
+            {
+              where: {
+                id: requestId,
+              },
+              data: {
+                status:
+                  "CANCELLED",
+                metadata:
+                  reason
+                    ? {
+                        cancellationReason:
+                          reason,
+                      }
+                    : undefined,
+              },
+            },
+          );
         },
-        data: {
-          status: "CANCELLED",
-          metadata: reason
-            ? {
-                cancellationReason: reason,
-              }
-            : undefined,
-        },
-      });
-    });
+      );
 
     await this.recordEvent(
       "dispatch.cancelled",
       requestId,
       {
-        reason: reason ?? null,
+        reason:
+          reason ?? null,
       },
     );
 
-    return this.toContract(updated);
+    return this.toContract(
+      updated,
+    );
   }
 
   async expire(
     requestId: string,
   ): Promise<DispatchRequest> {
     const request =
-      await this.requireRequest(requestId);
+      await this.requireRequest(
+        requestId,
+      );
 
     if (
-      request.status === "COMPLETED" ||
-      request.status === "CANCELLED"
+      request.status ===
+        "COMPLETED" ||
+      request.status ===
+        "CANCELLED"
     ) {
       throw new Error(
         "Dispatch request cannot expire in its current state.",
       );
     }
 
-    const updated = await prisma.$transaction(async (database) => {
-      if (
-        request.serviceType === "DELIVERY" &&
-        request.acceptedAgentId
-      ) {
-        await database.deliveryAgent.updateMany({
-          where: {
-            id: request.acceptedAgentId,
-            organizationId: request.organizationId,
-            availability: "BUSY",
-          },
-          data: {
-            availability: "AVAILABLE",
-          },
-        });
-      }
+    const updated =
+      await prisma.$transaction(
+        async (database) => {
+          if (
+            request.serviceType ===
+              "DELIVERY" &&
+            request.acceptedAgentId
+          ) {
+            await database.deliveryAgent.updateMany(
+              {
+                where: {
+                  id:
+                    request.acceptedAgentId,
+                  organizationId:
+                    request.organizationId,
+                  availability:
+                    "BUSY",
+                },
+                data: {
+                  availability:
+                    "AVAILABLE",
+                },
+              },
+            );
+          }
 
-      return database.dispatchRequest.update({
-        where: {
-          id: requestId,
+          return database.dispatchRequest.update(
+            {
+              where: {
+                id: requestId,
+              },
+              data: {
+                status:
+                  "EXPIRED",
+              },
+            },
+          );
         },
-        data: {
-          status: "EXPIRED",
-        },
-      });
-    });
+      );
 
-    return this.toContract(updated);
+    return this.toContract(
+      updated,
+    );
   }
 
   async setCandidates(
     requestId: string,
     candidates: DispatchCandidate[],
   ): Promise<DispatchRequest> {
-    await this.requireRequest(requestId);
+    await this.requireRequest(
+      requestId,
+    );
 
     const request =
       await prisma.$transaction(
         async (database) => {
-          await database.dispatchCandidate.deleteMany({
-            where: {
-              dispatchRequestId: requestId,
+          await database.dispatchCandidate.deleteMany(
+            {
+              where: {
+                dispatchRequestId:
+                  requestId,
+              },
             },
-          });
+          );
 
           if (candidates.length > 0) {
-            await database.dispatchCandidate.createMany({
-              data: candidates.map(
-                (candidate) => ({
-                  id: crypto.randomUUID(),
-                  dispatchRequestId:
-                    requestId,
-                  agentId:
-                    candidate.agentId,
-                  score:
-                    candidate.score,
-                  distanceMeters:
-                    candidate.distanceMeters,
-                  available:
-                    candidate.available,
-                  metadata:
-                    candidate.metadata as Prisma.InputJsonValue,
-                }),
-              ),
-            });
+            await database.dispatchCandidate.createMany(
+              {
+                data: candidates.map(
+                  (candidate) => ({
+                    id: crypto.randomUUID(),
+                    dispatchRequestId:
+                      requestId,
+                    agentId:
+                      candidate.agentId,
+                    score:
+                      candidate.score,
+                    distanceMeters:
+                      candidate.distanceMeters,
+                    available:
+                      candidate.available,
+                    metadata:
+                      candidate.metadata as Prisma.InputJsonValue,
+                  }),
+                ),
+              },
+            );
           }
 
-          return database.dispatchRequest.update({
-            where: {
-              id: requestId,
+          return database.dispatchRequest.update(
+            {
+              where: {
+                id: requestId,
+              },
+              data: {
+                status:
+                  "OFFERED",
+              },
             },
-            data: {
-              status: "OFFERED",
-            },
-          });
+          );
         },
       );
 
@@ -707,21 +967,27 @@ export class DispatchAdapter implements DispatchPort {
       },
     );
 
-    return this.toContract(request);
+    return this.toContract(
+      request,
+    );
   }
 
   async getRequest(
     requestId: string,
   ): Promise<DispatchRequest | null> {
     const request =
-      await prisma.dispatchRequest.findUnique({
-        where: {
-          id: requestId,
+      await prisma.dispatchRequest.findUnique(
+        {
+          where: {
+            id: requestId,
+          },
         },
-      });
+      );
 
     return request
-      ? this.toContract(request)
+      ? this.toContract(
+          request,
+        )
       : null;
   }
 
@@ -735,11 +1001,13 @@ export class DispatchAdapter implements DispatchPort {
     }
 
     const request =
-      await prisma.dispatchRequest.findUnique({
-        where: {
-          id: requestId,
+      await prisma.dispatchRequest.findUnique(
+        {
+          where: {
+            id: requestId,
+          },
         },
-      });
+      );
 
     if (!request) {
       throw new Error(
@@ -797,21 +1065,26 @@ export class DispatchAdapter implements DispatchPort {
       destinationLatitude: unknown;
       destinationLongitude: unknown;
       status: string;
-      candidatePolicyRef: string | null;
+      candidatePolicyRef:
+        string | null;
       createdAt: Date;
       updatedAt: Date;
     },
   ): DispatchRequest {
     const destination =
-      request.destinationLatitude !== null &&
-      request.destinationLongitude !== null
+      request.destinationLatitude !==
+        null &&
+      request.destinationLongitude !==
+        null
         ? {
-            latitude: Number(
-              request.destinationLatitude,
-            ),
-            longitude: Number(
-              request.destinationLongitude,
-            ),
+            latitude:
+              Number(
+                request.destinationLatitude,
+              ),
+            longitude:
+              Number(
+                request.destinationLongitude,
+              ),
           }
         : undefined;
 
@@ -832,12 +1105,14 @@ export class DispatchAdapter implements DispatchPort {
         type: request.subjectType,
       },
       origin: {
-        latitude: Number(
-          request.originLatitude,
-        ),
-        longitude: Number(
-          request.originLongitude,
-        ),
+        latitude:
+          Number(
+            request.originLatitude,
+          ),
+        longitude:
+          Number(
+            request.originLongitude,
+          ),
       },
       destination,
       candidatePolicyRef:
@@ -872,10 +1147,12 @@ export class DispatchAdapter implements DispatchPort {
       data: {
         eventKey:
           `${eventType}:${aggregateId}:${crypto.randomUUID()}`,
-        aggregateType: "DISPATCH",
+        aggregateType:
+          "DISPATCH",
         aggregateId,
         eventType,
-        payload: payload as Prisma.InputJsonValue,
+        payload:
+          payload as Prisma.InputJsonValue,
         status: "PENDING",
       },
     });
