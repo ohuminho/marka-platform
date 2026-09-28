@@ -178,7 +178,8 @@ export default function OrdersPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen space-y-8 p-8">
+        <RoleContextSummary />
         <section className="mb-10">
           <h1 className="text-4xl font-semibold">
             Orders
@@ -211,7 +212,8 @@ export default function OrdersPage() {
   }
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen space-y-8 p-8">
+      <RoleContextSummary />
       <section className="mb-10">
         <h1 className="text-4xl font-semibold">
           Orders
