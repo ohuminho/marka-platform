@@ -269,7 +269,8 @@ export default function Sidebar() {
       .map((section) => ({
         ...section,
         items: section.items.filter((item) => {
-          const permissions = "permissions" in item ? item.permissions : undefined;
+          const navigationItem = item as NavigationSection["items"][number];
+          const permissions = navigationItem.permissions;
 
           return (
             !permissions ||
