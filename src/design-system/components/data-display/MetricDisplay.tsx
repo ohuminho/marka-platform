@@ -9,7 +9,7 @@ export default function MetricDisplay({
 }: Props) {
   return (
     <div>
-      <p className="text-sm text-neutral-400">
+      <p className="text-sm text-[var(--theme-text-muted)]">
         {label}
       </p>
 
