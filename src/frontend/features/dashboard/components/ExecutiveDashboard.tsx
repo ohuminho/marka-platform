@@ -124,7 +124,10 @@ export default function ExecutiveDashboard() {
 
         <footer className="flex flex-col gap-2 border-t border-[var(--theme-border)] pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[9px] uppercase tracking-[0.28em] text-[var(--theme-text-faint)]">African born · Globally built</p>
-          <p className="text-[10px] text-[var(--theme-text-faint)]">MARKA Global Digital Economy</p>
+          <div className="flex flex-col gap-1 text-right">
+            <p className="text-[10px] text-[var(--theme-text-faint)]">MARKA Global Digital Economy</p>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Powered By Magestade Pura Digital</p>
+          </div>
         </footer>
       </div>
     </FadeIn>
