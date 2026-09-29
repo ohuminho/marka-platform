@@ -14,11 +14,12 @@ function AnalyticsContent() {
   const loading = vendorLoading || (vendorId !== null && !metrics);
 
   useEffect(() => {
-    if (vendorId === null) return;
+    const currentVendorId = vendorId;
+    if (currentVendorId === null) return;
     let cancelled = false;
     async function load() {
       try {
-        const response = await fetch("/api/vendors/" + vendorId + "/analytics", { credentials: "include", cache: "no-store" });
+        const response = await fetch("/api/vendors/" + currentVendorId + "/analytics", { credentials: "include", cache: "no-store" });
         if (!response.ok) throw new Error("Unable to load analytics");
         const data = (await response.json()) as Metrics;
         if (!cancelled) setMetrics(data);
