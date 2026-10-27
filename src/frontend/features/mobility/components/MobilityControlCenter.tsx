@@ -964,6 +964,7 @@ export default function MobilityControlCenter() {
         </div>
 
         <form
+          id="ride-request"
           onSubmit={createRide}
           className="
             rounded-[1.75rem]
