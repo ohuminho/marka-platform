@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import MobilityAdSlot from "@/frontend/features/mobility/components/MobilityAdSlot";
 
 const rideOptions = [
   {
@@ -176,9 +177,22 @@ export default function MobilityExperience() {
           <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">KYC, documentação do veículo, termos contratuais, suporte e registos devem fazer parte da operação real — não apenas da apresentação visual.</p>
           <Link href="/app/mobility/parceiros#processo" className="mt-5 inline-flex items-center text-sm font-semibold text-[var(--theme-text)]">Ver processo e lista de controlo <span aria-hidden="true" className="ml-2">→</span></Link>
         </div>
+        <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Equidade nas viagens</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Ouvir as duas partes. Decidir com provas.</h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">A reclamação de um passageiro ou de um motorista merece análise imparcial. A responsabilidade é individual e as medidas devem ser proporcionais à conduta e às evidências.</p>
+          <Link href="/app/mobility/justica" className="mt-5 inline-flex items-center text-sm font-semibold text-[var(--theme-text)]">Conhecer os princípios de justiça <span aria-hidden="true" className="ml-2">→</span></Link>
+        </div>
+        <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Preço transparente</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Poupar tem de ser real, não uma promessa vazia.</h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">A ambição da MARKA é apresentar tarifas competitivas e mostrar o valor antes da confirmação. Qualquer campanha de desconto — incluindo uma diferença de 1.000 Kz — deve ser aplicada e validada no sistema de preços antes de ser anunciada.</p>
+          <a href="#ride-request" className="mt-5 inline-flex items-center text-sm font-semibold text-[var(--theme-text)]">Consultar uma viagem <span aria-hidden="true" className="ml-2">→</span></a>
+        </div>
       </div>
+      <MobilityAdSlot />
       <p className="px-1 text-[10px] leading-5 text-[var(--theme-text-faint)]">
-        *A verificação e a disponibilidade dos serviços dependem do estado operacional real da plataforma.
+        *A verificação e a disponibilidade dos serviços dependem do estado operacional real da plataforma. A publicidade só aparece quando o AdSense está configurado e autorizado.
       </p>
     </section>
   );
