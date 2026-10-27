@@ -3,12 +3,13 @@
 import { usePlatformPreferences, type PlatformTheme } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
-const themes: { value: PlatformTheme; labelKey: "themeObsidian" | "themeGraphite" | "themeSilver" | "themeAurora" | "themePearl" }[] = [
-  { value: "obsidian", labelKey: "themeObsidian" },
-  { value: "graphite", labelKey: "themeGraphite" },
-  { value: "silver", labelKey: "themeSilver" },
-  { value: "aurora", labelKey: "themeAurora" },
-  { value: "pearl", labelKey: "themePearl" },
+const themes: { value: PlatformTheme; label: string; labelKey?: "themeObsidian" | "themeSilver" | "themePearl" }[] = [
+  { value: "obsidian", label: "Obsidian", labelKey: "themeObsidian" },
+  { value: "noir", label: "Noir" },
+  { value: "sable", label: "Sable" },
+  { value: "silver", label: "Silver", labelKey: "themeSilver" },
+  { value: "midnight", label: "Midnight" },
+  { value: "pearl", label: "Pérola", labelKey: "themePearl" },
 ];
 
 export default function ThemeSelector() {
@@ -23,7 +24,7 @@ export default function ThemeSelector() {
       </svg>
       <span className="sr-only">{t.theme}</span>
       <select aria-label={t.theme} value={theme} onChange={(event) => setTheme(event.target.value as PlatformTheme)} className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent text-[0px] outline-none">
-        {themes.map((item) => <option key={item.value} value={item.value}>{t[item.labelKey]}</option>)}
+        {themes.map((item) => <option key={item.value} value={item.value}>{item.labelKey ? t[item.labelKey] : item.label}</option>)}
       </select>
       <span className="pointer-events-none absolute -bottom-0.5 left-1/2 h-px w-2 -translate-x-1/2 bg-[var(--theme-accent)] opacity-0 transition-opacity group-focus-within:opacity-100" />
     </label>
