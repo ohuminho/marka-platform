@@ -79,3 +79,27 @@ assert.equal(disabled.discountMinor, BigInt(0));
 assert.equal(disabled.finalFareMinor, common.quotedFareMinor);
 
 console.log("Mobility promotion policy tests passed.");
+
+
+import { MobilityPricingService } from "../../../src/services/mobility/pricing/mobility-pricing.service";
+
+const integratedPricing = new MobilityPricingService().calculate({
+  currency: "AOA",
+  baseFareMinor: BigInt(500_000),
+  estimatedDistanceMeters: 12_000,
+  estimatedDurationSeconds: 1_800,
+  distanceRateMinorPerKm: BigInt(0),
+  durationRateMinorPerMinute: BigInt(0),
+  promotion: {
+    vehicle: "TAXI",
+    longDistanceThresholdMeters: 10_000,
+    isPeakHour: false,
+    minimumPayableFareMinor: BigInt(100_000),
+    availablePromotionBudgetMinor: BigInt(100_000),
+  },
+});
+
+assert.equal(integratedPricing.promotion?.discountMinor, BigInt(100_000));
+assert.equal(integratedPricing.totalMinor, BigInt(400_000));
+
+console.log("Mobility pricing integration tests passed.");
