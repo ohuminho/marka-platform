@@ -473,8 +473,12 @@ export class MobilityDispatchService {
 
     if (
       refreshed.status ===
-      MobilityRideStatus.DRIVER_ASSIGNED
+        MobilityRideStatus.DRIVER_ASSIGNED ||
+      refreshed.status ===
+        MobilityRideStatus.DRIVER_ARRIVING
     ) {
+      // Rejection can happen after the driver has already marked "arriving".
+      // Both pre-trip states must return to SEARCHING after releasing the claim.
       await mobilityRideService.startSearch(
         refreshed.id
       );
