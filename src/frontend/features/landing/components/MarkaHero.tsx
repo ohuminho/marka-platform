@@ -268,6 +268,31 @@ export default function MarkaHero() {
             >
               Explore the ecosystem
             </Link>
+
+            <Link
+              href="/advertise"
+              className="
+                inline-flex
+                h-14
+                min-w-52
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-[var(--theme-border)]
+                px-8
+                text-sm
+                font-medium
+                tracking-wide
+                text-[var(--theme-text)]/60
+                transition-all
+                duration-300
+                hover:border-white/25
+                hover:text-[var(--theme-text)]
+              "
+            >
+              Advertise with MARKA
+            </Link>
           </div>
 
           <div
