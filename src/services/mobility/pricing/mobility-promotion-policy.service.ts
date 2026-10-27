@@ -40,9 +40,9 @@ export function evaluateMobilityPromotion(
     !Number.isFinite(input.estimatedDistanceMeters) ||
     input.estimatedDistanceMeters < 0 ||
     !Number.isFinite(input.longDistanceThresholdMeters) ||
-    input.longDistanceThresholdMeters < 0
+    input.longDistanceThresholdMeters <= 0
   ) {
-    throw new Error("Promotion distance values must be valid non-negative numbers.");
+    throw new Error("Promotion distance must be non-negative and the long-distance threshold must be positive.");
   }
 
   if (
