@@ -794,6 +794,53 @@ export class MobilityDispatchService {
     ) {
       return;
     }
+
+    // Never detach a driver or vehicle from a trip that has already started.
+    // This method is only for releasing a pre-trip dispatch assignment.
+    if (
+      ride.status !== MobilityRideStatus.DRIVER_ASSIGNED &&
+      ride.status !== MobilityRideStatus.DRIVER_ARRIVING
+    ) {
+      throw new DispatchDomainError(
+        `Cannot release an assignment while ride is in status ${ride.status}.`,
+        "RIDE_ASSIGNMENT_NOT_RELEASABLE"
+      );
+    }
+
+    if (!ride.driverId || !ride.vehicleId) {
+      throw new DispatchDomainError(
+        "Ride has an incomplete driver/vehicle assignment.",
+        "RIDE_ASSIGNMENT_INCONSISTENT"
+      );
+    }
+
+    // Compare-and-set prevents a stale rejection/redispatch request from
+    // clearing an assignment that another request has already changed.
+    const released = await prisma.mobilityRide.updateMany({
+      where: {
+        id: ride.id,
+        status: {
+          in: [
+            MobilityRideStatus.DRIVER_ASSIGNED,
+            MobilityRideStatus.DRIVER_ARRIVING,
+          ],
+        },
+        driverId: ride.driverId,
+        vehicleId: ride.vehicleId,
+      },
+      data: {
+        driverId: null,
+        vehicleId: null,
+        driverAssignedAt: null,
+      },
+    });
+
+    if (released.count !== 1) {
+      throw new DispatchDomainError(
+        "Ride assignment changed before it could be released.",
+        "RIDE_ASSIGNMENT_CHANGED"
+      );
+    }
   }
 
   private async requireDispatchableRide(
