@@ -128,6 +128,9 @@ export default function MobilityExperience() {
               <Link href="/app/marketplace" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-medium text-white/80 transition hover:bg-white/[0.06]">
                 Explorar Marketplace
               </Link>
+              <Link href="/app/mobility/parceiros" className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#d8c18c]/35 px-6 py-3 text-sm font-medium text-[#e4d2a8] transition hover:bg-white/[0.06]">
+                Conduzir com a MARKA
+              </Link>
             </div>
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-[10px] uppercase tracking-[0.16em] text-white/45">
               <span>Mobilidade urbana</span>
@@ -159,6 +162,20 @@ export default function MobilityExperience() {
             <span aria-hidden="true" className="text-lg text-[var(--theme-text-faint)] transition group-hover:translate-x-1">→</span>
           </a>
         ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Para quem conduz</p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--theme-text)]">A sua experiência também merece uma plataforma melhor.</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Conheça o percurso de adesão, os documentos a preparar, a verificação de identidade e os pontos que devem constar no contrato antes de começar a aceitar viagens.</p>
+          <Link href="/app/mobility/parceiros" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--theme-text)] px-5 py-3 text-sm font-semibold text-[var(--theme-background)]">Centro de motoristas e parceiros <span aria-hidden="true" className="ml-2">→</span></Link>
+        </div>
+        <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Confiança e conformidade</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Segurança visível. Regras claras.</h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">KYC, documentação do veículo, termos contratuais, suporte e registos devem fazer parte da operação real — não apenas da apresentação visual.</p>
+          <Link href="/app/mobility/parceiros#processo" className="mt-5 inline-flex items-center text-sm font-semibold text-[var(--theme-text)]">Ver processo e lista de controlo <span aria-hidden="true" className="ml-2">→</span></Link>
+        </div>
       </div>
       <p className="px-1 text-[10px] leading-5 text-[var(--theme-text-faint)]">
         *A verificação e a disponibilidade dos serviços dependem do estado operacional real da plataforma.
