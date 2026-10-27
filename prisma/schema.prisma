@@ -317,6 +317,13 @@ enum MobilityRideStatus {
   DISPUTED
 }
 
+enum MobilityNextRideReservationStatus {
+  RESERVED
+  ACTIVATED
+  CANCELLED
+  EXPIRED
+}
+
 enum MobilityRideStopType {
   PICKUP
   STOP
@@ -449,6 +456,7 @@ model MobilityDriver {
   availability  MobilityDriverAvailability?
   location      MobilityLocation?
   ridesAsDriver MobilityRide[] @relation("MobilityRideDriver")
+  nextRideReservations MobilityNextRideReservation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -502,6 +510,7 @@ model MobilityVehicle {
   currentLocation MobilityLocation?
 
   rides MobilityRide[]
+  nextRideReservations MobilityNextRideReservation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -631,9 +640,11 @@ model MobilityRide {
   driver       MobilityDriver? @relation("MobilityRideDriver", fields: [driverId], references: [id])
   vehicle      MobilityVehicle? @relation(fields: [vehicleId], references: [id])
 
-  stops                MobilityRideStop[]
-  orchestration        MobilityRideOrchestration?
-  orchestrationEvents  MobilityRideOrchestrationEvent[]
+  stops                       MobilityRideStop[]
+  orchestration                MobilityRideOrchestration?
+  orchestrationEvents          MobilityRideOrchestrationEvent[]
+  nextRideReservationsAsCurrent MobilityNextRideReservation[] @relation("MobilityNextReservationCurrentRide")
+  nextRideReservation          MobilityNextRideReservation?   @relation("MobilityNextReservationNextRide")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -644,6 +655,35 @@ model MobilityRide {
   @@index([vehicleId])
   @@index([status])
   @@index([requestedAt])
+}
+
+model MobilityNextRideReservation {
+  id             String                            @id @default(uuid())
+  organizationId String
+  driverId       String
+  vehicleId      String
+  currentRideId  String
+  nextRideId     String                            @unique
+  status         MobilityNextRideReservationStatus @default(RESERVED)
+  expiresAt      DateTime
+  activatedAt    DateTime?
+  cancelledAt    DateTime?
+  metadata       Json?
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  driver       MobilityDriver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle      MobilityVehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  currentRide  MobilityRide   @relation("MobilityNextReservationCurrentRide", fields: [currentRideId], references: [id], onDelete: Cascade)
+  nextRide     MobilityRide   @relation("MobilityNextReservationNextRide", fields: [nextRideId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([driverId, status])
+  @@index([vehicleId, status])
+  @@index([currentRideId, status])
+  @@index([expiresAt])
 }
 
 model MobilityRideStop {
@@ -711,6 +751,7 @@ model Organization {
 
   mobilityOrchestrations      MobilityRideOrchestration[]
   mobilityOrchestrationEvents MobilityRideOrchestrationEvent[]
+  mobilityNextRideReservations MobilityNextRideReservation[]
 
   fulfillmentRequests FulfillmentRequest[]
   dispatchRequests    DispatchRequest[]
