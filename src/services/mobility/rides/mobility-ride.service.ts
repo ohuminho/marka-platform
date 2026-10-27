@@ -372,8 +372,18 @@ export class MobilityRideService {
         // Serialize claims for the same driver and vehicle. Without row locks,
         // two concurrent requests for different rides could both observe no
         // conflicting assignment and claim the same resources.
-        await tx.$queryRaw`SELECT "id" FROM "MobilityDriver" WHERE "id" = ${input.driverId} FOR UPDATE`;
-        await tx.$queryRaw`SELECT "id" FROM "MobilityVehicle" WHERE "id" = ${input.vehicleId} FOR UPDATE`;
+        await tx.$queryRaw`
+          SELECT "id"
+          FROM "MobilityDriver"
+          WHERE "id" = ${input.driverId}
+          FOR UPDATE
+        `;
+        await tx.$queryRaw`
+          SELECT "id"
+          FROM "MobilityVehicle"
+          WHERE "id" = ${input.vehicleId}
+          FOR UPDATE
+        `;
 
         const conflictingRide = await tx.mobilityRide.findFirst({
           where: {
