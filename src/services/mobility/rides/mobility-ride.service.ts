@@ -377,21 +377,39 @@ export class MobilityRideService {
           nextStatus
         );
 
-        return tx.mobilityRide.update({
+        // Compare-and-set: only one concurrent dispatcher can claim a ride.
+        // A transaction alone is not enough when two requests read the same prior status.
+        const claimed = await tx.mobilityRide.updateMany({
+          where: {
+            id: input.rideId,
+            status: {
+              in: [
+                MobilityRideStatus.MATCHED,
+                MobilityRideStatus.SEARCHING,
+              ],
+            },
+            driverId: null,
+            vehicleId: null,
+          },
+          data: {
+            driverId: input.driverId,
+            vehicleId: input.vehicleId,
+            status: nextStatus,
+            driverAssignedAt: new Date(),
+          },
+        });
+
+        if (claimed.count !== 1) {
+          throw new MobilityDomainError(
+            "This ride has already been claimed or is no longer available.",
+            "RIDE_ALREADY_CLAIMED"
+          );
+        }
+
+        return tx.mobilityRide.findUniqueOrThrow({
           where: {
             id: input.rideId,
           },
-
-          data: {
-            driverId:
-              input.driverId,
-            vehicleId:
-              input.vehicleId,
-            status: nextStatus,
-            driverAssignedAt:
-              new Date(),
-          },
-
           include: {
             stops: {
               orderBy: {
