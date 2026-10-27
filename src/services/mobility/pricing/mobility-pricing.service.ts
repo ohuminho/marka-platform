@@ -113,6 +113,10 @@ export class MobilityPricingService {
       totalMinor = input.minimumFareMinor;
     }
 
+    if (input.promotion && input.currency !== "AOA") {
+      throw new Error("MARKA Mobility promotions are currently defined in AOA only.");
+    }
+
     const promotion = input.promotion
       ? evaluateMobilityPromotion({
           vehicle: input.promotion.vehicle,
