@@ -1,3 +1,9 @@
+import {
+  evaluateMobilityPromotion,
+  type MobilityPromotionResult,
+  type MobilityPromotionVehicle,
+} from "./mobility-promotion-policy.service";
+
 export interface MobilityPricingInput {
   currency: string;
 
@@ -14,6 +20,14 @@ export interface MobilityPricingInput {
   surgeMultiplierBps?: number;
 
   metadata?: Record<string, unknown>;
+  promotion?: {
+    vehicle: MobilityPromotionVehicle;
+    longDistanceThresholdMeters: number;
+    isPeakHour: boolean;
+    minimumPayableFareMinor: bigint;
+    availablePromotionBudgetMinor: bigint;
+    enabled?: boolean;
+  };
 }
 
 export interface MobilityPriceBreakdown {
@@ -32,6 +46,7 @@ export interface MobilityPriceBreakdown {
   surgeMultiplierBps: number;
 
   metadata?: Record<string, unknown>;
+  promotion?: MobilityPromotionResult;
 }
 
 const BPS_TOTAL = 10_000;
@@ -98,6 +113,26 @@ export class MobilityPricingService {
       totalMinor = input.minimumFareMinor;
     }
 
+    const promotion = input.promotion
+      ? evaluateMobilityPromotion({
+          vehicle: input.promotion.vehicle,
+          estimatedDistanceMeters: input.estimatedDistanceMeters,
+          longDistanceThresholdMeters:
+            input.promotion.longDistanceThresholdMeters,
+          isPeakHour: input.promotion.isPeakHour,
+          quotedFareMinor: totalMinor,
+          minimumPayableFareMinor:
+            input.promotion.minimumPayableFareMinor,
+          availablePromotionBudgetMinor:
+            input.promotion.availablePromotionBudgetMinor,
+          enabled: input.promotion.enabled,
+        })
+      : undefined;
+
+    if (promotion) {
+      totalMinor = promotion.finalFareMinor;
+    }
+
     return {
       currency: input.currency,
       baseFareMinor: input.baseFareMinor,
@@ -113,6 +148,7 @@ export class MobilityPricingService {
         input.estimatedDurationSeconds,
       surgeMultiplierBps,
       metadata: input.metadata,
+      promotion,
     };
   }
 
