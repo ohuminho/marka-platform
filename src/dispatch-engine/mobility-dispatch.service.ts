@@ -845,6 +845,23 @@ export class MobilityDispatchService {
         "RIDE_ASSIGNMENT_CHANGED"
       );
     }
+
+    // Restore availability only for a pre-trip assignment. Do not clear ON_TRIP
+    // here: the status guard above prevents releasing a trip already in progress.
+    await prisma.mobilityDriverAvailability.updateMany({
+      where: {
+        driverId: ride.driverId,
+        status: {
+          in: [
+            MobilityAvailabilityStatus.BUSY,
+            MobilityAvailabilityStatus.AVAILABLE,
+          ],
+        },
+      },
+      data: {
+        status: MobilityAvailabilityStatus.AVAILABLE,
+      },
+    });
   }
 
   private async requireDispatchableRide(
