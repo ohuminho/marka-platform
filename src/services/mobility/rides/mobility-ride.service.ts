@@ -1,4 +1,5 @@
 import {
+  MobilityAvailabilityStatus,
   MobilityRideStatus,
   Prisma,
 } from "@prisma/client";
@@ -455,6 +456,26 @@ export class MobilityRideService {
           );
         }
 
+        // Keep dispatch candidate selection in sync with the atomic ride claim.
+        // A BUSY driver should not continue appearing as AVAILABLE to dispatch.
+        const availabilityClaimed =
+          await tx.mobilityDriverAvailability.updateMany({
+            where: {
+              driverId: input.driverId,
+              status: MobilityAvailabilityStatus.AVAILABLE,
+            },
+            data: {
+              status: MobilityAvailabilityStatus.BUSY,
+            },
+          });
+
+        if (availabilityClaimed.count !== 1) {
+          throw new MobilityDomainError(
+            "Driver availability changed before assignment could be claimed.",
+            "DRIVER_AVAILABILITY_CHANGED"
+          );
+        }
+
         return tx.mobilityRide.findUniqueOrThrow({
           where: {
             id: input.rideId,
@@ -798,6 +819,51 @@ export class MobilityRideService {
           ride.status,
           nextStatus
         );
+
+        if (ride.driverId) {
+          if (
+            nextStatus === MobilityRideStatus.TRIP_STARTED ||
+            nextStatus === MobilityRideStatus.TRIP_IN_PROGRESS
+          ) {
+            await tx.mobilityDriverAvailability.updateMany({
+              where: {
+                driverId: ride.driverId,
+                status: {
+                  in: [
+                    MobilityAvailabilityStatus.AVAILABLE,
+                    MobilityAvailabilityStatus.BUSY,
+                    MobilityAvailabilityStatus.ON_TRIP,
+                  ],
+                },
+              },
+              data: {
+                status: MobilityAvailabilityStatus.ON_TRIP,
+              },
+            });
+          } else if (
+            nextStatus === MobilityRideStatus.TRIP_COMPLETED ||
+            nextStatus === MobilityRideStatus.CANCELLED ||
+            nextStatus === MobilityRideStatus.EXPIRED ||
+            nextStatus === MobilityRideStatus.NO_DRIVER_FOUND ||
+            nextStatus === MobilityRideStatus.FAILED ||
+            nextStatus === MobilityRideStatus.DISPUTED
+          ) {
+            await tx.mobilityDriverAvailability.updateMany({
+              where: {
+                driverId: ride.driverId,
+                status: {
+                  in: [
+                    MobilityAvailabilityStatus.BUSY,
+                    MobilityAvailabilityStatus.ON_TRIP,
+                  ],
+                },
+              },
+              data: {
+                status: MobilityAvailabilityStatus.AVAILABLE,
+              },
+            });
+          }
+        }
 
         return tx.mobilityRide.update({
           where: {
