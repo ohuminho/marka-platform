@@ -83,7 +83,9 @@ export default function CartPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/cart", {
+      const storeId = new URLSearchParams(window.location.search).get("storeId");
+      const cartUrl = storeId ? `/api/cart?storeId=${encodeURIComponent(storeId)}` : "/api/cart";
+      const response = await fetch(cartUrl, {
         method: "GET",
         credentials: "include",
         cache: "no-store",
