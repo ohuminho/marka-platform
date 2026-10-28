@@ -3,7 +3,8 @@ import type { AdvertisementPlacement, MobilityAdContext } from "./ad.types";
 /**
  * Central UX guard for MARKA advertising.
  * Suppresses ads during critical mobility actions and checkout/payment flows.
- * This is a client-side presentation guard, not an authorization or billing control.
+ * Mobility is deliberately fail-closed: unknown trip/navigation/safety state
+ * must never be interpreted as permission to display an ad.
  */
 export function canShowAdvertisement(
   placement: AdvertisementPlacement,
@@ -16,15 +17,16 @@ export function canShowAdvertisement(
 
   if (placement === "mobility_trip") {
     if (context.rideStatus !== "TRIP_IN_PROGRESS") return false;
-    if (context.isNearDestination || context.isNavigationActive) return false;
-    if (context.isPaymentFlowActive || context.isSafetyFlowActive) return false;
+    if (context.isNearDestination !== false) return false;
+    if (context.isNavigationActive !== false) return false;
+    if (context.isPaymentFlowActive !== false) return false;
+    if (context.isSafetyFlowActive !== false) return false;
+    if (context.tripStartedAt == null || !Number.isFinite(context.tripStartedAt)) return false;
+    if (now - context.tripStartedAt < 90_000) return false;
     if (
       context.lastAdDismissedAt != null &&
       now - context.lastAdDismissedAt < AD_UX_LIMITS.mobilityMinimumSecondsBetweenAds * 1000
     ) {
-      return false;
-    }
-    if (context.tripStartedAt != null && now - context.tripStartedAt < 90_000) {
       return false;
     }
     return true;
