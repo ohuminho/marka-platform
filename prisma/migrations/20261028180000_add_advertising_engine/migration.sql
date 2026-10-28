@@ -1,8 +1,19 @@
-CREATE TYPE "AdvertisementCampaignStatus" AS ENUM ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PAUSED', 'REJECTED', 'ENDED');
-CREATE TYPE "AdvertisementPlacement" AS ENUM ('MOBILITY_TRIP', 'MARKETPLACE_FEED', 'MARKETPLACE_PRODUCT', 'COMMUNITY_FEED');
-CREATE TYPE "AdvertisementCreativeType" AS ENUM ('IMAGE', 'VIDEO', 'NATIVE');
+DO $$ BEGIN
+  CREATE TYPE "AdvertisementCampaignStatus" AS ENUM ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PAUSED', 'REJECTED', 'ENDED');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE "AdvertisementCampaign" (
+DO $$ BEGIN
+  CREATE TYPE "AdvertisementPlacement" AS ENUM ('MOBILITY_TRIP', 'MARKETPLACE_FEED', 'MARKETPLACE_PRODUCT', 'COMMUNITY_FEED');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE "AdvertisementCreativeType" AS ENUM ('IMAGE', 'VIDEO', 'NATIVE');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS "AdvertisementCampaign" (
   "id" TEXT NOT NULL,
   "advertiserName" TEXT NOT NULL,
   "headline" TEXT NOT NULL,
@@ -26,9 +37,10 @@ CREATE TABLE "AdvertisementCampaign" (
   CONSTRAINT "AdvertisementCampaign_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "AdvertisementCampaign_placement_status_startsAt_endsAt_idx"
+CREATE INDEX IF NOT EXISTS "AdvertisementCampaign_placement_status_startsAt_endsAt_idx"
 ON "AdvertisementCampaign"("placement", "status", "startsAt", "endsAt");
-CREATE INDEX "AdvertisementCampaign_status_createdAt_idx"
+
+CREATE INDEX IF NOT EXISTS "AdvertisementCampaign_status_createdAt_idx"
 ON "AdvertisementCampaign"("status", "createdAt");
 
 -- Campaigns are managed through the trusted server API, not public Supabase client access.
