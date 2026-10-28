@@ -5,7 +5,7 @@ import {
   useState,
 } from "react";
 
-import ProductCard from "./ProductCard";
+import ProductCard from "./ProductCard";\nimport SponsoredAdCard from "@/frontend/features/ads/components/SponsoredAdCard";\nimport type { Advertisement } from "@/monetization/ads/ad.types";
 import MarketplaceSearch from "./MarketplaceSearch";
 import MarketplaceFilters from "./MarketplaceFilters";
 import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
