@@ -6,7 +6,7 @@ import type {
   AdvertisementPlacement,
   MobilityAdContext,
 } from "@/monetization/ads/ad.types";
-import { canShowAdvertisement } from "@/monetization/ads/ad-policy";
+import { AD_UX_LIMITS, canShowAdvertisement } from "@/monetization/ads/ad-policy";
 
 type SponsoredAdCardProps = {
   advertisement: Advertisement;
@@ -23,7 +23,11 @@ export default function SponsoredAdCard({
 }: SponsoredAdCardProps) {
   const [dismissed, setDismissed] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const impressionSent = useRef(false);
+  const maxVideoSeconds = placement === "mobility_trip"
+    ? AD_UX_LIMITS.mobilityVideoMaxSeconds
+    : AD_UX_LIMITS.marketplaceVideoMaxSeconds;
 
   useEffect(() => {
     const node = cardRef.current;
@@ -109,6 +113,7 @@ export default function SponsoredAdCard({
 
       {creative && advertisement.creativeType === "video" ? (
         <video
+          ref={videoRef}
           className="block max-h-44 w-full bg-black object-cover sm:max-h-52"
           src={creative}
           poster={advertisement.thumbnailUrl}
@@ -119,12 +124,19 @@ export default function SponsoredAdCard({
           controls
           preload="metadata"
           aria-label={advertisement.headline || "Vídeo patrocinado"}
+          onTimeUpdate={() => {
+            const video = videoRef.current;
+            if (video && video.currentTime >= maxVideoSeconds) {
+              video.pause();
+              video.currentTime = maxVideoSeconds;
+            }
+          }}
         />
       ) : creative ? (
         <img
           src={creative}
           alt={advertisement.headline || "Imagem patrocinada"}
-          className="block max-h-44 w-full object-cover sm:max-h-52"
+          className="block max-h-44 w-full object-cover"
           loading="lazy"
         />
       ) : null}
