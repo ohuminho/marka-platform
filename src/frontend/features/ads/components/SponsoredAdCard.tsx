@@ -128,14 +128,14 @@ export default function SponsoredAdCard({
             </span>
           )}
         </div>
-        <button
+        {!driverSafe && <button
           type="button"
           onClick={dismiss}
           aria-label="Ocultar publicidade"
           className="shrink-0 rounded-full px-2.5 py-1 text-xs text-[var(--theme-text-muted)] transition hover:bg-[var(--theme-background)]"
         >
           Ocultar
-        </button>
+        </button>}
       </div>
 
       {creative && advertisement.creativeType === "video" && !driverSafe ? (
