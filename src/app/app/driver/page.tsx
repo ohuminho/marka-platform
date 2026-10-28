@@ -2,6 +2,7 @@ import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 import MobilityActiveTripExperience from "@/frontend/features/mobility/components/MobilityActiveTripExperience";
+import DriverTripHistory from "@/frontend/features/mobility/components/DriverTripHistory";
 
 export default function DriverPage() {
   return (
@@ -20,6 +21,7 @@ export default function DriverPage() {
               <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)]/40 p-4"><p className="text-[9px] uppercase tracking-[.18em] text-[var(--theme-text-faint)]">Prioridade</p><p className="mt-2 text-sm font-medium text-[var(--theme-text)]">Segurança e confiança</p></div>
             </div>
           </section>
+          <DriverTripHistory />
         </main>
       </AppShell>
     </DynamicBackground>
