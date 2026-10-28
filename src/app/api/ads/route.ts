@@ -11,6 +11,16 @@ const placementMap = {
   community_feed: "COMMUNITY_FEED",
 } as const;
 
+function safeHttpUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function isPlacement(value: string | null): value is AdvertisementPlacement {
   return value === "mobility_trip" ||
     value === "marketplace_feed" ||
@@ -67,9 +77,14 @@ export async function GET(request: Request) {
       },
     });
 
-    const eligibleCampaigns = campaigns.filter((campaign) =>
-      campaign.maxImpressions === null || campaign.impressions < campaign.maxImpressions
-    );
+    const eligibleCampaigns = campaigns.filter((campaign) => {
+      const hasRemainingInventory =
+        campaign.maxImpressions === null || campaign.impressions < campaign.maxImpressions;
+      const hasSafeCreative =
+        campaign.creativeType === "NATIVE" ||
+        safeHttpUrl(campaign.creativeUrl) !== null;
+      return hasRemainingInventory && hasSafeCreative;
+    });
 
     return NextResponse.json(
       {
@@ -85,9 +100,9 @@ export async function GET(request: Request) {
           headline: campaign.headline,
           description: campaign.description,
           creativeType: campaign.creativeType.toLowerCase(),
-          creativeUrl: campaign.creativeUrl,
-          thumbnailUrl: campaign.thumbnailUrl,
-          destinationUrl: campaign.destinationUrl,
+          creativeUrl: safeHttpUrl(campaign.creativeUrl),
+          thumbnailUrl: safeHttpUrl(campaign.thumbnailUrl),
+          destinationUrl: safeHttpUrl(campaign.destinationUrl),
           startsAt: campaign.startsAt?.toISOString(),
           endsAt: campaign.endsAt?.toISOString(),
           status: campaign.status,
