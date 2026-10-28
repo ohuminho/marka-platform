@@ -39,10 +39,7 @@ export default function MobilityExperience() {
         <div className="z-10 px-6 pb-2 pt-8 sm:px-10 lg:py-12">
           <BrandMark />
           <p className="mt-5 text-center text-lg leading-7 text-white/85 sm:text-xl">Mais do que uma viagem.<br/><span className="text-[#e9bd58]">É uma experiência.</span></p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <Link href="/app/sign-in" className="flex min-h-12 items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] px-6 font-bold text-[#17130a] shadow-[0_4px_24px_rgba(233,189,88,.2)]">Entrar</Link>
-            <Link href="/app/sign-up" className="flex min-h-12 items-center justify-center rounded-full border border-[#e9bd58]/80 bg-black/60 px-6 font-semibold text-white">Criar conta</Link>
-          </div>
+          <a href="#ride-request" className="mt-7 flex min-h-12 items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] px-6 font-bold text-[#17130a] shadow-[0_4px_24px_rgba(233,189,88,.2)]">Pedir uma viagem　›</a>
           <p className="mt-4 text-center text-[10px] tracking-wide text-white/45">MARKA · Mais que uma viagem</p>
         </div>
         <div className="relative min-h-[260px] overflow-hidden sm:min-h-[360px] lg:min-h-[480px]">
