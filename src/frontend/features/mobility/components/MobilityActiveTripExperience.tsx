@@ -15,7 +15,7 @@ type Ride = {
   driver?: { user?: { name?: string | null } | null; location?: { latitude?: number | string | null; longitude?: number | string | null; lat?: number | string | null; lng?: number | string | null } | null } | null;
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
 };
-type RidePayload = { ride?: Ride | null; orchestration?: { currentStep?: string | null } | null; message?: string };
+type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP" | "BEGIN_TRIP_PROGRESS";\ntype RidePayload = { ride?: Ride | null; orchestration?: { currentStep?: string | null } | null; message?: string };
 const ACTIVE = ["REQUESTED", "SEARCHING", "MATCHED", "DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"];
 const STATUS: Record<string, string> = {
   REQUESTED: "Pedido recebido", SEARCHING: "A encontrar motorista", MATCHED: "Motorista identificado",
@@ -38,7 +38,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adsEnabled, setAdsEnabled] = useState(true);
-  const [lastAdDismissedAt, setLastAdDismissedAt] = useState<number | null>(null);
+  const [lastAdDismissedAt, setLastAdDismissedAt] = useState<number | null>(null);\n  const [actionLoading, setActionLoading] = useState(false);\n  const [actionError, setActionError] = useState<string | null>(null);
   const organizationId = activeOrganization?.id;
 
   const refresh = useCallback(async () => {
@@ -77,7 +77,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     isNavigationActive: false, isPaymentFlowActive: !inProgress, isSafetyFlowActive: !inProgress,
     lastAdDismissedAt,
   };
-  const active = Boolean(ride && ACTIVE.includes(ride.status));
+  const active = Boolean(ride && ACTIVE.includes(ride.status));\n  const driverAction = useMemo(() => {\n    if (audience !== "driver") return null;\n    const step = payload?.orchestration?.currentStep;\n    const actions: Record<string, { action: RideAction; label: string }> = {\n      DRIVER_ASSIGNED: { action: "ACCEPT", label: "Aceitar viagem" },\n      DRIVER_ACCEPTED: { action: "DRIVER_ARRIVING", label: "Iniciar deslocação para recolha" },\n      DRIVER_ARRIVING: { action: "DRIVER_ARRIVED", label: "Confirmar chegada" },\n      DRIVER_ARRIVED: { action: "START_TRIP", label: "Iniciar viagem" },\n      TRIP_STARTED: { action: "BEGIN_TRIP_PROGRESS", label: "Confirmar passageiro a bordo e iniciar percurso" },\n    };\n    return step ? actions[step] ?? null : null;\n  }, [audience, payload?.orchestration?.currentStep]);\n\n  const performDriverAction = async () => {\n    if (!ride || !organizationId || !driverAction || actionLoading) return;\n    setActionLoading(true); setActionError(null);\n    try {\n      const response = await fetch("/api/mobility/rides/" + encodeURIComponent(ride.id), {\n        method: "PATCH", credentials: "include",\n        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": "marka-driver-" + ride.id + "-" + driverAction.action + "-" + Date.now() },\n        body: JSON.stringify({ action: driverAction.action, safetyMode: "STANDARD" }),\n      });\n      const data = (await response.json()) as RidePayload;\n      if (!response.ok) throw new Error(data.message || "Não foi possível atualizar o estado da viagem.");\n      setPayload(data);\n      await refresh();\n    } catch (e) { setActionError(e instanceof Error ? e.message : "Falha ao atualizar a viagem."); }\n    finally { setActionLoading(false); }\n  };
 
   return <section className="overflow-hidden rounded-[2rem] border border-[#d8b35a]/25 bg-[#080a0e] text-white shadow-[0_28px_90px_rgba(0,0,0,.28)]">
     <header className="relative border-b border-white/[.08] px-5 py-6 sm:px-8">
@@ -104,7 +104,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
             {ride.vehicle && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Veículo</p><p className="mt-1 text-sm text-white/80">{[ride.vehicle.make, ride.vehicle.model].filter(Boolean).join(" ") || "Veículo atribuído"}</p></div>}
             {ride.vehicle && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Matrícula</p><p className="mt-1 text-sm text-white/80">{ride.vehicle.plateNumber || ride.vehicle.registrationNumber || "Confirmada na viagem"}</p></div>}
           </div>
-          <p className="mt-5 rounded-xl border border-white/[.08] bg-black/20 px-4 py-3 text-[11px] leading-5 text-white/45">Segurança e atenção à estrada têm prioridade. A publicidade é ocultada se o estado da viagem, a localização ou a proximidade do destino não permitirem uma apresentação segura.</p>
+          <p className="mt-5 rounded-xl border border-white/[.08] bg-black/20 px-4 py-3 text-[11px] leading-5 text-white/45">Segurança e atenção à estrada têm prioridade. A publicidade é ocultada se o estado da viagem, a localização ou a proximidade do destino não permitirem uma apresentação segura.</p>\n          {audience === "driver" && driverAction && <div className="mt-5 border-t border-white/[.08] pt-5"><button type="button" disabled={actionLoading} onClick={() => void performDriverAction()} className="flex min-h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] px-5 py-3 text-center text-xs font-bold text-[#17130a] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-60">{actionLoading ? "A atualizar viagem…" : driverAction.label + " →"}</button>{actionError && <p role="alert" className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/[.05] p-3 text-xs text-rose-100">{actionError}</p>}</div>}
         </div>}
       </div>
       <aside className="space-y-3">
