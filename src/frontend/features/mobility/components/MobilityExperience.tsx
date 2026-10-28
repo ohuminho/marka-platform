@@ -117,7 +117,17 @@ export default function MobilityExperience() {
         </div>
         <div aria-label="Experiências MARKA. Deslize horizontalmente para mudar de painel." className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3 [scrollbar-width:thin]">
           <a href="/app/marketplace" className="group relative min-h-[255px] min-w-[86%] snap-center overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#171814] p-6 text-white sm:min-w-[48%] sm:p-8 lg:min-w-[32%]">
-            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_90%_10%,rgba(216,193,140,0.26),transparent_45%),linear-gradient(145deg,transparent,rgba(0,0,0,0.6))]" />
+            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_90%_10%,rgba(216,193,140,0.30),transparent_45%),linear-gradient(145deg,transparent,rgba(0,0,0,0.72))]" />
+            <div aria-hidden="true" className="pointer-events-none absolute -right-4 bottom-0 h-44 w-44 opacity-90 transition duration-500 group-hover:scale-105 sm:h-52 sm:w-52">
+              <svg viewBox="0 0 220 220" className="h-full w-full" fill="none">
+                <circle cx="120" cy="110" r="83" stroke="#d8c18c" strokeOpacity=".18" />
+                <circle cx="120" cy="110" r="61" stroke="#d8c18c" strokeOpacity=".14" />
+                <path d="M73 75h68l19 23v58H73z" fill="#d8c18c" fillOpacity=".10" stroke="#d8c18c" strokeOpacity=".75" strokeWidth="1.5"/>
+                <path d="M86 75V60h42v15M73 99h87M107 99v57" stroke="#e9d7a8" strokeWidth="1.5" strokeOpacity=".85"/>
+                <path d="M94 112h23m-23 10h32m-32 10h19" stroke="#e9d7a8" strokeWidth="2" strokeLinecap="round" strokeOpacity=".65"/>
+                <path d="M146 55l7 7 14-17" stroke="#e9d7a8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
             <div className="relative flex h-full min-h-[205px] flex-col">
               <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#d8c18c]">01 / Marketplace</span>
               <h3 className="mt-5 max-w-xs text-3xl font-semibold leading-tight tracking-[-0.04em]">Descubra. Compare. Escolha.</h3>
@@ -126,7 +136,19 @@ export default function MobilityExperience() {
             </div>
           </a>
           <a href="#ride-request" className="group relative min-h-[255px] min-w-[86%] snap-center overflow-hidden rounded-[1.8rem] border border-[#d8c18c]/35 bg-[#10110f] p-6 text-white shadow-[0_20px_60px_rgba(0,0,0,0.16)] sm:min-w-[48%] sm:p-8 lg:min-w-[32%]">
-            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_15%,rgba(216,193,140,0.25),transparent_45%)]" />
+            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_15%,rgba(216,193,140,0.30),transparent_45%),linear-gradient(150deg,transparent_30%,rgba(0,0,0,0.52))]" />
+            <div aria-hidden="true" className="pointer-events-none absolute -right-5 bottom-0 h-44 w-64 opacity-90 transition duration-500 group-hover:translate-x-1 sm:h-52 sm:w-72">
+              <svg viewBox="0 0 300 190" className="h-full w-full" fill="none">
+                <ellipse cx="158" cy="151" rx="116" ry="12" fill="#000" fillOpacity=".32"/>
+                <path d="M36 124l17-34c5-10 14-17 25-19l43-6 34-31c7-6 15-9 24-9h29c13 0 23 6 31 16l24 32 18 10c8 5 13 12 13 22v21c0 7-6 13-13 13H43c-9 0-13-8-7-15z" fill="#d8d9d5" fillOpacity=".16" stroke="#e8d7ad" strokeOpacity=".9" strokeWidth="1.5"/>
+                <path d="M91 70l15-22 35-4-2 27zM150 44l25-23h22l18 47h-65zM220 22h7c9 0 15 5 21 13l17 26h-33z" fill="#101719" stroke="#e8d7ad" strokeOpacity=".48"/>
+                <path d="M140 45v26m67-49l6 47" stroke="#e8d7ad" strokeOpacity=".5"/>
+                <rect x="157" y="77" width="58" height="18" rx="4" fill="#d8c18c"/>
+                <text x="186" y="89" textAnchor="middle" fontSize="8" fontWeight="700" letterSpacing="1.5" fill="#171814">MARKA</text>
+                <circle cx="82" cy="132" r="22" fill="#111" stroke="#777b76" strokeWidth="2"/><circle cx="82" cy="132" r="12" fill="#c4c6bf"/><circle cx="82" cy="132" r="5" fill="#505552"/>
+                <circle cx="250" cy="132" r="22" fill="#111" stroke="#777b76" strokeWidth="2"/><circle cx="250" cy="132" r="12" fill="#c4c6bf"/><circle cx="250" cy="132" r="5" fill="#505552"/>
+              </svg>
+            </div>
             <div className="relative flex h-full min-h-[205px] flex-col">
               <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#d8c18c]">02 / Mobility</span>
               <h3 className="mt-5 max-w-xs text-3xl font-semibold leading-tight tracking-[-0.04em]">A cidade. O seu ritmo.</h3>
@@ -135,7 +157,20 @@ export default function MobilityExperience() {
             </div>
           </a>
           <a href="/app/mobility/parceiros" className="group relative min-h-[255px] min-w-[86%] snap-center overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#20211d] p-6 text-white sm:min-w-[48%] sm:p-8 lg:min-w-[32%]">
-            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_85%_10%,rgba(255,255,255,0.12),transparent_42%),linear-gradient(145deg,transparent,rgba(0,0,0,0.45))]" />
+            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_85%_10%,rgba(255,255,255,0.14),transparent_42%),linear-gradient(145deg,transparent,rgba(0,0,0,0.62))]" />
+            <div aria-hidden="true" className="pointer-events-none absolute -right-3 bottom-0 h-44 w-52 opacity-85 transition duration-500 group-hover:scale-105 sm:h-52 sm:w-60">
+              <svg viewBox="0 0 240 210" className="h-full w-full" fill="none">
+                <circle cx="126" cy="105" r="86" stroke="#e4e5df" strokeOpacity=".12"/>
+                <circle cx="126" cy="105" r="64" stroke="#e4e5df" strokeOpacity=".10"/>
+                <path d="M38 148V86a9 9 0 0 1 9-9h143a9 9 0 0 1 9 9v62" stroke="#d8c18c" strokeOpacity=".72" strokeWidth="1.5"/>
+                <path d="M27 148h174v12H27z" fill="#d8c18c" fillOpacity=".13" stroke="#d8c18c" strokeOpacity=".72"/>
+                <path d="M56 77V61h42v16M118 77V48h42v29" stroke="#e4e5df" strokeOpacity=".7" strokeWidth="1.5"/>
+                <rect x="50" y="94" width="37" height="31" rx="3" fill="#d8c18c" fillOpacity=".13" stroke="#d8c18c" strokeOpacity=".7"/>
+                <rect x="101" y="94" width="37" height="31" rx="3" fill="#d8c18c" fillOpacity=".13" stroke="#d8c18c" strokeOpacity=".7"/>
+                <rect x="152" y="94" width="29" height="54" rx="3" fill="#d8c18c" fillOpacity=".18" stroke="#d8c18c" strokeOpacity=".7"/>
+                <path d="M60 108h17m-17 7h12m40-7h17m-17 7h12" stroke="#e9d7a8" strokeOpacity=".8" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
             <div className="relative flex h-full min-h-[205px] flex-col">
               <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/50">03 / MARKA Business</span>
               <h3 className="mt-5 max-w-xs text-3xl font-semibold leading-tight tracking-[-0.04em]">Cresça connosco.</h3>
