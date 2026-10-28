@@ -4,15 +4,26 @@ import { z } from "zod";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 
+const safeHttpUrl = z.string().url().max(2000).refine((value) => {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}, "Apenas URLs HTTP ou HTTPS são permitidos.");
+
+const optionalSafeHttpUrl = safeHttpUrl.optional().or(z.literal(""));
+
 const createSchema = z.object({
   advertiserName: z.string().trim().min(2).max(120),
   headline: z.string().trim().min(3).max(160),
   description: z.string().trim().max(1000).optional(),
   placement: z.enum(["MOBILITY_TRIP", "MARKETPLACE_FEED", "MARKETPLACE_PRODUCT", "COMMUNITY_FEED"]),
   creativeType: z.enum(["IMAGE", "VIDEO", "NATIVE"]),
-  creativeUrl: z.string().url().max(2000).optional().or(z.literal("")),
-  thumbnailUrl: z.string().url().max(2000).optional().or(z.literal("")),
-  destinationUrl: z.string().url().max(2000).optional().or(z.literal("")),
+  creativeUrl: optionalSafeHttpUrl,
+  thumbnailUrl: optionalSafeHttpUrl,
+  destinationUrl: optionalSafeHttpUrl,
   startsAt: z.string().datetime().optional(),
   endsAt: z.string().datetime().optional(),
 }).refine((value) => value.creativeType === "NATIVE" || Boolean(value.creativeUrl), {
