@@ -52,7 +52,7 @@ export default function RootLayout({
   return (
 
     <html
-      lang="en"
+      lang="pt-AO"
       className={`
         ${geistSans.variable}
         ${geistMono.variable}
