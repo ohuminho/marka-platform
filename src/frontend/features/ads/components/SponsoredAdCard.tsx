@@ -22,6 +22,7 @@ export default function SponsoredAdCard({
   onDismiss,
 }: SponsoredAdCardProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [sessionLimitReached, setSessionLimitReached] = useState(true);
   const cardRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const impressionSent = useRef(false);
@@ -30,8 +31,18 @@ export default function SponsoredAdCard({
     : AD_UX_LIMITS.marketplaceVideoMaxSeconds;
 
   useEffect(() => {
+    try {
+      const count = Number(window.sessionStorage.getItem("marka_ads_viewed_session") || "0");
+      setSessionLimitReached(Number.isFinite(count) && count >= AD_UX_LIMITS.maxAdsPerSession);
+    } catch {
+      // If storage is unavailable, fail closed instead of showing unlimited ads.
+      setSessionLimitReached(true);
+    }
+  }, []);
+
+  useEffect(() => {
     const node = cardRef.current;
-    if (!node || impressionSent.current || typeof IntersectionObserver === "undefined") return;
+    if (sessionLimitReached || !node || impressionSent.current || typeof IntersectionObserver === "undefined") return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
@@ -40,6 +51,18 @@ export default function SponsoredAdCard({
         if (!timer) {
           timer = setTimeout(() => {
             if (impressionSent.current) return;
+            try {
+              const count = Number(window.sessionStorage.getItem("marka_ads_viewed_session") || "0");
+              if (!Number.isFinite(count) || count >= AD_UX_LIMITS.maxAdsPerSession) {
+                setSessionLimitReached(true);
+                return;
+              }
+              // Reserve the slot synchronously so multiple ad cards cannot exceed the cap in one tab.
+              window.sessionStorage.setItem("marka_ads_viewed_session", String(count + 1));
+            } catch {
+              setSessionLimitReached(true);
+              return;
+            }
             impressionSent.current = true;
             void fetch("/api/ads/events", {
               method: "POST",
@@ -62,10 +85,11 @@ export default function SponsoredAdCard({
       observer.disconnect();
       if (timer) clearTimeout(timer);
     };
-  }, [advertisement.campaignId, advertisement.id]);
+  }, [advertisement.campaignId, advertisement.id, sessionLimitReached]);
 
   if (
     dismissed ||
+    sessionLimitReached ||
     !advertisement.active ||
     (advertisement.status && advertisement.status !== "APPROVED") ||
     !canShowAdvertisement(placement, context)
