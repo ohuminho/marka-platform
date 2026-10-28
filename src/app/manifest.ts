@@ -5,7 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "MARKA — African Digital Platform",
     short_name: "MARKA",
-    description: "Mobilidade, Marketplace e serviços empresariais numa única plataforma.",
+    description:
+      "Mobilidade, Marketplace e serviços empresariais numa única plataforma.",
     start_url: "/app",
     scope: "/",
     display: "standalone",
@@ -17,7 +18,13 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         src: "/marka-icon.svg",
-        sizes: "any",
+        sizes: "192x192",
+        type: "image/svg+xml",
+        purpose: "any",
+      },
+      {
+        src: "/marka-icon.svg",
+        sizes: "512x512",
         type: "image/svg+xml",
         purpose: "any",
       },
