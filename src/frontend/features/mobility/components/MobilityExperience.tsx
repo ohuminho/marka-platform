@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import MobilityAdSlot from "@/frontend/features/mobility/components/MobilityAdSlot";
 import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
 
 const vehicles = [
@@ -71,7 +70,6 @@ export default function MobilityExperience() {
       <Link href="/app/marketplace" className="rounded-2xl border border-white/10 bg-[#0b0d12] p-5 transition hover:border-[#e9bd58]/60"><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">Marketplace</p><h3 className="mt-3 text-xl font-semibold">Descubra e escolha</h3><p className="mt-2 text-sm leading-6 text-white/60">Produtos e serviços num só lugar, com uma experiência simples.</p><span className="mt-5 inline-block text-sm font-semibold text-[#e9bd58]">Explorar　→</span></Link>
       <Link href="/app/mobility/parceiros" className="rounded-2xl border border-white/10 bg-[#0b0d12] p-5 transition hover:border-[#e9bd58]/60"><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">Para motoristas</p><h3 className="mt-3 text-xl font-semibold">Conduza com a MARKA</h3><p className="mt-2 text-sm leading-6 text-white/60">Conheça o processo de adesão e os requisitos para parceiros.</p><span className="mt-5 inline-block text-sm font-semibold text-[#e9bd58]">Conhecer processo　→</span></Link>
     </div>
-    <MobilityAdSlot />
     <p className="px-1 text-[10px] leading-5 text-white/35">A disponibilidade de viagens e tarifas depende do estado operacional real e da disponibilidade dos parceiros.</p>
   </section>;
 }
