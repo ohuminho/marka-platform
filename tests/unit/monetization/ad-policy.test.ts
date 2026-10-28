@@ -93,4 +93,31 @@ assert.equal(
   "Product placements must not show during payment."
 );
 
+
+assert.equal(
+  canShowAdvertisement("mobility_trip", { ...base, isPaymentFlowActive: undefined }, 100_000),
+  false,
+  "Mobility ads must remain hidden if payment state is unknown."
+);
+assert.equal(
+  canShowAdvertisement("mobility_trip", { ...base, userDismissed: true }, 100_000),
+  false,
+  "Dismissed advertising must remain hidden."
+);
+assert.equal(
+  canShowAdvertisement("mobility_trip", { ...base, reducedMotion: true }, 100_000),
+  false,
+  "Mobility ads must respect reduced-motion preference."
+);
+assert.equal(
+  canShowAdvertisement("mobility_trip", { ...base, lastAdDismissedAt: 70_000 }, 370_000),
+  true,
+  "Mobility ads may become eligible after the full five-minute cooldown."
+);
+assert.equal(
+  canShowAdvertisement("community_feed", { adsEnabled: true, isPaymentFlowActive: true }, 100_000),
+  false,
+  "Community ads must not show during payment."
+);
+
 console.log("MARKA ad policy tests passed.");
