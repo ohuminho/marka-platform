@@ -12,7 +12,8 @@ type SponsoredAdCardProps = {
   advertisement: Advertisement;
   placement: AdvertisementPlacement;
   context: MobilityAdContext;
-  onDismiss?: (advertisementId: string, dismissedAt: number) => void;\n  audience?: "rider" | "driver";
+  onDismiss?: (advertisementId: string, dismissedAt: number) => void;
+  audience?: "rider" | "driver";
 };
 
 export default function SponsoredAdCard({
@@ -20,6 +21,7 @@ export default function SponsoredAdCard({
   placement,
   context,
   onDismiss,
+  audience = "rider",
 }: SponsoredAdCardProps) {
   const [dismissed, setDismissed] = useState(false);
   const [sessionLimitReached, setSessionLimitReached] = useState(true);
@@ -104,7 +106,8 @@ export default function SponsoredAdCard({
   }
 
   const creative = advertisement.creativeUrl;
-  const destination = advertisement.destinationUrl;\n  const driverSafe = audience === "driver";
+  const destination = advertisement.destinationUrl;
+  const driverSafe = audience === "driver";
 
   return (
     <aside
