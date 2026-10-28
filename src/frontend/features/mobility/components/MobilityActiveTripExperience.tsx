@@ -16,7 +16,8 @@ type Ride = {
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
 };
 type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP" | "BEGIN_TRIP_PROGRESS";
-type RidePayload = { ride?: Ride | null; orchestration?: { currentStep?: string | null } | null; message?: string };\ntype AvailabilityPayload = { driver?: { status?: string; displayName?: string | null } | null; availability?: { status?: string } | null; status?: string; message?: string };
+type RidePayload = { ride?: Ride | null; orchestration?: { currentStep?: string | null } | null; message?: string };
+type AvailabilityPayload = { driver?: { status?: string; displayName?: string | null } | null; availability?: { status?: string } | null; status?: string; message?: string };
 const ACTIVE = ["REQUESTED", "SEARCHING", "MATCHED", "DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"];
 const STATUS: Record<string, string> = {
   REQUESTED: "Pedido recebido", SEARCHING: "A encontrar motorista", MATCHED: "Motorista identificado",
@@ -42,7 +43,11 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [adsPreferenceLoaded, setAdsPreferenceLoaded] = useState(false);
   const [lastAdDismissedAt, setLastAdDismissedAt] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);\n  const [driverProfileStatus, setDriverProfileStatus] = useState<string | null>(null);\n  const [driverAvailability, setDriverAvailability] = useState("OFFLINE");\n  const [availabilityLoading, setAvailabilityLoading] = useState(false);\n  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [driverProfileStatus, setDriverProfileStatus] = useState<string | null>(null);
+  const [driverAvailability, setDriverAvailability] = useState("OFFLINE");
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const organizationId = activeOrganization?.id;
 
   useEffect(() => {
@@ -69,7 +74,18 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
       const response = await fetch(endpoint, { credentials: "include", cache: "no-store", headers: { "X-Organization-Id": organizationId } });
       const data = (await response.json()) as RidePayload;
       if (!response.ok) throw new Error(data.message || "Não foi possível consultar a viagem.");
-      setPayload(data); setError(null);\n      if (audience === "driver") {\n        try {\n          const availabilityResponse = await fetch("/api/mobility/driver/availability", { credentials: "include", cache: "no-store", headers: { "X-Organization-Id": organizationId } });\n          const availabilityData = (await availabilityResponse.json()) as AvailabilityPayload;\n          if (availabilityResponse.ok) {\n            setDriverProfileStatus(availabilityData.driver?.status ?? null);\n            setDriverAvailability(availabilityData.availability?.status ?? "OFFLINE");\n            setAvailabilityError(null);\n          } else setAvailabilityError(availabilityData.message || "Não foi possível consultar a disponibilidade.");\n        } catch { setAvailabilityError("Não foi possível consultar a disponibilidade."); }\n      }
+      setPayload(data); setError(null);
+      if (audience === "driver") {
+        try {
+          const availabilityResponse = await fetch("/api/mobility/driver/availability", { credentials: "include", cache: "no-store", headers: { "X-Organization-Id": organizationId } });
+          const availabilityData = (await availabilityResponse.json()) as AvailabilityPayload;
+          if (availabilityResponse.ok) {
+            setDriverProfileStatus(availabilityData.driver?.status ?? null);
+            setDriverAvailability(availabilityData.availability?.status ?? "OFFLINE");
+            setAvailabilityError(null);
+          } else setAvailabilityError(availabilityData.message || "Não foi possível consultar a disponibilidade.");
+        } catch { setAvailabilityError("Não foi possível consultar a disponibilidade."); }
+      }
     } catch (e) { setError(e instanceof Error ? e.message : "Falha de ligação."); }
     finally { setLoading(false); }
   }, [audience, organizationId]);
@@ -112,7 +128,20 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     return step ? actions[step] ?? null : null;
   }, [audience, payload?.orchestration?.currentStep]);
 
-  const toggleDriverAvailability = async () => {\n    if (!organizationId || availabilityLoading || active) return;\n    setAvailabilityLoading(true); setAvailabilityError(null);\n    const nextStatus = driverAvailability === "AVAILABLE" ? "OFFLINE" : "AVAILABLE";\n    try {\n      const response = await fetch("/api/mobility/driver/availability", { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId }, body: JSON.stringify({ status: nextStatus }) });\n      const data = (await response.json()) as AvailabilityPayload;\n      if (!response.ok) throw new Error(data.message || "Não foi possível atualizar a disponibilidade.");\n      setDriverAvailability(data.status || nextStatus);\n    } catch (e) { setAvailabilityError(e instanceof Error ? e.message : "Falha ao atualizar disponibilidade."); }\n    finally { setAvailabilityLoading(false); }\n  };\n\n  const performDriverAction = async () => {
+  const toggleDriverAvailability = async () => {
+    if (!organizationId || availabilityLoading || active) return;
+    setAvailabilityLoading(true); setAvailabilityError(null);
+    const nextStatus = driverAvailability === "AVAILABLE" ? "OFFLINE" : "AVAILABLE";
+    try {
+      const response = await fetch("/api/mobility/driver/availability", { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId }, body: JSON.stringify({ status: nextStatus }) });
+      const data = (await response.json()) as AvailabilityPayload;
+      if (!response.ok) throw new Error(data.message || "Não foi possível atualizar a disponibilidade.");
+      setDriverAvailability(data.status || nextStatus);
+    } catch (e) { setAvailabilityError(e instanceof Error ? e.message : "Falha ao atualizar disponibilidade."); }
+    finally { setAvailabilityLoading(false); }
+  };
+
+  const performDriverAction = async () => {
     if (!ride || !organizationId || !driverAction || actionLoading) return;
     setActionLoading(true); setActionError(null);
     try {
