@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 import { MarketplaceProduct } from "../types/marketplace.types";
@@ -9,6 +10,38 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
   const { language } = usePlatformPreferences();
   const t = usePlatformTranslation(language);
   const currency = "AOA";
+  const [adding, setAdding] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  async function addToCart() {
+    if (adding || product.status !== "ACTIVE" || product.stock < 1) return;
+
+    setAdding(true);
+    setFeedback(null);
+
+    try {
+      const response = await fetch("/api/cart/items", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, quantity: 1 }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Inicie sessão para adicionar produtos ao carrinho.");
+        }
+        throw new Error(data.message || "Não foi possível adicionar o produto.");
+      }
+
+      // Open the cart for this seller. Carts belonging to other stores stay intact.
+      window.location.assign(`/app/cart?storeId=${encodeURIComponent(product.store.id)}`);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Ocorreu um erro ao adicionar o produto.");
+      setAdding(false);
+    }
+  }
 
   return (
     <article className="group overflow-hidden rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2.5 backdrop-blur-xl transition duration-500 hover:-translate-y-1 hover:shadow-[0_32px_90px_rgba(0,0,0,0.16)]">
@@ -48,12 +81,22 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
           <VendorTrustBadge verified={product.store.verified} rating={product.store.rating} />
         </div>
 
-        <div className="mt-5 flex items-center justify-between border-t border-[var(--theme-border)] pt-4">
+        <div className="mt-4 flex items-center justify-between border-t border-[var(--theme-border)] pt-4">
           <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">{t.stock}: {product.stock}</span>
           <span className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">
             {product.status}
           </span>
         </div>
+
+        {feedback && <p role="alert" className="mt-3 text-xs text-red-600">{feedback}</p>}
+        <button
+          type="button"
+          onClick={() => void addToCart()}
+          disabled={adding || product.status !== "ACTIVE" || product.stock < 1}
+          className="mt-4 w-full rounded-full bg-[var(--theme-text)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          {adding ? "A adicionar..." : product.status !== "ACTIVE" || product.stock < 1 ? "Indisponível" : "Adicionar ao carrinho"}
+        </button>
       </div>
     </article>
   );
