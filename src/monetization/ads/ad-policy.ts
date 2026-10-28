@@ -2,9 +2,8 @@ import type { AdvertisementPlacement, MobilityAdContext } from "./ad.types";
 
 /**
  * Central UX guard for MARKA advertising.
- *
- * The policy intentionally suppresses ads during critical mobility actions.
- * It is a client-side presentation guard, not an authorization or billing control.
+ * Suppresses ads during critical mobility actions and checkout/payment flows.
+ * This is a client-side presentation guard, not an authorization or billing control.
  */
 export function canShowAdvertisement(
   placement: AdvertisementPlacement,
@@ -19,16 +18,24 @@ export function canShowAdvertisement(
     if (context.rideStatus !== "TRIP_IN_PROGRESS") return false;
     if (context.isNearDestination || context.isNavigationActive) return false;
     if (context.isPaymentFlowActive || context.isSafetyFlowActive) return false;
-    if (context.lastAdDismissedAt && now - context.lastAdDismissedAt < 5 * 60_000) {
+    if (
+      context.lastAdDismissedAt != null &&
+      now - context.lastAdDismissedAt < AD_UX_LIMITS.mobilityMinimumSecondsBetweenAds * 1000
+    ) {
       return false;
     }
-    if (context.tripStartedAt && now - context.tripStartedAt < 90_000) {
+    if (context.tripStartedAt != null && now - context.tripStartedAt < 90_000) {
       return false;
     }
     return true;
   }
 
-  if (placement === "marketplace_feed") {
+  // Marketplace discovery/product placements are permitted, but never during checkout or payment.
+  if (
+    placement === "marketplace_feed" ||
+    placement === "marketplace_product" ||
+    placement === "community_feed"
+  ) {
     return !context.isCheckoutActive && !context.isPaymentFlowActive;
   }
 
