@@ -38,11 +38,29 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [payload, setPayload] = useState<RidePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adsEnabled, setAdsEnabled] = useState(true);\n  const [adsPreferenceLoaded, setAdsPreferenceLoaded] = useState(false);
+  const [adsEnabled, setAdsEnabled] = useState(true);
+  const [adsPreferenceLoaded, setAdsPreferenceLoaded] = useState(false);
   const [lastAdDismissedAt, setLastAdDismissedAt] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const organizationId = activeOrganization?.id;\n\n  useEffect(() => {\n    try {\n      const saved = window.localStorage.getItem("marka.ads.enabled." + audience);\n      if (saved !== null) setAdsEnabled(saved === "true");\n    } catch {\n      setAdsEnabled(false);\n    } finally {\n      setAdsPreferenceLoaded(true);\n    }\n  }, [audience]);\n\n  const updateAdsEnabled = (enabled: boolean) => {\n    setAdsEnabled(enabled);\n    try { window.localStorage.setItem("marka.ads.enabled." + audience, String(enabled)); }\n    catch { setAdsEnabled(false); }\n  };
+  const organizationId = activeOrganization?.id;
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("marka.ads.enabled." + audience);
+      if (saved !== null) setAdsEnabled(saved === "true");
+    } catch {
+      setAdsEnabled(false);
+    } finally {
+      setAdsPreferenceLoaded(true);
+    }
+  }, [audience]);
+
+  const updateAdsEnabled = (enabled: boolean) => {
+    setAdsEnabled(enabled);
+    try { window.localStorage.setItem("marka.ads.enabled." + audience, String(enabled)); }
+    catch { setAdsEnabled(false); }
+  };
 
   const refresh = useCallback(async () => {
     if (!organizationId) { setPayload(null); setLoading(false); return; }
