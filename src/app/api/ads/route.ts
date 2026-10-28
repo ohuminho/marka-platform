@@ -45,7 +45,6 @@ export async function GET(request: Request) {
         AND: [
           { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
           { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
-          { OR: [{ maxImpressions: null }, { impressions: { lt: prisma.advertisementCampaign.fields.maxImpressions } }] },
         ],
       },
       orderBy: [{ createdAt: "desc" }],
@@ -63,13 +62,19 @@ export async function GET(request: Request) {
         startsAt: true,
         endsAt: true,
         status: true,
+        impressions: true,
+        maxImpressions: true,
       },
     });
+
+    const eligibleCampaigns = campaigns.filter((campaign) =>
+      campaign.maxImpressions === null || campaign.impressions < campaign.maxImpressions
+    );
 
     return NextResponse.json(
       {
         placement: requestedPlacement,
-        advertisements: campaigns.map((campaign) => ({
+        advertisements: eligibleCampaigns.map((campaign) => ({
           id: campaign.id,
           campaignId: campaign.id,
           vendorId: campaign.id,
