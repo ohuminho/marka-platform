@@ -38,11 +38,11 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [payload, setPayload] = useState<RidePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adsEnabled, setAdsEnabled] = useState(true);
+  const [adsEnabled, setAdsEnabled] = useState(true);\n  const [adsPreferenceLoaded, setAdsPreferenceLoaded] = useState(false);
   const [lastAdDismissedAt, setLastAdDismissedAt] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const organizationId = activeOrganization?.id;
+  const organizationId = activeOrganization?.id;\n\n  useEffect(() => {\n    try {\n      const saved = window.localStorage.getItem("marka.ads.enabled." + audience);\n      if (saved !== null) setAdsEnabled(saved === "true");\n    } catch {\n      setAdsEnabled(false);\n    } finally {\n      setAdsPreferenceLoaded(true);\n    }\n  }, [audience]);\n\n  const updateAdsEnabled = (enabled: boolean) => {\n    setAdsEnabled(enabled);\n    try { window.localStorage.setItem("marka.ads.enabled." + audience, String(enabled)); }\n    catch { setAdsEnabled(false); }\n  };
 
   const refresh = useCallback(async () => {
     if (!organizationId) { setPayload(null); setLoading(false); return; }
@@ -75,7 +75,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   }, [ride]);
 
   const adContext: MobilityAdContext = {
-    adsEnabled, rideStatus: ride?.status, tripStartedAt: startedAt,
+    adsEnabled: adsPreferenceLoaded && adsEnabled, rideStatus: ride?.status, tripStartedAt: startedAt,
     isNearDestination: destinationDistance === null || destinationDistance <= 700,
     isNavigationActive: false, isPaymentFlowActive: !inProgress, isSafetyFlowActive: !inProgress,
     lastAdDismissedAt,
@@ -141,7 +141,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
         </div>}
       </div>
       <aside className="space-y-3">
-        <div className="rounded-2xl border border-white/10 bg-white/[.025] p-5"><p className="text-[9px] uppercase tracking-[.22em] text-[#e9bd58]">Experiência MARKA</p><h3 className="mt-2 text-base font-semibold">{audience === "driver" ? "Mais clareza. Menos distração." : "Conforto, transparência e confiança."}</h3><p className="mt-2 text-xs leading-5 text-white/45">{audience === "driver" ? "O conteúdo comercial não interfere com segurança ou pagamento." : "Informação essencial primeiro; conteúdo patrocinado apenas quando elegível."}</p><label className="mt-4 flex cursor-pointer items-center justify-between gap-3 border-t border-white/[.08] pt-4 text-xs text-white/65"><span>Publicidade durante a viagem</span><input type="checkbox" checked={adsEnabled} onChange={(event) => setAdsEnabled(event.target.checked)} className="h-4 w-4 accent-[#e9bd58]" /></label></div>
+        <div className="rounded-2xl border border-white/10 bg-white/[.025] p-5"><p className="text-[9px] uppercase tracking-[.22em] text-[#e9bd58]">Experiência MARKA</p><h3 className="mt-2 text-base font-semibold">{audience === "driver" ? "Mais clareza. Menos distração." : "Conforto, transparência e confiança."}</h3><p className="mt-2 text-xs leading-5 text-white/45">{audience === "driver" ? "O conteúdo comercial não interfere com segurança ou pagamento." : "Informação essencial primeiro; conteúdo patrocinado apenas quando elegível."}</p><label className="mt-4 flex cursor-pointer items-center justify-between gap-3 border-t border-white/[.08] pt-4 text-xs text-white/65"><span>Publicidade durante a viagem</span><input type="checkbox" checked={adsEnabled} disabled={!adsPreferenceLoaded} onChange={(event) => updateAdsEnabled(event.target.checked)} className="h-4 w-4 accent-[#e9bd58]" /></label></div>
         {active && <MobilityTripAdSlot context={adContext} audience={audience} onDismiss={(time) => setLastAdDismissedAt(time)} />}
         {active && destinationDistance !== null && <p className="px-1 text-[10px] text-white/30">Distância aproximada ao destino: {destinationDistance < 1000 ? String(Math.round(destinationDistance)) + " m" : (destinationDistance / 1000).toFixed(1) + " km"}</p>}
       </aside>
