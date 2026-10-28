@@ -53,6 +53,7 @@ export default function MobilityTripAdSlot({ context, audience = "rider", onDism
         advertisement={advertisement}
         placement="mobility_trip"
         context={context}
+        audience={audience}
         onDismiss={(_advertisementId, dismissedAt) => { setDismissed(true); onDismiss?.(dismissedAt); }}
       />
     </div>
