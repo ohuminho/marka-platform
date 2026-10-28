@@ -15,6 +15,9 @@ const createSchema = z.object({
   destinationUrl: z.string().url().max(2000).optional().or(z.literal("")),
   startsAt: z.string().datetime().optional(),
   endsAt: z.string().datetime().optional(),
+}).refine((value) => value.creativeType === "NATIVE" || Boolean(value.creativeUrl), {
+  message: "Imagem e vídeo precisam de um URL de conteúdo.",
+  path: ["creativeUrl"],
 }).refine((value) => !value.startsAt || !value.endsAt || value.endsAt > value.startsAt, {
   message: "A data final deve ser posterior à data inicial.",
   path: ["endsAt"],
