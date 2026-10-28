@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   Advertisement,
   AdvertisementPlacement,
@@ -21,7 +21,7 @@ export default function SponsoredAdCard({
   context,
   onDismiss,
 }: SponsoredAdCardProps) {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);\n  const cardRef = useRef<HTMLElement | null>(null);\n  const impressionSent = useRef(false);\n\n  useEffect(() => {\n    const node = cardRef.current;\n    if (!node || impressionSent.current || typeof IntersectionObserver === "undefined") return;\n    let timer: ReturnType<typeof setTimeout> | undefined;\n    const observer = new IntersectionObserver((entries) => {\n      const entry = entries[0];\n      if (!entry) return;\n      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {\n        if (!timer) timer = setTimeout(() => {\n          if (impressionSent.current) return;\n          impressionSent.current = true;\n          void fetch("/api/ads/events", {\n            method: "POST",\n            headers: { "Content-Type": "application/json" },\n            body: JSON.stringify({ campaignId: advertisement.campaignId || advertisement.id, event: "impression" }),\n            keepalive: true,\n          }).catch(() => undefined);\n        }, 1000);\n      } else if (timer) {\n        clearTimeout(timer);\n        timer = undefined;\n      }\n    }, { threshold: [0, 0.5, 1] });\n    observer.observe(node);\n    return () => { observer.disconnect(); if (timer) clearTimeout(timer); };\n  }, [advertisement.campaignId, advertisement.id]);
 
   if (
     dismissed ||
