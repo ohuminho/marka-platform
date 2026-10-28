@@ -6,6 +6,10 @@ const base: MobilityAdContext = {
   adsEnabled: true,
   rideStatus: "TRIP_IN_PROGRESS",
   tripStartedAt: 1_000,
+  isNearDestination: false,
+  isNavigationActive: false,
+  isPaymentFlowActive: false,
+  isSafetyFlowActive: false,
 };
 
 assert.equal(canShowAdvertisement("mobility_trip", base, 100_000), true);
@@ -40,6 +44,21 @@ assert.equal(
   "Mobility ads must wait at least 90 seconds after trip start."
 );
 assert.equal(
+  canShowAdvertisement("mobility_trip", { ...base, tripStartedAt: undefined }, 100_000),
+  false,
+  "Mobility ads must remain hidden if the trip start time is unknown."
+);
+assert.equal(
+  canShowAdvertisement("mobility_trip", { ...base, isNavigationActive: undefined }, 100_000),
+  false,
+  "Mobility ads must remain hidden if navigation state is unknown."
+);
+assert.equal(
+  canShowAdvertisement("mobility_trip", { ...base, isSafetyFlowActive: undefined }, 100_000),
+  false,
+  "Mobility ads must remain hidden if safety state is unknown."
+);
+assert.equal(
   canShowAdvertisement("mobility_trip", { ...base, lastAdDismissedAt: 99_000 }, 100_000),
   false,
   "Mobility ads must respect the post-dismissal cooldown."
@@ -58,8 +77,6 @@ assert.equal(
   false,
   "Users must be able to disable ads."
 );
-
-
 assert.equal(
   canShowAdvertisement("marketplace_product", { adsEnabled: true }, 100_000),
   true,
