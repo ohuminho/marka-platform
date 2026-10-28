@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         ],
       },
       orderBy: [{ createdAt: "desc" }],
-      take: requestedPlacement === "mobility_trip" ? 1 : 3,
+      take: 30,
       select: {
         id: true,
         advertiserName: true,
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         placement: requestedPlacement,
-        advertisements: eligibleCampaigns.map((campaign) => ({
+        advertisements: eligibleCampaigns.slice(0, requestedPlacement === "mobility_trip" ? 1 : 3).map((campaign) => ({
           id: campaign.id,
           campaignId: campaign.id,
           vendorId: campaign.id,
