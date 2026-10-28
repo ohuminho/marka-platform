@@ -59,4 +59,21 @@ assert.equal(
   "Users must be able to disable ads."
 );
 
+
+assert.equal(
+  canShowAdvertisement("marketplace_product", { adsEnabled: true }, 100_000),
+  true,
+  "Product placements should be eligible outside checkout."
+);
+assert.equal(
+  canShowAdvertisement("community_feed", { adsEnabled: true }, 100_000),
+  true,
+  "Community-feed placements should be eligible outside checkout."
+);
+assert.equal(
+  canShowAdvertisement("marketplace_product", { adsEnabled: true, isPaymentFlowActive: true }, 100_000),
+  false,
+  "Product placements must not show during payment."
+);
+
 console.log("MARKA ad policy tests passed.");
