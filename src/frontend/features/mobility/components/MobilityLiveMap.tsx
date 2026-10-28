@@ -76,7 +76,8 @@ export default function MobilityLiveMap() {
       const rows = await response.json(); if (!Array.isArray(rows) || !rows[0]) throw new Error("Destino não encontrado. Tente um bairro ou ponto de referência.");
       const row = rows[0], point = { lat: Number(row.lat), lon: Number(row.lon), label: String(row.display_name) };
       setPoint(point, "destination"); setDestinationText(String(row.display_name).split(",").slice(0, 3).join(","));
-      if (origin) await calculateRoute(origin, point);\n      else setStatus("Destino encontrado. Ative o GPS para calcular a rota rodoviária.");
+      if (origin) await calculateRoute(origin, point);
+      else setStatus("Destino encontrado. Ative o GPS para calcular a rota rodoviária.");
     } catch (e) { setStatus(e instanceof Error ? e.message : "Falha na pesquisa do destino."); setBusy(false); }
   }
   return <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#080d12]">
