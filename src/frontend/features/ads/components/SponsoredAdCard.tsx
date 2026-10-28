@@ -21,12 +21,49 @@ export default function SponsoredAdCard({
   context,
   onDismiss,
 }: SponsoredAdCardProps) {
-  const [dismissed, setDismissed] = useState(false);\n  const cardRef = useRef<HTMLElement | null>(null);\n  const impressionSent = useRef(false);\n\n  useEffect(() => {\n    const node = cardRef.current;\n    if (!node || impressionSent.current || typeof IntersectionObserver === "undefined") return;\n    let timer: ReturnType<typeof setTimeout> | undefined;\n    const observer = new IntersectionObserver((entries) => {\n      const entry = entries[0];\n      if (!entry) return;\n      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {\n        if (!timer) timer = setTimeout(() => {\n          if (impressionSent.current) return;\n          impressionSent.current = true;\n          void fetch("/api/ads/events", {\n            method: "POST",\n            headers: { "Content-Type": "application/json" },\n            body: JSON.stringify({ campaignId: advertisement.campaignId || advertisement.id, event: "impression" }),\n            keepalive: true,\n          }).catch(() => undefined);\n        }, 1000);\n      } else if (timer) {\n        clearTimeout(timer);\n        timer = undefined;\n      }\n    }, { threshold: [0, 0.5, 1] });\n    observer.observe(node);\n    return () => { observer.disconnect(); if (timer) clearTimeout(timer); };\n  }, [advertisement.campaignId, advertisement.id]);
+  const [dismissed, setDismissed] = useState(false);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const impressionSent = useRef(false);
+
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node || impressionSent.current || typeof IntersectionObserver === "undefined") return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+        if (!timer) {
+          timer = setTimeout(() => {
+            if (impressionSent.current) return;
+            impressionSent.current = true;
+            void fetch("/api/ads/events", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                campaignId: advertisement.campaignId || advertisement.id,
+                event: "impression",
+              }),
+              keepalive: true,
+            }).catch(() => undefined);
+          }, 1000);
+        }
+      } else if (timer) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
+    }, { threshold: [0, 0.5, 1] });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      if (timer) clearTimeout(timer);
+    };
+  }, [advertisement.campaignId, advertisement.id]);
 
   if (
     dismissed ||
     !advertisement.active ||
-    advertisement.status && advertisement.status !== "APPROVED" ||
+    (advertisement.status && advertisement.status !== "APPROVED") ||
     !canShowAdvertisement(placement, context)
   ) {
     return null;
@@ -43,6 +80,7 @@ export default function SponsoredAdCard({
 
   return (
     <aside
+      ref={cardRef}
       aria-label="Publicidade patrocinada"
       className="relative overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)]"
       data-ad-placement={placement}
@@ -105,6 +143,17 @@ export default function SponsoredAdCard({
         {destination && (
           <a
             href={destination}
+            onClick={() => {
+              void fetch("/api/ads/events", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  campaignId: advertisement.campaignId || advertisement.id,
+                  event: "click",
+                }),
+                keepalive: true,
+              }).catch(() => undefined);
+            }}
             target="_blank"
             rel="noopener noreferrer sponsored"
             className="mt-3 inline-flex min-h-10 items-center rounded-full bg-[var(--theme-text)] px-4 py-2 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-85"
