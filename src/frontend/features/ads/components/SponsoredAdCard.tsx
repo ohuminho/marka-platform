@@ -161,7 +161,7 @@ export default function SponsoredAdCard({
         />
       ) : creative ? (
         <img
-          src={creative}
+          src={driverSafe && advertisement.thumbnailUrl ? advertisement.thumbnailUrl : creative}
           alt={advertisement.headline || "Imagem patrocinada"}
           className="block max-h-44 w-full object-cover"
           loading="lazy"
