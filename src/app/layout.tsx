@@ -20,9 +20,26 @@ const geistMono = Geist_Mono({
 
 
 export const metadata: Metadata = {
-  title: "MARKA",
+  title: "MARKA — African Digital Platform",
+  applicationName: "MARKA",
   description:
-    "African Digital Economy Platform",
+    "Mobilidade, Marketplace e serviços empresariais numa única plataforma.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "MARKA",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
+  themeColor: "#070707",
 };
 
 
