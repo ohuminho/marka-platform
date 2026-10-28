@@ -1889,3 +1889,20 @@ model AdvertisementCampaign {
   @@index([placement, status, startsAt, endsAt])
   @@index([status, createdAt])
 }
+
+enum AdvertisementEventType {
+  IMPRESSION
+  CLICK
+}
+
+model AdvertisementEvent {
+  id        String                 @id @default(uuid())
+  campaignId String
+  userId    String
+  eventType AdvertisementEventType
+  eventDay  String                 @db.Char(10)
+  createdAt DateTime               @default(now())
+
+  @@unique([campaignId, userId, eventType, eventDay])
+  @@index([campaignId, eventType, createdAt])
+}
