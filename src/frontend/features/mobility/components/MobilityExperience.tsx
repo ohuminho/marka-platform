@@ -7,7 +7,7 @@ const vehicles = [
   { name: "MARKA Go", detail: "Rápido e confortável", price: "AOA 5.000", seats: "4", time: "2 min", image: "photo-1618843479313-40f8afb4b4d8", popular: true },
   { name: "MARKA Executive", detail: "Luxo em cada detalhe", price: "AOA 8.000", seats: "4", time: "3 min", image: "photo-1563720223185-11003d516935" },
   { name: "MARKA Business", detail: "Para grupos e empresas", price: "AOA 12.000", seats: "7", time: "4 min", image: "photo-1552519507-da3b142c6e3d" },
-  { name: "MARKA Electric", detail: "Sustentável e inovador", price: "AOA 10.000", seats: "4", time: "3 min", image: "photo-1560958089-b8a1929 физических" },
+  { name: "MARKA Electric", detail: "Sustentável e inovador", price: "AOA 10.000", seats: "4", time: "3 min", image: "photo-1593941707882-a5bba14938c7" },
 ];
 
 const carPhoto = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=85`;
