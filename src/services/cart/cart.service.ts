@@ -2,22 +2,57 @@ import { prisma } from "@/database/client/prisma";
 
 export class CartService {
   async getCart(userId: string, storeId?: string) {
+    // Repair legacy carts that may contain products from several stores.
+    // Keep one store in the existing cart and move each other store's items
+    // into its own cart, preserving quantities and product rows.
+    const legacyCarts = await prisma.cart.findMany({
+      where: { userId, status: "ACTIVE" },
+      include: { items: { include: { product: { select: { storeId: true } } } } },
+    });
+
+    for (const legacyCart of legacyCarts) {
+      const groups = new Map<string, string[]>();
+      for (const item of legacyCart.items) {
+        const key = item.product.storeId ?? "__NO_STORE__";
+        const ids = groups.get(key) ?? [];
+        ids.push(item.id);
+        groups.set(key, ids);
+      }
+
+      if (groups.size <= 1) continue;
+
+      let keepExistingCart = true;
+      for (const itemIds of groups.values()) {
+        if (keepExistingCart) {
+          keepExistingCart = false;
+          continue;
+        }
+
+        await prisma.$transaction(async (database) => {
+          const newCart = await database.cart.create({
+            data: { userId, currency: legacyCart.currency },
+            select: { id: true },
+          });
+          await database.cartItem.updateMany({
+            where: { id: { in: itemIds }, cartId: legacyCart.id },
+            data: { cartId: newCart.id },
+          });
+        });
+      }
+    }
+
     const carts = await prisma.cart.findMany({
       where: { userId, status: "ACTIVE" },
       include: {
         items: {
           include: {
-            product: {
-              include: { store: true },
-            },
+            product: { include: { store: true } },
           },
         },
       },
       orderBy: { updatedAt: "desc" },
     });
 
-    // A store-specific cart is selected by its products, so no schema
-    // migration is required and existing financial/cart relations remain intact.
     let cart = storeId
       ? carts.find((candidate) =>
           candidate.items.length > 0 &&
@@ -25,25 +60,13 @@ export class CartService {
         )
       : carts.find((candidate) => candidate.items.length > 0);
 
-    if (!cart && storeId) {
-      cart = carts.find((candidate) => candidate.items.length === 0);
-    }
-
-    if (!cart && !storeId) {
-      cart = carts.find((candidate) => candidate.items.length === 0);
-    }
+    if (!cart) cart = carts.find((candidate) => candidate.items.length === 0);
 
     if (!cart) {
       cart = await prisma.cart.create({
         data: { userId },
         include: {
-          items: {
-            include: {
-              product: {
-                include: { store: true },
-              },
-            },
-          },
+          items: { include: { product: { include: { store: true } } } },
         },
       });
     }
@@ -72,9 +95,7 @@ export class CartService {
       ? existingItem.quantity + quantity
       : quantity;
 
-    if (requestedQuantity > product.stock) {
-      throw new Error("Insufficient stock.");
-    }
+    if (requestedQuantity > product.stock) throw new Error("Insufficient stock.");
 
     if (existingItem) {
       return prisma.cartItem.update({
@@ -95,9 +116,7 @@ export class CartService {
 
     const item = await prisma.cartItem.findFirst({
       where: { id: itemId, cart: { userId, status: "ACTIVE" } },
-      include: {
-        product: { select: { id: true, status: true, stock: true } },
-      },
+      include: { product: { select: { id: true, status: true, stock: true } } },
     });
 
     if (!item) throw new Error("Cart item not found.");
@@ -117,7 +136,6 @@ export class CartService {
     });
 
     if (!item) throw new Error("Cart item not found.");
-
     return prisma.cartItem.delete({ where: { id: item.id } });
   }
 }
