@@ -745,6 +745,7 @@ export class MobilityRideService {
         include: {
           driver: {
             include: {
+              user: { select: { id: true, name: true } },
               location: true,
             },
           },
