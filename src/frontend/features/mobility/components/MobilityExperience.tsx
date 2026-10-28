@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import MobilityAdSlot from "@/frontend/features/mobility/components/MobilityAdSlot";
+import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
 
 const vehicles = [
   { name: "MARKA Go", detail: "Rápido e confortável", price: "AOA 5.000", seats: "4", time: "2 min", image: "photo-1618843479313-40f8afb4b4d8", popular: true },
@@ -14,15 +15,6 @@ const carPhoto = (id: string) => `https://images.unsplash.com/${id}?auto=format&
 
 function BrandMark({ small = false }: { small?: boolean }) {
   return <div className={`flex items-center gap-2 ${small ? "" : "flex-col"}`}><span className="font-black leading-none text-[#e9bd58]" style={{ fontSize: small ? 26 : 62, letterSpacing: "-.12em" }}>M</span><span className={`font-semibold tracking-[.28em] text-white ${small ? "text-xs" : "text-3xl"}`}>MARKA</span>{!small && <span className="text-[10px] tracking-[.55em] text-[#e9bd58]">M O B I L I T Y</span>}</div>;
-}
-
-function RouteMap({ large = false }: { large?: boolean }) {
-  return <div className={`relative isolate overflow-hidden rounded-2xl border border-white/10 bg-[#08131c] ${large ? "h-64 sm:h-80" : "h-36"}`}>
-    <div className="absolute inset-0 opacity-70" style={{ backgroundImage: "linear-gradient(32deg, transparent 46%, #15313d 47%, #15313d 49%, transparent 50%),linear-gradient(118deg, transparent 36%, #1b3540 37%, #1b3540 39%, transparent 40%),linear-gradient(78deg, transparent 62%, #203640 63%, #203640 64%, transparent 65%),linear-gradient(150deg, transparent 24%, #263943 25%, #263943 26%, transparent 27%),linear-gradient(90deg,rgba(15,35,45,.9) 1px,transparent 1px),linear-gradient(rgba(15,35,45,.9) 1px,transparent 1px)", backgroundSize: "100% 100%,100% 100%,100% 100%,100% 100%,34px 34px,34px 34px" }} />
-    <svg viewBox="0 0 400 220" preserveAspectRatio="none" className="absolute inset-0 h-full w-full"><path d="M-10 170 L80 140 L132 160 L195 85 L250 108 L315 35 L420 55" fill="none" stroke="#e9bd58" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 5"/><circle cx="80" cy="140" r="7" fill="#e9bd58" stroke="#fff" strokeWidth="2"/><circle cx="315" cy="35" r="7" fill="#e95e5e" stroke="#fff" strokeWidth="2"/></svg>
-    <div className="absolute left-[18%] top-[53%] rounded-full border-4 border-white bg-blue-500 p-1.5 shadow-[0_0_28px_8px_rgba(59,130,246,.35)]" />
-    <span className="absolute bottom-3 left-3 rounded-lg bg-black/65 px-3 py-1.5 text-xs text-white backdrop-blur">Luanda · percurso em tempo real</span>
-  </div>;
 }
 
 export default function MobilityExperience() {
@@ -59,7 +51,7 @@ export default function MobilityExperience() {
           <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.035] p-3"><span className="text-xl text-[#e9bd58]">⚑</span><div className="flex-1"><p className="text-[10px] text-white/45">Destino</p><p className="text-sm">Para onde pretende ir?</p></div><span className="text-xl">＋</span></div>
         </div>
         <a href="#ride-request" className="mt-4 flex min-h-12 items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] font-bold text-[#17130a]">Pedir viagem　›</a>
-        <div className="mt-4"><RouteMap /></div>
+        <div className="mt-4"><MobilityLiveMap /></div>
       </div>
       <div className="rounded-[1.8rem] border border-white/10 bg-[#0a0c11] p-4 sm:p-6">
         <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">Escolha um veículo</p><h2 className="mt-1 text-xl font-semibold">Encontre a sua viagem</h2></div>
