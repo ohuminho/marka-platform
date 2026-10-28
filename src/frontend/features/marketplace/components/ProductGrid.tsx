@@ -1,11 +1,14 @@
 "use client";
 
 import {
+  Fragment,
   useEffect,
   useState,
 } from "react";
 
-import ProductCard from "./ProductCard";\nimport SponsoredAdCard from "@/frontend/features/ads/components/SponsoredAdCard";\nimport type { Advertisement } from "@/monetization/ads/ad.types";
+import ProductCard from "./ProductCard";
+import SponsoredAdCard from "@/frontend/features/ads/components/SponsoredAdCard";
+import type { Advertisement } from "@/monetization/ads/ad.types";
 import MarketplaceSearch from "./MarketplaceSearch";
 import MarketplaceFilters from "./MarketplaceFilters";
 import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
@@ -31,6 +34,21 @@ export default function ProductGrid() {
     loading,
     setLoading,
   ] = useState(true);
+
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/ads?placement=marketplace_feed", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data.advertisements) ? data.advertisements as Advertisement[] : [];
+      })
+      .then((items) => { if (!cancelled) setAdvertisements(items); })
+      .catch(() => { if (!cancelled) setAdvertisements([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const [
     error,
@@ -178,11 +196,17 @@ export default function ProductGrid() {
         </div>
       ) : (
         <div className="mt-10 grid gap-x-5 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-            />
+          {products.map((product, index) => (
+            <Fragment key={product.id}>
+              <ProductCard product={product} />
+              {index === 1 && advertisements[0] ? (
+                <SponsoredAdCard
+                  advertisement={advertisements[0]}
+                  placement="marketplace_feed"
+                  context={{ adsEnabled: true, isCheckoutActive: false, isPaymentFlowActive: false }}
+                />
+              ) : null}
+            </Fragment>
           ))}
         </div>
       )}
