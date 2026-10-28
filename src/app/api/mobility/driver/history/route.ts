@@ -55,13 +55,7 @@ export async function GET(request: Request) {
     });
 
     const completed = rides.filter((ride) => ride.status === MobilityRideStatus.TRIP_COMPLETED).length;
-    const cancelled = rides.filter((ride) => [
-      MobilityRideStatus.CANCELLED,
-      MobilityRideStatus.EXPIRED,
-      MobilityRideStatus.NO_DRIVER_FOUND,
-      MobilityRideStatus.FAILED,
-      MobilityRideStatus.DISPUTED,
-    ].includes(ride.status)).length;
+    const cancelled = rides.filter((ride) => ride.status !== MobilityRideStatus.TRIP_COMPLETED).length;
 
     return NextResponse.json(
       { rides, summary: { total: rides.length, completed, cancelled } },
