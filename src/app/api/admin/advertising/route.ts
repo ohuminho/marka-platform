@@ -37,7 +37,7 @@ async function requireAdmin() {
     where: { id: session.userId },
     select: { id: true, status: true, role: true },
   });
-  if (!user || user.status !== "ACTIVE" || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+  if (!user || user.status !== "ACTIVE" || !["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(user.role)) {
     return { error: NextResponse.json({ message: "Administrative access required." }, { status: 403 }) };
   }
   return { user };
