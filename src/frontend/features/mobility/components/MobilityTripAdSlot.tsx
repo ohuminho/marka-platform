@@ -9,7 +9,7 @@ import { canShowAdvertisement } from "@/monetization/ads/ad-policy";
  * Mount inside a real passenger trip screen and pass live ride/navigation state.
  * It intentionally renders nothing without an explicitly eligible active trip.
  */
-export default function MobilityTripAdSlot({ context }: { context: MobilityAdContext }) {
+export default function MobilityTripAdSlot({ context, onDismiss }: { context: MobilityAdContext; onDismiss?: (dismissedAt: number) => void }) {
   const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -53,7 +53,7 @@ export default function MobilityTripAdSlot({ context }: { context: MobilityAdCon
         advertisement={advertisement}
         placement="mobility_trip"
         context={context}
-        onDismiss={() => setDismissed(true)}
+        onDismiss={(_advertisementId, dismissedAt) => { setDismissed(true); onDismiss?.(dismissedAt); }}
       />
     </div>
   );
