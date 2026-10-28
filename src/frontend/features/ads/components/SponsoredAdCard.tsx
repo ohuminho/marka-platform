@@ -12,7 +12,7 @@ type SponsoredAdCardProps = {
   advertisement: Advertisement;
   placement: AdvertisementPlacement;
   context: MobilityAdContext;
-  onDismiss?: (advertisementId: string, dismissedAt: number) => void;
+  onDismiss?: (advertisementId: string, dismissedAt: number) => void;\n  audience?: "rider" | "driver";
 };
 
 export default function SponsoredAdCard({
@@ -104,7 +104,7 @@ export default function SponsoredAdCard({
   }
 
   const creative = advertisement.creativeUrl;
-  const destination = advertisement.destinationUrl;
+  const destination = advertisement.destinationUrl;\n  const driverSafe = audience === "driver";
 
   return (
     <aside
@@ -135,7 +135,7 @@ export default function SponsoredAdCard({
         </button>
       </div>
 
-      {creative && advertisement.creativeType === "video" ? (
+      {creative && advertisement.creativeType === "video" && !driverSafe ? (
         <video
           ref={videoRef}
           className="block max-h-44 w-full bg-black object-cover sm:max-h-52"
@@ -176,7 +176,7 @@ export default function SponsoredAdCard({
             {advertisement.description}
           </p>
         )}
-        {destination && (
+        {destination && !driverSafe && (
           <a
             href={destination}
             onClick={() => {
