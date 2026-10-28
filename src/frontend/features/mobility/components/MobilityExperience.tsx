@@ -107,6 +107,45 @@ function TaxiIllustration() {
 export default function MobilityExperience() {
   return (
     <section className="space-y-6">
+      <div className="space-y-3">
+        <div className="flex items-end justify-between gap-3 px-1">
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-[var(--theme-text-faint)]">Um universo. Três experiências.</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--theme-text)] sm:text-3xl">Explore a MARKA</h2>
+          </div>
+          <span className="hidden text-xs text-[var(--theme-text-muted)] sm:block">Deslize para explorar <span aria-hidden="true">→</span></span>
+        </div>
+        <div aria-label="Experiências MARKA. Deslize horizontalmente para mudar de painel." className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-3 [scrollbar-width:thin]">
+          <a href="/app/marketplace" className="group relative min-h-[255px] min-w-[86%] snap-center overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#171814] p-6 text-white sm:min-w-[48%] sm:p-8 lg:min-w-[32%]">
+            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_90%_10%,rgba(216,193,140,0.26),transparent_45%),linear-gradient(145deg,transparent,rgba(0,0,0,0.6))]" />
+            <div className="relative flex h-full min-h-[205px] flex-col">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#d8c18c]">01 / Marketplace</span>
+              <h3 className="mt-5 max-w-xs text-3xl font-semibold leading-tight tracking-[-0.04em]">Descubra. Compare. Escolha.</h3>
+              <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">Produtos e serviços num só lugar, com uma experiência simples e organizada.</p>
+              <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-[#d8c18c]">Explorar Marketplace <span className="transition group-hover:translate-x-1" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+          <a href="#ride-request" className="group relative min-h-[255px] min-w-[86%] snap-center overflow-hidden rounded-[1.8rem] border border-[#d8c18c]/35 bg-[#10110f] p-6 text-white shadow-[0_20px_60px_rgba(0,0,0,0.16)] sm:min-w-[48%] sm:p-8 lg:min-w-[32%]">
+            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_15%,rgba(216,193,140,0.25),transparent_45%)]" />
+            <div className="relative flex h-full min-h-[205px] flex-col">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#d8c18c]">02 / Mobility</span>
+              <h3 className="mt-5 max-w-xs text-3xl font-semibold leading-tight tracking-[-0.04em]">A cidade. O seu ritmo.</h3>
+              <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">Peça uma viagem e acompanhe o percurso numa experiência premium.</p>
+              <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-[#d8c18c]">Pedir viagem <span className="transition group-hover:translate-x-1" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+          <a href="/app/mobility/parceiros" className="group relative min-h-[255px] min-w-[86%] snap-center overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#20211d] p-6 text-white sm:min-w-[48%] sm:p-8 lg:min-w-[32%]">
+            <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_85%_10%,rgba(255,255,255,0.12),transparent_42%),linear-gradient(145deg,transparent,rgba(0,0,0,0.45))]" />
+            <div className="relative flex h-full min-h-[205px] flex-col">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/50">03 / MARKA Business</span>
+              <h3 className="mt-5 max-w-xs text-3xl font-semibold leading-tight tracking-[-0.04em]">Cresça connosco.</h3>
+              <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">Uma porta de entrada para motoristas, frotas parceiras e mobilidade profissional.</p>
+              <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-[#d8c18c]">Conhecer parcerias <span className="transition group-hover:translate-x-1" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+        </div>
+        <p className="px-1 text-[10px] text-[var(--theme-text-faint)] sm:hidden">Deslize para a esquerda ou direita para mudar de painel.</p>
+      </div>
       <div className="relative isolate overflow-hidden rounded-[2rem] border border-white/10 bg-[#10110f] text-white shadow-[0_30px_100px_rgba(0,0,0,0.24)]">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_78%_12%,rgba(214,185,121,0.18),transparent_38%),linear-gradient(115deg,rgba(255,255,255,0.035),transparent_52%)]" />
         <div className="relative grid min-h-[420px] items-center gap-8 px-5 py-7 sm:px-9 sm:py-10 lg:grid-cols-[1fr_0.9fr] lg:px-12">
