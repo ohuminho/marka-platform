@@ -5,20 +5,20 @@ import MobilityAdSlot from "@/frontend/features/mobility/components/MobilityAdSl
 
 const rideOptions = [
   {
-    name: "MARKA Taxi",
-    detail: "Conforto para as deslocações do dia a dia",
-    badge: "POPULAR",
+    name: "MARKA Go",
+    detail: "Uma opção prática para as viagens do dia a dia",
+    badge: "ESSENCIAL",
     icon: "car",
   },
   {
-    name: "Moto-táxi",
-    detail: "Uma alternativa ágil para a cidade",
+    name: "MARKA Moto",
+    detail: "Agilidade para percursos urbanos",
     badge: "ÁGIL",
     icon: "moto",
   },
   {
-    name: "Mobilidade empresarial",
-    detail: "Transporte para equipas e negócios",
+    name: "MARKA Business",
+    detail: "Mobilidade para equipas e compromissos profissionais",
     badge: "EMPRESAS",
     icon: "business",
   },
@@ -107,39 +107,56 @@ function TaxiIllustration() {
 export default function MobilityExperience() {
   return (
     <section className="space-y-6">
-      <div className="relative isolate overflow-hidden rounded-[2rem] border border-[var(--theme-border)] bg-[#101414] text-white shadow-[0_28px_90px_rgba(0,0,0,0.22)]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_35%,rgba(205,184,133,0.16),transparent_43%),linear-gradient(125deg,rgba(255,255,255,0.035),transparent_55%)]" />
-        <div className="relative grid min-h-[440px] items-center gap-2 px-6 py-8 sm:px-10 sm:py-10 lg:grid-cols-[0.92fr_1.08fr] lg:px-14">
-          <div className="relative z-20 max-w-xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.24em] text-white/65">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#d8c18c]" />
-              MARKA Mobility · Angola
+      <div className="relative isolate overflow-hidden rounded-[2rem] border border-white/10 bg-[#10110f] text-white shadow-[0_30px_100px_rgba(0,0,0,0.24)]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_78%_12%,rgba(214,185,121,0.18),transparent_38%),linear-gradient(115deg,rgba(255,255,255,0.035),transparent_52%)]" />
+        <div className="relative grid min-h-[420px] items-center gap-8 px-5 py-7 sm:px-9 sm:py-10 lg:grid-cols-[1fr_0.9fr] lg:px-12">
+          <div className="relative z-10 max-w-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.045] px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.22em] text-white/65">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#d8c18c]" /> MARKA Mobility <span className="text-white/25">/</span> Angola
             </div>
-            <h1 className="mt-6 text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-6xl">
-              A cidade é sua.<br />
-              <span className="text-[#d8c18c]">Vamos a caminho.</span>
+            <h1 className="mt-6 text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-[3.7rem]">
+              A sua cidade.<br /><span className="text-[#d8c18c]">O seu ritmo.</span>
             </h1>
-            <p className="mt-5 max-w-lg text-sm leading-7 text-white/60 sm:text-base">
-              Peça uma viagem, acompanhe a sua mobilidade e chegue ao seu destino com uma experiência simples, moderna e com a identidade MARKA.
+            <p className="mt-5 max-w-md text-sm leading-7 text-white/60 sm:text-base">
+              Peça, acompanhe e chegue ao destino. Uma experiência de mobilidade directa, transparente e feita para o dia a dia em Angola.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <a href="#ride-request" className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-[#d8c18c] px-6 py-3 text-sm font-semibold text-[#171814] transition hover:brightness-105">
-                Pedir uma viagem <span aria-hidden="true">→</span>
+                Pedir viagem <span aria-hidden="true">↗</span>
               </a>
-              <Link href="/app/marketplace" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-medium text-white/80 transition hover:bg-white/[0.06]">
-                Explorar Marketplace
-              </Link>
-              <Link href="/app/mobility/parceiros" className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#d8c18c]/35 px-6 py-3 text-sm font-medium text-[#e4d2a8] transition hover:bg-white/[0.06]">
-                Conduzir com a MARKA
+              <Link href="/app/mobility/parceiros" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 px-5 py-3 text-sm font-medium text-white/80 transition hover:bg-white/[0.07]">
+                Ser parceiro
               </Link>
             </div>
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-[10px] uppercase tracking-[0.16em] text-white/45">
-              <span>Mobilidade urbana</span>
-              <span>Motoristas verificados*</span>
-              <span>Uma só plataforma</span>
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-[9px] font-medium uppercase tracking-[0.15em] text-white/40">
+              <span>Pedido simples</span><span>Preço claro</span><span>Parceiros independentes</span>
             </div>
           </div>
-          <TaxiIllustration />
+          <div className="relative mx-auto w-full max-w-[440px]">
+            <div aria-hidden="true" className="absolute inset-6 rounded-[2.5rem] bg-[#d8c18c]/10 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[1.8rem] border border-white/12 bg-[#1b1c19] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.35)] sm:p-5">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div><p className="text-[9px] uppercase tracking-[0.22em] text-white/40">A sua próxima viagem</p><p className="mt-1 text-base font-semibold tracking-tight">Para onde vamos?</p></div>
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d8c18c]/30 bg-[#d8c18c]/10 text-lg text-[#d8c18c]" aria-hidden="true">↗</span>
+              </div>
+              <div className="relative mt-5 space-y-3">
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.07] text-[#d8c18c]" aria-hidden="true">●</span>
+                  <div className="min-w-0 flex-1"><p className="text-[9px] uppercase tracking-[0.16em] text-white/40">Partida</p><p className="mt-1 text-sm text-white/80">Defina o local de recolha</p></div>
+                  <span className="text-white/30" aria-hidden="true">⌖</span>
+                </div>
+                <div className="ml-7 h-4 border-l border-dashed border-white/20" aria-hidden="true" />
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#d8c18c]/10 text-[#d8c18c]" aria-hidden="true">◆</span>
+                  <div className="min-w-0 flex-1"><p className="text-[9px] uppercase tracking-[0.16em] text-white/40">Destino</p><p className="mt-1 text-sm text-white/80">Para onde pretende ir?</p></div>
+                  <span className="text-white/30" aria-hidden="true">⌖</span>
+                </div>
+              </div>
+              <a href="#ride-request" className="mt-5 flex min-h-12 items-center justify-center rounded-xl bg-[#d8c18c] px-4 text-sm font-semibold text-[#171814] transition hover:brightness-105">Começar pedido <span className="ml-2" aria-hidden="true">→</span></a>
+              <div className="mt-4 flex items-center justify-between text-[9px] text-white/35"><span>Mobilidade à sua maneira</span><span>MARKA · AO</span></div>
+            </div>
+            <div className="relative mt-3 flex items-center justify-center gap-2 text-[9px] uppercase tracking-[0.16em] text-white/40"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Serviços sujeitos à disponibilidade de parceiros</div>
+          </div>
         </div>
       </div>
 
