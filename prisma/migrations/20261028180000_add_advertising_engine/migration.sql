@@ -30,3 +30,6 @@ CREATE INDEX "AdvertisementCampaign_placement_status_startsAt_endsAt_idx"
 ON "AdvertisementCampaign"("placement", "status", "startsAt", "endsAt");
 CREATE INDEX "AdvertisementCampaign_status_createdAt_idx"
 ON "AdvertisementCampaign"("status", "createdAt");
+
+-- Campaigns are managed through the trusted server API, not public Supabase client access.
+ALTER TABLE "AdvertisementCampaign" ENABLE ROW LEVEL SECURITY;
