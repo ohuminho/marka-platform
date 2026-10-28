@@ -15,39 +15,42 @@ export async function POST(request: Request) {
     const now = new Date();
 
     if (input.event === "impression") {
-      const result = await prisma.advertisementCampaign.updateMany({
-        where: {
-          id: input.campaignId,
-          status: "APPROVED",
-          AND: [
-            { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
-            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
-            { OR: [{ maxImpressions: null }, { impressions: { lt: 0 } }] },
-          ],
-        },
-        data: { impressions: { increment: 1 } },
-      });
-      // The database-level date/status filters are authoritative. A max-impression
-      // cap is also checked by the delivery API before a creative is returned.
-      if (result.count === 0) {
-        const campaign = await prisma.advertisementCampaign.findFirst({
-          where: { id: input.campaignId, status: "APPROVED" },
-          select: { id: true, maxImpressions: true, impressions: true },
+      // Compare-and-increment prevents concurrent requests from overshooting a cap.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const campaign = await prisma.advertisementCampaign.findUnique({
+          where: { id: input.campaignId },
+          select: {
+            id: true,
+            status: true,
+            startsAt: true,
+            endsAt: true,
+            maxImpressions: true,
+            impressions: true,
+          },
         });
-        if (!campaign || (campaign.maxImpressions !== null && campaign.impressions >= campaign.maxImpressions)) {
+        if (
+          !campaign ||
+          campaign.status !== "APPROVED" ||
+          (campaign.startsAt !== null && campaign.startsAt > now) ||
+          (campaign.endsAt !== null && campaign.endsAt <= now) ||
+          (campaign.maxImpressions !== null && campaign.impressions >= campaign.maxImpressions)
+        ) {
           return NextResponse.json({ recorded: false }, { status: 409 });
         }
-        const retry = await prisma.advertisementCampaign.updateMany({
+
+        const updated = await prisma.advertisementCampaign.updateMany({
           where: {
-            id: input.campaignId,
+            id: campaign.id,
             status: "APPROVED",
             impressions: campaign.impressions,
           },
           data: { impressions: { increment: 1 } },
         });
-        return NextResponse.json({ recorded: retry.count === 1 });
+        if (updated.count === 1) {
+          return NextResponse.json({ recorded: true });
+        }
       }
-      return NextResponse.json({ recorded: true });
+      return NextResponse.json({ recorded: false }, { status: 409 });
     }
 
     const result = await prisma.advertisementCampaign.updateMany({
