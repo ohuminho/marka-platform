@@ -1841,3 +1841,51 @@ model ComplianceCase {
   @@index([status])
   @@index([assignedTo])
 }
+
+enum AdvertisementCampaignStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  PAUSED
+  REJECTED
+  ENDED
+}
+
+enum AdvertisementPlacement {
+  MOBILITY_TRIP
+  MARKETPLACE_FEED
+  MARKETPLACE_PRODUCT
+  COMMUNITY_FEED
+}
+
+enum AdvertisementCreativeType {
+  IMAGE
+  VIDEO
+  NATIVE
+}
+
+model AdvertisementCampaign {
+  id               String                       @id @default(uuid())
+  advertiserName   String
+  headline         String
+  description      String?
+  placement        AdvertisementPlacement
+  creativeType     AdvertisementCreativeType
+  creativeUrl      String?
+  thumbnailUrl     String?
+  destinationUrl   String?
+  status           AdvertisementCampaignStatus  @default(DRAFT)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  dailyBudgetMinor BigInt?
+  totalBudgetMinor BigInt?
+  currency         String                       @default("AOA") @db.Char(3)
+  maxImpressions   Int?
+  impressions      Int                          @default(0)
+  clicks           Int                          @default(0)
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+
+  @@index([placement, status, startsAt, endsAt])
+  @@index([status, createdAt])
+}
