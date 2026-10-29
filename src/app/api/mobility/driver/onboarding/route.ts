@@ -14,6 +14,8 @@ const onboardingSchema = z.object({
   countryCode: z.string().trim().length(2).default("AO"),
 });
 
+const DRIVER_TERMS_VERSION = "MARKA-MOBILITY-DRIVER-2026-10-29";
+
 const REQUIRED_DRIVER_DOCUMENTS = [
   {
     documentType: "IDENTITY_DOCUMENT",
@@ -111,6 +113,23 @@ export async function POST(request: Request) {
     });
     if (!membership) {
       return NextResponse.json({ message: "Acesso à organização negado.", code: "ORGANIZATION_ACCESS_DENIED" }, { status: 403 });
+    }
+
+    const termsAcceptance = await prisma.auditLog.findFirst({
+      where: {
+        actorUserId: user.id,
+        organizationId,
+        action: "MOBILITY_DRIVER_TERMS_ACCEPTED",
+        entityType: "MobilityDriverTerms",
+        entityId: DRIVER_TERMS_VERSION,
+      },
+      select: { id: true },
+    });
+    if (!termsAcceptance) {
+      return NextResponse.json(
+        { message: "Lê e aceita os Termos de Adesão do Motorista antes de enviar a candidatura.", code: "DRIVER_TERMS_NOT_ACCEPTED" },
+        { status: 422 },
+      );
     }
 
     const existing = await prisma.mobilityDriver.findUnique({
