@@ -48,7 +48,7 @@ function loadAdSense(clientId: string): Promise<void> {
 export default function GoogleAdSenseSlot() {
   const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID?.trim();
   const slotId = process.env.NEXT_PUBLIC_ADSENSE_MARKETPLACE_SLOT_ID?.trim();
-  const adRef = useRef<HTMLElement | null>(null);
+  const adRef = useRef<HTMLModElement | null>(null);
   const [failed, setFailed] = useState(false);
   const initialized = useRef(false);
 
@@ -83,7 +83,7 @@ export default function GoogleAdSenseSlot() {
         Publicidade
       </div>
       <ins
-        ref={adRef as React.Ref<HTMLElement>}
+        ref={adRef}
         className="adsbygoogle block min-h-[100px] w-full overflow-hidden"
         style={{ display: "block" }}
         data-ad-client={clientId}
