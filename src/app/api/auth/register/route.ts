@@ -100,12 +100,24 @@ export async function POST(request: Request) {
         }
 
         const accountRole =
-          await tx.role.findUnique({
+          await tx.role.upsert({
             where: {
               organizationId_name: {
                 organizationId: organization.id,
                 name: accountType,
               },
+            },
+            update: {
+              status: "ACTIVE",
+            },
+            create: {
+              organizationId: organization.id,
+              name: accountType,
+              description:
+                accountType === "DRIVER"
+                  ? "MARKA Mobility driver partner pending operational approval"
+                  : "Standard MARKA customer",
+              status: "ACTIVE",
             },
             select: {
               id: true,
