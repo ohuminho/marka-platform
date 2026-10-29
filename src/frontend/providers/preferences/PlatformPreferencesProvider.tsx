@@ -28,26 +28,33 @@ const isRtlLanguage = (language: PlatformLanguage) => language === "ar";
 export function PlatformPreferencesProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<PlatformTheme>("pearl");
   const [language, setLanguageState] = useState<PlatformLanguage>("pt");
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_KEY);
-    const storedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
-    // The persisted values are client-only; hydration must complete before applying them.
-    if (isTheme(storedTheme)) setThemeState(storedTheme);
-    if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
+    const timer = window.setTimeout(() => {
+      const storedTheme = window.localStorage.getItem(THEME_KEY);
+      const storedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
+      // Read saved preferences before persisting defaults so existing choices are preserved.
+      if (isTheme(storedTheme)) setThemeState(storedTheme);
+      if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
+      setHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
+  }, [theme, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     document.documentElement.lang = language;
     document.documentElement.dir = isRtlLanguage(language) ? "rtl" : "ltr";
     document.documentElement.dataset.language = language;
     window.localStorage.setItem(LANGUAGE_KEY, language);
-  }, [language]);
+  }, [language, hydrated]);
 
   const value = useMemo(
     () => ({ theme, language, setTheme: setThemeState, setLanguage: setLanguageState }),
