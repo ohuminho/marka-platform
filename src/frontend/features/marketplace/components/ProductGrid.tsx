@@ -8,6 +8,7 @@ import {
 
 import ProductCard from "./ProductCard";
 import SponsoredAdCard from "@/frontend/features/ads/components/SponsoredAdCard";
+import GoogleAdSenseSlot from "@/frontend/features/ads/components/GoogleAdSenseSlot";
 import type { Advertisement } from "@/monetization/ads/ad.types";
 import MarketplaceSearch from "./MarketplaceSearch";
 import MarketplaceFilters from "./MarketplaceFilters";
@@ -199,6 +200,7 @@ export default function ProductGrid() {
           {products.map((product, index) => (
             <Fragment key={product.id}>
               <ProductCard product={product} />
+              {index === 4 ? <GoogleAdSenseSlot /> : null}
               {index === 1 && advertisements[0] ? (
                 <SponsoredAdCard
                   advertisement={advertisements[0]}
