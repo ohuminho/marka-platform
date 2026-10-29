@@ -59,6 +59,7 @@ export async function GET(
           name: true,
           email: true,
           role: true,
+          isFounder: true,
           status: true,
           emailVerifiedAt: true,
 
@@ -158,6 +159,7 @@ export async function GET(
             name: user.name,
             email: user.email,
             role: user.role,
+            isFounder: user.isFounder,
             status: user.status,
             emailVerifiedAt:
               user.emailVerifiedAt,
@@ -185,6 +187,7 @@ export async function GET(
         name: user.name,
         email: user.email,
         role: user.role,
+        isFounder: user.isFounder,
         status: user.status,
         emailVerifiedAt:
           user.emailVerifiedAt,
