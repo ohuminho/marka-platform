@@ -58,6 +58,11 @@ export async function POST(request: Request) {
     select: { id: true },
   });
   if (!membership) return NextResponse.json({ message: "Acesso à organização negado." }, { status: 403 });
+  const acceptedTerms = await prisma.auditLog.findFirst({
+    where: { actorUserId: user.id, organizationId, action: "MOBILITY_DRIVER_TERMS_ACCEPTED", entityType: "MobilityDriverTerms", entityId: "MARKA-MOBILITY-DRIVER-2026-10-29" },
+    select: { id: true },
+  });
+  if (!acceptedTerms) return NextResponse.json({ message: "Aceita primeiro os Termos de Adesão do Motorista.", code: "DRIVER_TERMS_NOT_ACCEPTED" }, { status: 422 });
   const driver = await prisma.mobilityDriver.findFirst({ where: { userId: user.id, organizationId }, select: { id: true } });
   if (!driver) return NextResponse.json({ message: "Inicia primeiro a candidatura de motorista.", code: "DRIVER_APPLICATION_REQUIRED" }, { status: 409 });
 
