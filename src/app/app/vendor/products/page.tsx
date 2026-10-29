@@ -59,7 +59,10 @@ export default function VendorProductsPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   async function createStore(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
