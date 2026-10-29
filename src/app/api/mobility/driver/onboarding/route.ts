@@ -113,10 +113,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Acesso à organização negado.", code: "ORGANIZATION_ACCESS_DENIED" }, { status: 403 });
     }
 
-    const existing = await prisma.mobilityDriver.findFirst({
-      where: { userId: user.id, organizationId },
-      select: { id: true, status: true, displayName: true },
+    const existing = await prisma.mobilityDriver.findUnique({
+      where: { userId: user.id },
+      select: { id: true, organizationId: true, status: true, displayName: true },
     });
+    if (existing && existing.organizationId !== organizationId) {
+      return NextResponse.json(
+        { message: "Já existe um perfil de motorista associado a esta conta noutra organização.", code: "DRIVER_PROFILE_ALREADY_LINKED" },
+        { status: 409 },
+      );
+    }
     if (existing) {
       return NextResponse.json({ driver: existing, alreadyApplied: true }, { status: 200 });
     }
