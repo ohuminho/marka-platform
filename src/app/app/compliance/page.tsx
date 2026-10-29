@@ -57,9 +57,12 @@ export default function CompliancePage() {
   };
 
   useEffect(() => {
-    void loadProfiles()
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load compliance status."))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      void loadProfiles()
+        .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load compliance status."))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const upload = async (subjectType: SubjectType) => {
