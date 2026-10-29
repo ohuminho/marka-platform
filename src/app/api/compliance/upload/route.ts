@@ -17,8 +17,53 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json({ message: "Choose a document file." }, { status: 400 });
+      return NextResponse.json({ message: "Escolhe uma fotografia ou ficheiro do documento." }, { status: 400 });
     }
+    if (file.size < 1) {
+      return NextResponse.json({ message: "O ficheiro selecionado está vazio." }, { status: 400 });
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ message: "O ficheiro excede o limite de 10 MB." }, { status: 413 });
+    }
+
+    // Mobile file pickers sometimes provide an empty or generic MIME type.
+    // Identify supported files by their bytes and normalize the MIME type before forwarding.
+    const signature = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    const startsWith = (bytes: number[]) => bytes.every((value, index) => signature[index] === value);
+    const isJpeg = startsWith([0xff, 0xd8, 0xff]);
+    const isPng = startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const isPdf = signature.length >= 5 && String.fromCharCode(...signature.slice(0, 5)) === "%PDF-";
+    const isWebp = signature.length >= 12 &&
+      String.fromCharCode(...signature.slice(0, 4)) === "RIFF" &&
+      String.fromCharCode(...signature.slice(8, 12)) === "WEBP";
+    const detectedMime = isJpeg ? "image/jpeg" : isPng ? "image/png" : isPdf ? "application/pdf" : isWebp ? "image/webp" : null;
+    if (!detectedMime) {
+      return NextResponse.json({
+        message: "Formato não reconhecido. Usa uma fotografia JPG/JPEG, PNG, WebP ou um documento PDF, até 10 MB.",
+        code: "UNSUPPORTED_FILE_SIGNATURE",
+      }, { status: 415 });
+    }
+    const declaredMime = file.type.toLowerCase().split(";")[0].trim();
+    const mimeAliases: Record<string, string> = {
+      "image/jpg": "image/jpeg",
+      "image/pjpeg": "image/jpeg",
+      "application/x-pdf": "application/pdf",
+    };
+    const normalizedDeclaredMime = mimeAliases[declaredMime] ?? declaredMime;
+    const genericMimes = ["", "application/octet-stream", "binary/octet-stream"];
+    if (!genericMimes.includes(normalizedDeclaredMime) && normalizedDeclaredMime !== detectedMime) {
+      return NextResponse.json({
+        message: "O conteúdo do ficheiro não corresponde ao tipo declarado. Escolhe novamente o ficheiro original.",
+        code: "FILE_TYPE_MISMATCH",
+      }, { status: 415 });
+    }
+    const extensionByMime: Record<string, string> = {
+      "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf",
+    };
+    const normalizedFile = new File([file], file.name || `document.${extensionByMime[detectedMime]}`, {
+      type: detectedMime,
+      lastModified: file.lastModified,
+    });
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const anonKey = process.env.SUPABASE_ANON_KEY;
@@ -70,7 +115,7 @@ export async function POST(request: Request) {
       const value = form.get(key);
       if (typeof value === "string" && value.trim()) forwarded.set(key, value.trim());
     }
-    forwarded.set("file", file, file.name);
+    forwarded.set("file", normalizedFile, normalizedFile.name);
 
     const response = await fetch(
       `${supabaseUrl.replace(/\/$/, "")}/functions/v1/marka-kyc-upload`,
