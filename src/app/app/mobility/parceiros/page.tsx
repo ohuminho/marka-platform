@@ -2,6 +2,7 @@ import Link from "next/link";
 import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
+import MobilitySupportCenter from "@/frontend/features/mobility/components/MobilitySupportCenter";
 
 const onboardingSteps = [
   {
@@ -141,19 +142,7 @@ export default function MobilityPartnersPage() {
             </div>
           </section>
 
-          <section id="suporte" className="grid gap-4 lg:grid-cols-2">
-            <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
-              <h2 className="text-lg font-semibold text-[var(--theme-text)]">Contratos sem surpresas</h2>
-              <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">Antes de entrar em operação, o motorista deve conseguir consultar a versão do contrato, a comissão aplicável, a forma e periodicidade de liquidação, as regras de cancelamento, o tratamento de reclamações e as condições de suspensão ou saída. A aceitação deve ficar registada e ser recuperável.</p>
-            </article>
-            <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
-              <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[#b89a5b]">SUPORTE · SEGURANÇA</p>
-              <h2 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">Contacto e protecção de dados</h2>
-              <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">Para iniciar o acompanhamento operacional, abra a área do motorista ou reveja a candidatura. Em caso de perigo imediato, contacte os serviços locais de emergência. Não envie BI, registo criminal ou documentos do veículo por comentários públicos ou canais não verificados.</p>
-              <Link href="/app/driver" className="mt-5 inline-flex min-h-10 items-center rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)] transition hover:border-[#b89a5b]">Ir para a área do motorista <span aria-hidden="true" className="ml-2">↗</span></Link>
-              <p className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[.05] p-3 text-xs leading-5 text-[var(--theme-text-muted)]">Nota transparente: o contacto directo de suporte ainda precisa de um canal oficial configurado pela operação. Não apresentamos um formulário fictício como se já encaminhasse pedidos.</p>
-            </article>
-          </section>
+          <MobilitySupportCenter />
 
           <section className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
             <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Ajuda ao candidato</p>
