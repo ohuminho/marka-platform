@@ -229,7 +229,7 @@ export default function LoginForm() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-[var(--theme-text)]">A sua identidade pessoal</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--theme-text-muted)]">O perfil começa consigo. Poderá personalizar a sua fotografia depois de criar a conta.</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--theme-text-muted)]">Uma identidade visual distinta para a sua presença em todo o ecossistema MARKA.</p>
           </div>
         </div>
       )}
