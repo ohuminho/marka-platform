@@ -494,19 +494,14 @@ export default function MobilityControlCenter() {
                 serviceType,
                 currency: "AOA",
 
-                pickupLatitude: 0,
-                pickupLongitude: 0,
+                pickupLatitude: pickupPoint.latitude,
+                pickupLongitude: pickupPoint.longitude,
 
-                dropoffLatitude: 0,
-                dropoffLongitude: 0,
+                dropoffLatitude: dropoffPoint.latitude,
+                dropoffLongitude: dropoffPoint.longitude,
 
-                pickupAddress:
-                  pickupAddress ||
-                  undefined,
-
-                dropoffAddress:
-                  dropoffAddress ||
-                  undefined,
+                pickupAddress: pickupPoint.address,
+                dropoffAddress: dropoffPoint.address,
 
                 safetyMode,
               }),
