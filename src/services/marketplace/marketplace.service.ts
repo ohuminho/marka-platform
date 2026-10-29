@@ -151,6 +151,7 @@ export class MarketplaceService {
       id: product.id,
       name: product.name,
       description: product.description,
+      attributes: product.attributes,
       sku: product.sku,
       image: product.image,
       price: Number(product.price),
