@@ -93,9 +93,13 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       };
       const route = payload.routes?.[0];
       if (!route?.geometry?.coordinates?.length) throw new Error("Não foi encontrada uma rota rodoviária entre estes pontos.");
+      const leaflet = window.L;
+      const map = mapRef.current;
+      if (!leaflet || !map) throw new Error("O mapa ainda não está pronto. Tente novamente.");
       if (routeRef.current) routeRef.current.remove();
-      routeRef.current = window.L.geoJSON(route.geometry, { style: { color: "#e9bd58", weight: 5, opacity: .95 } }).addTo(mapRef.current);
-      mapRef.current.fitBounds(routeRef.current.getBounds(), { padding: [24, 24] });
+      const routeLayer = leaflet.geoJSON(route.geometry, { style: { color: "#e9bd58", weight: 5, opacity: .95 } }).addTo(map);
+      routeRef.current = routeLayer;
+      map.fitBounds(routeLayer.getBounds(), { padding: [24, 24] });
       setRouteSummary(`${(route.distance / 1000).toLocaleString("pt-AO", { maximumFractionDigits: 1 })} km · cerca de ${Math.max(1, Math.round(route.duration / 60))} min`);
       setStatus("Percurso rodoviário calculado com OSRM.");
     } catch (e) { setStatus(e instanceof Error ? e.message : "Falha ao calcular o percurso."); }
