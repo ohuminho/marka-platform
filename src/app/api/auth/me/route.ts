@@ -125,6 +125,18 @@ export async function GET(
       );
     }
 
+    const verifiedIdentityProfile = await prisma.complianceProfile.findFirst({
+      where: {
+        subjectType: "KYC",
+        subjectId: user.id,
+        organizationId: null,
+        status: "VERIFIED",
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      select: { id: true },
+    });
+    const isIdentityVerified = Boolean(verifiedIdentityProfile);
+
     const membershipOrganizationIds =
       user.memberships.map(
         (membership) =>
@@ -160,6 +172,7 @@ export async function GET(
             email: user.email,
             role: user.role,
             isFounder: user.isFounder,
+            isIdentityVerified,
             status: user.status,
             emailVerifiedAt:
               user.emailVerifiedAt,
@@ -188,6 +201,7 @@ export async function GET(
         email: user.email,
         role: user.role,
         isFounder: user.isFounder,
+        isIdentityVerified,
         status: user.status,
         emailVerifiedAt:
           user.emailVerifiedAt,
