@@ -729,6 +729,7 @@ model User {
   emailNormalized String     @unique
   password        String     @map("password_hash")
   role            String     @default("CUSTOMER")
+  isFounder       Boolean    @default(false)
   status          UserStatus @default(PENDING_VERIFICATION)
 
   emailVerifiedAt DateTime?
