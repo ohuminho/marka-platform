@@ -117,17 +117,38 @@ export default function MobilityExperience() {
         </Link>
       </header>
 
-      <div className="relative isolate overflow-hidden rounded-[2rem] border border-[#e9bd58]/25 bg-[#07090d]">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#e9bd58]/10 blur-3xl" />
+      <div className="relative isolate overflow-hidden rounded-[2rem] border border-[#e9bd58]/30 bg-[#07090d] shadow-[0_24px_90px_-38px_rgba(233,189,88,.22)]">
+        <img
+          src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=2000&q=85"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-30"
+        />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(5,7,10,.97)_0%,rgba(5,7,10,.88)_42%,rgba(5,7,10,.62)_100%)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_82%_18%,rgba(233,189,88,.22),transparent_34%),linear-gradient(0deg,rgba(5,7,10,.55),transparent_55%)]" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#e9bd58]/20 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 left-[28%] h-64 w-64 rounded-full bg-sky-400/[.07] blur-3xl" />
         <div className="relative grid gap-8 p-5 sm:p-8 lg:grid-cols-[.8fr_1.2fr] lg:items-center lg:p-10">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.28em] text-[#e9bd58]">Mobilidade inteligente</p>
             <h1 className="mt-4 max-w-lg text-3xl font-semibold leading-tight tracking-[-.04em] sm:text-4xl">A sua próxima viagem começa aqui.</h1>
             <p className="mt-4 max-w-md text-sm leading-6 text-white/60">Escolha a partida, confirme o destino e envie um pedido real. A disponibilidade do motorista é confirmada pelo sistema operacional — não por estimativas fictícias.</p>
-            <div className="mt-6 flex flex-wrap gap-2 text-[10px] text-white/55">
-              <span className="rounded-full border border-white/10 px-3 py-2">GPS do dispositivo</span>
-              <span className="rounded-full border border-white/10 px-3 py-2">Rotas OpenStreetMap</span>
-              <span className="rounded-full border border-white/10 px-3 py-2">Pedido registado no sistema</span>
+            <div className="mt-6 flex flex-wrap gap-2 text-[10px] text-white/75">
+              <span className="rounded-full border border-white/15 bg-black/25 px-3 py-2 backdrop-blur-sm">GPS do dispositivo</span>
+              <span className="rounded-full border border-white/15 bg-black/25 px-3 py-2 backdrop-blur-sm">Rotas OpenStreetMap</span>
+              <span className="rounded-full border border-[#e9bd58]/35 bg-[#e9bd58]/[.08] px-3 py-2 text-[#f2cd70] backdrop-blur-sm">Pedido registado no sistema</span>
+            </div>
+            <div className="mt-6 grid grid-cols-3 gap-2">
+              {[
+                { value: "01", label: "Escolha a rota" },
+                { value: "02", label: "Defina o serviço" },
+                { value: "03", label: "Envie o pedido" },
+              ].map((step) => (
+                <div key={step.value} className="rounded-xl border border-white/10 bg-black/30 p-3 backdrop-blur-md">
+                  <span className="text-[10px] font-semibold tracking-[.2em] text-[#e9bd58]">{step.value}</span>
+                  <p className="mt-2 text-[10px] leading-4 text-white/75 sm:text-xs">{step.label}</p>
+                </div>
+              ))}
             </div>
           </div>
           <div className="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
@@ -155,6 +176,7 @@ export default function MobilityExperience() {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.24em] text-[#e9bd58]">A frota MARKA</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight">Conforto, presença e elegância em cada viagem.</h2>
+            <div className="mt-4 h-px w-24 bg-gradient-to-r from-[#e9bd58] via-[#e9bd58]/50 to-transparent" />
           </div>
           <p className="max-w-sm text-xs leading-5 text-white/45">Uma apresentação visual dos estilos de viatura MARKA. A disponibilidade depende dos veículos e motoristas activos na plataforma.</p>
         </div>
