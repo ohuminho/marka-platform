@@ -757,6 +757,8 @@ model User {
   mobilityDriver MobilityDriver? @relation("MobilityDriverUser")
   mobilityRides  MobilityRide[]  @relation("MobilityRideRider")
   deliveryAgent  DeliveryAgent? @relation("DeliveryAgentUser")
+  supportTickets SupportTicket[] @relation("SupportTicketRequester")
+  supportMessages SupportMessage[] @relation("SupportMessageAuthor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1906,4 +1908,59 @@ model AdvertisementEvent {
 
   @@unique([campaignId, userId, eventType, eventDay])
   @@index([campaignId, eventType, createdAt])
+}
+
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_USER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model SupportTicket {
+  id          String              @id @default(uuid())
+  reference   String              @unique
+  userId      String
+  subject     String
+  category    String
+  description String              @db.Text
+  priority    SupportTicketPriority @default(NORMAL)
+  status      SupportTicketStatus @default(OPEN)
+  lastReplyAt DateTime?
+  resolvedAt  DateTime?
+
+  requester User             @relation("SupportTicketRequester", fields: [userId], references: [id], onDelete: Cascade)
+  messages  SupportMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, priority, updatedAt])
+  @@index([reference])
+}
+
+model SupportMessage {
+  id        String   @id @default(uuid())
+  ticketId  String
+  authorId  String
+  body      String   @db.Text
+  isStaff   Boolean  @default(false)
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User          @relation("SupportMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([authorId, createdAt])
 }
