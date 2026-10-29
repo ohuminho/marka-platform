@@ -150,6 +150,35 @@ export default function MobilityExperience() {
         </div>
       </div>
 
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[.24em] text-[#e9bd58]">A frota MARKA</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">Conforto, presença e elegância em cada viagem.</h2>
+          </div>
+          <p className="max-w-sm text-xs leading-5 text-white/45">Uma apresentação visual dos estilos de viatura MARKA. A disponibilidade depende dos veículos e motoristas activos na plataforma.</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { name: "MARKA Go", detail: "Mobilidade urbana", image: "photo-1618843479313-40f8afb4b4d8", alt: "Automóvel moderno para mobilidade urbana" },
+            { name: "MARKA Executive", detail: "Conforto executivo", image: "photo-1563720223185-11003d516935", alt: "Automóvel de luxo para transporte executivo" },
+            { name: "MARKA Business", detail: "Espaço para grupos", image: "photo-1552519507-da3b142c6e3d", alt: "Automóvel premium de carroçaria elegante" },
+            { name: "MARKA Electric", detail: "Mobilidade eléctrica", image: "photo-1593941707882-a5bba14938c7", alt: "Veículo eléctrico moderno" },
+          ].map((vehicle) => (
+            <article key={vehicle.name} className="group overflow-hidden rounded-2xl border border-white/10 bg-[#0a0c11] transition hover:-translate-y-1 hover:border-[#e9bd58]/50">
+              <div className="relative aspect-[16/10] overflow-hidden bg-white/5">
+                <img src={`https://images.unsplash.com/${vehicle.image}?auto=format&fit=crop&w=1000&q=85`} alt={vehicle.alt} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#07090d]/70 via-transparent to-transparent" />
+              </div>
+              <div className="p-4">
+                <h3 className="text-sm font-semibold">{vehicle.name}</h3>
+                <p className="mt-1 text-xs text-white/50">{vehicle.detail}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <form onSubmit={submitRide} className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="rounded-[1.7rem] border border-white/10 bg-[#0a0c11] p-4 sm:p-6">
           <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">01 · Serviço</p><h2 className="mt-1 text-xl font-semibold">Escolha o tipo de viagem</h2><p className="mt-2 text-xs leading-5 text-white/45">O tipo seleccionado é enviado ao dispatch, que procura veículos compatíveis e motoristas elegíveis.</p></div>
