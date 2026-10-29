@@ -67,7 +67,10 @@ export default function AccountPage() {
           </div>
           <div>
             <p className="marka-kicker">MARKA / ACCOUNT</p>
-            <h1 className="marka-editorial mt-2 text-3xl text-[var(--theme-text)]">{user.profile?.displayName || user.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="marka-editorial mt-2 text-3xl text-[var(--theme-text)]">{user.profile?.displayName || user.name}</h1>
+              {user.isFounder && <span className="mt-2 inline-flex items-center rounded-full border border-[#b9944d]/50 bg-[#b9944d]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b9944d]">Fundador MARKA</span>}
+            </div>
             <p className="mt-1 text-sm text-[var(--theme-text-muted)]">{user.email}</p>
           </div>
         </div>
