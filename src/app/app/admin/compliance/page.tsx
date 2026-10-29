@@ -121,12 +121,15 @@ export default function AdminCompliancePage() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-8 p-6">
-      <header>
-        <p className="text-sm font-medium text-[var(--theme-muted)]">Administration</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--theme-text)]">Compliance Center</h1>
-        <p className="mt-2 max-w-3xl text-[var(--theme-muted)]">
-          Inspect private evidence using short-lived links, review each document, and then decide the overall profile. Identity owners cannot approve their own KYC.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-[var(--theme-muted)]">Administration</p>
+          <h1 className="mt-2 text-3xl font-semibold text-[var(--theme-text)]">Compliance Center</h1>
+          <p className="mt-2 max-w-3xl text-[var(--theme-muted)]">
+            Inspect private evidence using short-lived links, review each document, and then decide the overall profile. Identity owners cannot approve their own KYC.
+          </p>
+        </div>
+        <a href="/app/admin/mobility/drivers" className="rounded-xl border border-[var(--theme-border)] px-4 py-3 text-sm font-semibold text-[var(--theme-text)] transition hover:opacity-80">Revisão e ativação de motoristas</a>
       </header>
 
       {error && <div role="alert" className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-[var(--theme-text)]">{error}</div>}
