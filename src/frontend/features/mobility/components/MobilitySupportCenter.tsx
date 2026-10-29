@@ -62,7 +62,10 @@ export default function MobilitySupportCenter() {
     }
   }, []);
 
-  useEffect(() => { void loadTickets(); }, [loadTickets]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadTickets(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadTickets]);
 
   async function submitTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
