@@ -203,7 +203,7 @@ export default function VendorProductsPage() {
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   {["Produtos", "Automóveis", "Motociclos", "Imóveis", "Serviços", "Lojas locais"].map((item) => <div key={item} className="rounded-xl border border-[var(--theme-border)] p-4"><span className="text-sm text-[var(--theme-text)]">{item}</span></div>)}
                 </div>
-                <p className="mt-6 text-sm leading-7 text-[var(--theme-text-muted)]">A MARKA está a estruturar a experiência por tipo de anúncio. Neste momento, este espaço ativa a abertura de loja e o catálogo de produtos; categorias especializadas exigem os respetivos formulários e validações.</p>
+                <p className="mt-6 text-sm leading-7 text-[var(--theme-text-muted)]">A MARKA permite preparar anúncios de produtos, veículos, imóveis e serviços no mesmo espaço. Cada categoria apresenta campos próprios; todos os anúncios começam como rascunho e a publicação depende da aprovação comercial.</p>
               </aside>
             </section>
           ) : (
