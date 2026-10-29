@@ -174,8 +174,41 @@ export async function POST(
         },
       });
 
+    await mobilityLifecycleService.initialize({
+      organizationId:
+        authentication.session
+          .organizationId,
+
+      rideId:
+        ride.id,
+
+      actorUserId:
+        authentication.session
+          .userId,
+
+      correlationId:
+        requestContext.correlationId,
+
+      requestId:
+        requestContext.requestId,
+
+      idempotencyKey:
+        `${idempotencyKey}:orchestration`,
+
+      ipAddress:
+        requestContext.ipAddress,
+
+      userAgent:
+        requestContext.userAgent,
+
+      safetyMode,
+    });
+
+    // A ride request must enter the real safety + matching + dispatch
+    // pipeline immediately; merely creating an orchestration leaves it stuck
+    // at REQUESTED and no driver can ever receive the offer.
     const orchestration =
-      await mobilityLifecycleService.initialize({
+      await mobilityLifecycleService.execute({
         organizationId:
           authentication.session
             .organizationId,
@@ -194,7 +227,7 @@ export async function POST(
           requestContext.requestId,
 
         idempotencyKey:
-          `${idempotencyKey}:orchestration`,
+          `${idempotencyKey}:dispatch`,
 
         ipAddress:
           requestContext.ipAddress,
@@ -203,15 +236,25 @@ export async function POST(
           requestContext.userAgent,
 
         safetyMode,
+
+        action: "DISPATCH",
       });
+
+    const refreshedRide =
+      await mobilityRideService.getById(
+        ride.id,
+      );
 
     return NextResponse.json(
       {
-        ride,
+        ride: refreshedRide ?? ride,
         orchestration,
       },
       {
-        status: 201,
+        status:
+          orchestration.recoveryRequired
+            ? 202
+            : 201,
       },
     );
   } catch (error) {
