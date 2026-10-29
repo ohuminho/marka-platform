@@ -68,3 +68,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Não foi possível registar o pedido. Tenta novamente." }, { status: 500 });
   }
 }
+
+
+export async function PATCH(request: Request) {
+  try {
+    const actor = await getActor();
+    if (!actor) return NextResponse.json({ message: "Inicia sessão para gerir pedidos." }, { status: 401 });
+    if (!actor.isStaff) return NextResponse.json({ message: "Apenas a equipa de suporte pode alterar o estado." }, { status: 403 });
+    const body = await request.json();
+    const ticketId = typeof body?.ticketId === "string" ? body.ticketId : "";
+    const status = typeof body?.status === "string" ? body.status.toUpperCase() : "";
+    if (!ticketId || !["OPEN", "IN_PROGRESS", "WAITING_FOR_USER", "RESOLVED", "CLOSED"].includes(status)) {
+      return NextResponse.json({ message: "Pedido ou estado inválido." }, { status: 400 });
+    }
+    const ticket = await prisma.supportTicket.update({
+      where: { id: ticketId },
+      data: {
+        status: status as "OPEN" | "IN_PROGRESS" | "WAITING_FOR_USER" | "RESOLVED" | "CLOSED",
+        resolvedAt: status === "RESOLVED" || status === "CLOSED" ? new Date() : null,
+      },
+      select: { id: true, reference: true, status: true, resolvedAt: true },
+    });
+    return NextResponse.json({ ticket, message: "Estado do pedido actualizado." });
+  } catch (error) {
+    console.error("[SUPPORT_TICKET_PATCH]", error);
+    return NextResponse.json({ message: "Não foi possível actualizar o estado do pedido." }, { status: 500 });
+  }
+}
