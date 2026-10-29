@@ -38,6 +38,7 @@ export default function VendorProductsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [storeName, setStoreName] = useState("");
+  const [storeProfile, setStoreProfile] = useState({ name: "", description: "", logo: "", banner: "", location: "" });
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", price: "", stock: "", image: "" });
   const [form, setForm] = useState({
@@ -57,6 +58,7 @@ export default function VendorProductsPage() {
       setVendor(data.vendor ?? null);
       setProducts(Array.isArray(data.products) ? data.products : []);
       if (data.vendor?.store?.name) setStoreName(data.vendor.store.name);
+      if (data.vendor?.store) setStoreProfile({ name: data.vendor.store.name ?? "", description: data.vendor.store.description ?? "", logo: data.vendor.store.logo ?? "", banner: data.vendor.store.banner ?? "", location: data.vendor.store.location ?? "" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ocorreu um erro ao carregar a loja.");
     } finally {
@@ -85,6 +87,24 @@ export default function VendorProductsPage() {
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível criar a loja.");
+    } finally { setSaving(false); }
+  }
+
+  async function saveStoreProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/vendor/store", {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(storeProfile),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível atualizar o perfil da loja.");
+      setNotice(data.message || "Perfil da loja atualizado.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível atualizar o perfil da loja.");
     } finally { setSaving(false); }
   }
 
@@ -204,6 +224,22 @@ export default function VendorProductsPage() {
 
           {error && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-600">{error}</div>}
           {notice && <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-[var(--theme-text)]">{notice}</div>}
+
+          {vendor && <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+            <div className="mb-6">
+              <p className="marka-kicker">IDENTIDADE COMERCIAL</p>
+              <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">Perfil da loja</h2>
+              <p className="mt-2 text-sm text-[var(--theme-text-muted)]">Defina a apresentação pública do negócio. Use imagens alojadas em HTTPS; a identidade não altera o estado de aprovação.</p>
+            </div>
+            <form onSubmit={saveStoreProfile} className="grid gap-4 md:grid-cols-2">
+              <div><label className={label} htmlFor="storeProfileName">Nome comercial</label><input id="storeProfileName" className={field} required minLength={2} maxLength={160} value={storeProfile.name} onChange={(e) => setStoreProfile({ ...storeProfile, name: e.target.value })} /></div>
+              <div><label className={label} htmlFor="storeProfileLocation">Localização</label><input id="storeProfileLocation" className={field} maxLength={200} value={storeProfile.location} onChange={(e) => setStoreProfile({ ...storeProfile, location: e.target.value })} placeholder="Município, província" /></div>
+              <div className="md:col-span-2"><label className={label} htmlFor="storeProfileDescription">Descrição da loja</label><textarea id="storeProfileDescription" className={field} rows={3} maxLength={2000} value={storeProfile.description} onChange={(e) => setStoreProfile({ ...storeProfile, description: e.target.value })} placeholder="Apresente o negócio, os produtos e os serviços…" /></div>
+              <div><label className={label} htmlFor="storeProfileLogo">URL do logótipo</label><input id="storeProfileLogo" type="url" className={field} value={storeProfile.logo} onChange={(e) => setStoreProfile({ ...storeProfile, logo: e.target.value })} placeholder="https://…" /></div>
+              <div><label className={label} htmlFor="storeProfileBanner">URL do banner</label><input id="storeProfileBanner" type="url" className={field} value={storeProfile.banner} onChange={(e) => setStoreProfile({ ...storeProfile, banner: e.target.value })} placeholder="https://…" /></div>
+              <div className="md:col-span-2 flex justify-end"><button disabled={saving} className="rounded-full bg-[var(--theme-text)] px-7 py-3 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] disabled:opacity-50">{saving ? "A guardar…" : "Guardar perfil da loja"}</button></div>
+            </form>
+          </section>}
 
           {loading ? <div className="rounded-2xl border border-[var(--theme-border)] p-8 text-sm text-[var(--theme-text-muted)]">A carregar o seu espaço comercial…</div> : !vendor ? (
             <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
