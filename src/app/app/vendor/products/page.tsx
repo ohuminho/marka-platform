@@ -39,6 +39,7 @@ export default function VendorProductsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [storeName, setStoreName] = useState("");
+  const [sellerProfile, setSellerProfile] = useState({ businessType: "INDIVIDUAL" as "INDIVIDUAL" | "COMPANY", phone: "", country: "Angola" });
   const [storeProfile, setStoreProfile] = useState({ name: "", description: "", logo: "", banner: "", location: "" });
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", price: "", stock: "", image: "" });
@@ -80,7 +81,7 @@ export default function VendorProductsPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeName }),
+        body: JSON.stringify({ storeName, ...sellerProfile }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível criar a loja.");
@@ -250,10 +251,12 @@ export default function VendorProductsPage() {
                 <h2 className="marka-editorial mt-4 text-3xl text-[var(--theme-text)] sm:text-4xl">Abra a sua loja na MARKA.</h2>
                 <p className="mt-4 text-sm leading-7 text-[var(--theme-text-muted)]">Venda produtos, construa uma marca e prepare-se para receber encomendas. A candidatura fica pendente de validação antes de os anúncios poderem ser publicados.</p>
                 <form onSubmit={createStore} className="mt-8 space-y-4">
+                  <div><label className={label} htmlFor="sellerType">Tipo de vendedor</label><select id="sellerType" className={field} value={sellerProfile.businessType} onChange={(e) => setSellerProfile({ ...sellerProfile, businessType: e.target.value as "INDIVIDUAL" | "COMPANY" })}><option value="INDIVIDUAL">Pessoa singular / vendedor individual</option><option value="COMPANY">Empresa / pessoa coletiva</option></select></div>
                   <div><label className={label} htmlFor="storeName">Nome da loja ou negócio</label><input id="storeName" className={field} required minLength={2} maxLength={160} value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ex.: Mercado do Bairro" /></div>
+                  <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="sellerPhone">Telefone de contacto</label><input id="sellerPhone" className={field} type="tel" autoComplete="tel" maxLength={40} value={sellerProfile.phone} onChange={(e) => setSellerProfile({ ...sellerProfile, phone: e.target.value })} placeholder="+244 9XX XXX XXX" /></div><div><label className={label} htmlFor="sellerCountry">País de operação</label><input id="sellerCountry" className={field} required maxLength={80} value={sellerProfile.country} onChange={(e) => setSellerProfile({ ...sellerProfile, country: e.target.value })} placeholder="Angola" /></div></div>
                   <button disabled={saving} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A criar candidatura…" : "Abrir a minha loja"}</button>
                 </form>
-                <p className="mt-4 text-xs leading-6 text-[var(--theme-text-faint)]">É necessário ter sessão iniciada e pertencer a uma organização ativa. A candidatura não ativa automaticamente pagamentos nem publica anúncios sem verificação.</p>
+                <p className="mt-4 text-xs leading-6 text-[var(--theme-text-faint)]">É necessário ter sessão iniciada e uma adesão ativa à MARKA. Pessoas singulares e empresas podem candidatar-se; a equipa valida os dados antes de ativar a loja e permitir publicações.</p>
               </div>
               <aside className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-background)] p-7 sm:p-10">
                 <p className="marka-kicker">UM MERCADO, VÁRIOS SETORES</p>
