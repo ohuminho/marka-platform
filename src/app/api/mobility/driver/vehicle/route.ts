@@ -80,27 +80,48 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       const currentLink = await tx.mobilityDriverVehicle.findFirst({
         where: { driverId: driver.id, activeUntil: null, isPrimary: true },
-        include: { vehicle: { include: { verifications: true } } },
+        select: { vehicleId: true },
       });
-      let vehicle;
+      const vehicle = currentLink
+        ? await tx.mobilityVehicle.update({
+            where: { id: currentLink.vehicleId },
+            data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING" },
+          })
+        : await tx.mobilityVehicle.create({
+            data: { organizationId, type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING" },
+          });
+
       if (currentLink) {
-        vehicle = await tx.mobilityVehicle.update({
-          where: { id: currentLink.vehicleId },
-          data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING" },
-          include: { verifications: true },
+        await tx.mobilityDriverVehicle.update({
+          where: { driverId_vehicleId: { driverId: driver.id, vehicleId: vehicle.id } },
+          data: { isPrimary: true, activeUntil: null },
         });
       } else {
-        vehicle = await tx.mobilityVehicle.create({
-          data: {
-            organizationId, type: input.type, registrationNumber, make: input.make, model: input.model,
-            year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING",
-            drivers: { create: { driverId: driver.id, isPrimary: true } },
-            verifications: { create: REQUIRED.map((doc) => ({ documentType: doc.documentType, status: "PENDING", metadata: { requirementLabel: doc.label, documentSubmitted: false, source: "ANGOLA_DRIVER_ONBOARDING" } })) },
-          },
-          include: { verifications: true },
+        await tx.mobilityDriverVehicle.create({
+          data: { driverId: driver.id, vehicleId: vehicle.id, isPrimary: true },
         });
       }
-      return vehicle;
+
+      for (const requirement of REQUIRED) {
+        const existingVerification = await tx.mobilityVehicleVerification.findFirst({
+          where: { vehicleId: vehicle.id, documentType: requirement.documentType },
+          select: { id: true },
+        });
+        if (!existingVerification) {
+          await tx.mobilityVehicleVerification.create({
+            data: {
+              vehicleId: vehicle.id,
+              documentType: requirement.documentType,
+              status: "PENDING",
+              metadata: { requirementLabel: requirement.label, documentSubmitted: false, source: "ANGOLA_DRIVER_ONBOARDING" },
+            },
+          });
+        }
+      }
+      return tx.mobilityVehicle.findUniqueOrThrow({
+        where: { id: vehicle.id },
+        include: { verifications: true },
+      });
     });
     return NextResponse.json({ vehicle: result, requiredVehicleDocuments: REQUIRED }, { status: 201, headers: { "Cache-Control": "private, no-store, max-age=0" } });
   } catch (error) {
