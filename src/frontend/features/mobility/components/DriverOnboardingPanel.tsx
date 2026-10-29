@@ -73,6 +73,7 @@ export default function DriverOnboardingPanel() {
   const [expiryDates, setExpiryDates] = useState<Record<string, string>>({});
   const [vehicleForm, setVehicleForm] = useState({ type: "CAR", registrationNumber: "", make: "", model: "", year: String(new Date().getFullYear()), color: "", capacity: "4" });
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [savingVehicle, setSavingVehicle] = useState(false);
@@ -114,6 +115,11 @@ export default function DriverOnboardingPanel() {
       setLoading(false);
     }
   }, [organizationId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCurrentTime(Date.now()), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -214,7 +220,7 @@ export default function DriverOnboardingPanel() {
 
   function documentUploadCard(document: { documentType: string; label: string }, verification?: Verification, vehicleDocument = false) {
     const status = verification?.status ?? "PENDING";
-    const expired = verification?.documentExpiry && new Date(verification.documentExpiry).getTime() < Date.now();
+    const expired = Boolean(currentTime && verification?.documentExpiry && new Date(verification.documentExpiry).getTime() < currentTime);
     return <article key={document.documentType} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)]/35 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0"><h4 className="text-sm font-semibold text-[var(--theme-text)]">{document.label}</h4><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{document.documentType}</p></div>
