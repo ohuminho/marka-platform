@@ -7,7 +7,6 @@ import { VerificationService } from "@/core/auth/verification/verification.servi
 import { verificationDeliveryService } from "@/core/auth/verification/verification-delivery.service";
 
 const registerSchema = z.object({
-  accountType: z.enum(["CUSTOMER", "DRIVER"]).default("CUSTOMER"),
   name: z
     .string()
     .trim()
@@ -45,7 +44,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const accountType = parsed.data.accountType;
     const name = parsed.data.name.trim();
     const email = normalizeEmail(parsed.data.email);
     const password = parsed.data.password;
@@ -104,7 +102,7 @@ export async function POST(request: Request) {
             where: {
               organizationId_name: {
                 organizationId: organization.id,
-                name: accountType,
+                name: "CUSTOMER",
               },
             },
             update: {
@@ -112,11 +110,9 @@ export async function POST(request: Request) {
             },
             create: {
               organizationId: organization.id,
-              name: accountType,
+              name: "CUSTOMER",
               description:
-                accountType === "DRIVER"
-                  ? "MARKA Mobility driver partner pending operational approval"
-                  : "Standard MARKA customer",
+                "Standard MARKA customer",
               status: "ACTIVE",
             },
             select: {
@@ -130,7 +126,7 @@ export async function POST(request: Request) {
           accountRole.status !== "ACTIVE"
         ) {
           throw new Error(
-            `MARKA ${accountType} role is not available.`
+            "MARKA CUSTOMER role is not available."
           );
         }
 
@@ -140,7 +136,7 @@ export async function POST(request: Request) {
             email,
             emailNormalized: email,
             password: passwordHash,
-            role: accountType,
+            role: "CUSTOMER",
             status: "PENDING_VERIFICATION",
           },
         });
@@ -167,17 +163,6 @@ export async function POST(request: Request) {
             organizationId: organization.id,
           },
         });
-
-        if (accountType === "DRIVER") {
-          await tx.mobilityDriver.create({
-            data: {
-              organizationId: organization.id,
-              userId: user.id,
-              displayName: name,
-              status: "PENDING",
-            },
-          });
-        }
 
         const tokenData =
           await verificationService.createToken(
