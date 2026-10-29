@@ -58,7 +58,9 @@ export default function DriverOnboardingPanel() {
   }, [organizationId]);
 
   useEffect(() => {
-    if (!authLoading) void load();
+    if (authLoading) return;
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
   }, [authLoading, load]);
 
   async function apply(event: React.FormEvent<HTMLFormElement>) {
