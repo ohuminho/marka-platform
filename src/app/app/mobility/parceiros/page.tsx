@@ -153,7 +153,7 @@ export default function MobilityPartnersPage() {
                 ["Onde faço a candidatura e envio documentos?", "Abre a candidatura real de motorista. Aí podes aceitar os termos, submeter documentos do motorista e da viatura e acompanhar o estado da revisão."],
                 ["Enviar documentos significa que fui aprovado?", "Não. Os documentos ficam pendentes até serem revistos por um utilizador autorizado. Não é possível aceitar viagens antes da ativação operacional."],
                 ["Que documentos são normalmente necessários?", "Documento de identificação, carta de condução adequada e registo criminal quando exigido. A viatura pode exigir registo, prova de propriedade ou autorização de uso, seguro, inspeção e licença aplicável."],
-                ["Como são tratadas as comissões?", "As condições comerciais concretas devem ser apresentadas numa tabela identificada antes da ativação. Esta página não inventa percentagens nem garante rendimentos."],
+                ["Como são tratadas as comissões?", "A política padrão atualmente configurada indica 12% para táxi e 10% para moto-táxi. A parcela restante é 88% e 90%, respetivamente, antes de outros ajustes. Confirma sempre o resumo comercial apresentado antes da ativação."],
                 ["Onde leio os termos e a política de dados?", "Consulta o contrato de adesão e o Aviso de Privacidade antes de aceitar e enviar documentos."],
               ].map(([question, answer]) => <details key={question} className="py-4">
                 <summary className="cursor-pointer text-sm font-semibold text-[var(--theme-text)]">{question}</summary>
