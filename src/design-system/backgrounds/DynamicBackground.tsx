@@ -38,9 +38,12 @@ export default function DynamicBackground({
   const [showIncoming, setShowIncoming] = useState(false);
 
   useEffect(() => {
-    setActiveIndex(initialIndex);
-    setIncomingIndex(initialIndex);
-    setShowIncoming(false);
+    const frame = window.requestAnimationFrame(() => {
+      setActiveIndex(initialIndex);
+      setIncomingIndex(initialIndex);
+      setShowIncoming(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [initialIndex]);
 
   useEffect(() => {
