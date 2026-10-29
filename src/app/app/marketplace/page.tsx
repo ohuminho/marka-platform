@@ -1,6 +1,7 @@
 "use client";
 
 import ProductGrid from "@/frontend/features/marketplace/components/ProductGrid";
+import Link from "next/link";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
@@ -22,6 +23,10 @@ export default function MarketplacePage() {
           </div>
           <h1 className="marka-editorial mt-5 text-5xl leading-[0.98] text-[var(--theme-text)] lg:text-7xl">{t.marketplaceTitle}</h1>
           <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--theme-text-muted)] lg:text-base">{t.marketplaceSubtitle}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/app/vendor/products" className="inline-flex items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--theme-background)] transition hover:opacity-85">Abrir uma loja</Link>
+            <Link href="/app/vendor/products" className="inline-flex items-center justify-center rounded-full border border-[var(--theme-border)] px-6 py-3.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text)] transition hover:bg-[var(--theme-surface)]">Vender na MARKA</Link>
+          </div>
         </div>
       </section>
 
