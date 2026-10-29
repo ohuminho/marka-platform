@@ -34,6 +34,22 @@ export async function POST(request: Request) {
       ? await prisma.mobilityDriver.findUnique({ where: { userId: session.userId }, select: { id: true, organizationId: true } })
       : null;
     let primaryVehicleId: string | null = null;
+    if (subjectType === "KYD" && driver && (
+      ["IDENTITY_DOCUMENT", "DRIVING_LICENSE", "CRIMINAL_RECORD"].includes(documentType) ||
+      documentType.startsWith("VEHICLE_")
+    )) {
+      const acceptedTerms = await prisma.auditLog.findFirst({
+        where: {
+          actorUserId: session.userId,
+          organizationId: driver.organizationId,
+          action: "MOBILITY_DRIVER_TERMS_ACCEPTED",
+          entityType: "MobilityDriverTerms",
+          entityId: "MARKA-MOBILITY-DRIVER-2026-10-29",
+        },
+        select: { id: true },
+      });
+      if (!acceptedTerms) return NextResponse.json({ message: "Aceita primeiro os Termos de Adesão do Motorista.", code: "DRIVER_TERMS_NOT_ACCEPTED" }, { status: 422 });
+    }
     if (subjectType === "KYD" && documentType.startsWith("VEHICLE_")) {
       if (!driver) return NextResponse.json({ message: "Inicia primeiro a candidatura de motorista.", code: "DRIVER_APPLICATION_REQUIRED" }, { status: 409 });
       const primary = await prisma.mobilityDriverVehicle.findFirst({
