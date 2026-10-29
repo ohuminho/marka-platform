@@ -965,6 +965,7 @@ model Product {
   id          String        @id @default(uuid())
   name        String
   description String?
+  attributes  Json?         @db.JsonB
   sku         String        @unique
   image       String?
   price       Decimal       @db.Decimal(20, 4)
