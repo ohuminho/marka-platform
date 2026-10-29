@@ -1,10 +1,32 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-declare global { interface Window { L?: any } }
+
+type LeafletMap = {
+  setView(center: [number, number], zoom: number): LeafletMap;
+  invalidateSize(): void;
+  fitBounds(bounds: unknown, options?: { padding: [number, number] }): void;
+  remove(): void;
+};
+type LeafletLayer = { remove(): void };
+type LeafletMarker = LeafletLayer & {
+  addTo(map: LeafletMap): LeafletMarker;
+  bindPopup(content: string): LeafletMarker;
+};
+type LeafletLayerGroup = LeafletLayer & {
+  addTo(map: LeafletMap): LeafletLayerGroup;
+  getBounds(): unknown;
+};
+type LeafletNamespace = {
+  map(element: HTMLElement): LeafletMap;
+  tileLayer(url: string, options?: { maxZoom?: number; attribution?: string }): { addTo(map: LeafletMap): unknown };
+  marker(position: [number, number]): LeafletMarker;
+  geoJSON(data: unknown, options?: { style?: { color: string; weight: number; opacity: number } }): LeafletLayerGroup;
+};
+declare global { interface Window { L?: LeafletNamespace } }
 type Point = { lat: number; lon: number; label: string };
 const CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-function loadLeaflet(): Promise<any> {
+function loadLeaflet(): Promise<LeafletNamespace> {
   return new Promise((resolve, reject) => {
     if (window.L) return resolve(window.L);
     if (!document.querySelector('link[data-marka-leaflet="true"]')) {
@@ -22,8 +44,10 @@ function loadLeaflet(): Promise<any> {
   });
 }
 export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (points: { origin: Point | null; destination: Point | null }) => void } = {}) {
-  const hostRef = useRef<HTMLDivElement>(null), mapRef = useRef<any>(null), routeRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const routeRef = useRef<LeafletLayerGroup | null>(null);
+  const markersRef = useRef<LeafletMarker[]>([]);
   const [origin, setOrigin] = useState<Point | null>(null), [destination, setDestination] = useState<Point | null>(null);
   const [destinationText, setDestinationText] = useState(""), [routeSummary, setRouteSummary] = useState("");
   const [status, setStatus] = useState("Ative o GPS ou pesquise um destino para calcular a rota."), [busy, setBusy] = useState(false);
@@ -60,7 +84,14 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     try {
       const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson&steps=false`);
       if (!response.ok) throw new Error("O serviço de rotas está temporariamente indisponível.");
-      const payload = await response.json(), route = payload?.routes?.[0];
+      const payload = (await response.json()) as {
+        routes?: Array<{
+          geometry?: { coordinates?: number[][] };
+          distance: number;
+          duration: number;
+        }>;
+      };
+      const route = payload.routes?.[0];
       if (!route?.geometry?.coordinates?.length) throw new Error("Não foi encontrada uma rota rodoviária entre estes pontos.");
       if (routeRef.current) routeRef.current.remove();
       routeRef.current = window.L.geoJSON(route.geometry, { style: { color: "#e9bd58", weight: 5, opacity: .95 } }).addTo(mapRef.current);
