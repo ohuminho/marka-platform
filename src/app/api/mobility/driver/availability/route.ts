@@ -48,12 +48,39 @@ export async function PATCH(request: Request) {
   try {
     const driver = await prisma.mobilityDriver.findFirst({
       where: { userId: auth.session.userId, organizationId: auth.session.organizationId },
-      select: { id: true, status: true },
+      include: {
+        verifications: { select: { documentType: true, status: true, documentExpiry: true } },
+        vehicles: {
+          where: { isPrimary: true, activeUntil: null },
+          include: { vehicle: { include: { verifications: { select: { documentType: true, status: true, documentExpiry: true } } } } },
+        },
+      },
     });
     if (!driver) return NextResponse.json({ message: "Perfil de motorista não encontrado.", code: "DRIVER_PROFILE_REQUIRED" }, { status: 404 });
 
     if (requested === "AVAILABLE" && driver.status !== "ACTIVE") {
       return NextResponse.json({ message: "O perfil de motorista tem de estar aprovado e ativo antes de aceitar viagens.", code: "DRIVER_NOT_ACTIVE" }, { status: 409 });
+    }
+
+    if (requested === "AVAILABLE") {
+      const now = new Date();
+      const requiredDriverDocuments = ["IDENTITY_DOCUMENT", "DRIVING_LICENSE", "CRIMINAL_RECORD"];
+      const requiredVehicleDocuments = ["VEHICLE_REGISTRATION", "VEHICLE_OWNERSHIP", "VEHICLE_INSURANCE", "VEHICLE_INSPECTION", "VEHICLE_SERVICE_LICENSE"];
+      const valid = (items: Array<{ documentType: string; status: string; documentExpiry: Date | null }>, type: string) =>
+        items.some((item) => item.documentType === type && item.status === "VERIFIED" && (!item.documentExpiry || item.documentExpiry > now));
+      const missingDriverDocuments = requiredDriverDocuments.filter((type) => !valid(driver.verifications, type));
+      const primaryVehicle = driver.vehicles[0]?.vehicle;
+      const missingVehicleDocuments = primaryVehicle
+        ? requiredVehicleDocuments.filter((type) => !valid(primaryVehicle.verifications, type))
+        : ["VEHICLE_NOT_REGISTERED"];
+      if (!primaryVehicle || primaryVehicle.status !== "ACTIVE" || missingDriverDocuments.length || missingVehicleDocuments.length) {
+        return NextResponse.json({
+          message: "A candidatura não pode ficar online: faltam documentos atuais verificados ou a viatura ainda não foi aprovada.",
+          code: "DRIVER_COMPLIANCE_INCOMPLETE",
+          missingDriverDocuments,
+          missingVehicleDocuments,
+        }, { status: 409 });
+      }
     }
 
     const activeRide = await prisma.mobilityRide.findFirst({
