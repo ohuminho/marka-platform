@@ -1003,6 +1003,16 @@ export default function MobilityControlCenter() {
           </p>
 
           <div className="mt-6 space-y-4">
+            <div className="mb-5">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e9bd58]">Mapa e localização</p>
+              <MobilityLiveMap onPointsChange={({ origin, destination }) => {
+                setPickupPoint(origin ? { latitude: origin.lat, longitude: origin.lon, address: origin.label } : null);
+                setDropoffPoint(destination ? { latitude: destination.lat, longitude: destination.lon, address: destination.label } : null);
+                if (origin) setPickupAddress(origin.label);
+                if (destination) setDropoffAddress(destination.label);
+              }} />
+              <p className="mt-2 text-[10px] text-white/40">Defina a partida por GPS e pesquise o destino para enviar coordenadas reais.</p>
+            </div>
             <label className="block">
               <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
                 Tipo de serviço
