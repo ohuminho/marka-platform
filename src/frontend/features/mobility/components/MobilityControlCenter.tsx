@@ -391,6 +391,9 @@ export default function MobilityControlCenter() {
   const [dropoffAddress, setDropoffAddress] =
     useState("");
 
+  const [pickupPoint, setPickupPoint] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
+  const [dropoffPoint, setDropoffPoint] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
+
   const [activeRide, setActiveRide] =
     useState<RideResponse | null>(null);
 
