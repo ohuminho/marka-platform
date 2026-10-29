@@ -33,13 +33,16 @@ export default function SponsoredAdCard({
     : AD_UX_LIMITS.marketplaceVideoMaxSeconds;
 
   useEffect(() => {
-    try {
-      const count = Number(window.sessionStorage.getItem("marka_ads_viewed_session") || "0");
-      setSessionLimitReached(Number.isFinite(count) && count >= AD_UX_LIMITS.maxAdsPerSession);
-    } catch {
-      // If storage is unavailable, fail closed instead of showing unlimited ads.
-      setSessionLimitReached(true);
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        const count = Number(window.sessionStorage.getItem("marka_ads_viewed_session") || "0");
+        setSessionLimitReached(Number.isFinite(count) && count >= AD_UX_LIMITS.maxAdsPerSession);
+      } catch {
+        // If storage is unavailable, fail closed instead of showing unlimited ads.
+        setSessionLimitReached(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
