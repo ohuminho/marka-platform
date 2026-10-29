@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { AuthorizationService } from "@/core/authorization/authorization.service";
-import { Permissions } from "@/core/authorization/permissions.catalog";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { VendorService } from "@/services/vendors/vendor.service";
@@ -107,27 +105,9 @@ export async function POST(request: Request) {
       organizationId,
     } = parsed.data;
 
-    const authorization =
-      new AuthorizationService();
-
-    const hasPermission =
-      await authorization.hasPermission(
-        user.id,
-        Permissions.VENDOR_CREATE,
-        organizationId
-      );
-
-    if (!hasPermission) {
-      return NextResponse.json(
-        {
-          message:
-            "You do not have permission to create a vendor.",
-          code: "VENDOR_CREATE_FORBIDDEN",
-        },
-        { status: 403 }
-      );
-    }
-
+    // Seller onboarding is self-service for active users in an active organization.
+    // The created vendor remains PENDING and all new products remain DRAFT until reviewed,
+    // so self-service does not bypass merchant verification or publish unapproved listings.
     const service = new VendorService();
 
     const vendor =
