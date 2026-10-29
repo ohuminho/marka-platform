@@ -40,6 +40,9 @@ export default function VendorProductsPage() {
   const [storeName, setStoreName] = useState("");
   const [form, setForm] = useState({
     name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros",
+    brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "",
+    propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "",
+    serviceType: "", availability: "", duration: "",
   });
 
   const load = useCallback(async () => {
@@ -127,12 +130,15 @@ export default function VendorProductsPage() {
           price: Number(form.price),
           stock: Number(form.stock),
           currency: "AOA",
+          brand: form.brand, model: form.model, year: form.year, mileage: form.mileage, condition: form.condition, fuel: form.fuel, transmission: form.transmission,
+          propertyType: form.propertyType, transactionType: form.transactionType, bedrooms: form.bedrooms, bathrooms: form.bathrooms, area: form.area, location: form.location,
+          serviceType: form.serviceType, availability: form.availability, duration: form.duration,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível guardar o anúncio.");
       setNotice(data.message || "Anúncio guardado como rascunho.");
-      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros" });
+      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros", brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "", propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", serviceType: "", availability: "", duration: "" });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível guardar o anúncio.");
@@ -230,6 +236,21 @@ export default function VendorProductsPage() {
                       <div><label className={label} htmlFor="productStock">Stock disponível</label><input id="productStock" className={field} type="number" min="0" step="1" required value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                     </div>
                     <div><label className={label} htmlFor="productCategory">Categoria</label><select id="productCategory" className={field} value={form.categoryName} onChange={(e) => setForm({ ...form, categoryName: e.target.value })}>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></div>
+                    {(form.categoryName === "Automóveis" || form.categoryName === "Motociclos") && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do veículo</legend>
+                      <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="vehicleBrand">Marca</label><input id="vehicleBrand" className={field} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Toyota" /></div><div><label className={label} htmlFor="vehicleModel">Modelo</label><input id="vehicleModel" className={field} value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="Corolla" /></div>
+                      <div><label className={label} htmlFor="vehicleYear">Ano</label><input id="vehicleYear" className={field} type="number" min="1950" max="2035" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} placeholder="2020" /></div><div><label className={label} htmlFor="vehicleMileage">Quilometragem (km)</label><input id="vehicleMileage" className={field} type="number" min="0" value={form.mileage} onChange={(e) => setForm({ ...form, mileage: e.target.value })} placeholder="85000" /></div>
+                      <div><label className={label} htmlFor="vehicleCondition">Estado</label><select id="vehicleCondition" className={field} value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })}><option>Novo</option><option>Usado</option><option>Recondicionado</option></select></div><div><label className={label} htmlFor="vehicleFuel">Combustível</label><select id="vehicleFuel" className={field} value={form.fuel} onChange={(e) => setForm({ ...form, fuel: e.target.value })}><option value="">Selecionar</option><option>Gasolina</option><option>Gasóleo</option><option>Elétrico</option><option>Híbrido</option><option>GPL</option></select></div>
+                      <div className="sm:col-span-2"><label className={label} htmlFor="vehicleTransmission">Transmissão</label><select id="vehicleTransmission" className={field} value={form.transmission} onChange={(e) => setForm({ ...form, transmission: e.target.value })}><option value="">Selecionar</option><option>Manual</option><option>Automática</option></select></div></div>
+                    </fieldset>}
+                    {form.categoryName === "Imóveis e arrendamento" && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do imóvel</legend>
+                      <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="propertyType">Tipo de imóvel</label><select id="propertyType" className={field} value={form.propertyType} onChange={(e) => setForm({ ...form, propertyType: e.target.value })}><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Escritório</option><option>Espaço comercial</option><option>Armazém</option></select></div><div><label className={label} htmlFor="transactionType">Finalidade</label><select id="transactionType" className={field} value={form.transactionType} onChange={(e) => setForm({ ...form, transactionType: e.target.value })}><option>Arrendamento</option><option>Venda</option></select></div>
+                      <div><label className={label} htmlFor="propertyBedrooms">Quartos</label><input id="propertyBedrooms" className={field} type="number" min="0" value={form.bedrooms} onChange={(e) => setForm({ ...form, bedrooms: e.target.value })} /></div><div><label className={label} htmlFor="propertyBathrooms">Casas de banho</label><input id="propertyBathrooms" className={field} type="number" min="0" value={form.bathrooms} onChange={(e) => setForm({ ...form, bathrooms: e.target.value })} /></div>
+                      <div><label className={label} htmlFor="propertyArea">Área (m²)</label><input id="propertyArea" className={field} type="number" min="1" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} /></div><div><label className={label} htmlFor="propertyLocation">Localização</label><input id="propertyLocation" className={field} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Município, bairro" /></div></div>
+                    </fieldset>}
+                    {form.categoryName === "Serviços" && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do serviço</legend>
+                      <div><label className={label} htmlFor="serviceType">Tipo de serviço</label><input id="serviceType" className={field} value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })} placeholder="Ex.: Reparação de eletrodomésticos" /></div>
+                      <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="serviceAvailability">Disponibilidade</label><input id="serviceAvailability" className={field} value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })} placeholder="Ex.: Segunda a sábado" /></div><div><label className={label} htmlFor="serviceDuration">Duração estimada</label><input id="serviceDuration" className={field} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="Ex.: 2 horas" /></div></div>
+                    </fieldset>}
                     <button disabled={saving || uploadingImage} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A guardar…" : "Guardar anúncio como rascunho"}</button>
                   </form>
                 </div>
