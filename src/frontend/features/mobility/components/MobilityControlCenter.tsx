@@ -1196,7 +1196,11 @@ export default function MobilityControlCenter() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-[9px] uppercase tracking-[0.18em] text-[#e9bd58]">
-                  Viagem criada
+                  {activeRide.ride.status === "NO_DRIVER_FOUND"
+                    ? "Sem motorista disponível"
+                    : activeRide.ride.status === "DRIVER_ASSIGNED"
+                      ? "Motorista encontrado"
+                      : "Viagem criada"}
                 </span>
 
                 <StatusPill
@@ -1210,6 +1214,16 @@ export default function MobilityControlCenter() {
                 {activeRide.ride.reference ??
                   activeRide.ride.id}
               </p>
+              {activeRide.ride.status === "NO_DRIVER_FOUND" && (
+                <p className="mt-2 text-xs leading-5 text-white/65">
+                  Não encontrámos um motorista elegível neste momento. A viagem não foi atribuída; tente novamente daqui a pouco.
+                </p>
+              )}
+              {activeRide.ride.status === "DRIVER_ASSIGNED" && (
+                <p className="mt-2 text-xs leading-5 text-white/65">
+                  Encontrámos um motorista elegível. Aguarde a confirmação da aceitação.
+                </p>
+              )}
             </div>
           )}
         </form>
