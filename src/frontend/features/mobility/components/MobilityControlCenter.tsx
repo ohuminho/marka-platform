@@ -464,8 +464,14 @@ export default function MobilityControlCenter() {
     ) => {
       event.preventDefault();
 
-      setCreating(true);
       setError(null);
+
+      if (!pickupPoint || !dropoffPoint) {
+        setError("Use o mapa para obter a partida por GPS e pesquisar um destino antes de pedir a viagem.");
+        return;
+      }
+
+      setCreating(true);
 
       try {
         const idempotencyKey =
