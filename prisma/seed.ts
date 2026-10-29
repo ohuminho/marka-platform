@@ -39,6 +39,10 @@ const roles = [
     description: "MARKA vendor operator",
   },
   {
+    name: "DRIVER",
+    description: "MARKA Mobility driver partner pending operational approval",
+  },
+  {
     name: "ADMIN",
     description: "MARKA platform administrator",
   },
