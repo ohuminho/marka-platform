@@ -3,6 +3,7 @@ import AppShell from "@/frontend/shell/AppShell";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 import MobilityActiveTripExperience from "@/frontend/features/mobility/components/MobilityActiveTripExperience";
 import DriverTripHistory from "@/frontend/features/mobility/components/DriverTripHistory";
+import DriverOnboardingPanel from "@/frontend/features/mobility/components/DriverOnboardingPanel";
 
 export default function DriverPage() {
   return (
@@ -10,6 +11,7 @@ export default function DriverPage() {
       <AppShell>
         <main className="space-y-8">
           <RoleContextSummary />
+          <DriverOnboardingPanel />
           <MobilityActiveTripExperience audience="driver" />
           <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
             <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[var(--theme-text-muted)]">MARKA partner network</p>
