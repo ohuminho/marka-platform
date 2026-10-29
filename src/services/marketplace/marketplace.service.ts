@@ -100,21 +100,15 @@ export class MarketplaceService {
 
 
 
-        store: query?.verifiedOnly
+        stock: { gt: 0 },
 
-          ? {
-
-              vendor: {
-
-                verified: true,
-
-              },
-
-            }
-
-          : undefined,
-
-
+        store: {
+          status: "ACTIVE",
+          vendor: {
+            status: "ACTIVE",
+            ...(query?.verifiedOnly ? { verified: true } : {}),
+          },
+        },
 
         status: "ACTIVE",
 
