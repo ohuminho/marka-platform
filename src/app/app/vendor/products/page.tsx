@@ -108,7 +108,7 @@ export default function VendorProductsPage() {
     } finally { setSaving(false); }
   }
 
-  async function uploadImage(file?: File) {
+  async function uploadImage(file?: File, target: "product" | "logo" | "banner" = "product") {
     if (!file) return;
     setError(""); setNotice("");
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
@@ -130,8 +130,9 @@ export default function VendorProductsPage() {
       });
       const data = await response.json();
       if (!response.ok || !data.imageUrl) throw new Error(data.message || "Não foi possível carregar a imagem.");
-      setForm((current) => ({ ...current, image: data.imageUrl }));
-      setNotice("Imagem carregada com segurança e pronta para associar ao anúncio.");
+      if (target === "product") setForm((current) => ({ ...current, image: data.imageUrl }));
+      else setStoreProfile((current) => ({ ...current, [target]: data.imageUrl }));
+      setNotice(target === "product" ? "Imagem carregada com segurança e pronta para associar ao anúncio." : "Imagem da identidade comercial carregada com segurança.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível carregar a imagem.");
     } finally {
@@ -235,8 +236,8 @@ export default function VendorProductsPage() {
               <div><label className={label} htmlFor="storeProfileName">Nome comercial</label><input id="storeProfileName" className={field} required minLength={2} maxLength={160} value={storeProfile.name} onChange={(e) => setStoreProfile({ ...storeProfile, name: e.target.value })} /></div>
               <div><label className={label} htmlFor="storeProfileLocation">Localização</label><input id="storeProfileLocation" className={field} maxLength={200} value={storeProfile.location} onChange={(e) => setStoreProfile({ ...storeProfile, location: e.target.value })} placeholder="Município, província" /></div>
               <div className="md:col-span-2"><label className={label} htmlFor="storeProfileDescription">Descrição da loja</label><textarea id="storeProfileDescription" className={field} rows={3} maxLength={2000} value={storeProfile.description} onChange={(e) => setStoreProfile({ ...storeProfile, description: e.target.value })} placeholder="Apresente o negócio, os produtos e os serviços…" /></div>
-              <div><label className={label} htmlFor="storeProfileLogo">URL do logótipo</label><input id="storeProfileLogo" type="url" className={field} value={storeProfile.logo} onChange={(e) => setStoreProfile({ ...storeProfile, logo: e.target.value })} placeholder="https://…" /></div>
-              <div><label className={label} htmlFor="storeProfileBanner">URL do banner</label><input id="storeProfileBanner" type="url" className={field} value={storeProfile.banner} onChange={(e) => setStoreProfile({ ...storeProfile, banner: e.target.value })} placeholder="https://…" /></div>
+              <div><label className={label} htmlFor="storeLogoFile">Logótipo da loja</label><input id="storeLogoFile" type="file" accept="image/jpeg,image/png,image/webp" className={field} disabled={uploadingImage} onChange={(e) => void uploadImage(e.target.files?.[0], "logo")} /><label className={label} htmlFor="storeProfileLogo">Ou URL do logótipo</label><input id="storeProfileLogo" type="url" className={field} value={storeProfile.logo} onChange={(e) => setStoreProfile({ ...storeProfile, logo: e.target.value })} placeholder="https://…" />{storeProfile.logo && <img src={storeProfile.logo} alt="Pré-visualização do logótipo" className="mt-2 h-20 w-20 rounded-xl border border-[var(--theme-border)] object-cover" />}</div>
+              <div><label className={label} htmlFor="storeBannerFile">Banner da loja</label><input id="storeBannerFile" type="file" accept="image/jpeg,image/png,image/webp" className={field} disabled={uploadingImage} onChange={(e) => void uploadImage(e.target.files?.[0], "banner")} /><label className={label} htmlFor="storeProfileBanner">Ou URL do banner</label><input id="storeProfileBanner" type="url" className={field} value={storeProfile.banner} onChange={(e) => setStoreProfile({ ...storeProfile, banner: e.target.value })} placeholder="https://…" />{storeProfile.banner && <img src={storeProfile.banner} alt="Pré-visualização do banner" className="mt-2 h-24 w-full rounded-xl border border-[var(--theme-border)] object-cover" />}</div>
               <div className="md:col-span-2 flex justify-end"><button disabled={saving} className="rounded-full bg-[var(--theme-text)] px-7 py-3 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] disabled:opacity-50">{saving ? "A guardar…" : "Guardar perfil da loja"}</button></div>
             </form>
           </section>}
