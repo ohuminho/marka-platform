@@ -88,7 +88,8 @@ export default function MobilityPartnersPage() {
                 Um processo de adesão pensado para Angola: identidade validada, veículo documentado, condições contratuais claras e activação apenas depois das verificações necessárias.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/app/mobility" className="inline-flex min-h-11 items-center rounded-full bg-[#d8c18c] px-5 py-3 text-sm font-semibold text-[#171814]">Voltar à Mobility</Link>
+                <Link href="/app/driver#candidatura" className="inline-flex min-h-11 items-center rounded-full bg-[#d8c18c] px-5 py-3 text-sm font-semibold text-[#171814]">Iniciar candidatura real</Link>
+                <Link href="/legal/mobility-driver" className="inline-flex min-h-11 items-center rounded-full border border-white/20 px-5 py-3 text-sm font-medium text-white/85">Ler contrato</Link>
                 <a href="#processo" className="inline-flex min-h-11 items-center rounded-full border border-white/20 px-5 py-3 text-sm font-medium text-white/85">Ver processo de adesão</a>
               </div>
             </div>
@@ -144,10 +145,27 @@ export default function MobilityPartnersPage() {
             </article>
           </section>
 
-          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5">
-            <p className="text-sm font-semibold text-[var(--theme-text)]">Estado honesto desta área</p>
-            <p className="mt-2 text-xs leading-6 text-[var(--theme-text-muted)]">Esta página organiza o processo e os requisitos. O envio seguro de documentos, assinatura electrónica, gestão de contratos, contacto operacional com motoristas e integração de registos com as autoridades só devem ser considerados activos depois de ligados e testados com os serviços reais. Não carregue aqui documentos pessoais: este ecrã ainda não é um formulário de candidatura.</p>
-          </div>
+          <section className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Ajuda ao candidato</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--theme-text)]">Perguntas frequentes</h2>
+            <div className="mt-4 divide-y divide-[var(--theme-border)]">
+              {[
+                ["Onde faço a candidatura e envio documentos?", "Abre a candidatura real de motorista. Aí podes aceitar os termos, submeter documentos do motorista e da viatura e acompanhar o estado da revisão."],
+                ["Enviar documentos significa que fui aprovado?", "Não. Os documentos ficam pendentes até serem revistos por um utilizador autorizado. Não é possível aceitar viagens antes da ativação operacional."],
+                ["Que documentos são normalmente necessários?", "Documento de identificação, carta de condução adequada e registo criminal quando exigido. A viatura pode exigir registo, prova de propriedade ou autorização de uso, seguro, inspeção e licença aplicável."],
+                ["Como são tratadas as comissões?", "As condições comerciais concretas devem ser apresentadas numa tabela identificada antes da ativação. Esta página não inventa percentagens nem garante rendimentos."],
+                ["Onde leio os termos e a política de dados?", "Consulta o contrato de adesão e o Aviso de Privacidade antes de aceitar e enviar documentos."],
+              ].map(([question, answer]) => <details key={question} className="py-4">
+                <summary className="cursor-pointer text-sm font-semibold text-[var(--theme-text)]">{question}</summary>
+                <p className="mt-2 text-sm leading-6 text-[var(--theme-text-muted)]">{answer}</p>
+              </details>)}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href="/app/driver#candidatura" className="rounded-full bg-[#d8c18c] px-5 py-3 text-sm font-semibold text-[#171814]">Abrir candidatura</Link>
+              <Link href="/legal/mobility-driver" className="rounded-full border border-[var(--theme-border)] px-5 py-3 text-sm text-[var(--theme-text)]">Termos de Adesão</Link>
+              <Link href="/legal/privacy" className="rounded-full border border-[var(--theme-border)] px-5 py-3 text-sm text-[var(--theme-text)]">Aviso de Privacidade</Link>
+            </div>
+          </section>
         </div>
       </AppShell>
     </DynamicBackground>
