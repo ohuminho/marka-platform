@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MobilityTripAdSlot from "@/frontend/features/mobility/components/MobilityTripAdSlot";
 import type { MobilityAdContext } from "@/monetization/ads/ad.types";
@@ -48,6 +48,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [driverAvailability, setDriverAvailability] = useState("OFFLINE");
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "active" | "permission" | "unavailable" | "error">("idle");
+  const lastGpsSentAt = useRef(0);
   const organizationId = activeOrganization?.id;
 
   useEffect(() => {
@@ -115,6 +117,58 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     lastAdDismissedAt,
   };
   const active = Boolean(ride && ACTIVE.includes(ride.status));
+  useEffect(() => {
+    if (audience !== "driver" || !organizationId || authLoading || loading) {
+      setGpsStatus("idle");
+      return;
+    }
+    if (driverAvailability !== "AVAILABLE" && !active) {
+      setGpsStatus("idle");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setGpsStatus("unavailable");
+      return;
+    }
+
+    let disposed = false;
+    let lastSentForWatch = 0;
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        if (disposed) return;
+        const now = Date.now();
+        if (now - lastSentForWatch < 15000 || now - lastGpsSentAt.current < 12000) return;
+        lastSentForWatch = now;
+        lastGpsSentAt.current = now;
+        const coords = position.coords;
+        void fetch("/api/mobility/driver/location", {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+          body: JSON.stringify({
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            accuracyM: Number.isFinite(coords.accuracy) ? coords.accuracy : null,
+            heading: coords.heading == null ? null : coords.heading,
+            speedKph: coords.speed == null ? null : coords.speed * 3.6,
+          }),
+        }).then((response) => {
+          if (!disposed) setGpsStatus(response.ok ? "active" : "error");
+        }).catch(() => {
+          if (!disposed) setGpsStatus("error");
+        });
+      },
+      (geoError) => {
+        if (!disposed) setGpsStatus(geoError.code === 1 ? "permission" : "unavailable");
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+    );
+    return () => {
+      disposed = true;
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [audience, organizationId, authLoading, loading, driverAvailability, active, ride?.id]);
   const driverAction = useMemo(() => {
     if (audience !== "driver") return null;
     const step = payload?.orchestration?.currentStep;
@@ -191,6 +245,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
         <div className="rounded-2xl border border-white/10 bg-white/[.025] p-5"><p className="text-[9px] uppercase tracking-[.22em] text-[#e9bd58]">Experiência MARKA</p><h3 className="mt-2 text-base font-semibold">{audience === "driver" ? "Mais clareza. Menos distração." : "Conforto, transparência e confiança."}</h3><p className="mt-2 text-xs leading-5 text-white/45">{audience === "driver" ? "O conteúdo comercial não interfere com segurança ou pagamento." : "Informação essencial primeiro; conteúdo patrocinado apenas quando elegível."}</p><label className="mt-4 flex cursor-pointer items-center justify-between gap-3 border-t border-white/[.08] pt-4 text-xs text-white/65"><span>Publicidade durante a viagem</span><input type="checkbox" checked={adsEnabled} disabled={!adsPreferenceLoaded} onChange={(event) => updateAdsEnabled(event.target.checked)} className="h-4 w-4 accent-[#e9bd58]" /></label></div>
         {active && <MobilityTripAdSlot context={adContext} audience={audience} onDismiss={(time) => setLastAdDismissedAt(time)} />}
         {active && destinationDistance !== null && <p className="px-1 text-[10px] text-white/30">Distância aproximada ao destino: {destinationDistance < 1000 ? String(Math.round(destinationDistance)) + " m" : (destinationDistance / 1000).toFixed(1) + " km"}</p>}
+        {audience === "driver" && driverAvailability === "AVAILABLE" && <p role="status" className="px-1 text-[10px] text-white/40">{gpsStatus === "active" ? "GPS ativo · localização sincronizada" : gpsStatus === "permission" ? "GPS bloqueado · permita a localização no dispositivo" : gpsStatus === "unavailable" ? "GPS indisponível · verifique os serviços de localização" : gpsStatus === "error" ? "GPS sem sincronização · será tentada nova atualização" : "A preparar localização GPS…"}</p>}
       </aside>
     </div>
   </section>;
