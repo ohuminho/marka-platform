@@ -70,6 +70,18 @@ export default function AccountPage() {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="marka-editorial mt-2 text-3xl text-[var(--theme-text)]">{user.profile?.displayName || user.name}</h1>
               {user.isFounder && <span className="mt-2 inline-flex items-center rounded-full border border-[#b9944d]/50 bg-[#b9944d]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b9944d]">Fundador MARKA</span>}
+              {user.isIdentityVerified && (
+                <span
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-500"
+                  title="Identity independently verified by MARKA"
+                  aria-label="Identity verified by MARKA"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-current">
+                    <path d="M12 2.5 14.5 4l3-.1 1.2 2.8 2.4 1.8-.7 2.9.7 2.9-2.4 1.8-1.2 2.8-3-.1L12 22l-2.5-1.5-3 .1-1.2-2.8-2.4-1.8.7-2.9-.7-2.9 2.4-1.8 1.2-2.8 3 .1L12 2.5Zm-1.2 13.7 6-6-1.4-1.4-4.6 4.6-2.2-2.2-1.4 1.4 3.6 3.6Z" />
+                  </svg>
+                  Identidade verificada
+                </span>
+              )}
             </div>
             <p className="mt-1 text-sm text-[var(--theme-text-muted)]">{user.email}</p>
           </div>
