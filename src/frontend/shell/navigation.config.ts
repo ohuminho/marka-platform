@@ -54,6 +54,11 @@ export const NavigationConfig = {
           permissions: ["WALLET_READ"],
         },
         {
+          title: "Support",
+          route: "/app/support",
+          description: "Open and track support requests inside MARKA",
+        },
+        {
           title: "Account",
           route: "/app/account",
           description: "Identity, session and access context",
@@ -123,6 +128,11 @@ export const NavigationConfig = {
           permissions: ["VENDOR_MANAGE"],
         },
         {
+          title: "Support",
+          route: "/app/support",
+          description: "Open and track support requests inside MARKA",
+        },
+        {
           title: "Account",
           route: "/app/account",
           description: "Identity, session and access context",
@@ -182,6 +192,11 @@ export const NavigationConfig = {
           permissions: ["ADMIN_ACCESS"],
         },
         {
+          title: "Support",
+          route: "/app/support",
+          description: "Open and track support requests inside MARKA",
+        },
+        {
           title: "Account",
           route: "/app/account",
           description: "Identity, session and access context",
@@ -195,6 +210,7 @@ export const NavigationConfig = {
       items: [
         { title: "Driver Workspace", route: "/app/driver", description: "Driver operational workspace" },
         { title: "Mobility", route: "/app/mobility", description: "Trips, dispatch and settlement" },
+        { title: "Support", route: "/app/support", description: "Open and track support requests inside MARKA" },
         { title: "Account", route: "/app/account", description: "Identity, session and access context" },
         { title: "Compliance", route: "/app/compliance", description: "KYC, KYD and verification status" },
       ],
@@ -207,6 +223,7 @@ export const NavigationConfig = {
         { title: "Workspace", route: "/app/delivery-agent", description: "Delivery operations" },
         { title: "Available Deliveries", route: "/app/delivery-agent/offers", description: "Review and accept delivery offers", permissions: ["DELIVERY_AGENT_OPERATE"] },
         { title: "My Deliveries", route: "/app/delivery-agent/deliveries", description: "Operate assigned deliveries", permissions: ["DELIVERY_AGENT_OPERATE"] },
+        { title: "Support", route: "/app/support", description: "Open and track support requests inside MARKA" },
         { title: "Account", route: "/app/account", description: "Identity, session and access context" },
         { title: "Compliance", route: "/app/compliance", description: "KYC, KYD and verification status" },
       ],
@@ -233,6 +250,11 @@ export const NavigationConfig = {
           route: "/app/admin/compliance",
           description: "Global KYC, KYD, KYB and compliance review",
           permissions: ["SYSTEM_ADMIN"],
+        },
+        {
+          title: "Support",
+          route: "/app/support",
+          description: "Open and track support requests inside MARKA",
         },
         {
           title: "Account",
