@@ -46,8 +46,29 @@ export default function AccountPage() {
     <section className="space-y-6">
       <header className="flex flex-col gap-4 rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] text-lg font-semibold text-[var(--theme-text)]">
-            {initials(user.profile?.displayName || user.name)}
+          <div className="relative h-[5.25rem] w-[5.25rem] shrink-0 rounded-full bg-gradient-to-br from-[#f6df9b] via-[#b9944d] to-[#514329] p-[2px] shadow-[0_10px_36px_rgba(185,148,77,0.2)]">
+            <div
+              className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-[var(--theme-background)]/70 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),var(--theme-surface-strong)_62%)] text-lg font-semibold tracking-wide text-[var(--theme-text)]"
+              role={user.profile?.avatarUrl ? "img" : undefined}
+              aria-label={user.profile?.avatarUrl ? `${user.profile?.displayName || user.name} profile photo` : undefined}
+              style={user.profile?.avatarUrl ? {
+                backgroundImage: `url("${user.profile.avatarUrl.replace(/["\\\\]/g, "")}")`,
+                backgroundPosition: "center",
+                backgroundSize: "cover",
+              } : undefined}
+            >
+              {!user.profile?.avatarUrl && (
+                <span className="drop-shadow-[0_1px_8px_rgba(233,189,88,0.16)]">
+                  {initials(user.profile?.displayName || user.name)}
+                </span>
+              )}
+            </div>
+            <span aria-hidden="true" className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--theme-surface)] bg-[#d9b565] text-[#17130a]">
+              <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3">
+                <path d="M8 2.2 9.7 3l1.8-.1.6 1.7 1.4 1.1-.6 1.7.2 1.8-1.6.8-.9 1.5-1.8-.3-1.7.6-1.1-1.4-1.7-.5.1-1.8-.8-1.6 1.3-1.3.4-1.8 1.8-.1L8 2.2Z" fill="currentColor" opacity=".28" />
+                <path d="m5.2 8.1 1.7 1.7 3.9-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </div>
           <div>
             <p className="marka-kicker">MARKA / ACCOUNT</p>
