@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 
+import Link from "next/link";
 import ProductCard from "./ProductCard";
 import SponsoredAdCard from "@/frontend/features/ads/components/SponsoredAdCard";
 import GoogleAdSenseSlot from "@/frontend/features/ads/components/GoogleAdSenseSlot";
@@ -193,6 +194,7 @@ export default function ProductGrid() {
             <p className="marka-kicker">MARKA MARKETPLACE</p>
             <h3 className="marka-editorial mt-4 text-4xl text-[var(--theme-text)]">A sua próxima descoberta começa aqui.</h3>
             <p className="mt-4 text-sm leading-7 text-[var(--theme-text-muted)]">{t.noProducts}</p>
+            <Link href="/app/vendor/products" className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--theme-background)] transition hover:opacity-85">Abrir loja ou publicar um produto</Link>
           </div>
         </div>
       ) : (
