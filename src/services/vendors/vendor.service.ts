@@ -6,75 +6,44 @@ export class VendorService {
     storeName: string,
     organizationId?: string
   ) {
-    let resolvedOrganizationId =
-      organizationId;
+    const membership = await prisma.organizationMembership.findFirst({
+      where: {
+        userId: ownerId,
+        status: "ACTIVE",
+        organization: { status: "ACTIVE" },
+        ...(organizationId ? { organizationId } : {}),
+      },
+      orderBy: { joinedAt: "asc" },
+      select: { organizationId: true },
+    });
 
-    if (!resolvedOrganizationId) {
-      const membership =
-        await prisma.organizationMembership.findFirst({
-          where: {
-            userId: ownerId,
-            status: "ACTIVE",
-            organization: {
-              status: "ACTIVE",
-            },
-          },
-          orderBy: {
-            joinedAt: "asc",
-          },
-          select: {
-            organizationId: true,
-          },
-        });
-
-      if (!membership) {
-        throw new Error(
-          "Owner does not belong to an active organization."
-        );
-      }
-
-      resolvedOrganizationId =
-        membership.organizationId;
+    if (!membership) {
+      throw new Error("Owner must belong to an active organization.");
     }
 
-    const organization =
-      await prisma.organization.findUnique({
-        where: {
-          id: resolvedOrganizationId,
-        },
-        select: {
-          id: true,
-          status: true,
-        },
-      });
-
-    if (
-      !organization ||
-      organization.status !== "ACTIVE"
-    ) {
-      throw new Error(
-        "Organization is not active."
-      );
+    const existing = await prisma.vendor.findFirst({
+      where: { ownerId, status: { notIn: ["SUSPENDED", "CLOSED"] } },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new Error("A seller profile already exists for this account.");
     }
 
-    const vendor =
-      await prisma.vendor.create({
-        data: {
-          name: storeName.trim(),
-          ownerId,
-          organizationId:
-            resolvedOrganizationId,
-          store: {
-            create: {
-              name: storeName.trim(),
-            },
+    return prisma.vendor.create({
+      data: {
+        name: storeName.trim(),
+        ownerId,
+        organizationId: membership.organizationId,
+        status: "PENDING",
+        verified: false,
+        store: {
+          create: {
+            name: storeName.trim(),
+            status: "INACTIVE",
           },
         },
-        include: {
-          store: true,
-        },
-      });
-
-    return vendor;
+      },
+      include: { store: true },
+    });
   }
 }
