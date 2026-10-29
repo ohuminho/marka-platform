@@ -5,7 +5,9 @@
 
 ## 1. Recommendation
 
-Use a **recurring subscription** for the public MARKA Verified badge, with monthly and annual options. Do not sell a permanent one-time badge.
+Use a **recurring subscription** for the premium MARKA Verified package, with monthly and annual options. Do not sell a permanent one-time paid badge.
+
+Important distinction from Facebook: Meta announced a free, selfie-based Facebook Verified badge for eligible personal profiles in July 2026, while Meta Verified for creators/businesses is a paid subscription product. So MARKA should not assume every Facebook verification badge is paid; the strongest commercial precedent is the subscription bundle that adds support and impersonation protection, not a one-time sale of a checkmark. Availability and methods can vary by market, so do not assume the same flow is available in Angola.
 
 Identity review and the paid badge are different controls:
 
