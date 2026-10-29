@@ -24,6 +24,7 @@ export interface AuthUser {
   email: string;
   role: string;
   isFounder: boolean;
+  isIdentityVerified: boolean;
   status: string;
   emailVerifiedAt: string | null;
   profile: AuthUserProfile | null;
