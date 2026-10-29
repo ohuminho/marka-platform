@@ -7,6 +7,7 @@ import { VerificationService } from "@/core/auth/verification/verification.servi
 import { verificationDeliveryService } from "@/core/auth/verification/verification-delivery.service";
 
 const registerSchema = z.object({
+  accountType: z.enum(["CUSTOMER", "DRIVER"]).default("CUSTOMER"),
   name: z
     .string()
     .trim()
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const accountType = parsed.data.accountType;
     const name = parsed.data.name.trim();
     const email = normalizeEmail(parsed.data.email);
     const password = parsed.data.password;
@@ -97,12 +99,12 @@ export async function POST(request: Request) {
           );
         }
 
-        const customerRole =
+        const accountRole =
           await tx.role.findUnique({
             where: {
               organizationId_name: {
                 organizationId: organization.id,
-                name: "CUSTOMER",
+                name: accountType,
               },
             },
             select: {
@@ -112,11 +114,11 @@ export async function POST(request: Request) {
           });
 
         if (
-          !customerRole ||
-          customerRole.status !== "ACTIVE"
+          !accountRole ||
+          accountRole.status !== "ACTIVE"
         ) {
           throw new Error(
-            "MARKA CUSTOMER role is not available."
+            `MARKA ${accountType} role is not available.`
           );
         }
 
@@ -126,7 +128,7 @@ export async function POST(request: Request) {
             email,
             emailNormalized: email,
             password: passwordHash,
-            role: "CUSTOMER",
+            role: accountType,
             status: "PENDING_VERIFICATION",
           },
         });
@@ -149,10 +151,21 @@ export async function POST(request: Request) {
         await tx.userRole.create({
           data: {
             userId: user.id,
-            roleId: customerRole.id,
+            roleId: accountRole.id,
             organizationId: organization.id,
           },
         });
+
+        if (accountType === "DRIVER") {
+          await tx.mobilityDriver.create({
+            data: {
+              organizationId: organization.id,
+              userId: user.id,
+              displayName: name,
+              status: "PENDING",
+            },
+          });
+        }
 
         const tokenData =
           await verificationService.createToken(
