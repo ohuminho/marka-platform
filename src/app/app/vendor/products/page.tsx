@@ -38,6 +38,8 @@ export default function VendorProductsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [storeName, setStoreName] = useState("");
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", price: "", stock: "", image: "" });
   const [form, setForm] = useState({
     name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros",
     brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "",
@@ -161,6 +163,23 @@ export default function VendorProductsPage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível alterar o anúncio."); }
   }
 
+  function beginEdit(product: Product) {
+    setEditingProductId(product.id);
+    setEditForm({ name: product.name, description: product.description ?? "", price: String(product.price), stock: String(product.stock), image: product.image ?? "" });
+    setError("");
+    setNotice("");
+  }
+
+  async function saveProductEdit(productId: string) {
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/vendor/products", { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId, action: "update", name: editForm.name, description: editForm.description, price: Number(editForm.price), stock: Number(editForm.stock), image: editForm.image }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível atualizar o anúncio.");
+      setEditingProductId(null); setNotice(data.message || "Anúncio atualizado."); await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível atualizar o anúncio."); }
+    finally { setSaving(false); }
+  }
   const field = "w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-4 py-3 text-sm text-[var(--theme-text)] outline-none transition placeholder:text-[var(--theme-text-faint)] focus:border-[var(--theme-text-muted)]";
   const label = "mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-muted)]";
 
@@ -267,7 +286,7 @@ export default function VendorProductsPage() {
                     {products.length === 0 ? <div className="mt-6 rounded-xl border border-dashed border-[var(--theme-border)] p-8 text-center"><p className="text-sm text-[var(--theme-text)]">Ainda não tem anúncios.</p><p className="mt-2 text-xs leading-6 text-[var(--theme-text-muted)]">Use o formulário para criar o primeiro produto. Ele ficará guardado como rascunho até poder ser publicado.</p></div> : <div className="mt-6 space-y-3">
                       {products.map((product) => <article key={product.id} className="flex gap-4 rounded-xl border border-[var(--theme-border)] p-4">
                         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-[var(--theme-background)]">{product.image ? <img src={product.image} alt={product.name} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[9px] tracking-[0.2em] text-[var(--theme-text-faint)]">MARKA</div>}</div>
-                        <div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-medium text-[var(--theme-text)]">{product.name}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase tracking-[0.15em] text-[var(--theme-text-muted)]">{product.status}</span></div><p className="mt-1 text-sm text-[var(--theme-text-muted)]">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(product.price)} · Stock {product.stock}</p><p className="mt-1 text-xs text-[var(--theme-text-faint)]">{product.category?.name ?? "Sem categoria"} · SKU {product.sku}</p><div className="mt-3 flex flex-wrap gap-2">{product.status === "DRAFT" && <button onClick={() => void productAction(product.id, "publish")} className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] text-[var(--theme-text)]">Publicar</button>}{product.status !== "ARCHIVED" && <button onClick={() => void productAction(product.id, "archive")} className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] text-[var(--theme-text-muted)]">Arquivar</button>}</div></div>
+                        <div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-medium text-[var(--theme-text)]">{product.name}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase tracking-[0.15em] text-[var(--theme-text-muted)]">{product.status}</span></div><p className="mt-1 text-sm text-[var(--theme-text-muted)]">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(product.price)} · Stock {product.stock}</p><p className="mt-1 text-xs text-[var(--theme-text-faint)]">{product.category?.name ?? "Sem categoria"} · SKU {product.sku}</p><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => beginEdit(product)} className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] text-[var(--theme-text)]">Editar</button>{product.status === "DRAFT" && <button onClick={() => void productAction(product.id, "publish")} className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] text-[var(--theme-text)]">Publicar</button>}{product.status !== "ARCHIVED" && <button onClick={() => void productAction(product.id, "archive")} className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] text-[var(--theme-text-muted)]">Arquivar</button>}</div>{editingProductId === product.id && <div className="mt-4 grid w-full gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4"><label className="text-xs text-[var(--theme-text-muted)]">Nome<input className="mt-1 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-sm" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></label><label className="text-xs text-[var(--theme-text-muted)]">Descrição<textarea className="mt-1 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-sm" rows={3} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} /></label><div className="grid grid-cols-2 gap-3"><label className="text-xs text-[var(--theme-text-muted)]">Preço (Kz)<input type="number" min="0.01" step="0.01" className="mt-1 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-sm" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} /></label><label className="text-xs text-[var(--theme-text-muted)]">Stock<input type="number" min="0" step="1" className="mt-1 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-sm" value={editForm.stock} onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })} /></label></div><label className="text-xs text-[var(--theme-text-muted)]">URL da imagem<input type="url" className="mt-1 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-sm" value={editForm.image} onChange={(e) => setEditForm({ ...editForm, image: e.target.value })} /></label><div className="flex gap-2"><button disabled={saving || editForm.name.trim().length < 2 || !editForm.price || Number(editForm.price) <= 0 || !editForm.stock || Number(editForm.stock) < 0} onClick={() => void saveProductEdit(product.id)} className="rounded-full bg-[var(--theme-text)] px-4 py-2 text-xs font-semibold text-[var(--theme-background)] disabled:opacity-50">{saving ? "A guardar…" : "Guardar alterações"}</button><button onClick={() => setEditingProductId(null)} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs">Cancelar</button></div></div>}</div>
                       </article>)}
                     </div>}
                   </div>
