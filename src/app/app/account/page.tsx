@@ -63,12 +63,7 @@ export default function AccountPage() {
                 </span>
               )}
             </div>
-            <span aria-hidden="true" className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--theme-surface)] bg-[#d9b565] text-[#17130a]">
-              <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3">
-                <path d="M8 2.2 9.7 3l1.8-.1.6 1.7 1.4 1.1-.6 1.7.2 1.8-1.6.8-.9 1.5-1.8-.3-1.7.6-1.1-1.4-1.7-.5.1-1.8-.8-1.6 1.3-1.3.4-1.8 1.8-.1L8 2.2Z" fill="currentColor" opacity=".28" />
-                <path d="m5.2 8.1 1.7 1.7 3.9-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
+
           </div>
           <div>
             <p className="marka-kicker">MARKA / ACCOUNT</p>
