@@ -39,9 +39,12 @@ export default function AdminCompliancePage() {
   };
 
   useEffect(() => {
-    void load()
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load the compliance queue."))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      void load()
+        .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Unable to load the compliance queue."))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const review = async (profile: Profile, status: "VERIFIED" | "REJECTED" | "IN_REVIEW" | "SUSPENDED") => {
