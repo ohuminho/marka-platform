@@ -97,6 +97,31 @@ export async function PATCH(request: Request) {
       );
     }
 
+    if (input.status === "VERIFIED") {
+      const verificationEvidence = await prisma.complianceProfile.findUnique({
+        where: { id: input.id },
+        include: { documents: true },
+      });
+      const documents = verificationEvidence?.documents ?? [];
+      const hasCurrentVerifiedEvidence =
+        documents.length > 0 &&
+        documents.every(
+          (document) =>
+            document.status === "VERIFIED" &&
+            (!document.expiresAt || document.expiresAt > new Date()),
+        );
+      if (!hasCurrentVerifiedEvidence) {
+        return NextResponse.json(
+          {
+            message:
+              "Verification blocked: at least one current identity document must be securely submitted and independently reviewed before this profile can be approved.",
+            code: "VERIFICATION_EVIDENCE_REQUIRED",
+          },
+          { status: 422 },
+        );
+      }
+    }
+
     const result = await new ComplianceService().review(
       input.id,
       input.status,
