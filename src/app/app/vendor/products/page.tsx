@@ -34,6 +34,7 @@ export default function VendorProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -77,6 +78,37 @@ export default function VendorProductsPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível criar a loja.");
     } finally { setSaving(false); }
+  }
+
+  async function uploadImage(file?: File) {
+    if (!file) return;
+    setError(""); setNotice("");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Usa uma imagem JPG, PNG ou WebP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("A imagem deve ter até 5 MB.");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      const response = await fetch("/api/vendor/products/media", {
+        method: "POST",
+        credentials: "include",
+        body,
+      });
+      const data = await response.json();
+      if (!response.ok || !data.imageUrl) throw new Error(data.message || "Não foi possível carregar a imagem.");
+      setForm((current) => ({ ...current, image: data.imageUrl }));
+      setNotice("Imagem carregada com segurança e pronta para associar ao anúncio.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível carregar a imagem.");
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function createProduct(event: FormEvent<HTMLFormElement>) {
@@ -182,13 +214,20 @@ export default function VendorProductsPage() {
                   <form onSubmit={createProduct} className="mt-6 space-y-4">
                     <div><label className={label} htmlFor="productName">Nome do produto</label><input id="productName" className={field} required minLength={2} maxLength={180} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Candeeiro artesanal" /></div>
                     <div><label className={label} htmlFor="productDescription">Descrição</label><textarea id="productDescription" className={field} rows={4} maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalhes, estado, dimensões, garantia…" /></div>
-                    <div><label className={label} htmlFor="productImage">Imagem do produto (URL pública)</label><input id="productImage" type="url" className={field} value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="https://…" /><p className="mt-2 text-xs text-[var(--theme-text-faint)]">O carregamento direto de fotografias será ligado ao armazenamento seguro de media; não introduza documentos privados neste campo.</p></div>
+                    <div>
+                      <label className={label} htmlFor="productImageFile">Fotografia do produto</label>
+                      <input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className={field} disabled={uploadingImage} onChange={(e) => void uploadImage(e.target.files?.[0])} />
+                      <p className="mt-2 text-xs text-[var(--theme-text-faint)]">{uploadingImage ? "A carregar e validar a imagem…" : "JPG, PNG ou WebP · máximo 5 MB."}</p>
+                      <label className={label} htmlFor="productImage">Ou URL de imagem já alojada</label>
+                      <input id="productImage" type="url" className={field} value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="https://…" />
+                      {form.image && <img src={form.image} alt="Pré-visualização do produto" className="mt-3 h-36 w-36 rounded-xl border border-[var(--theme-border)] object-cover" />}
+                    </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div><label className={label} htmlFor="productPrice">Preço (Kz)</label><input id="productPrice" className={field} type="number" min="0.01" step="0.01" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="15000" /></div>
                       <div><label className={label} htmlFor="productStock">Stock disponível</label><input id="productStock" className={field} type="number" min="0" step="1" required value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                     </div>
                     <div><label className={label} htmlFor="productCategory">Categoria</label><select id="productCategory" className={field} value={form.categoryName} onChange={(e) => setForm({ ...form, categoryName: e.target.value })}>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></div>
-                    <button disabled={saving} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A guardar…" : "Guardar anúncio como rascunho"}</button>
+                    <button disabled={saving || uploadingImage} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A guardar…" : "Guardar anúncio como rascunho"}</button>
                   </form>
                 </div>
 
