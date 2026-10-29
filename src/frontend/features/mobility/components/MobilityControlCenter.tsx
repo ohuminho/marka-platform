@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
 import {
   FormEvent,
   useCallback,
