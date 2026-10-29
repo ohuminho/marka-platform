@@ -15,7 +15,7 @@ type DriverProfile = {
 type OnboardingResponse = {
   driver: DriverProfile | null;
   requiredDriverDocuments?: Array<{ documentType: string; label: string }>;
-  requiredVehicleDocuments?: Array<{ documentType: string; label: string }>;
+  requiredVehicleDocuments?: Array<{ documentType: string; label: string }> | string[];
   activationPolicy?: string;
   nextStep?: string;
   message?: string;
