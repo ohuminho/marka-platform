@@ -16,7 +16,7 @@ const registerVendorSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const sessionToken = request.headers.get("cookie")?.match(/(?:^|;\\s*)marka_session=([^;]+)/)?.[1];
+    const sessionToken = request.headers.get("cookie")?.match(/(?:^|;\s*)marka_session=([^;]+)/)?.[1];
     if (!sessionToken) {
       return NextResponse.json({ message: "Inicie sessão para abrir uma loja.", code: "AUTHENTICATION_REQUIRED" }, { status: 401 });
     }
