@@ -16,7 +16,6 @@ export default function MobilityTripAdSlot({ context, audience = "rider", onDism
   useEffect(() => {
     let cancelled = false;
     if (!canShowAdvertisement("mobility_trip", context)) {
-      setAdvertisement(null);
       return () => { cancelled = true; };
     }
 
