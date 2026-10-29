@@ -46,7 +46,10 @@ export default function AdvertisingAdminPage() {
     }
   }, []);
 
-  useEffect(() => { void loadCampaigns(); }, [loadCampaigns]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadCampaigns(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadCampaigns]);
 
   async function createCampaign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
