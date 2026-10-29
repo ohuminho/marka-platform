@@ -13,6 +13,7 @@ export default function LoginForm() {
   const [mode, setMode] =
     useState<AuthMode>("login");
 
+  const [accountType, setAccountType] = useState<"CUSTOMER" | "DRIVER">("CUSTOMER");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] =
@@ -66,7 +67,8 @@ export default function LoginForm() {
         await register(
           name,
           email,
-          password
+          password,
+          accountType
         );
 
         setMessage(
@@ -217,6 +219,17 @@ export default function LoginForm() {
         onSubmit={handleSubmit}
         className="space-y-4"
       >
+        {isRegistering && (
+          <div className="space-y-2">
+            <label htmlFor="marka-account-type" className="block px-1 text-xs font-medium text-[var(--theme-text-muted)]">Account type</label>
+            <select id="marka-account-type" value={accountType} onChange={(event) => setAccountType(event.target.value as "CUSTOMER" | "DRIVER")} className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent-strong)]">
+              <option value="CUSTOMER">Passenger / Customer</option>
+              <option value="DRIVER">Mobility driver partner</option>
+            </select>
+            {accountType === "DRIVER" && <p className="px-1 text-xs leading-5 text-[var(--theme-text-faint)]">Driver accounts remain pending until identity, licence and vehicle checks are reviewed and approved.</p>}
+          </div>
+        )}
+
         {isRegistering && (
           <input
             type="text"
