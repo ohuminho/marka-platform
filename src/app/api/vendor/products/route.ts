@@ -31,7 +31,7 @@ const createProductSchema = z.object({
   price: z.coerce.number().finite().positive().max(1_000_000_000),
   currency: z.string().trim().length(3).default("AOA"),
   stock: z.coerce.number().int().min(0).max(1_000_000),
-  categoryId: z.string().uuid().optional().or(z.literal("")),
+  categoryName: z.string().trim().max(80).optional().default(""),
 });
 
 const productActionSchema = z.object({
@@ -126,11 +126,17 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data;
-    if (input.categoryId) {
-      const category = await prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true, status: true } });
-      if (!category || category.status !== "ACTIVE") {
-        return NextResponse.json({ message: "A categoria selecionada já não está disponível." }, { status: 400 });
-      }
+    let categoryId: string | null = null;
+    if (input.categoryName) {
+      const existingCategory = await prisma.category.findFirst({
+        where: { name: { equals: input.categoryName, mode: "insensitive" }, status: "ACTIVE" },
+        select: { id: true },
+      });
+      const category = existingCategory ?? await prisma.category.create({
+        data: { name: input.categoryName, status: "ACTIVE" },
+        select: { id: true },
+      });
+      categoryId = category.id;
     }
 
     const product = await prisma.product.create({
@@ -144,7 +150,7 @@ export async function POST(request: Request) {
         stock: input.stock,
         status: "DRAFT",
         storeId: vendor.store.id,
-        categoryId: input.categoryId || null,
+        categoryId,
         inventory: {
           create: { quantityOnHand: input.stock, reserved: 0, reorderLevel: 0 },
         },
