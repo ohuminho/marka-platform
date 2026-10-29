@@ -12,6 +12,9 @@ const registerVendorSchema = z.object({
     .min(2, "Store name must contain at least 2 characters.")
     .max(160, "Store name is too long."),
   organizationId: z.string().uuid("Invalid organization ID.").optional(),
+  businessType: z.enum(["INDIVIDUAL", "COMPANY"]).default("INDIVIDUAL"),
+  phone: z.string().trim().max(40).optional(),
+  country: z.string().trim().max(80).optional(),
 });
 
 export async function POST(request: Request) {
@@ -49,7 +52,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    const vendor = await new VendorService().createVendor(user.id, parsed.data.storeName, parsed.data.organizationId);
+    const vendor = await new VendorService().createVendor(user.id, parsed.data);
     return NextResponse.json({ vendor }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
