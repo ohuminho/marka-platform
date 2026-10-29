@@ -261,7 +261,7 @@ export default function DriverOnboardingPanel() {
         <summary className="cursor-pointer text-sm font-semibold text-[var(--theme-text)]">Resumo das condições de adesão</summary>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-[var(--theme-text-muted)]">
           <li>Identidade, carta de condução e documentos do veículo têm de ser verdadeiros, válidos e verificáveis.</li>
-          <li>A comissão e as condições de liquidação devem ser apresentadas numa tabela comercial antes da ativação; não são inventadas nesta página.</li>
+          <li>A política padrão atualmente configurada é 12% para táxi e 10% para moto-táxi; as condições de liquidação devem ser confirmadas antes da ativação.</li>
           <li>O motorista deve cumprir regras de trânsito, segurança, atendimento, cancelamento e proteção de dados.</li>
           <li>Documentos rejeitados, expirados ou em falta impedem a ativação operacional até regularização.</li>
           <li>A relação contratual final deve ser validada juridicamente em Angola antes da ativação comercial.</li>
