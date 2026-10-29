@@ -33,7 +33,7 @@ The check must be a server-derived state. It must never be set by a client reque
 
 - **Monthly subscription:** accessible entry price, automatically renewed only with clear consent.
 - **Annual subscription:** discounted relative to twelve monthly payments.
-- **Founder entitlement:** the founder account may receive a complimentary subscription entitlement. This removes the subscription charge, not the identity review. The same KYC approval and account-good-standing rules apply.
+- **Founder identity is not a verification privilege:** do not grant a blue identity check merely because someone created or owns MARKA, and do not make payment a requirement for the founder's identity to be reviewed. The founder can receive a separate, clearly labelled “Fundador MARKA” role marker based on the platform's ownership records. The blue identity check must mean that the account identity was reviewed and approved through a documented process. To avoid a self-approval conflict, the founder's KYC decision should be recorded by a second authorized reviewer, or by a formally documented independent verification method. Any complimentary MARKA Verified subscription is a separate commercial entitlement and must never itself approve KYC.
 - Do not set prices in code until Angolan payment costs, taxes, consumer terms, chargeback risk, and local willingness-to-pay are reviewed.
 
 Benefits should be explicit and operationally deliverable: visible verification check, stronger impersonation reporting, priority account-support queue, and a clear verification-status page. Do not promise reach, sales, ranking, or guaranteed protection.
@@ -57,7 +57,7 @@ KYC document references, IDs, review notes, and rejection reasons must never be 
 1. **Trust baseline:** confirm KYC review and expiry handling; add audit events for decisions and badge changes.
 2. **Billing entitlement:** add a subscription/entitlement record using the existing payment infrastructure; persist provider subscription IDs, status, plan, current period, cancellation and grace-period dates. Never trust a client-side payment-success redirect.
 3. **Server-derived badge:** create one shared badge component and one server-side status resolver used by Marketplace profile cards, seller/store pages, account header, and other public name surfaces.
-4. **Owner/founder account:** create a comped entitlement after the owner account is identified, but show the verified check only after an authorized KYC reviewer has approved the identity. Do not mark the account verified merely because it owns the platform.
+4. **Founder account:** identify the exact account using authenticated account records, never by guessing from a GitHub username or display name. Record the founder role separately from KYC. Do not mark identity verified until an authorized, independent review has approved the relevant KYC profile. A founder role badge may be displayed separately and must not resemble the blue identity check.
 5. **Self-service:** pricing/benefits page, checkout, renewal/cancellation controls, invoices/receipts, and clear status messages.
 6. **Operations:** admin review queue, audit log, abuse/impersonation reports, renewal failure notifications, and suspension/revocation path.
 7. **Launch gates:** payment webhook tests, expiry tests, KYC rejection tests, subscription cancellation tests, permission tests, and public/private data-leak checks.
@@ -66,7 +66,7 @@ KYC document references, IDs, review notes, and rejection reasons must never be 
 
 Use a small, crisp blue verification check immediately after the display name, with an accessible tooltip such as “Identidade verificada pela MARKA”. Keep the subscription/renewal details private in account settings. The visual badge must be recognizable but restrained and consistent across Marketplace, account profiles, and seller surfaces.
 
-Do not use a gold “founder” ornament as a substitute for the blue verified check. If a founder marker is desired, label it separately as “Fundador MARKA”.
+Do not use a gold “founder” ornament as a substitute for the blue verified check. The “Fundador MARKA” marker confirms platform role/ownership only; the blue check confirms identity review. These two claims must be visually and technically distinct.
 
 ## 7. Safety and launch constraints
 
