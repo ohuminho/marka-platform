@@ -222,7 +222,7 @@ export default function DriverOnboardingPanel() {
       </div>
       {verification?.rejectionReason && <p className="mt-2 text-xs text-red-400">Motivo: {verification.rejectionReason}</p>}
       <label className={`${labelClass} mt-4`}>Ficheiro do documento
-        <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => {
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => {
           const selected = event.target.files?.[0];
           setFiles((current) => ({ ...current, [document.documentType]: selected }));
         }} className="mt-2 block w-full text-xs text-[var(--theme-text)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--theme-surface)] file:px-3 file:py-2 file:text-[var(--theme-text)]" />
