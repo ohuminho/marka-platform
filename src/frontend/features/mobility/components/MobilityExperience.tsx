@@ -14,7 +14,6 @@ type RideResult = {
 const services = [
   { id: "TAXI", name: "MARKA Go", detail: "Viagem urbana", seats: "Até 4 passageiros", badge: "Mais escolhido" },
   { id: "MOTO_TAXI", name: "MARKA Moto", detail: "Deslocação ágil", seats: "1 passageiro", badge: "Urbano" },
-  { id: "EXECUTIVE", name: "MARKA Executive", detail: "Conforto executivo", seats: "Até 4 passageiros", badge: "Premium" },
 ] as const;
 
 const statusLabels: Record<string, string> = {
@@ -153,7 +152,7 @@ export default function MobilityExperience() {
 
       <form onSubmit={submitRide} className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="rounded-[1.7rem] border border-white/10 bg-[#0a0c11] p-4 sm:p-6">
-          <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">01 · Serviço</p><h2 className="mt-1 text-xl font-semibold">Escolha a experiência</h2><p className="mt-2 text-xs leading-5 text-white/45">As opções enviam o tipo de serviço à plataforma. Preços e tempo de chegada só devem ser apresentados quando forem calculados pelos motores reais.</p></div>
+          <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">01 · Serviço</p><h2 className="mt-1 text-xl font-semibold">Escolha o tipo de viagem</h2><p className="mt-2 text-xs leading-5 text-white/45">O tipo seleccionado é enviado ao dispatch, que procura veículos compatíveis e motoristas elegíveis.</p></div>
           <div className="grid gap-3 md:grid-cols-3">
             {services.map((service) => {
               const selected = serviceType === service.id;
