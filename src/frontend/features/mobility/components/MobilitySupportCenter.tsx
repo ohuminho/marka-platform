@@ -83,6 +83,23 @@ export default function MobilitySupportCenter() {
     } finally { setSending(false); }
   }
 
+  async function changeStatus(status: SupportTicket["status"]) {
+    if (!activeId) return;
+    setSending(true); setError(""); setSuccess("");
+    try {
+      const response = await fetch("/api/support/tickets", {
+        method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: activeId, status }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível actualizar o estado.");
+      setSuccess(`Pedido actualizado: ${statusLabels[data.ticket.status as SupportTicket["status"]] || data.ticket.status}.`);
+      await loadTickets();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao actualizar o estado.");
+    } finally { setSending(false); }
+  }
+
   async function submitReply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!activeId || !reply.trim()) return;
@@ -172,6 +189,11 @@ export default function MobilitySupportCenter() {
                     <p className="text-[9px] font-bold tracking-[.14em] text-[#b89a5b]">{active.reference} · {active.category}</p>
                     <h4 className="mt-2 text-base font-semibold text-[var(--theme-text)]">{active.subject}</h4>
                     <div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-[var(--theme-background)] px-3 py-1 text-[10px] text-[var(--theme-text-muted)]">{statusLabels[active.status]}</span><span className="rounded-full bg-[var(--theme-background)] px-3 py-1 text-[10px] text-[var(--theme-text-muted)]">Prioridade {priorityLabels[active.priority]}</span></div>
+                    {isStaff && <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" disabled={sending} onClick={() => void changeStatus("WAITING_FOR_USER")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] text-[var(--theme-text)] disabled:opacity-50">Aguardar utilizador</button>
+                      <button type="button" disabled={sending} onClick={() => void changeStatus("RESOLVED")} className="rounded-full border border-emerald-500/30 px-3 py-2 text-[10px] text-[var(--theme-text)] disabled:opacity-50">Marcar resolvido</button>
+                      <button type="button" disabled={sending} onClick={() => void changeStatus("CLOSED")} className="rounded-full border border-red-500/30 px-3 py-2 text-[10px] text-[var(--theme-text)] disabled:opacity-50">Encerrar pedido</button>
+                    </div>}
                   </div>
                   <div className="flex-1 space-y-3 p-4 sm:p-5">
                     {(active.messages || []).map((message) => <div key={message.id} className={`max-w-[95%] rounded-2xl p-3 ${message.isStaff ? "border border-[#b89a5b]/30 bg-[#b89a5b]/10" : "bg-[var(--theme-background)]"}`}>
