@@ -35,7 +35,8 @@ export async function login(
 export async function register(
   name: string,
   email: string,
-  password: string
+  password: string,
+  accountType: "CUSTOMER" | "DRIVER" = "CUSTOMER"
 ): Promise<AuthRegistrationResponse> {
   const response = await fetch("/api/auth/register", {
     method: "POST",
@@ -46,6 +47,7 @@ export async function register(
       name,
       email,
       password,
+      accountType,
     }),
   });
 
