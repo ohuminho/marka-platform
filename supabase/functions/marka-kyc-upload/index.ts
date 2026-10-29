@@ -131,7 +131,8 @@ Deno.serve(async (request: Request) => {
       if (error) return json({ message: "Unable to update verification profile." }, 500);
       profileId = existing.id;
     } else {
-      const { data, error } = await supabase.from("ComplianceProfile").insert(profilePayload).select("id").single();
+      // Prisma-generated text IDs are not generated automatically by PostgREST.
+      const { data, error } = await supabase.from("ComplianceProfile").insert({ ...profilePayload, id: crypto.randomUUID() }).select("id").single();
       if (error || !data) return json({ message: "Unable to create verification profile." }, 500);
       profileId = data.id;
     }
@@ -142,6 +143,7 @@ Deno.serve(async (request: Request) => {
     });
     if (uploadError) return json({ message: "Secure document storage failed. Please retry." }, 500);
     const { data: document, error: documentError } = await supabase.from("ComplianceDocument").insert({
+      id: crypto.randomUUID(),
       profileId, documentType, documentRef: path, status: "PENDING", expiresAt: expiresAt?.toISOString() ?? null,
     }).select("id,documentType,status,expiresAt").single();
     if (documentError || !document) {
