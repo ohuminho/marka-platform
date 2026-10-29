@@ -2,6 +2,7 @@ import {
   MobilityAvailabilityStatus,
   MobilityDriverStatus,
   MobilityVehicleStatus,
+  MobilityVerificationStatus,
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
@@ -44,11 +45,39 @@ export class MobilityMatchingService {
       50
     );
 
+    const now = new Date();
+    const requiredDriverDocuments = ["IDENTITY_DOCUMENT", "DRIVING_LICENSE", "CRIMINAL_RECORD"];
+    const requiredVehicleDocuments = ["VEHICLE_REGISTRATION", "VEHICLE_OWNERSHIP", "VEHICLE_INSURANCE", "VEHICLE_INSPECTION", "VEHICLE_SERVICE_LICENSE"];
+    const currentVerifiedDocument = (documentType: string) => ({
+      verifications: {
+        some: {
+          documentType,
+          status: MobilityVerificationStatus.VERIFIED,
+          OR: [{ documentExpiry: null }, { documentExpiry: { gt: now } }],
+        },
+      },
+    });
+
     const drivers =
       await prisma.mobilityDriver.findMany({
         where: {
           organizationId: input.organizationId,
           status: MobilityDriverStatus.ACTIVE,
+          AND: [
+            ...requiredDriverDocuments.map(currentVerifiedDocument),
+            {
+              vehicles: {
+                some: {
+                  isPrimary: true,
+                  activeUntil: null,
+                  vehicle: {
+                    status: MobilityVehicleStatus.ACTIVE,
+                    AND: requiredVehicleDocuments.map((documentType) => currentVerifiedDocument(documentType)),
+                  },
+                },
+              },
+            },
+          ],
 
           availability: {
             status:
