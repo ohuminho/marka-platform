@@ -76,10 +76,8 @@ Deno.serve(async (request: Request) => {
     if (!["KYC", "KYD", "KYB"].includes(subjectType)) return json({ message: "Invalid verification type." }, 400);
     if (documentType.length < 2 || documentType.length > 100) return json({ message: "Enter a valid document type." }, 400);
     if (file.size < 1 || file.size > 10 * 1024 * 1024) return json({ message: "File must be no larger than 10 MB." }, 413);
-    const mimeToExt: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
-    const extension = mimeToExt[file.type];
-    if (!extension) return json({ message: "Only PDF, JPEG, PNG or WebP documents are accepted." }, 415);
-    // Do not trust the browser-supplied MIME type alone; inspect the file signature.
+    // Mobile browsers and document providers may omit MIME metadata or use common aliases.
+    // Detect the actual supported format from the file signature, then normalize the stored type.
     const signature = new Uint8Array(await file.slice(0, 16).arrayBuffer());
     const startsWith = (bytes: number[]) => bytes.every((value, index) => signature[index] === value);
     const isJpeg = startsWith([0xff, 0xd8, 0xff]);
@@ -88,12 +86,23 @@ Deno.serve(async (request: Request) => {
     const isWebp = signature.length >= 12 &&
       String.fromCharCode(...signature.slice(0, 4)) === "RIFF" &&
       String.fromCharCode(...signature.slice(8, 12)) === "WEBP";
-    const validSignature =
-      (file.type === "image/jpeg" && isJpeg) ||
-      (file.type === "image/png" && isPng) ||
-      (file.type === "application/pdf" && isPdf) ||
-      (file.type === "image/webp" && isWebp);
-    if (!validSignature) return json({ message: "The file content does not match its declared document type." }, 415);
+    const detectedMime = isJpeg ? "image/jpeg" : isPng ? "image/png" : isPdf ? "application/pdf" : isWebp ? "image/webp" : null;
+    if (!detectedMime) {
+      return json({ message: "Formato não reconhecido. Usa JPG/JPEG, PNG, WebP ou PDF, até 10 MB.", code: "UNSUPPORTED_FILE_SIGNATURE" }, 415);
+    }
+    const declaredMime = file.type.toLowerCase().split(";")[0].trim();
+    const mimeAliases: Record<string, string> = {
+      "image/jpg": "image/jpeg",
+      "image/pjpeg": "image/jpeg",
+      "application/x-pdf": "application/pdf",
+    };
+    const normalizedDeclaredMime = mimeAliases[declaredMime] ?? declaredMime;
+    const genericMimes = ["", "application/octet-stream", "binary/octet-stream"];
+    if (!genericMimes.includes(normalizedDeclaredMime) && normalizedDeclaredMime !== detectedMime) {
+      return json({ message: "The file content does not match its declared document type.", code: "FILE_TYPE_MISMATCH" }, 415);
+    }
+    const mimeToExt: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
+    const extension = mimeToExt[detectedMime];
     if (expiresRaw && (!expiresAt || Number.isNaN(expiresAt.getTime()))) return json({ message: "Invalid expiry date." }, 400);
     if (expiresAt && expiresAt.getTime() <= Date.now()) return json({ message: "The document expiry date must be in the future." }, 400);
 
@@ -129,7 +138,7 @@ Deno.serve(async (request: Request) => {
     const path = user.id + "/" + profileId + "/" + crypto.randomUUID() + "." + extension;
     const bytes = new Uint8Array(await file.arrayBuffer());
     const { error: uploadError } = await supabase.storage.from("marka-kyc-evidence").upload(path, bytes, {
-      contentType: file.type, upsert: false, cacheControl: "0",
+      contentType: detectedMime, upsert: false, cacheControl: "0",
     });
     if (uploadError) return json({ message: "Secure document storage failed. Please retry." }, 500);
     const { data: document, error: documentError } = await supabase.from("ComplianceDocument").insert({
