@@ -32,6 +32,13 @@ const createProductSchema = z.object({
   currency: z.string().trim().length(3).default("AOA"),
   stock: z.coerce.number().int().min(0).max(1_000_000),
   categoryName: z.string().trim().max(80).optional().default(""),
+  brand: z.string().trim().max(100).optional().default(""), model: z.string().trim().max(100).optional().default(""),
+  year: z.coerce.number().int().min(1950).max(2035).optional().or(z.literal("")), mileage: z.coerce.number().int().min(0).max(10_000_000).optional().or(z.literal("")),
+  condition: z.string().trim().max(40).optional().default(""), fuel: z.string().trim().max(40).optional().default(""), transmission: z.string().trim().max(40).optional().default(""),
+  propertyType: z.string().trim().max(80).optional().default(""), transactionType: z.string().trim().max(40).optional().default(""),
+  bedrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")), bathrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
+  area: z.coerce.number().positive().max(10_000_000).optional().or(z.literal("")), location: z.string().trim().max(200).optional().default(""),
+  serviceType: z.string().trim().max(160).optional().default(""), availability: z.string().trim().max(120).optional().default(""), duration: z.string().trim().max(80).optional().default(""),
 });
 
 const productActionSchema = z.object({
@@ -126,6 +133,23 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data;
+    const categoryName = input.categoryName.toLocaleLowerCase();
+    const details: string[] = [];
+    const addDetail = (label: string, value: unknown) => {
+      if (value !== undefined && value !== null && value !== "") details.push(`${label}: ${String(value)}`);
+    };
+    if (categoryName === "automóveis" || categoryName === "motociclos") {
+      addDetail("Marca", input.brand); addDetail("Modelo", input.model); addDetail("Ano", input.year);
+      addDetail("Quilometragem (km)", input.mileage); addDetail("Estado", input.condition);
+      addDetail("Combustível", input.fuel); addDetail("Transmissão", input.transmission);
+    } else if (categoryName === "imóveis e arrendamento") {
+      addDetail("Tipo de imóvel", input.propertyType); addDetail("Finalidade", input.transactionType);
+      addDetail("Quartos", input.bedrooms); addDetail("Casas de banho", input.bathrooms);
+      addDetail("Área (m²)", input.area); addDetail("Localização", input.location);
+    } else if (categoryName === "serviços") {
+      addDetail("Tipo de serviço", input.serviceType); addDetail("Disponibilidade", input.availability); addDetail("Duração estimada", input.duration);
+    }
+    const completeDescription = [input.description, details.length ? `Detalhes do anúncio:\n${details.join("\n")}` : ""].filter(Boolean).join("\n\n").slice(0, 5000);
     let categoryId: string | null = null;
     if (input.categoryName) {
       const existingCategory = await prisma.category.findFirst({
@@ -142,7 +166,7 @@ export async function POST(request: Request) {
     const product = await prisma.product.create({
       data: {
         name: input.name,
-        description: input.description || null,
+        description: completeDescription || null,
         sku: input.sku || `MK-${crypto.randomUUID()}`,
         image: input.image || null,
         price: input.price.toFixed(4),
