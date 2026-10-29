@@ -172,14 +172,20 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md px-6">
-      <div className="mb-10 text-center">
-        <div className="mb-3 text-3xl font-semibold tracking-[0.28em] text-[var(--theme-text)]">
-          MARKA
+    <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-surface)_90%,transparent)] px-6 py-8 shadow-[0_30px_100px_rgba(0,0,0,0.36)] backdrop-blur-2xl sm:px-8 sm:py-10">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(233,189,88,0.14),transparent_68%)]" />
+      <div className="relative">
+      <div className="mb-8 text-center">
+        <div className="mx-auto mb-5 flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-[1.4rem] border border-[#e9bd58]/45 bg-[linear-gradient(145deg,rgba(255,255,255,0.09),rgba(233,189,88,0.06))] shadow-[0_12px_42px_rgba(233,189,88,0.12)]">
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden="true" className="h-8 w-8">
+            <path d="M8 29V11l12 18 12-18v18" stroke="#e9bd58" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M13 11h14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".65" />
+          </svg>
         </div>
-
-        <p className="text-sm tracking-wide text-[var(--theme-text-muted)]">
-          Global Digital Economy
+        <div className="mb-2 text-[1.8rem] font-semibold tracking-[0.3em] text-[var(--theme-text)]">MARKA</div>
+        <p className="text-[10px] uppercase tracking-[0.24em] text-[var(--theme-text-muted)]">Global Digital Economy</p>
+        <p className="mx-auto mt-5 max-w-xs text-sm leading-6 text-[var(--theme-text-muted)]">
+          {isRegistering ? "Crie a sua identidade MARKA e aceda a um único ecossistema." : "A sua conta. Todas as possibilidades MARKA."}
         </p>
       </div>
 
@@ -212,6 +218,21 @@ export default function LoginForm() {
           Create account
         </button>
       </div>
+
+      {isRegistering && (
+        <div className="mb-6 flex items-center gap-4 rounded-2xl border border-[#e9bd58]/20 bg-[#e9bd58]/[0.045] p-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#e9bd58]/50 bg-[radial-gradient(circle_at_35%_25%,rgba(255,255,255,0.14),rgba(233,189,88,0.05)_60%,transparent)] shadow-[0_0_28px_rgba(233,189,88,0.08)]">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-7 w-7 text-[#e9bd58]">
+              <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M5.5 19c.55-3.2 2.7-5 6.5-5s5.95 1.8 6.5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-[var(--theme-text)]">A sua identidade pessoal</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--theme-text-muted)]">O perfil começa consigo. Poderá personalizar a sua fotografia depois de criar a conta.</p>
+          </div>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -328,9 +349,13 @@ export default function LoginForm() {
         )}
 
       <p className="mt-8 text-center text-xs leading-5 text-[var(--theme-text-faint)]">
-        By continuing, you agree to use MARKA
-        responsibly and securely.
+        By continuing, you agree to use MARKA responsibly and securely.
       </p>
+      <div className="mt-6 flex items-center justify-center gap-2 text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#e9bd58]" />
+        Secure account access
+      </div>
+      </div>
     </div>
   );
 }
