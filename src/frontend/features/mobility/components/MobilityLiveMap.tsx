@@ -21,7 +21,7 @@ function loadLeaflet(): Promise<any> {
     script.onerror = () => reject(new Error("Não foi possível carregar o mapa.")); document.head.appendChild(script);
   });
 }
-export default function MobilityLiveMap() {
+export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (points: { origin: Point | null; destination: Point | null }) => void } = {}) {
   const hostRef = useRef<HTMLDivElement>(null), mapRef = useRef<any>(null), routeRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const [origin, setOrigin] = useState<Point | null>(null), [destination, setDestination] = useState<Point | null>(null);
@@ -39,7 +39,10 @@ export default function MobilityLiveMap() {
   }, []);
   function setPoint(point: Point, kind: "origin" | "destination") {
     const L = window.L, map = mapRef.current; if (!L || !map) return;
+    const nextOrigin = kind === "origin" ? point : origin;
+    const nextDestination = kind === "destination" ? point : destination;
     if (kind === "origin") setOrigin(point); else setDestination(point);
+    onPointsChange?.({ origin: nextOrigin, destination: nextDestination });
     markersRef.current.push(L.marker([point.lat, point.lon]).addTo(map).bindPopup(point.label));
     map.setView([point.lat, point.lon], 15);
   }
