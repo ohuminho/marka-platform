@@ -680,6 +680,20 @@ export class MobilityLifecycleService {
             safetyMode,
           });
 
+        if (!dispatch.assignment) {
+          return this.advance(
+            current,
+            input,
+            "FAILED",
+            {
+              dispatchStatus: dispatch.status,
+              candidateCount: dispatch.candidates.length,
+              reason: "NO_ELIGIBLE_DRIVER",
+            },
+            "FAILED",
+          );
+        }
+
         return this.advance(
           current,
           input,
