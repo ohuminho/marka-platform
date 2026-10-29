@@ -43,8 +43,6 @@ export const NavigationConfig = {
           description: "Start a business and manage your product catalogue",
         },
         {
-        },
-        {
           title: "Cart",
           route: "/app/cart",
           description: "Review items before checkout",
