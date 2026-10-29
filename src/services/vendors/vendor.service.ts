@@ -3,15 +3,14 @@ import { prisma } from "@/database/client/prisma";
 export class VendorService {
   async createVendor(
     ownerId: string,
-    storeName: string,
-    organizationId?: string
+    input: { storeName: string; businessType: "INDIVIDUAL" | "COMPANY"; phone?: string; country?: string; organizationId?: string }
   ) {
     const membership = await prisma.organizationMembership.findFirst({
       where: {
         userId: ownerId,
         status: "ACTIVE",
         organization: { status: "ACTIVE" },
-        ...(organizationId ? { organizationId } : {}),
+        ...(input.organizationId ? { organizationId: input.organizationId } : {}),
       },
       orderBy: { joinedAt: "asc" },
       select: { organizationId: true },
@@ -31,14 +30,17 @@ export class VendorService {
 
     return prisma.vendor.create({
       data: {
-        name: storeName.trim(),
+        name: input.storeName.trim(),
         ownerId,
         organizationId: membership.organizationId,
+        businessType: input.businessType,
+        phone: input.phone?.trim() || null,
+        country: input.country?.trim() || null,
         status: "PENDING",
         verified: false,
         store: {
           create: {
-            name: storeName.trim(),
+            name: input.storeName.trim(),
             status: "INACTIVE",
           },
         },
