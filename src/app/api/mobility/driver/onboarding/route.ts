@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -29,8 +30,7 @@ const REQUIRED_DRIVER_DOCUMENTS = [
 ] as const;
 
 export async function GET(request: Request) {
-  const token = (await import("next/headers")).cookies;
-  const cookieStore = await token();
+  const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AuthConfig.cookies.name)?.value;
   if (!sessionToken) {
     return NextResponse.json({ message: "Autenticação necessária.", code: "AUTHENTICATION_REQUIRED" }, { status: 401 });
@@ -73,7 +73,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
   const token = cookieStore.get(AuthConfig.cookies.name)?.value;
   if (!token) {
