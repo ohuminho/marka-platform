@@ -23,6 +23,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: string;
+  isFounder: boolean;
   status: string;
   emailVerifiedAt: string | null;
   profile: AuthUserProfile | null;
