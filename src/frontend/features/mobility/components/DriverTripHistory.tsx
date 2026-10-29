@@ -64,9 +64,12 @@ export default function DriverTripHistory() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const initialLoad = window.setTimeout(() => { void load(); }, 0);
     const timer = window.setInterval(() => void load(), 60_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [load]);
 
   const summary = payload.summary ?? { total: 0, completed: 0, cancelled: 0 };
