@@ -94,6 +94,7 @@ export async function GET() {
         id: product.id,
         name: product.name,
         description: product.description,
+        attributes: product.attributes,
         sku: product.sku,
         image: product.image,
         price: Number(product.price),
@@ -135,6 +136,7 @@ export async function POST(request: Request) {
     const input = parsed.data;
     const categoryName = input.categoryName.toLocaleLowerCase();
     const details: string[] = [];
+    const attributes: Record<string, string> = {};
     const addDetail = (label: string, value: unknown) => {
       if (value !== undefined && value !== null && value !== "") details.push(`${label}: ${String(value)}`);
     };
@@ -142,12 +144,15 @@ export async function POST(request: Request) {
       addDetail("Marca", input.brand); addDetail("Modelo", input.model); addDetail("Ano", input.year);
       addDetail("Quilometragem (km)", input.mileage); addDetail("Estado", input.condition);
       addDetail("Combustível", input.fuel); addDetail("Transmissão", input.transmission);
+      for (const [key, value] of Object.entries({ brand: input.brand, model: input.model, year: input.year, mileage: input.mileage, condition: input.condition, fuel: input.fuel, transmission: input.transmission })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
     } else if (categoryName === "imóveis e arrendamento") {
       addDetail("Tipo de imóvel", input.propertyType); addDetail("Finalidade", input.transactionType);
       addDetail("Quartos", input.bedrooms); addDetail("Casas de banho", input.bathrooms);
       addDetail("Área (m²)", input.area); addDetail("Localização", input.location);
+      for (const [key, value] of Object.entries({ propertyType: input.propertyType, transactionType: input.transactionType, bedrooms: input.bedrooms, bathrooms: input.bathrooms, area: input.area, location: input.location })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
     } else if (categoryName === "serviços") {
       addDetail("Tipo de serviço", input.serviceType); addDetail("Disponibilidade", input.availability); addDetail("Duração estimada", input.duration);
+      for (const [key, value] of Object.entries({ serviceType: input.serviceType, availability: input.availability, duration: input.duration })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
     }
     const completeDescription = [input.description, details.length ? `Detalhes do anúncio:\n${details.join("\n")}` : ""].filter(Boolean).join("\n\n").slice(0, 5000);
     let categoryId: string | null = null;
@@ -167,6 +172,7 @@ export async function POST(request: Request) {
       data: {
         name: input.name,
         description: completeDescription || null,
+        attributes: Object.keys(attributes).length ? attributes : undefined,
         sku: input.sku || `MK-${crypto.randomUUID()}`,
         image: input.image || null,
         price: input.price.toFixed(4),
