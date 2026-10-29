@@ -967,31 +967,41 @@ export default function MobilityControlCenter() {
           id="ride-request"
           onSubmit={createRide}
           className="
-            rounded-[1.75rem]
+            relative
+            isolate
+            overflow-hidden
+            rounded-[1.9rem]
             border
-            border-[var(--theme-border)]
-            bg-[var(--theme-surface)]
+            border-[#e9bd58]/30
+            bg-[#08090c]
             p-6
+            text-white
+            shadow-[0_24px_70px_rgba(0,0,0,.35)]
+            sm:p-8
           "
         >
-          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text-faint)]">
-            Mobility request
-          </p>
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(233,189,88,.14),transparent_55%)]" />
+          <div className="mb-6 flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e9bd58]/35 bg-[#17140c] text-xl text-[#e9bd58]">⌖</span>
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#e9bd58]">
+                MARKA Mobility · Passageiros
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">
+                Vamos à sua próxima viagem?
+              </h2>
+            </div>
+          </div>
 
-          <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
-            Start a real ride lifecycle
-          </h2>
-
-          <p className="mt-3 text-xs leading-5 text-[var(--theme-text-muted)]">
-            A criação passa pelo Ride Engine e pelo Lifecycle
-            Orchestrator. As coordenadas podem ser preenchidas posteriormente
-            quando o mapa estiver ligado.
+          <p className="mt-3 max-w-xl text-sm leading-6 text-white/60">
+            Escolha o serviço e indique os locais de partida e destino. A viagem
+            segue para o fluxo operacional da MARKA Mobility.
           </p>
 
           <div className="mt-6 space-y-4">
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">
-                Service type
+              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                Tipo de serviço
               </span>
 
               <select
@@ -1002,31 +1012,35 @@ export default function MobilityControlCenter() {
                   )
                 }
                 className="
-                  h-11
+                  h-12
                   w-full
                   rounded-xl
                   border
-                  border-[var(--theme-border)]
-                  bg-[var(--theme-background)]/30
+                  border-white/10
+                  bg-white/[.045]
                   px-4
-                  text-xs
-                  text-[var(--theme-text)]
+                  text-sm
+                  text-white
                   outline-none
+                  transition
+                  focus:border-[#e9bd58]/70
+                  focus:ring-2
+                  focus:ring-[#e9bd58]/15
                 "
               >
-                <option value="TAXI">
-                  TAXI
+                <option value="TAXI" className="bg-[#08090c] text-white">
+                  MARKA Go · Táxi
                 </option>
 
-                <option value="MOTO_TAXI">
-                  MOTO TAXI
+                <option value="MOTO_TAXI" className="bg-[#08090c] text-white">
+                  MARKA Moto
                 </option>
               </select>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">
-                Safety mode
+              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                Preferência de segurança
               </span>
 
               <select
@@ -1050,23 +1064,23 @@ export default function MobilityControlCenter() {
                   outline-none
                 "
               >
-                <option value="STANDARD">
-                  STANDARD
+                <option value="STANDARD" className="bg-[#08090c] text-white">
+                  Padrão
                 </option>
 
-                <option value="TRUSTED">
-                  TRUSTED
+                <option value="TRUSTED" className="bg-[#08090c] text-white">
+                  Contacto de confiança
                 </option>
 
-                <option value="CHILD">
-                  CHILD
+                <option value="CHILD" className="bg-[#08090c] text-white">
+                  Viagem para menor
                 </option>
               </select>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">
-                Pickup
+              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                Local de partida
               </span>
 
               <input
@@ -1076,26 +1090,30 @@ export default function MobilityControlCenter() {
                     event.target.value,
                   )
                 }
-                placeholder="Pickup address"
+                placeholder="Onde vamos buscá-lo?"
                 className="
-                  h-11
+                  h-12
                   w-full
                   rounded-xl
                   border
-                  border-[var(--theme-border)]
-                  bg-[var(--theme-background)]/30
+                  border-white/10
+                  bg-white/[.045]
                   px-4
-                  text-xs
-                  text-[var(--theme-text)]
+                  text-sm
+                  text-white
                   outline-none
-                  placeholder:text-[var(--theme-text-faint)]
+                  transition
+                  placeholder:text-white/30
+                  focus:border-[#e9bd58]/70
+                  focus:ring-2
+                  focus:ring-[#e9bd58]/15
                 "
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">
-                Destination
+              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                Destino
               </span>
 
               <input
@@ -1105,7 +1123,7 @@ export default function MobilityControlCenter() {
                     event.target.value,
                   )
                 }
-                placeholder="Destination address"
+                placeholder="Para onde pretende ir?"
                 className="
                   h-11
                   w-full
@@ -1129,22 +1147,24 @@ export default function MobilityControlCenter() {
                 h-12
                 w-full
                 rounded-full
-                bg-[var(--theme-surface-strong)]
+                bg-gradient-to-r
+                from-[#f5d47c]
+                to-[#dca83d]
                 px-6
-                text-[10px]
-                font-semibold
-                uppercase
-                tracking-[0.18em]
-                text-[var(--theme-background)]
+                text-sm
+                font-bold
+                tracking-wide
+                text-[#17130a]
+                shadow-[0_4px_24px_rgba(233,189,88,.18)]
                 transition
-                hover:scale-[1.01]
+                hover:brightness-105
                 disabled:cursor-not-allowed
-                disabled:opacity-40
+                disabled:opacity-50
               "
             >
               {creating
-                ? "Creating..."
-                : "Request Mobility Ride"}
+                ? "A preparar a viagem..."
+                : "Pedir viagem　›"}
             </button>
           </div>
 
@@ -1154,14 +1174,14 @@ export default function MobilityControlCenter() {
                 mt-5
                 rounded-xl
                 border
-                border-[var(--theme-border)]
-                bg-[color-mix(in_srgb,var(--theme-background)_20%,transparent)]
+                border-[#e9bd58]/25
+                bg-white/[.035]
                 p-4
               "
             >
               <div className="flex items-center justify-between">
-                <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
-                  Created
+                <span className="text-[9px] uppercase tracking-[0.18em] text-[#e9bd58]">
+                  Viagem criada
                 </span>
 
                 <StatusPill
@@ -1171,7 +1191,7 @@ export default function MobilityControlCenter() {
                 />
               </div>
 
-              <p className="mt-3 text-sm text-[var(--theme-text)]">
+              <p className="mt-3 text-sm text-white">
                 {activeRide.ride.reference ??
                   activeRide.ride.id}
               </p>
