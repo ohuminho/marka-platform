@@ -25,19 +25,42 @@ export async function GET() {
     return NextResponse.json({ message: "Administrative access required." }, { status: 403 });
   }
 
-  const organizations = await prisma.organizationMembership.findMany({
-    where: { userId: user.id, status: "ACTIVE" },
-    select: { organizationId: true },
+  // Compliance reviewers need a complete queue, including personal KYC/KYD
+  // profiles that have no organization membership. This endpoint is restricted
+  // to authenticated platform administrators above.
+  const profiles = await prisma.complianceProfile.findMany({
+    include: { documents: true, cases: true },
+    orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
   });
-  const profiles = (
-    await Promise.all(
-      organizations.map(({ organizationId }) =>
-        new ComplianceService().listForOrganization(organizationId),
-      ),
-    )
-  ).flat();
 
-  return NextResponse.json({ profiles });
+  return NextResponse.json({
+    profiles: profiles.map((profile) => ({
+      id: profile.id,
+      subjectType: profile.subjectType,
+      subjectId: profile.subjectId,
+      organizationId: profile.organizationId,
+      status: profile.status,
+      countryCode: profile.countryCode,
+      submittedAt: profile.submittedAt?.toISOString() ?? null,
+      verifiedAt: profile.verifiedAt?.toISOString() ?? null,
+      expiresAt: profile.expiresAt?.toISOString() ?? null,
+      rejectionReason: profile.rejectionReason,
+      documents: profile.documents.map((document) => ({
+        id: document.id,
+        documentType: document.documentType,
+        status: document.status,
+        expiresAt: document.expiresAt?.toISOString() ?? null,
+        rejectionReason: document.rejectionReason,
+      })),
+      cases: profile.cases.map((item) => ({
+        id: item.id,
+        status: item.status,
+        reason: item.reason,
+        decision: item.decision,
+        notes: item.notes,
+      })),
+    })),
+  });
 }
 
 export async function PATCH(request: Request) {
@@ -60,6 +83,19 @@ export async function PATCH(request: Request) {
       select: { id: true },
     });
     if (!profile) return NextResponse.json({ message: "Compliance profile not found." }, { status: 404 });
+
+    // A reviewer must never approve or reject their own personal identity profile.
+    // Founder ownership and administrator permissions do not override this control.
+    const target = await prisma.complianceProfile.findUnique({
+      where: { id: input.id },
+      select: { subjectType: true, subjectId: true, organizationId: true },
+    });
+    if (target?.subjectType === "KYC" && target.organizationId === null && target.subjectId === user.id) {
+      return NextResponse.json(
+        { message: "Independent review is required for your own identity profile." },
+        { status: 403 },
+      );
+    }
 
     const result = await new ComplianceService().review(
       input.id,
