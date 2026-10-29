@@ -38,6 +38,13 @@ export const NavigationConfig = {
           description: "Discover products, services and stores",
         },
         {
+          title: "Open a Store",
+          route: "/app/vendor/products",
+          description: "Start a business and manage your product catalogue",
+        },
+        {
+        },
+        {
           title: "Cart",
           route: "/app/cart",
           description: "Review items before checkout",
