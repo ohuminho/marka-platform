@@ -53,14 +53,17 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const organizationId = activeOrganization?.id;
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("marka.ads.enabled." + audience);
-      if (saved !== null) setAdsEnabled(saved === "true");
-    } catch {
-      setAdsEnabled(false);
-    } finally {
-      setAdsPreferenceLoaded(true);
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem("marka.ads.enabled." + audience);
+        if (saved !== null) setAdsEnabled(saved === "true");
+      } catch {
+        setAdsEnabled(false);
+      } finally {
+        setAdsPreferenceLoaded(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [audience]);
 
   const updateAdsEnabled = (enabled: boolean) => {
@@ -93,9 +96,12 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   }, [audience, organizationId]);
 
   useEffect(() => {
-    void refresh();
+    const initialLoad = window.setTimeout(() => { void refresh(); }, 0);
     const timer = window.setInterval(() => { void refresh(); }, 15000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [refresh]);
 
   const ride = payload?.ride ?? null;
@@ -119,16 +125,16 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const active = Boolean(ride && ACTIVE.includes(ride.status));
   useEffect(() => {
     if (audience !== "driver" || !organizationId || authLoading || loading) {
-      setGpsStatus("idle");
-      return;
+      const timer = window.setTimeout(() => setGpsStatus("idle"), 0);
+      return () => window.clearTimeout(timer);
     }
     if (driverAvailability !== "AVAILABLE" && !active) {
-      setGpsStatus("idle");
-      return;
+      const timer = window.setTimeout(() => setGpsStatus("idle"), 0);
+      return () => window.clearTimeout(timer);
     }
     if (!navigator.geolocation) {
-      setGpsStatus("unavailable");
-      return;
+      const timer = window.setTimeout(() => setGpsStatus("unavailable"), 0);
+      return () => window.clearTimeout(timer);
     }
 
     let disposed = false;
