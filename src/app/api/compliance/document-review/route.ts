@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { SessionService } from "@/core/auth/sessions/session.service";
+import { prisma } from "@/database/client/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,50 @@ export async function POST(request: Request) {
       cache: "no-store",
     });
     const data = await response.json().catch(() => ({ message: "Evidence review failed." }));
+    if (response.ok && body.action === "review-document" && (body.status === "VERIFIED" || body.status === "REJECTED")) {
+      const complianceDocument = await prisma.complianceDocument.findUnique({
+        where: { id: body.documentId },
+        include: { profile: { select: { subjectType: true, subjectId: true } } },
+      });
+      if (complianceDocument?.profile.subjectType === "KYD") {
+        const documentType = complianceDocument.documentType;
+        const status = body.status;
+        if (documentType.startsWith("VEHICLE_")) {
+          await prisma.mobilityVehicleVerification.updateMany({
+            where: {
+              documentType,
+              metadata: { path: ["complianceDocumentId"], equals: complianceDocument.id },
+            },
+            data: {
+              status,
+              reviewedAt: new Date(),
+              reviewedBy: (await new SessionService().validate(token!))?.userId ?? null,
+              rejectionReason: status === "REJECTED" && typeof body.reason === "string" ? body.reason : null,
+            },
+          });
+        } else {
+          const driver = await prisma.mobilityDriver.findUnique({
+            where: { userId: complianceDocument.profile.subjectId },
+            select: { id: true },
+          });
+          if (driver) {
+            await prisma.mobilityDriverVerification.updateMany({
+              where: {
+                driverId: driver.id,
+                documentType,
+                metadata: { path: ["complianceDocumentId"], equals: complianceDocument.id },
+              },
+              data: {
+                status,
+                reviewedAt: new Date(),
+                reviewedBy: (await new SessionService().validate(token!))?.userId ?? null,
+                rejectionReason: status === "REJECTED" && typeof body.reason === "string" ? body.reason : null,
+              },
+            });
+          }
+        }
+      }
+    }
     return NextResponse.json(data, { status: response.status, headers: { "cache-control": "no-store" } });
   } catch (error) {
     console.error("[MARKA_COMPLIANCE_DOCUMENT_REVIEW]", error instanceof Error ? error.message : "unknown error");
