@@ -53,3 +53,24 @@ Do not rely on public STUN alone for production. P2P direct media is inexpensive
 6. Add abuse controls, operational metrics, load tests and security review.
 
 Release gate: do not label calls production-ready until tested between two real accounts on separate devices and networks (including mobile data), with permissions denied/granted, reconnect, hang-up, unauthorized participant, expired ride/conversation and TURN relay scenarios.
+
+## Implementation status — 2026-10-30
+
+The first Marketplace calling slice is now present in the repository:
+
+- Prisma persistence for 1:1 call sessions and short-lived WebRTC signalling records.
+- Authenticated call creation/listing, accept/reject/end lifecycle and participant-scoped offer/answer/ICE exchange.
+- Per-conversation PostgreSQL advisory locking to prevent concurrent ringing sessions.
+- Server-issued, one-hour Coturn REST credentials derived from `MARKA_TURN_SHARED_SECRET`; the shared secret is never sent to the browser.
+- Marketplace inbox controls for audio/video, incoming calls, accept/reject, mute, camera toggle and hang-up.
+- Operational runbook: `docs/operations/COMMUNICATIONS_TURN_DEPLOYMENT.md`.
+
+This is an implementation milestone, not a production certification. The following remain release blockers:
+
+1. Apply migration `20261030150000_add_communication_call_sessions` to the target database and regenerate Prisma Client.
+2. Configure a real Coturn endpoint and server-only shared secret in the production environment. The ICE endpoint deliberately returns HTTP 503 in production when TURN is absent; it does not silently fall back to STUN-only calling.
+3. Complete successful GitHub CI, two-device Android/browser testing across independent networks, mobile-carrier NAT/TURN relay tests, permission-denial tests and unauthorized-participant tests.
+4. Extend the same authorization and conversation model to Mobility rides and Delivery fulfillments before enabling calling in those verticals.
+5. Add durable incoming-call push delivery, operational rate limiting, retention cleanup for expired SDP/ICE records and abuse monitoring.
+
+Do not expose the call controls as globally production-ready until these gates are met.
