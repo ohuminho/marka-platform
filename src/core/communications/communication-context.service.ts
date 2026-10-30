@@ -87,11 +87,14 @@ export async function syncCommunicationThread(contextType: CommunicationContextT
       select: { id: true, contextType: true, contextId: true, subject: true, status: true, lastMessageAt: true },
     });
     if (!current) {
-      current = await tx.communicationThread.create({
-        data: { contextType, contextId, subject: resolved.subject, status: "ACTIVE" },
+      current = await tx.communicationThread.upsert({
+        where: { contextType_contextId: { contextType, contextId } },
+        create: { contextType, contextId, subject: resolved.subject, status: "ACTIVE" },
+        update: {},
         select: { id: true, contextType: true, contextId: true, subject: true, status: true, lastMessageAt: true },
       });
-    } else if (current.status !== "ACTIVE" || current.subject !== resolved.subject) {
+    }
+    if (current.status !== "ACTIVE" || current.subject !== resolved.subject) {
       current = await tx.communicationThread.update({
         where: { id: current.id },
         data: { subject: resolved.subject, status: "ACTIVE" },
@@ -108,8 +111,10 @@ export async function syncCommunicationThread(contextType: CommunicationContextT
     for (const participant of resolved.participants) {
       const prior = byUser.get(participant.userId);
       if (!prior) {
-        await tx.communicationThreadParticipant.create({
-          data: { threadId: current.id, userId: participant.userId, role: participant.role },
+        await tx.communicationThreadParticipant.upsert({
+          where: { threadId_userId: { threadId: current.id, userId: participant.userId } },
+          create: { threadId: current.id, userId: participant.userId, role: participant.role },
+          update: {},
         });
       } else if (prior.role !== participant.role || prior.revokedAt) {
         await tx.communicationThreadParticipant.update({
