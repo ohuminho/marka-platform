@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "@/frontend/shell/AppShell";
+import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
 
 type Message = { id: string; body: string; senderId: string; createdAt: string; readAt?: string | null; sender?: { id: string; name: string } };
 type Conversation = {
@@ -109,7 +110,7 @@ function MessagesWorkspace() {
             {active ? <>
               <div className="flex items-center justify-between gap-3 border-b border-[var(--theme-border)] px-5 py-4">
                 <div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--theme-text)]">{active.buyerId === actorId ? active.seller.name : active.buyer.name}</p><p className="mt-1 truncate text-xs text-[var(--theme-text-muted)]">{active.product.name} · {active.store.name}</p></div>
-                <a href={`/app/marketplace/products/${active.product.id}`} className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)] underline underline-offset-4">Ver produto</a>
+                <div className="flex flex-wrap items-center gap-2"><MarketplaceCallPanel conversationId={active.id} /><a href={`/app/marketplace/products/${active.product.id}`} className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)] underline underline-offset-4">Ver produto</a></div>
               </div>
               <div className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
                 {messages.map((message) => <div key={message.id} className={`flex ${message.senderId === actorId ? "justify-end" : "justify-start"}`}>
