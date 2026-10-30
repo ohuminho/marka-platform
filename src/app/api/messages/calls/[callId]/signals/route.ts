@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/database/client/prisma";
 
 async function getActor() {
@@ -45,8 +46,8 @@ export async function POST(request: Request, context: { params: Promise<{ callId
     if (!actor) return NextResponse.json({ message: "Inicia sessão para enviar sinalização." }, { status: 401 });
     const { callId } = await context.params;
     const input = await request.json().catch(() => null) as { type?: unknown; payload?: unknown } | null;
-    const type = input?.type;
-    if (!["OFFER", "ANSWER", "ICE_CANDIDATE"].includes(String(type))) {
+    const type = input?.type === "OFFER" || input?.type === "ANSWER" || input?.type === "ICE_CANDIDATE" ? input.type : null;
+    if (!type) {
       return NextResponse.json({ message: "Tipo de sinalização inválido." }, { status: 400 });
     }
     if (!input?.payload || typeof input.payload !== "object" || Array.isArray(input.payload)) {
@@ -66,7 +67,7 @@ export async function POST(request: Request, context: { params: Promise<{ callId
     if (type === "ANSWER" && actor.id !== call.calleeId) return NextResponse.json({ message: "A resposta pertence ao destinatário da chamada." }, { status: 403 });
 
     const signal = await prisma.communicationCallSignal.create({
-      data: { callId, senderId: actor.id, type, payload: input.payload as object, expiresAt: new Date(Date.now() + 5 * 60_000) },
+      data: { callId, senderId: actor.id, type, payload: input.payload as Prisma.InputJsonValue, expiresAt: new Date(Date.now() + 5 * 60_000) },
       select: { id: true, type: true, createdAt: true },
     });
     return NextResponse.json({ signal }, { status: 201, headers: { "Cache-Control": "no-store" } });
