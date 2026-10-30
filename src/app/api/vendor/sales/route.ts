@@ -83,6 +83,7 @@ export async function PATCH(request: Request) {
     if (message === "VENDOR_NOT_FOUND") return NextResponse.json({ message: "Vendor not found.", code: message }, { status: 404 });
     if (message === "ORDER_NOT_FOUND") return NextResponse.json({ message: "Order not found.", code: message }, { status: 404 });
     if (message.startsWith("INVALID_VENDOR_ORDER_TRANSITION")) return NextResponse.json({ message: "Order status transition is not allowed.", code: "INVALID_ORDER_TRANSITION" }, { status: 409 });
+    if (message.includes("payment") || message.includes("can no longer be cancelled") || message.includes("changed while cancellation")) return NextResponse.json({ message, code: "ORDER_CANCELLATION_BLOCKED" }, { status: 409 });
     console.error("[VENDOR_SALES_PATCH_ERROR]", error);
     return NextResponse.json({ message: "Unable to update order.", code: "VENDOR_ORDER_UPDATE_FAILED" }, { status: 500 });
   }
