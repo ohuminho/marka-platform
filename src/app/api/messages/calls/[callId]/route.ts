@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -26,9 +27,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
 
     const call = await prisma.communicationCallSession.findFirst({
       where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }] },
-      select: { id: true, callerId: true, calleeId: true, status: true, expiresAt: true },
+      select: { id: true, callerId: true, calleeId: true, threadId: true, status: true, expiresAt: true },
     });
     if (!call) return NextResponse.json({ message: "Chamada não encontrada." }, { status: 404 });
+    if (call.threadId) await getAuthorizedCommunicationThread(call.threadId, actor.id);
     const now = new Date();
     if (call.status !== "RINGING" && call.status !== "ACCEPTED") {
       return NextResponse.json({ message: "Esta chamada já não está activa." }, { status: 409 });
