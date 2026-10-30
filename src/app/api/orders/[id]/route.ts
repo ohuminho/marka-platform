@@ -177,9 +177,9 @@ export async function PATCH(
       session.userId,
     );
 
-    const order = await orderService.updateOrderStatus(
+    const order = await orderService.cancelUnpaidOrder(
       orderId,
-      "CANCELLED" as import("@/services/orders/types/order.types").OrderStatus,
+      session.userId,
     );
 
     return NextResponse.json(order);
@@ -196,6 +196,18 @@ export async function PATCH(
           code: "ORDER_NOT_FOUND",
         },
         { status: 404 },
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      (error.message.includes("payment") ||
+        error.message.includes("can no longer be cancelled") ||
+        error.message.includes("changed while cancellation"))
+    ) {
+      return NextResponse.json(
+        { message: error.message, code: "ORDER_CANCELLATION_BLOCKED" },
+        { status: 409 },
       );
     }
 
