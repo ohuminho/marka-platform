@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import AppShell from "@/frontend/shell/AppShell";
 
 type Message = { id: string; body: string; senderId: string; createdAt: string; readAt?: string | null; sender?: { id: string; name: string } };
@@ -17,7 +16,6 @@ function stamp(value: string) {
 }
 
 function MessagesWorkspace() {
-  const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,13 +34,14 @@ function MessagesWorkspace() {
       if (!response.ok) throw new Error(data.message || "Não foi possível carregar as mensagens.");
       setConversations(data.conversations ?? []);
       setActorId(data.actorId ?? "");
-      setActiveId((current) => current || searchParams.get("conversationId") || data.conversations?.[0]?.id || "");
+      const requestedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conversationId") : null;
+      setActiveId((current) => current || requestedId || data.conversations?.[0]?.id || "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar mensagens.");
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, []);
 
   const loadThread = useCallback(async (id: string) => {
     if (!id) { setMessages([]); return; }
