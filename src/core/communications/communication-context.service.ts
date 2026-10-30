@@ -141,13 +141,32 @@ export async function getAuthorizedCommunicationThread(threadId: string, actorId
     select: { id: true, contextType: true, contextId: true, status: true },
   });
   if (!thread) throw new CommunicationContextError("Conversa não encontrada.");
-  const synchronized = await syncCommunicationThread(thread.contextType, thread.contextId);
+  let synchronized;
+  try {
+    synchronized = await syncCommunicationThread(thread.contextType, thread.contextId);
+  } catch (error) {
+    if (error instanceof CommunicationContextError) {
+      const now = new Date();
+      await prisma.$transaction([
+        prisma.communicationThread.update({ where: { id: threadId }, data: { status: "CLOSED" } }),
+        prisma.communicationThreadParticipant.updateMany({ where: { threadId, revokedAt: null }, data: { revokedAt: now } }),
+        prisma.communicationCallSession.updateMany({ where: { threadId, status: { in: ["RINGING", "ACCEPTED"] } }, data: { status: "ENDED", endedAt: now } }),
+      ]);
+    }
+    throw error;
+  }
   const members = await prisma.communicationThreadParticipant.findMany({
     where: { threadId: synchronized.id, revokedAt: null },
     include: { user: { select: { id: true, name: true } } },
   });
   const participant = members.find((item) => item.userId === actorId);
-  if (!participant) throw new CommunicationContextError("Não tens autorização para esta conversa.", 403);
+  if (!participant) {
+    await prisma.communicationCallSession.updateMany({
+      where: { threadId, status: { in: ["RINGING", "ACCEPTED"] } },
+      data: { status: "ENDED", endedAt: new Date() },
+    });
+    throw new CommunicationContextError("Não tens autorização para esta conversa.", 403);
+  }
   return {
     ...synchronized,
     participants: members.map((item) => ({ userId: item.userId, role: item.role, name: item.user.name })),
