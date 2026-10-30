@@ -36,6 +36,7 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
   const actorIdRef = useRef("");
   const lastSignalAtRef = useRef<string>("");
   const processingRef = useRef(false);
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -73,6 +74,7 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
   const closeMedia = useCallback(() => {
     pcRef.current?.close();
     pcRef.current = null;
+    pendingCandidatesRef.current = [];
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
     setLocalStream(null);
@@ -122,13 +124,19 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
         if (signal.createdAt > lastSignalAtRef.current) lastSignalAtRef.current = signal.createdAt;
         if (signal.type === "OFFER" && call.calleeId === actorIdRef.current && !pc.remoteDescription) {
           await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
+          for (const candidate of pendingCandidatesRef.current) await pc.addIceCandidate(candidate).catch(() => undefined);
+          pendingCandidatesRef.current = [];
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           await sendSignal(call.id, "ANSWER", answer);
         } else if (signal.type === "ANSWER" && call.callerId === actorIdRef.current && !pc.remoteDescription) {
           await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
+          for (const candidate of pendingCandidatesRef.current) await pc.addIceCandidate(candidate).catch(() => undefined);
+          pendingCandidatesRef.current = [];
         } else if (signal.type === "ICE_CANDIDATE") {
-          try { await pc.addIceCandidate(signal.payload as RTCIceCandidateInit); } catch { /* Late ICE after teardown is ignored. */ }
+          const candidate = signal.payload as RTCIceCandidateInit;
+          if (!pc.remoteDescription) pendingCandidatesRef.current.push(candidate);
+          else try { await pc.addIceCandidate(candidate); } catch { /* Late ICE after teardown is ignored. */ }
         }
       }
     } catch (e) {
