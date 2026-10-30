@@ -64,6 +64,9 @@ export default function ProductDetails({
   ] =
     useState("");
 
+  const [contactText, setContactText] = useState("Olá! Tenho interesse neste produto. Pode dar-me mais informações?");
+  const [contacting, setContacting] = useState(false);
+
 
 
   useEffect(() => {
@@ -191,6 +194,26 @@ export default function ProductDetails({
   }
 
 
+
+  async function contactSeller() {
+    if (!product || contacting) return;
+    setContacting(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, message: contactText }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível contactar o vendedor.");
+      window.location.assign(`/app/messages?conversationId=${encodeURIComponent(data.conversation.id)}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível contactar o vendedor.");
+      setContacting(false);
+    }
+  }
 
   if (loading) {
 
@@ -362,6 +385,23 @@ export default function ProductDetails({
           </div>
 
 
+
+          <div className="mt-8 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Falar com o vendedor</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--theme-text)]/55">Esclareça dúvidas, confirme disponibilidade ou combine detalhes antes de comprar.</p>
+            <textarea
+              value={contactText}
+              onChange={(event) => setContactText(event.target.value)}
+              maxLength={2000}
+              rows={3}
+              aria-label="Mensagem para o vendedor"
+              className="mt-3 w-full resize-y rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]"
+            />
+            <button type="button" onClick={contactSeller} disabled={contacting || contactText.trim().length < 2}
+              className="mt-3 w-full rounded-full border border-[var(--theme-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-text)] transition hover:bg-[var(--theme-surface-strong)] disabled:opacity-50">
+              {contacting ? "A abrir conversa..." : "Enviar mensagem ao vendedor"}
+            </button>
+          </div>
 
           <button
 
