@@ -50,6 +50,7 @@ const productActionSchema = z.object({
   price: z.coerce.number().finite().positive().max(1_000_000_000).optional(),
   stock: z.coerce.number().int().min(0).max(1_000_000).optional(),
   categoryId: z.string().uuid().optional().or(z.literal("")),
+  attributes: z.record(z.string(), z.string().trim().max(500)).optional(),
 });
 
 export async function GET() {
@@ -253,9 +254,14 @@ export async function PATCH(request: Request) {
           price: data.price === undefined ? undefined : data.price.toFixed(4),
           stock: data.stock ?? undefined,
           categoryId: data.categoryId === "" ? null : data.categoryId ?? undefined,
+          attributes: data.attributes === undefined ? undefined : data.attributes,
         },
       });
       if (data.stock !== undefined) {
+        const inventory = await tx.inventory.findUnique({ where: { productId: product.id } });
+        if (inventory && data.stock < inventory.reserved) {
+          throw new Error("STOCK_BELOW_RESERVED");
+        }
         await tx.inventory.upsert({
           where: { productId: product.id },
           create: { productId: product.id, quantityOnHand: data.stock, reserved: 0, reorderLevel: 0 },
@@ -266,6 +272,9 @@ export async function PATCH(request: Request) {
     });
     return NextResponse.json({ product: updated, message: "Produto atualizado." });
   } catch (error) {
+    if (error instanceof Error && error.message === "STOCK_BELOW_RESERVED") {
+      return NextResponse.json({ message: "O stock não pode ficar abaixo das unidades já reservadas em encomendas.", code: "STOCK_BELOW_RESERVED" }, { status: 409 });
+    }
     console.error("[VENDOR_PRODUCTS_PATCH]", error);
     return NextResponse.json({ message: "Não foi possível atualizar o produto." }, { status: 500 });
   }
