@@ -43,6 +43,11 @@ export const NavigationConfig = {
           description: "Start a business and manage your product catalogue",
         },
         {
+          title: "Messages",
+          route: "/app/messages",
+          description: "Converse with sellers and manage purchase enquiries",
+        },
+        {
           title: "Cart",
           route: "/app/cart",
           description: "Review items before checkout",
@@ -119,6 +124,11 @@ export const NavigationConfig = {
           route: "/app/vendor/products",
           description: "Manage your catalogue",
           permissions: ["PRODUCT_CREATE", "PRODUCT_UPDATE", "PRODUCT_DELETE"],
+        },
+        {
+          title: "Messages",
+          route: "/app/messages",
+          description: "Buyer enquiries and order conversations",
         },
         {
           title: "Sales",
