@@ -50,6 +50,7 @@ export default function IncomingCallListener() {
     const contextId = call.threadId ?? call.conversationId;
     if (!contextId) return;
     router.push(`/app/messages?conversationId=${encodeURIComponent(contextId)}`);
+    setDismissedId(call.id);
     setCall(null);
   }
 
