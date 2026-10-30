@@ -19,7 +19,7 @@ export async function GET(request: Request, context: { params: Promise<{ callId:
     if (!actor) return NextResponse.json({ message: "Inicia sessão para consultar a sinalização." }, { status: 401 });
     const { callId } = await context.params;
     const call = await prisma.communicationCallSession.findFirst({
-      where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }], status: "ACCEPTED", expiresAt: { gt: new Date() } },
+      where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }], status: { in: ["RINGING", "ACCEPTED"] }, expiresAt: { gt: new Date() } },
       select: { id: true },
     });
     if (!call) return NextResponse.json({ message: "Chamada não encontrada ou sem autorização." }, { status: 404 });
