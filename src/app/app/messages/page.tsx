@@ -55,10 +55,11 @@ function MessagesWorkspace() {
           contextType: thread.contextType,
         };
       });
-      setConversations([...marketplace, ...contextual].sort((a: Conversation, b: Conversation) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()));
+      const merged = [...marketplace, ...contextual].sort((a: Conversation, b: Conversation) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+      setConversations(merged);
       setActorId(currentActorId);
       const requestedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conversationId") : null;
-      setActiveId((current) => current || requestedId || data.conversations?.[0]?.id || "");
+      setActiveId((current) => current || requestedId || merged[0]?.id || "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar mensagens.");
     } finally {
@@ -76,7 +77,7 @@ function MessagesWorkspace() {
       const response = await fetch(endpoint, { credentials: "include", cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível abrir a conversa.");
-      setMessages(data.conversation.messages ?? []);
+      setMessages(data.conversation?.messages ?? data.thread?.messages ?? []);
       setActorId(data.actorId ?? "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao abrir conversa.");
