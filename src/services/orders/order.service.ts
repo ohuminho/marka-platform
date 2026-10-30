@@ -43,7 +43,12 @@ export class OrderService {
         throw new Error("An active or completed payment must be cancelled or refunded before cancelling this order.");
       }
 
-      if (order.payments.length > 0) {
+      const reservation = await database.order.updateMany({
+        where: { id: order.id, inventoryReserved: true },
+        data: { inventoryReserved: false },
+      });
+
+      if (reservation.count === 1) {
         await inventoryService.releaseWithinTransaction(
           database,
           order.items.map((item) => ({
