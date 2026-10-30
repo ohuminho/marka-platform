@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import NotificationButton from "./components/NotificationButton";
 import CartButton from "./components/CartButton";
 import UserMenu from "./components/UserMenu";
@@ -45,6 +46,12 @@ export default function TopNav() {
           </div>
 
           <div className="ml-2 flex items-center border-l border-[color-mix(in_srgb,var(--theme-border)_82%,transparent)] pl-2 sm:ml-3 sm:pl-3">
+            <Link href="/app/messages" aria-label="Mensagens" title="Mensagens" className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-xl text-[var(--theme-text-muted)] transition hover:bg-[var(--theme-surface)] hover:text-[var(--theme-text)]">
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13.5z" />
+                <path d="M8 8h8M8 11.5h5" />
+              </svg>
+            </Link>
             <NotificationButton />
             <CartButton />
           </div>
