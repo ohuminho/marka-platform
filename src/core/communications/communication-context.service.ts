@@ -79,24 +79,49 @@ async function resolveContext(contextType: CommunicationContextType, contextId: 
 export async function syncCommunicationThread(contextType: CommunicationContextType, contextId: string) {
   const resolved = await resolveContext(contextType, contextId);
   const thread = await prisma.$transaction(async (tx) => {
-    const current = await tx.communicationThread.upsert({
+    let current = await tx.communicationThread.findUnique({
       where: { contextType_contextId: { contextType, contextId } },
-      create: { contextType, contextId, subject: resolved.subject, status: "ACTIVE" },
-      update: { subject: resolved.subject, status: "ACTIVE" },
-      select: { id: true, contextType: true, contextId: true, subject: true, lastMessageAt: true },
+      select: { id: true, contextType: true, contextId: true, subject: true, status: true, lastMessageAt: true },
     });
-    const participantIds = resolved.participants.map((participant) => participant.userId);
-    for (const participant of resolved.participants) {
-      await tx.communicationThreadParticipant.upsert({
-        where: { threadId_userId: { threadId: current.id, userId: participant.userId } },
-        create: { threadId: current.id, userId: participant.userId, role: participant.role },
-        update: { role: participant.role, revokedAt: null },
+    if (!current) {
+      current = await tx.communicationThread.create({
+        data: { contextType, contextId, subject: resolved.subject, status: "ACTIVE" },
+        select: { id: true, contextType: true, contextId: true, subject: true, status: true, lastMessageAt: true },
+      });
+    } else if (current.status !== "ACTIVE" || current.subject !== resolved.subject) {
+      current = await tx.communicationThread.update({
+        where: { id: current.id },
+        data: { subject: resolved.subject, status: "ACTIVE" },
+        select: { id: true, contextType: true, contextId: true, subject: true, status: true, lastMessageAt: true },
       });
     }
-    await tx.communicationThreadParticipant.updateMany({
-      where: { threadId: current.id, revokedAt: null, userId: { notIn: participantIds } },
-      data: { revokedAt: new Date() },
+
+    const existing = await tx.communicationThreadParticipant.findMany({
+      where: { threadId: current.id },
+      select: { id: true, userId: true, role: true, revokedAt: true },
     });
+    const byUser = new Map(existing.map((item) => [item.userId, item]));
+    const participantIds = resolved.participants.map((participant) => participant.userId);
+    for (const participant of resolved.participants) {
+      const prior = byUser.get(participant.userId);
+      if (!prior) {
+        await tx.communicationThreadParticipant.create({
+          data: { threadId: current.id, userId: participant.userId, role: participant.role },
+        });
+      } else if (prior.role !== participant.role || prior.revokedAt) {
+        await tx.communicationThreadParticipant.update({
+          where: { id: prior.id },
+          data: { role: participant.role, revokedAt: null },
+        });
+      }
+    }
+    const revokedIds = existing.filter((item) => !participantIds.includes(item.userId) && !item.revokedAt).map((item) => item.id);
+    if (revokedIds.length) {
+      await tx.communicationThreadParticipant.updateMany({
+        where: { id: { in: revokedIds } },
+        data: { revokedAt: new Date() },
+      });
+    }
     return current;
   });
   return { ...thread, participants: resolved.participants };
