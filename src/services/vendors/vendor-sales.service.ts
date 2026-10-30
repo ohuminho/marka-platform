@@ -1,5 +1,6 @@
 import { prisma } from "@/database/client/prisma";
 import type { OrderStatus } from "@prisma/client";
+import { OrderService } from "@/services/orders/order.service";
 
 export class VendorSalesService {
   async listSales({
@@ -118,6 +119,22 @@ export class VendorSalesService {
 
     if (!allowed[order.status]?.includes(status)) {
       throw new Error(`INVALID_VENDOR_ORDER_TRANSITION:${order.status}:${status}`);
+    }
+
+    if (status === "CANCELLED") {
+      const cancelled = await new OrderService().cancelUnpaidOrder(
+        order.id,
+        undefined,
+        vendor.id,
+      );
+      return {
+        id: cancelled.id,
+        status: cancelled.status,
+        total: Number(cancelled.total),
+        currency: cancelled.currency,
+        updatedAt: cancelled.updatedAt,
+        fulfillment: order.fulfillment,
+      };
     }
 
     const updated = await prisma.order.update({
