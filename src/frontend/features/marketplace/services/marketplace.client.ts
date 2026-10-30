@@ -22,7 +22,7 @@ export async function getMarketplaceProducts(): Promise<MarketplaceProduct[]> {
 
 
   const data = await response.json();
-  return data.product as MarketplaceProduct;
+  return (data.products ?? []) as MarketplaceProduct[];
 
 }
 
@@ -50,6 +50,7 @@ export async function getMarketplaceProduct(
   }
 
 
-  return response.json();
+  const data = await response.json();
+  return data.product as MarketplaceProduct;
 
 }
