@@ -6,6 +6,11 @@ import AppShell from "@/frontend/shell/AppShell";
 import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
 
 type Message = { id: string; body: string; senderId: string; createdAt: string; readAt?: string | null; sender?: { id: string; name: string } };
+type ContextThread = {
+  id: string; contextId: string; contextType: "MOBILITY" | "DELIVERY"; subject?: string | null; lastMessageAt: string;
+  participants: Array<{ userId: string; role: string; user?: { id: string; name: string } }>;
+  messages: Message[];
+};
 type Conversation = {
   id: string; buyerId: string; sellerId: string; lastMessageAt: string;
   buyer: { id: string; name: string }; seller: { id: string; name: string };
@@ -40,10 +45,10 @@ function MessagesWorkspace() {
       if (!response.ok) throw new Error(data.message || "Não foi possível carregar as mensagens.");
       const currentActorId = data.actorId ?? "";
       const marketplace = data.conversations ?? [];
-      const contextual = (data.threads ?? []).map((thread: any) => {
-        const other = thread.participants.filter((participant: any) => participant.userId !== currentActorId);
-        const customer = thread.participants.find((participant: any) => participant.role === "CUSTOMER");
-        const otherNames = other.map((participant: any) => participant.user?.name).filter(Boolean);
+      const contextual = (data.threads ?? []).map((thread: ContextThread) => {
+        const other = thread.participants.filter((participant) => participant.userId !== currentActorId);
+        const customer = thread.participants.find((participant) => participant.role === "CUSTOMER");
+        const otherNames = other.map((participant) => participant.user?.name).filter((name): name is string => Boolean(name));
         return {
           id: thread.id,
           buyerId: customer?.userId ?? currentActorId,
@@ -87,7 +92,7 @@ function MessagesWorkspace() {
     }
   }, [conversations]);
 
-  useEffect(() => { if (requestedConversationId) setActiveId(requestedConversationId); }, [requestedConversationId]);
+  useEffect(() => { if (!requestedConversationId) return; const timer = window.setTimeout(() => setActiveId(requestedConversationId), 0); return () => window.clearTimeout(timer); }, [requestedConversationId]);
 
   useEffect(() => { const initial = window.setTimeout(() => void loadConversations(), 0); const timer = window.setInterval(() => void loadConversations(), 12000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [loadConversations]);
   useEffect(() => { if (!activeId) return; const initial = window.setTimeout(() => void loadThread(activeId), 0); const timer = window.setInterval(() => void loadThread(activeId), 5000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [activeId, loadThread]);
