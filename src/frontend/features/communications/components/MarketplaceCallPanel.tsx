@@ -30,7 +30,7 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
   const localStreamRef = useRef<MediaStream | null>(null);
   const activeCallRef = useRef<Call | null>(null);
   const actorIdRef = useRef("");
-  const lastSignalAtRef = useRef<string>(new Date(Date.now() - 60_000).toISOString());
+  const lastSignalAtRef = useRef<string>("");
   const processingRef = useRef(false);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -130,13 +130,13 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
   }, [sendSignal]);
 
   useEffect(() => {
-    void refreshCalls();
+    const initial = window.setTimeout(() => void refreshCalls(), 0);
     const timer = window.setInterval(() => {
       void refreshCalls();
       const current = activeCallRef.current;
       if (current && pcRef.current) void processSignals(current);
     }, 1800);
-    return () => window.clearInterval(timer);
+    return () => { window.clearTimeout(initial); window.clearInterval(timer); };
   }, [refreshCalls, processSignals]);
 
   async function startCall(mode: "AUDIO" | "VIDEO") {
@@ -201,7 +201,7 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
     setCameraEnabled(next);
   }
 
-  const incoming = calls.find((call) => call.calleeId === actorId && call.status === "RINGING" && new Date(call.expiresAt).getTime() > Date.now() && call.id !== activeCall?.id);
+  const incoming = calls.find((call) => call.calleeId === actorId && call.status === "RINGING" && call.id !== activeCall?.id);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
