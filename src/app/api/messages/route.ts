@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { inspectMarketplaceMessage } from "@/core/marketplace/message-policy";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -52,6 +53,9 @@ export async function POST(request: Request) {
     if (!productId || body.length < 2 || body.length > 2000) {
       return NextResponse.json({ message: "Produto ou mensagem inválida. A mensagem deve ter entre 2 e 2000 caracteres." }, { status: 400 });
     }
+
+    const policy = inspectMarketplaceMessage(body);
+    if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
 
     const product = await prisma.product.findFirst({
       where: { id: productId, status: "ACTIVE", store: { status: "ACTIVE", vendor: { status: "ACTIVE" } } },
