@@ -123,9 +123,9 @@ function MessagesWorkspace() {
             <div className="border-b border-[var(--theme-border)] px-5 py-4"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--theme-text-muted)]">Caixa de entrada</p></div>
             <div className="max-h-[280px] overflow-y-auto lg:max-h-[590px]">
               {loading ? <p className="p-5 text-sm text-[var(--theme-text-muted)]">A carregar conversas…</p> :
-                conversations.length === 0 ? <div className="p-6"><p className="text-sm text-[var(--theme-text)]">Ainda não tens conversas.</p><p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Abre um produto no Marketplace e selecciona “Enviar mensagem ao vendedor” para iniciar.</p></div> :
+                conversations.length === 0 ? <div className="p-6"><p className="text-sm text-[var(--theme-text)]">Ainda não tens conversas.</p><p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Abre um produto, uma viagem ativa ou uma entrega para iniciar uma conversa privada com os participantes autorizados.</p></div> :
                 conversations.map((item) => {
-                  const other = item.buyerId === actorId ? item.seller : item.buyer;
+                  const other = item.communicationThreadId ? item.seller : item.buyerId === actorId ? item.seller : item.buyer;
                   const last = item.messages[0];
                   return <button key={item.id} type="button" onClick={() => { setActiveId(item.id); setError(""); }} className={`w-full border-b border-[var(--theme-border)] p-4 text-left transition hover:bg-[var(--theme-background)] ${activeId === item.id ? "bg-[var(--theme-background)]" : ""}`}>
                     <div className="flex items-start justify-between gap-2"><p className="truncate text-sm font-semibold text-[var(--theme-text)]">{other.name}</p><span className="shrink-0 text-[9px] text-[var(--theme-text-faint)]">{last ? stamp(last.createdAt) : stamp(item.lastMessageAt)}</span></div>
@@ -139,7 +139,7 @@ function MessagesWorkspace() {
           <div className="flex min-h-[520px] flex-col">
             {active ? <>
               <div className="flex items-center justify-between gap-3 border-b border-[var(--theme-border)] px-5 py-4">
-                <div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--theme-text)]">{active.buyerId === actorId ? active.seller.name : active.buyer.name}</p><p className="mt-1 truncate text-xs text-[var(--theme-text-muted)]">{active.product.name} · {active.store.name}</p></div>
+                <div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--theme-text)]">{active.communicationThreadId ? active.seller.name : active.buyerId === actorId ? active.seller.name : active.buyer.name}</p><p className="mt-1 truncate text-xs text-[var(--theme-text-muted)]">{active.product.name} · {active.store.name}</p></div>
                 <div className="flex flex-wrap items-center gap-2"><MarketplaceCallPanel conversationId={active.communicationThreadId ? undefined : active.id} threadId={active.communicationThreadId} />{!active.communicationThreadId && <a href={`/app/marketplace/products/${active.product.id}`} className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)] underline underline-offset-4">Ver produto</a>}</div>
               </div>
               <div className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
@@ -154,7 +154,7 @@ function MessagesWorkspace() {
                 <div className="flex items-end gap-3"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={2} maxLength={5000} placeholder="Escreve uma mensagem…" className="min-h-12 flex-1 resize-y rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" /><button type="submit" disabled={sending || draft.trim().length < 2} className="rounded-xl bg-[var(--theme-text)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--theme-background)] disabled:opacity-45">{sending ? "A enviar…" : "Enviar"}</button></div>
                 <p className="mt-3 rounded-xl border border-[var(--theme-accent)]/20 bg-[var(--theme-accent)]/5 px-3 py-2 text-[10px] leading-5 text-[var(--theme-text-muted)]">Proteção MARKA: contactos externos, links de redes sociais, pagamentos fora da plataforma e credenciais são bloqueados. Nunca partilhes palavras-passe, PIN, OTP, códigos de recuperação ou dados bancários. Conclui sempre a compra no checkout MARKA.</p>
               </form>
-            </> : <div className="flex flex-1 flex-col items-center justify-center p-8 text-center"><div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--theme-border)] text-xl text-[var(--theme-text-muted)]">✉</div><h2 className="marka-editorial mt-5 text-2xl text-[var(--theme-text)]">A tua caixa de entrada</h2><p className="mt-2 max-w-sm text-sm leading-6 text-[var(--theme-text-muted)]">Selecciona uma conversa ou contacta um vendedor a partir de qualquer produto do Marketplace.</p></div>}
+            </> : <div className="flex flex-1 flex-col items-center justify-center p-8 text-center"><div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--theme-border)] text-xl text-[var(--theme-text-muted)]">✉</div><h2 className="marka-editorial mt-5 text-2xl text-[var(--theme-text)]">A tua caixa de entrada</h2><p className="mt-2 max-w-sm text-sm leading-6 text-[var(--theme-text-muted)]">Selecciona uma conversa do Marketplace, Mobility ou Delivery. As conversas são disponibilizadas apenas aos participantes autorizados de cada transação ou serviço.</p></div>}
           </div>
         </div>
       </section>
