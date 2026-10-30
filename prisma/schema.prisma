@@ -751,6 +751,9 @@ model User {
   buyerConversations    MarketplaceConversation[] @relation("MarketplaceConversationBuyer")
   sellerConversations   MarketplaceConversation[] @relation("MarketplaceConversationSeller")
   marketplaceMessages   MarketplaceMessage[] @relation("MarketplaceMessageSender")
+  callsInitiated        CommunicationCallSession[] @relation("CommunicationCallCaller")
+  callsReceived         CommunicationCallSession[] @relation("CommunicationCallCallee")
+  communicationSignals  CommunicationCallSignal[]
 
   auditLogs      AuditLog[]      @relation("AuditActor")
   securityEvents SecurityEvent[] @relation("SecurityActor")
@@ -1114,6 +1117,7 @@ model MarketplaceConversation {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
   messages MarketplaceMessage[]
+  calls    CommunicationCallSession[]
 
   @@unique([buyerId, sellerId, productId])
   @@index([buyerId, lastMessageAt])
@@ -2030,4 +2034,66 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt, createdAt])
+}
+
+
+enum CommunicationCallMode {
+  AUDIO
+  VIDEO
+}
+
+enum CommunicationCallStatus {
+  RINGING
+  ACCEPTED
+  REJECTED
+  ENDED
+  MISSED
+  EXPIRED
+  FAILED
+}
+
+enum CommunicationSignalType {
+  OFFER
+  ANSWER
+  ICE_CANDIDATE
+}
+
+model CommunicationCallSession {
+  id             String                 @id @default(uuid())
+  conversationId String
+  callerId       String
+  calleeId       String
+  mode           CommunicationCallMode  @default(AUDIO)
+  status         CommunicationCallStatus @default(RINGING)
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  endedAt        DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  conversation MarketplaceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  caller       User                    @relation("CommunicationCallCaller", fields: [callerId], references: [id], onDelete: Cascade)
+  callee       User                    @relation("CommunicationCallCallee", fields: [calleeId], references: [id], onDelete: Cascade)
+  signals      CommunicationCallSignal[]
+
+  @@index([conversationId, createdAt])
+  @@index([callerId, status, createdAt])
+  @@index([calleeId, status, createdAt])
+  @@index([status, expiresAt])
+}
+
+model CommunicationCallSignal {
+  id        String                  @id @default(uuid())
+  callId    String
+  senderId  String
+  type      CommunicationSignalType
+  payload   Json
+  expiresAt DateTime
+  createdAt DateTime                @default(now())
+
+  call   CommunicationCallSession @relation(fields: [callId], references: [id], onDelete: Cascade)
+  sender User                     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([callId, createdAt])
+  @@index([expiresAt])
 }
