@@ -57,8 +57,8 @@ function MessagesWorkspace() {
     }
   }, []);
 
-  useEffect(() => { void loadConversations(); const timer = window.setInterval(() => void loadConversations(), 12000); return () => window.clearInterval(timer); }, [loadConversations]);
-  useEffect(() => { void loadThread(activeId); if (!activeId) return; const timer = window.setInterval(() => void loadThread(activeId), 5000); return () => window.clearInterval(timer); }, [activeId, loadThread]);
+  useEffect(() => { const initial = window.setTimeout(() => void loadConversations(), 0); const timer = window.setInterval(() => void loadConversations(), 12000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [loadConversations]);
+  useEffect(() => { if (!activeId) return; const initial = window.setTimeout(() => void loadThread(activeId), 0); const timer = window.setInterval(() => void loadThread(activeId), 5000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [activeId, loadThread]);
 
   async function sendMessage(event: React.FormEvent) {
     event.preventDefault();
