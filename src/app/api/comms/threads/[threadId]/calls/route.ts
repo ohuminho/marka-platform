@@ -21,7 +21,7 @@ export async function GET(_request: Request, context: Context) {
     const actor = await getActor();
     if (!actor) return NextResponse.json({ message: "Inicia sessão para consultar chamadas." }, { status: 401 });
     const { threadId } = await context.params;
-    await getAuthorizedCommunicationThread(threadId, actor.id);
+    const thread = await getAuthorizedCommunicationThread(threadId, actor.id);
     const now = new Date();
     await prisma.communicationCallSession.updateMany({
       where: { threadId, status: "RINGING", expiresAt: { lte: now } },
@@ -32,7 +32,7 @@ export async function GET(_request: Request, context: Context) {
       orderBy: { createdAt: "desc" }, take: 20,
       select: { id: true, callerId: true, calleeId: true, mode: true, status: true, expiresAt: true, acceptedAt: true, endedAt: true, createdAt: true },
     });
-    return NextResponse.json({ calls, actorId: actor.id }, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json({ calls, actorId: actor.id, participants: thread.participants }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
     console.error("[MARKA_CONTEXT_CALLS_LIST]", error);
