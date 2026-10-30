@@ -8,7 +8,7 @@ type Call = {
   expiresAt: string; createdAt: string;
 };
 type Signal = { id: string; type: "OFFER" | "ANSWER" | "ICE_CANDIDATE"; payload: RTCSessionDescriptionInit | RTCIceCandidateInit; createdAt: string };
-type Recipient = { userId: string; role: string };
+type Recipient = { userId: string; role: string; name?: string };
 
 async function jsonRequest(url: string, init?: RequestInit) {
   const response = await fetch(url, { credentials: "include", cache: "no-store", ...init });
@@ -219,7 +219,7 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
 
       {threadId && recipients.length > 1 && !activeCall && <label className="w-full max-w-[260px] text-[10px] text-[var(--theme-text-muted)]">Ligar a
         <select value={selectedRecipientId} onChange={(event) => setSelectedRecipientId(event.target.value)} className="mt-1 w-full rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-xs text-[var(--theme-text)]">
-          {recipients.map((recipient) => <option key={recipient.userId} value={recipient.userId}>{recipient.role.toLowerCase()} · {recipient.userId.slice(0, 8)}</option>)}
+          {recipients.map((recipient) => <option key={recipient.userId} value={recipient.userId}>{recipient.name || recipient.role.toLowerCase()}</option>)}
         </select>
       </label>}
 
