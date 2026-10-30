@@ -109,7 +109,15 @@ export async function getAuthorizedCommunicationThread(threadId: string, actorId
   });
   if (!thread) throw new CommunicationContextError("Conversa não encontrada.");
   const synchronized = await syncCommunicationThread(thread.contextType, thread.contextId);
-  const participant = synchronized.participants.find((item) => item.userId === actorId);
+  const members = await prisma.communicationThreadParticipant.findMany({
+    where: { threadId: synchronized.id, revokedAt: null },
+    include: { user: { select: { id: true, name: true } } },
+  });
+  const participant = members.find((item) => item.userId === actorId);
   if (!participant) throw new CommunicationContextError("Não tens autorização para esta conversa.", 403);
-  return { ...synchronized, actorRole: participant.role };
+  return {
+    ...synchronized,
+    participants: members.map((item) => ({ userId: item.userId, role: item.role, name: item.user.name })),
+    actorRole: participant.role,
+  };
 }
