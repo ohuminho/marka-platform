@@ -58,7 +58,7 @@ async function resolveContext(contextType: CommunicationContextType, contextId: 
   const storeIds = [...new Set(fulfillment.order.items.map((item) => item.storeId).filter((id): id is string => !!id))];
   const [vendors, stores, agent] = await Promise.all([
     vendorIds.length ? prisma.vendor.findMany({ where: { id: { in: vendorIds }, status: "ACTIVE" }, select: { ownerId: true } }) : Promise.resolve([]),
-    storeIds.length ? prisma.store.findMany({ where: { id: { in: storeIds }, vendor: { status: "ACTIVE" } }, select: { vendor: { select: { ownerId: true } } } }) : Promise.resolve([]),
+    storeIds.length ? prisma.store.findMany({ where: { id: { in: storeIds }, vendor: { is: { status: "ACTIVE" } } }, select: { vendor: { select: { ownerId: true } } } }) : Promise.resolve([]),
     (fulfillment.assignment?.agentId ?? fulfillment.assignedAgentId)
       ? prisma.deliveryAgent.findUnique({ where: { id: fulfillment.assignment?.agentId ?? fulfillment.assignedAgentId! }, select: { userId: true, status: true } })
       : Promise.resolve(null),
