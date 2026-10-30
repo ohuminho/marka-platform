@@ -2,6 +2,7 @@
 
 import Sidebar from "./Sidebar";
 import TopNav from "./TopNav";
+import IncomingCallListener from "@/frontend/features/communications/components/IncomingCallListener";
 
 export default function AppShell({
   children,
@@ -21,6 +22,7 @@ export default function AppShell({
         "
       />
 
+      <IncomingCallListener />
       <div className="relative z-10 flex min-h-screen">
         <Sidebar />
 
