@@ -266,7 +266,7 @@ export async function PATCH(request: Request) {
         await tx.inventory.upsert({
           where: { productId: product.id },
           create: { productId: product.id, quantityOnHand: data.stock, reserved: 0, reorderLevel: 0 },
-          update: { quantityOnHand: data.stock + inventory.reserved },
+          update: { quantityOnHand: data.stock + (inventory?.reserved ?? 0) },
         });
       }
       return saved;
