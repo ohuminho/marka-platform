@@ -10,6 +10,8 @@ type Conversation = {
   buyer: { id: string; name: string }; seller: { id: string; name: string };
   store: { id: string; name: string }; product: { id: string; name: string; image?: string | null };
   messages: Message[];
+  communicationThreadId?: string;
+  contextType?: "MOBILITY" | "DELIVERY";
 };
 
 function stamp(value: string) {
@@ -33,8 +35,28 @@ function MessagesWorkspace() {
       const response = await fetch("/api/messages", { credentials: "include", cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível carregar as mensagens.");
-      setConversations(data.conversations ?? []);
-      setActorId(data.actorId ?? "");
+      const currentActorId = data.actorId ?? "";
+      const marketplace = data.conversations ?? [];
+      const contextual = (data.threads ?? []).map((thread: any) => {
+        const other = thread.participants.filter((participant: any) => participant.userId !== currentActorId);
+        const customer = thread.participants.find((participant: any) => participant.role === "CUSTOMER");
+        const otherNames = other.map((participant: any) => participant.user?.name).filter(Boolean);
+        return {
+          id: thread.id,
+          buyerId: customer?.userId ?? currentActorId,
+          sellerId: other[0]?.userId ?? "",
+          buyer: { id: customer?.userId ?? currentActorId, name: customer?.user?.name ?? "Cliente" },
+          seller: { id: other[0]?.userId ?? "", name: otherNames.join(", ") || "Participantes" },
+          store: { id: thread.id, name: thread.contextType === "MOBILITY" ? "MARKA Mobility" : "MARKA Delivery" },
+          product: { id: thread.contextId, name: thread.subject ?? "Comunicação" },
+          lastMessageAt: thread.lastMessageAt,
+          messages: thread.messages ?? [],
+          communicationThreadId: thread.id,
+          contextType: thread.contextType,
+        };
+      });
+      setConversations([...marketplace, ...contextual].sort((a: Conversation, b: Conversation) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()));
+      setActorId(currentActorId);
       const requestedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conversationId") : null;
       setActiveId((current) => current || requestedId || data.conversations?.[0]?.id || "");
     } catch (e) {
@@ -47,7 +69,11 @@ function MessagesWorkspace() {
   const loadThread = useCallback(async (id: string) => {
     if (!id) { setMessages([]); return; }
     try {
-      const response = await fetch(`/api/messages/${encodeURIComponent(id)}`, { credentials: "include", cache: "no-store" });
+      const selected = conversations.find((item) => item.id === id);
+      const endpoint = selected?.communicationThreadId
+        ? `/api/comms/threads/${encodeURIComponent(selected.communicationThreadId)}/messages`
+        : `/api/messages/${encodeURIComponent(id)}`;
+      const response = await fetch(endpoint, { credentials: "include", cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível abrir a conversa.");
       setMessages(data.conversation.messages ?? []);
@@ -55,7 +81,7 @@ function MessagesWorkspace() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao abrir conversa.");
     }
-  }, []);
+  }, [conversations]);
 
   useEffect(() => { const initial = window.setTimeout(() => void loadConversations(), 0); const timer = window.setInterval(() => void loadConversations(), 12000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [loadConversations]);
   useEffect(() => { if (!activeId) return; const initial = window.setTimeout(() => void loadThread(activeId), 0); const timer = window.setInterval(() => void loadThread(activeId), 5000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [activeId, loadThread]);
@@ -65,7 +91,10 @@ function MessagesWorkspace() {
     if (!activeId || draft.trim().length < 2 || sending) return;
     setSending(true); setError("");
     try {
-      const response = await fetch(`/api/messages/${encodeURIComponent(activeId)}`, {
+      const endpoint = active?.communicationThreadId
+        ? `/api/comms/threads/${encodeURIComponent(active.communicationThreadId)}/messages`
+        : `/api/messages/${encodeURIComponent(activeId)}`;
+      const response = await fetch(endpoint, {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: draft.trim() }),
       });
@@ -110,7 +139,7 @@ function MessagesWorkspace() {
             {active ? <>
               <div className="flex items-center justify-between gap-3 border-b border-[var(--theme-border)] px-5 py-4">
                 <div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--theme-text)]">{active.buyerId === actorId ? active.seller.name : active.buyer.name}</p><p className="mt-1 truncate text-xs text-[var(--theme-text-muted)]">{active.product.name} · {active.store.name}</p></div>
-                <div className="flex flex-wrap items-center gap-2"><MarketplaceCallPanel conversationId={active.id} /><a href={`/app/marketplace/products/${active.product.id}`} className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)] underline underline-offset-4">Ver produto</a></div>
+                <div className="flex flex-wrap items-center gap-2"><MarketplaceCallPanel conversationId={active.communicationThreadId ? undefined : active.id} threadId={active.communicationThreadId} />{!active.communicationThreadId && <a href={`/app/marketplace/products/${active.product.id}`} className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)] underline underline-offset-4">Ver produto</a>}</div>
               </div>
               <div className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
                 {messages.map((message) => <div key={message.id} className={`flex ${message.senderId === actorId ? "justify-end" : "justify-start"}`}>
