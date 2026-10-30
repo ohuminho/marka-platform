@@ -16,14 +16,14 @@ export class OrderService {
    * lifecycle; cancelling them here could create a captured payment without
    * a fulfilment or release stock belonging to a paid order.
    */
-  async cancelUnpaidOrder(orderId: string, userId: string) {
-    if (!orderId.trim() || !userId.trim()) {
+  async cancelUnpaidOrder(orderId: string, userId?: string, vendorId?: string) {
+    if (!orderId.trim() || (!userId?.trim() && !vendorId?.trim())) {
       throw new Error("Order id and user are required.");
     }
 
     return prisma.$transaction(async (database) => {
       const order = await database.order.findFirst({
-        where: { id: orderId, userId },
+        where: { id: orderId, ...(userId ? { userId } : {}), ...(vendorId ? { items: { some: { vendorId } } } : {}) },
         include: {
           items: { select: { productId: true, quantity: true } },
           payments: { select: { id: true, status: true } },
@@ -56,7 +56,8 @@ export class OrderService {
       const updated = await database.order.updateMany({
         where: {
           id: order.id,
-          userId,
+          ...(userId ? { userId } : {}),
+          ...(vendorId ? { items: { some: { vendorId } } } : {}),
           status: order.status,
         },
         data: { status: PrismaOrderStatus.CANCELLED },
