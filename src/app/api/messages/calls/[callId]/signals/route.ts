@@ -58,7 +58,7 @@ export async function POST(request: Request, context: { params: Promise<{ callId
       return NextResponse.json({ message: "Payload WebRTC excede o limite permitido." }, { status: 413 });
     }
     const call = await prisma.communicationCallSession.findFirst({
-      where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }], status: "ACCEPTED", expiresAt: { gt: new Date() } },
+      where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }], status: { in: ["RINGING", "ACCEPTED"] }, expiresAt: { gt: new Date() } },
       select: { callerId: true, calleeId: true },
     });
     if (!call) return NextResponse.json({ message: "Chamada não encontrada ou sem autorização." }, { status: 404 });
