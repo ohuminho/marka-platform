@@ -13,7 +13,7 @@ type Recipient = { userId: string; role: string; name?: string };
 async function jsonRequest(url: string, init?: RequestInit) {
   const response = await fetch(url, { credentials: "include", cache: "no-store", ...init });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || "Não foi possível concluir a operação.");
+  if (!response.ok) { const error = new Error(data.message || "Não foi possível concluir a operação.") as Error & { status?: number }; error.status = response.status; throw error; }
   return data;
 }
 
@@ -141,10 +141,15 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha na sinalização WebRTC.");
+      const status = (e as Error & { status?: number }).status;
+      if (status === 403 || status === 404 || status === 410) {
+        closeMedia();
+        setActiveCall(null);
+      }
     } finally {
       processingRef.current = false;
     }
-  }, [sendSignal]);
+  }, [sendSignal, closeMedia]);
 
   useEffect(() => {
     const initial = window.setTimeout(() => void refreshCalls(), 0);
