@@ -8,6 +8,7 @@ type Call = {
   expiresAt: string; createdAt: string;
 };
 type Signal = { id: string; type: "OFFER" | "ANSWER" | "ICE_CANDIDATE"; payload: RTCSessionDescriptionInit | RTCIceCandidateInit; createdAt: string };
+type Recipient = { userId: string; role: string };
 
 async function jsonRequest(url: string, init?: RequestInit) {
   const response = await fetch(url, { credentials: "include", cache: "no-store", ...init });
@@ -19,6 +20,8 @@ async function jsonRequest(url: string, init?: RequestInit) {
 export default function MarketplaceCallPanel({ conversationId, threadId }: { conversationId?: string; threadId?: string }) {
   const callsEndpoint = threadId ? `/api/comms/threads/${encodeURIComponent(threadId)}/calls` : `/api/messages/${encodeURIComponent(conversationId ?? "")}/calls`;
   const [calls, setCalls] = useState<Call[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [selectedRecipientId, setSelectedRecipientId] = useState("");
   const [actorId, setActorId] = useState("");
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -46,6 +49,11 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
       const data = await jsonRequest(callsEndpoint);
       setCalls(data.calls ?? []);
       if (data.actorId) setActorId(data.actorId);
+      if (Array.isArray(data.participants)) {
+        const available = data.participants.filter((participant: Recipient) => participant.userId !== data.actorId);
+        setRecipients(available);
+        setSelectedRecipientId((current) => current || available[0]?.userId || "");
+      }
       const current = (data.calls as Call[] | undefined)?.find((call) => ["RINGING", "ACCEPTED"].includes(call.status) && new Date(call.expiresAt).getTime() > Date.now());
       if (activeCallRef.current) {
         const refreshed = (data.calls as Call[] | undefined)?.find((call) => call.id === activeCallRef.current?.id);
@@ -146,7 +154,7 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
     let createdCall: Call | null = null;
     try {
       const data = await jsonRequest(callsEndpoint, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode, ...(threadId ? { recipientId: selectedRecipientId || undefined } : {}) }),
       });
       const call = data.call as Call;
       createdCall = call;
@@ -206,8 +214,14 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" disabled={busy || !!activeCall} onClick={() => void startCall("AUDIO")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--theme-text)] transition hover:bg-[var(--theme-background)] disabled:opacity-40" aria-label="Iniciar chamada de voz">☎ Voz</button>
-      <button type="button" disabled={busy || !!activeCall} onClick={() => void startCall("VIDEO")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--theme-text)] transition hover:bg-[var(--theme-background)] disabled:opacity-40" aria-label="Iniciar videochamada">▣ Vídeo</button>
+      <button type="button" disabled={busy || !!activeCall || (!!threadId && recipients.length > 1 && !selectedRecipientId)} onClick={() => void startCall("AUDIO")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--theme-text)] transition hover:bg-[var(--theme-background)] disabled:opacity-40" aria-label="Iniciar chamada de voz">☎ Voz</button>
+      <button type="button" disabled={busy || !!activeCall || (!!threadId && recipients.length > 1 && !selectedRecipientId)} onClick={() => void startCall("VIDEO")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--theme-text)] transition hover:bg-[var(--theme-background)] disabled:opacity-40" aria-label="Iniciar videochamada">▣ Vídeo</button>
+
+      {threadId && recipients.length > 1 && !activeCall && <label className="w-full max-w-[260px] text-[10px] text-[var(--theme-text-muted)]">Ligar a
+        <select value={selectedRecipientId} onChange={(event) => setSelectedRecipientId(event.target.value)} className="mt-1 w-full rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-xs text-[var(--theme-text)]">
+          {recipients.map((recipient) => <option key={recipient.userId} value={recipient.userId}>{recipient.role.toLowerCase()} · {recipient.userId.slice(0, 8)}</option>)}
+        </select>
+      </label>}
 
       {incoming && !activeCall && <div className="fixed inset-x-4 top-20 z-[90] mx-auto max-w-md rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 shadow-2xl">
         <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[var(--theme-text-muted)]">Chamada recebida</p>
