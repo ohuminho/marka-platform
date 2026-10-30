@@ -56,4 +56,4 @@ ALTER TABLE "CommunicationCallSession"
 CREATE INDEX "CommunicationCallSession_threadId_createdAt_idx" ON "CommunicationCallSession"("threadId", "createdAt");
 ALTER TABLE "CommunicationCallSession"
   ADD CONSTRAINT "CommunicationCallSession_exactly_one_context_check"
-  CHECK (("conversationId" IS NOT NULL)::int + ("threadId" IS NOT NULL)::int = 1);
+  CHECK (("conversationId" IS NOT NULL) <> ("threadId" IS NOT NULL));
