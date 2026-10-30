@@ -1042,6 +1042,7 @@ model Order {
   id       String      @id @default(uuid())
   userId   String
   status   OrderStatus @default(PENDING)
+  inventoryReserved Boolean @default(false)
   total    Decimal     @default(0) @db.Decimal(20, 4)
   currency String      @default("AOA") @db.Char(3)
 
