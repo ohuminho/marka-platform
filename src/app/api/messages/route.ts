@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { inspectMarketplaceMessage } from "@/core/marketplace/message-policy";
+import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -35,7 +36,28 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ conversations, actorId: actor.id }, { headers: { "Cache-Control": "private, no-store" } });
+    const memberships = await prisma.communicationThreadParticipant.findMany({
+      where: { userId: actor.id, revokedAt: null, thread: { status: "ACTIVE" } },
+      select: { threadId: true }, orderBy: { thread: { lastMessageAt: "desc" } }, take: 100,
+    });
+    const threads = [];
+    for (const membership of memberships) {
+      try {
+        await getAuthorizedCommunicationThread(membership.threadId, actor.id);
+        const thread = await prisma.communicationThread.findUnique({
+          where: { id: membership.threadId },
+          include: {
+            participants: { where: { revokedAt: null }, include: { user: { select: { id: true, name: true } } } },
+            messages: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, body: true, senderId: true, createdAt: true, readAt: true } },
+          },
+        });
+        if (thread) threads.push(thread);
+      } catch {
+        // Ended or revoked contexts are excluded from the active inbox.
+      }
+    }
+
+    return NextResponse.json({ conversations, threads, actorId: actor.id }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("[MARKETPLACE_MESSAGES_LIST]", error);
     return NextResponse.json({ message: "Não foi possível carregar as conversas." }, { status: 500 });
