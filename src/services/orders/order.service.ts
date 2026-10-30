@@ -1,4 +1,4 @@
-import { OrderStatus as PrismaOrderStatus } from "@prisma/client";
+import { OrderStatus as PrismaOrderStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
 import { inventoryService } from "@/services/inventory/inventory.service";
