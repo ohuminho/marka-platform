@@ -213,6 +213,11 @@ export class CheckoutService {
           })),
         );
 
+        await database.order.update({
+          where: { id: createdOrder.id },
+          data: { inventoryReserved: true },
+        });
+
         await database.cart.update({
           where: {
             id: cartId,
@@ -259,13 +264,20 @@ export class CheckoutService {
     } catch (error) {
       try {
         await prisma.$transaction(async (database) => {
-          await inventoryService.releaseWithinTransaction(
-            database,
-            preparedItems.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-            })),
-          );
+          const reservation = await database.order.updateMany({
+            where: { id: order.id, inventoryReserved: true },
+            data: { inventoryReserved: false },
+          });
+
+          if (reservation.count === 1) {
+            await inventoryService.releaseWithinTransaction(
+              database,
+              preparedItems.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+              })),
+            );
+          }
 
           await database.cart.update({
             where: {
