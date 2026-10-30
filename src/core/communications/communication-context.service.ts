@@ -44,7 +44,7 @@ async function resolveContext(contextType: CommunicationContextType, contextId: 
     select: {
       id: true, status: true, updatedAt: true, assignedAgentId: true,
       assignment: { select: { agentId: true } },
-      order: { select: { id: true, userId: true, items: { select: { vendorId: true } } } },
+      order: { select: { id: true, userId: true, items: { select: { vendorId: true, storeId: true } } } },
     },
   });
   if (!fulfillment) throw new CommunicationContextError("Entrega não encontrada.");
@@ -55,14 +55,17 @@ async function resolveContext(contextType: CommunicationContextType, contextId: 
   }
 
   const vendorIds = [...new Set(fulfillment.order.items.map((item) => item.vendorId).filter((id): id is string => !!id))];
-  const [vendors, agent] = await Promise.all([
+  const storeIds = [...new Set(fulfillment.order.items.map((item) => item.storeId).filter((id): id is string => !!id))];
+  const [vendors, stores, agent] = await Promise.all([
     vendorIds.length ? prisma.vendor.findMany({ where: { id: { in: vendorIds }, status: "ACTIVE" }, select: { ownerId: true } }) : Promise.resolve([]),
+    storeIds.length ? prisma.store.findMany({ where: { id: { in: storeIds }, vendor: { status: "ACTIVE" } }, select: { vendor: { select: { ownerId: true } } } }) : Promise.resolve([]),
     (fulfillment.assignment?.agentId ?? fulfillment.assignedAgentId)
       ? prisma.deliveryAgent.findUnique({ where: { id: fulfillment.assignment?.agentId ?? fulfillment.assignedAgentId! }, select: { userId: true, status: true } })
       : Promise.resolve(null),
   ]);
   const participants: ResolvedContext["participants"] = [{ userId: fulfillment.order.userId, role: "CUSTOMER" }];
   for (const vendor of vendors) participants.push({ userId: vendor.ownerId, role: "MERCHANT" });
+  for (const store of stores) participants.push({ userId: store.vendor.ownerId, role: "MERCHANT" });
   if (agent?.status === "ACTIVE") participants.push({ userId: agent.userId, role: "COURIER" });
 
   const unique = new Map<string, CommunicationParticipantRole>();
