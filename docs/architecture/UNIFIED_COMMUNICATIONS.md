@@ -66,6 +66,7 @@ The first Marketplace calling slice is now present in the repository:
 - Shared context-thread persistence for Mobility rides and Delivery fulfillments, with participant membership derived from live ride/fulfillment assignment data.
 - Context-authorized message APIs and shared inbox aggregation across Marketplace, Mobility and Delivery.
 - Private Mobility communication entry point from the active-trip workspace and Delivery communication entry point from order details.
+- Global authenticated incoming-call alert across the MARKA application shell, with a secure handoff into the correct conversation.
 - 1:1 calls in Mobility/Delivery contexts, with recipient selection when a fulfillment thread contains multiple participants.
 - Authorization revalidation on every thread read, message send, call lifecycle operation and WebRTC signalling request. Participant membership synchronization avoids repeated database writes on polling.
 - Operational runbook: `docs/operations/COMMUNICATIONS_TURN_DEPLOYMENT.md`.
