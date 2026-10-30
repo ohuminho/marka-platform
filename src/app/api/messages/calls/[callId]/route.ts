@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
-import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
+import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -58,6 +58,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
     }
     return NextResponse.json({ success: true, action }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
     console.error("[MARKA_CALL_LIFECYCLE]", error);
     return NextResponse.json({ message: "Não foi possível actualizar a chamada." }, { status: 500 });
   }
