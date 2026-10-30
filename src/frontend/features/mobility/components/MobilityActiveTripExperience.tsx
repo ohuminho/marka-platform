@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MobilityTripAdSlot from "@/frontend/features/mobility/components/MobilityTripAdSlot";
 import type { MobilityAdContext } from "@/monetization/ads/ad.types";
@@ -36,6 +37,7 @@ function distance(a: number, b: number, c: number, d: number) {
 
 export default function MobilityActiveTripExperience({ audience }: { audience: Audience }) {
   const { activeOrganization, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [payload, setPayload] = useState<RidePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [lastAdDismissedAt, setLastAdDismissedAt] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [communicationLoading, setCommunicationLoading] = useState(false);
+  const [communicationError, setCommunicationError] = useState<string | null>(null);
   const [driverProfileStatus, setDriverProfileStatus] = useState<string | null>(null);
   const [driverAvailability, setDriverAvailability] = useState("OFFLINE");
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -201,6 +205,23 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     finally { setAvailabilityLoading(false); }
   };
 
+  const openRideConversation = async () => {
+    if (!ride || communicationLoading) return;
+    setCommunicationLoading(true); setCommunicationError(null);
+    try {
+      const response = await fetch("/api/comms/threads", {
+        method: "POST", credentials: "include", cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contextType: "MOBILITY", contextId: ride.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "A comunicação ainda não está disponível.");
+      router.push(`/app/messages?conversationId=${encodeURIComponent(data.thread.id)}`);
+    } catch (e) {
+      setCommunicationError(e instanceof Error ? e.message : "Não foi possível abrir a conversa.");
+    } finally { setCommunicationLoading(false); }
+  };
+
   const performDriverAction = async () => {
     if (!ride || !organizationId || !driverAction || actionLoading) return;
     setActionLoading(true); setActionError(null);
@@ -243,6 +264,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
             {ride.vehicle && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Veículo</p><p className="mt-1 text-sm text-white/80">{[ride.vehicle.make, ride.vehicle.model].filter(Boolean).join(" ") || "Veículo atribuído"}</p></div>}
             {ride.vehicle && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Matrícula</p><p className="mt-1 text-sm text-white/80">{ride.vehicle.plateNumber || ride.vehicle.registrationNumber || "Confirmada na viagem"}</p></div>}
           </div>
+          {["DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"].includes(ride.status) && <div className="mt-5"><button type="button" disabled={communicationLoading} onClick={() => void openRideConversation()} className="flex min-h-11 w-full items-center justify-center rounded-full border border-[#e9bd58]/35 bg-[#e9bd58]/[.07] px-4 py-2.5 text-xs font-semibold text-[#f0d58e] transition hover:bg-[#e9bd58]/[.12] disabled:opacity-50">{communicationLoading ? "A abrir conversa…" : "Mensagem e chamada privadas ↗"}</button>{communicationError && <p role="alert" className="mt-2 text-xs text-rose-200">{communicationError}</p>}</div>}
           <p className="mt-5 rounded-xl border border-white/[.08] bg-black/20 px-4 py-3 text-[11px] leading-5 text-white/45">Segurança e atenção à estrada têm prioridade. A publicidade é ocultada se o estado da viagem, a localização ou a proximidade do destino não permitirem uma apresentação segura.</p>
           {audience === "driver" && driverAction && <div className="mt-5 border-t border-white/[.08] pt-5"><button type="button" disabled={actionLoading} onClick={() => void performDriverAction()} className="flex min-h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] px-5 py-3 text-center text-xs font-bold text-[#17130a] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-60">{actionLoading ? "A atualizar viagem…" : driverAction.label + " →"}</button>{actionError && <p role="alert" className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/[.05] p-3 text-xs text-rose-100">{actionError}</p>}</div>}
         </div>}
