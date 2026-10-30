@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -56,7 +57,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ vendor }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    console.error("[VENDOR_REGISTER_ERROR]", error);
+    const referenceId = randomUUID();
+    const prismaCode = typeof error === "object" && error !== null && "code" in error ? String(error.code) : null;
+    console.error("[VENDOR_REGISTER_ERROR]", { referenceId, error });
 
     if (message.includes("active organization")) {
       return NextResponse.json({
@@ -79,9 +82,18 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
+    if (prismaCode === "P2022" || prismaCode === "P1001" || prismaCode === "P1002" || prismaCode === "P2024") {
+      return NextResponse.json({
+        message: "A abertura da loja está temporariamente indisponível por uma falha técnica. Não precisa repetir o pedido várias vezes. Guarde a referência apresentada caso o problema continue.",
+        code: "VENDOR_REGISTRATION_TEMPORARILY_UNAVAILABLE",
+        referenceId,
+      }, { status: 503 });
+    }
+
     return NextResponse.json({
-      message: "Não foi possível concluir a abertura da loja. Tente novamente ou contacte o suporte se o problema persistir.",
+      message: "Não foi possível concluir a abertura da loja neste momento. Tente novamente mais tarde. Se o problema persistir, indique esta referência ao suporte.",
       code: "VENDOR_REGISTRATION_FAILED",
+      referenceId,
     }, { status: 500 });
   }
 }
