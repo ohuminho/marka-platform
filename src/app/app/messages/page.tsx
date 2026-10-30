@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/frontend/shell/AppShell";
 import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
 
@@ -19,6 +20,8 @@ function stamp(value: string) {
 }
 
 function MessagesWorkspace() {
+  const searchParams = useSearchParams();
+  const requestedConversationId = searchParams.get("conversationId");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -83,6 +86,8 @@ function MessagesWorkspace() {
       setError(e instanceof Error ? e.message : "Falha ao abrir conversa.");
     }
   }, [conversations]);
+
+  useEffect(() => { if (requestedConversationId) setActiveId(requestedConversationId); }, [requestedConversationId]);
 
   useEffect(() => { const initial = window.setTimeout(() => void loadConversations(), 0); const timer = window.setInterval(() => void loadConversations(), 12000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [loadConversations]);
   useEffect(() => { if (!activeId) return; const initial = window.setTimeout(() => void loadThread(activeId), 0); const timer = window.setInterval(() => void loadThread(activeId), 5000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [activeId, loadThread]);
