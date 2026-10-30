@@ -1,4 +1,5 @@
 import { prisma } from "@/database/client/prisma";
+import { notificationService } from "@/automation/notifications/notification.service";
 
 import { inventoryService } from "@/services/inventory/inventory.service";
 
@@ -318,6 +319,18 @@ export class CheckoutService {
       );
     }
 
+    // Notifications are best-effort and never change checkout/payment outcome.
+    try {
+      await notificationService.send({
+        userId,
+        type: "ORDER_CREATED",
+        title: "Pedido registado",
+        message: `O teu pedido ${order.id.slice(0, 8).toUpperCase()} foi registado. Podes acompanhar o estado na tua conta MARKA.`,
+        data: { orderId: order.id, status: order.status },
+      });
+    } catch (notificationError) {
+      console.error("[CHECKOUT_NOTIFICATION_ERROR]", { orderId: order.id, userId, error: notificationError });
+    }
     return {
       orderId: order.id,
       userId,
