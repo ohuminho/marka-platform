@@ -5,7 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/database/client/prisma";
-import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
+import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -37,6 +37,7 @@ export async function GET(request: Request, context: { params: Promise<{ callId:
     });
     return NextResponse.json({ signals }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
+    if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
     console.error("[MARKA_CALL_SIGNALS_GET]", error);
     return NextResponse.json({ message: "Não foi possível consultar a sinalização." }, { status: 500 });
   }
@@ -75,6 +76,7 @@ export async function POST(request: Request, context: { params: Promise<{ callId
     });
     return NextResponse.json({ signal }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
     console.error("[MARKA_CALL_SIGNALS_POST]", error);
     return NextResponse.json({ message: "Não foi possível enviar a sinalização." }, { status: 500 });
   }
