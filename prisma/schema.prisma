@@ -754,6 +754,8 @@ model User {
   callsInitiated        CommunicationCallSession[] @relation("CommunicationCallCaller")
   callsReceived         CommunicationCallSession[] @relation("CommunicationCallCallee")
   communicationSignals  CommunicationCallSignal[]
+  communicationThreadMemberships CommunicationThreadParticipant[]
+  communicationThreadMessages CommunicationThreadMessage[]
 
   auditLogs      AuditLog[]      @relation("AuditActor")
   securityEvents SecurityEvent[] @relation("SecurityActor")
@@ -2060,7 +2062,8 @@ enum CommunicationSignalType {
 
 model CommunicationCallSession {
   id             String                 @id @default(uuid())
-  conversationId String
+  conversationId String?
+  threadId       String?
   callerId       String
   calleeId       String
   mode           CommunicationCallMode  @default(AUDIO)
@@ -2071,12 +2074,14 @@ model CommunicationCallSession {
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 
-  conversation MarketplaceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation MarketplaceConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  thread       CommunicationThread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
   caller       User                    @relation("CommunicationCallCaller", fields: [callerId], references: [id], onDelete: Cascade)
   callee       User                    @relation("CommunicationCallCallee", fields: [calleeId], references: [id], onDelete: Cascade)
   signals      CommunicationCallSignal[]
 
   @@index([conversationId, createdAt])
+  @@index([threadId, createdAt])
   @@index([callerId, status, createdAt])
   @@index([calleeId, status, createdAt])
   @@index([status, expiresAt])
@@ -2096,4 +2101,73 @@ model CommunicationCallSignal {
 
   @@index([callId, createdAt])
   @@index([expiresAt])
+}
+
+
+enum CommunicationContextType {
+  MOBILITY
+  DELIVERY
+}
+
+enum CommunicationThreadStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum CommunicationParticipantRole {
+  CUSTOMER
+  DRIVER
+  MERCHANT
+  COURIER
+}
+
+model CommunicationThread {
+  id            String                    @id @default(uuid())
+  contextType   CommunicationContextType
+  contextId     String
+  subject       String?
+  status        CommunicationThreadStatus @default(ACTIVE)
+  lastMessageAt DateTime                  @default(now())
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  participants CommunicationThreadParticipant[]
+  messages     CommunicationThreadMessage[]
+  calls        CommunicationCallSession[]
+
+  @@unique([contextType, contextId])
+  @@index([status, lastMessageAt])
+}
+
+model CommunicationThreadParticipant {
+  id         String                       @id @default(uuid())
+  threadId   String
+  userId     String
+  role       CommunicationParticipantRole
+  revokedAt  DateTime?
+  createdAt  DateTime                     @default(now())
+  updatedAt  DateTime                     @updatedAt
+
+  thread CommunicationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, userId])
+  @@index([userId, revokedAt])
+  @@index([threadId, revokedAt])
+}
+
+model CommunicationThreadMessage {
+  id        String   @id @default(uuid())
+  threadId  String
+  senderId  String
+  body      String   @db.Text
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  thread CommunicationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User                @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([threadId, readAt])
 }
