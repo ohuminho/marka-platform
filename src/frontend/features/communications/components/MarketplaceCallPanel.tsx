@@ -46,7 +46,10 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
       setCalls(data.calls ?? []);
       if (data.actorId) setActorId(data.actorId);
       const current = (data.calls as Call[] | undefined)?.find((call) => ["RINGING", "ACCEPTED"].includes(call.status) && new Date(call.expiresAt).getTime() > Date.now());
-      if (!activeCallRef.current && current?.callerId === data.actorId) setActiveCall(current);
+      if (activeCallRef.current) {
+        const refreshed = (data.calls as Call[] | undefined)?.find((call) => call.id === activeCallRef.current?.id);
+        if (refreshed) setActiveCall(refreshed);
+      } else if (current?.callerId === data.actorId) setActiveCall(current);
     } catch {
       // The parent conversation endpoint remains the source of access control; transient polling errors are non-fatal.
     }
