@@ -60,7 +60,7 @@ export default function IncomingCallListener() {
         <div><p className="text-[9px] font-semibold uppercase tracking-[.2em] text-[var(--theme-accent-strong)]">MARKA · chamada recebida</p><p className="mt-1 text-sm font-semibold text-[var(--theme-text)]">{call.callerName} · {call.mode === "VIDEO" ? "Videochamada" : "Chamada de voz"}</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{call.contextLabel}</p></div>
         <span className="mt-1 h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
       </div>
-      <div className="mt-4 flex gap-2"><button type="button" disabled={busy} onClick={openInbox} className="rounded-full bg-[var(--theme-text)] px-4 py-2.5 text-xs font-semibold text-[var(--theme-background)]">Abrir e atender</button><button type="button" disabled={busy} onClick={() => void reject()} className="rounded-full border border-[var(--theme-border)] px-4 py-2.5 text-xs text-[var(--theme-text)]">Recusar</button></div>
+      <div className="mt-4 flex gap-2"><button type="button" disabled={busy} onClick={openInbox} className="rounded-full bg-[var(--theme-text)] px-4 py-2.5 text-xs font-semibold text-[var(--theme-background)]">Abrir chamada</button><button type="button" disabled={busy} onClick={() => void reject()} className="rounded-full border border-[var(--theme-border)] px-4 py-2.5 text-xs text-[var(--theme-text)]">Recusar</button></div>
     </div>
   );
 }
