@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { inspectMarketplaceMessage } from "@/core/marketplace/message-policy";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -51,6 +52,9 @@ export async function POST(request: Request, context: { params: Promise<{ conver
     if (body.length < 2 || body.length > 5000) {
       return NextResponse.json({ message: "A mensagem deve ter entre 2 e 5000 caracteres." }, { status: 400 });
     }
+
+    const policy = inspectMarketplaceMessage(body);
+    if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
 
     const conversation = await prisma.marketplaceConversation.findFirst({
       where: { id: conversationId, OR: [{ buyerId: actor.id }, { sellerId: actor.id }] },
