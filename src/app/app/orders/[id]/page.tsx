@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
@@ -152,6 +153,7 @@ function deliveryStageIndex(
 export default function OrderDetailPage({
   params,
 }: OrderPageProps) {
+  const router = useRouter();
   const [orderId, setOrderId] =
     useState<string | null>(null);
 
@@ -175,6 +177,9 @@ export default function OrderDetailPage({
 
   const [cancellationError, setCancellationError] =
     useState<string | null>(null);
+
+  const [communicationLoading, setCommunicationLoading] = useState(false);
+  const [communicationError, setCommunicationError] = useState<string | null>(null);
 
   const [tracking, setTracking] =
     useState<DeliveryTracking | null>(null);
@@ -283,6 +288,23 @@ export default function OrderDetailPage({
 
     return () => window.clearInterval(timer);
   }, [params, tracking?.status]);
+
+  const openDeliveryConversation = async () => {
+    if (!order?.fulfillment || communicationLoading) return;
+    setCommunicationLoading(true); setCommunicationError(null);
+    try {
+      const response = await fetch("/api/comms/threads", {
+        method: "POST", credentials: "include", cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contextType: "DELIVERY", contextId: order.fulfillment.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "A comunicação desta entrega ainda não está disponível.");
+      router.push(`/app/messages?conversationId=${encodeURIComponent(data.thread.id)}`);
+    } catch (error) {
+      setCommunicationError(error instanceof Error ? error.message : "Não foi possível abrir a conversa.");
+    } finally { setCommunicationLoading(false); }
+  };
 
   const cancelOrder = async () => {
     if (!order) return;
@@ -653,6 +675,11 @@ export default function OrderDetailPage({
                   <span className="text-[var(--theme-text)]/50">Fulfillment</span>
                   <span>{label(order.fulfillment.status)}</span>
                 </div>
+
+                {order.fulfillment.status !== "CANCELLED" && <div className="space-y-2">
+                  <button type="button" disabled={communicationLoading} onClick={() => void openDeliveryConversation()} className="w-full rounded-xl border border-[var(--theme-accent)]/35 bg-[var(--theme-accent)]/5 px-4 py-3 text-sm font-semibold text-[var(--theme-text)] transition hover:bg-[var(--theme-accent)]/10 disabled:opacity-50">{communicationLoading ? "A abrir comunicação…" : "Mensagens e chamadas privadas"}</button>
+                  {communicationError && <p role="alert" className="text-xs text-red-400">{communicationError}</p>}
+                </div>}
 
                 {order.dispatch ? (
                   <>
