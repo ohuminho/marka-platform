@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/database/client/prisma";
+import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -21,9 +22,10 @@ export async function GET(request: Request, context: { params: Promise<{ callId:
     const { callId } = await context.params;
     const call = await prisma.communicationCallSession.findFirst({
       where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }], status: { in: ["RINGING", "ACCEPTED"] }, expiresAt: { gt: new Date() } },
-      select: { id: true },
+      select: { id: true, threadId: true },
     });
     if (!call) return NextResponse.json({ message: "Chamada não encontrada ou sem autorização." }, { status: 404 });
+    if (call.threadId) await getAuthorizedCommunicationThread(call.threadId, actor.id);
     const url = new URL(request.url);
     const afterRaw = url.searchParams.get("after");
     const after = afterRaw ? new Date(afterRaw) : new Date(Date.now() - 30_000);
@@ -60,9 +62,10 @@ export async function POST(request: Request, context: { params: Promise<{ callId
     }
     const call = await prisma.communicationCallSession.findFirst({
       where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }], status: { in: ["RINGING", "ACCEPTED"] }, expiresAt: { gt: new Date() } },
-      select: { callerId: true, calleeId: true },
+      select: { callerId: true, calleeId: true, threadId: true },
     });
     if (!call) return NextResponse.json({ message: "Chamada não encontrada ou sem autorização." }, { status: 404 });
+    if (call.threadId) await getAuthorizedCommunicationThread(call.threadId, actor.id);
     if (type === "OFFER" && actor.id !== call.callerId) return NextResponse.json({ message: "A oferta inicial pertence ao iniciador da chamada." }, { status: 403 });
     if (type === "ANSWER" && actor.id !== call.calleeId) return NextResponse.json({ message: "A resposta pertence ao destinatário da chamada." }, { status: 403 });
 
