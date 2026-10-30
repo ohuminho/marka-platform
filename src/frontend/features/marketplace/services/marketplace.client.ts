@@ -21,7 +21,8 @@ export async function getMarketplaceProducts(): Promise<MarketplaceProduct[]> {
   }
 
 
-  return response.json();
+  const data = await response.json();
+  return data.product as MarketplaceProduct;
 
 }
 
