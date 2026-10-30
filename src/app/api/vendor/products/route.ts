@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -269,6 +270,10 @@ export async function PATCH(request: Request) {
         });
       }
       return saved;
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 5000,
+      timeout: 10000,
     });
     return NextResponse.json({ product: updated, message: "Produto atualizado." });
   } catch (error) {
