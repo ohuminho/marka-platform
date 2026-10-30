@@ -1,6 +1,7 @@
 import { OrderStatus as PrismaOrderStatus } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
+import { inventoryService } from "@/services/inventory/inventory.service";
 
 import {
   OrderStatus,
@@ -9,6 +10,81 @@ import {
 } from "./types/order.types";
 
 export class OrderService {
+  /**
+   * Cancels an unpaid order and releases its inventory reservation atomically.
+   * Orders with an active or completed payment must use the payment/refund
+   * lifecycle; cancelling them here could create a captured payment without
+   * a fulfilment or release stock belonging to a paid order.
+   */
+  async cancelUnpaidOrder(orderId: string, userId: string) {
+    if (!orderId.trim() || !userId.trim()) {
+      throw new Error("Order id and user are required.");
+    }
+
+    return prisma.$transaction(async (database) => {
+      const order = await database.order.findFirst({
+        where: { id: orderId, userId },
+        include: {
+          items: { select: { productId: true, quantity: true } },
+          payments: { select: { id: true, status: true } },
+        },
+      });
+
+      if (!order) throw new Error("Order not found.");
+      if (order.status === "CANCELLED") return order;
+      if (order.status !== "PENDING" && order.status !== "CONFIRMED") {
+        throw new Error("Order can no longer be cancelled.");
+      }
+
+      const blockingPayment = order.payments.some((payment) =>
+        ["CREATED", "PENDING", "PROCESSING", "COMPLETED"].includes(payment.status),
+      );
+      if (blockingPayment) {
+        throw new Error("An active or completed payment must be cancelled or refunded before cancelling this order.");
+      }
+
+      if (order.payments.length > 0) {
+        await inventoryService.releaseWithinTransaction(
+          database,
+          order.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+        );
+      }
+
+      const updated = await database.order.updateMany({
+        where: {
+          id: order.id,
+          userId,
+          status: order.status,
+        },
+        data: { status: PrismaOrderStatus.CANCELLED },
+      });
+
+      if (updated.count !== 1) {
+        throw new Error("Order changed while cancellation was being processed.");
+      }
+
+      return database.order.findUniqueOrThrow({
+        where: { id: order.id },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          total: true,
+          currency: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 5000,
+      timeout: 10000,
+    });
+  }
+
   async createOrder(
     input: CreateOrderInput
   ) {
