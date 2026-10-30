@@ -16,7 +16,8 @@ async function jsonRequest(url: string, init?: RequestInit) {
   return data;
 }
 
-export default function MarketplaceCallPanel({ conversationId }: { conversationId: string }) {
+export default function MarketplaceCallPanel({ conversationId, threadId }: { conversationId?: string; threadId?: string }) {
+  const callsEndpoint = threadId ? `/api/comms/threads/${encodeURIComponent(threadId)}/calls` : `/api/messages/${encodeURIComponent(conversationId ?? "")}/calls`;
   const [calls, setCalls] = useState<Call[]>([]);
   const [actorId, setActorId] = useState("");
   const [activeCall, setActiveCall] = useState<Call | null>(null);
@@ -42,7 +43,7 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
 
   const refreshCalls = useCallback(async () => {
     try {
-      const data = await jsonRequest(`/api/messages/${encodeURIComponent(conversationId)}/calls`);
+      const data = await jsonRequest(callsEndpoint);
       setCalls(data.calls ?? []);
       if (data.actorId) setActorId(data.actorId);
       const current = (data.calls as Call[] | undefined)?.find((call) => ["RINGING", "ACCEPTED"].includes(call.status) && new Date(call.expiresAt).getTime() > Date.now());
@@ -53,7 +54,7 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
     } catch {
       // The parent conversation endpoint remains the source of access control; transient polling errors are non-fatal.
     }
-  }, [conversationId]);
+  }, [callsEndpoint]);
 
   const sendSignal = useCallback(async (callId: string, type: Signal["type"], payload: object) => {
     await jsonRequest(`/api/messages/calls/${encodeURIComponent(callId)}/signals`, {
@@ -144,7 +145,7 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
     setBusy(true); setError("");
     let createdCall: Call | null = null;
     try {
-      const data = await jsonRequest(`/api/messages/${encodeURIComponent(conversationId)}/calls`, {
+      const data = await jsonRequest(callsEndpoint, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode }),
       });
       const call = data.call as Call;
