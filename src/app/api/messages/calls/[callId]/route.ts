@@ -43,7 +43,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
     if (action === "ACCEPT") {
       const result = await prisma.communicationCallSession.updateMany({
         where: { id: callId, calleeId: actor.id, status: "RINGING", expiresAt: { gt: now } },
-        data: { status: "ACCEPTED", acceptedAt: now },
+        data: { status: "ACCEPTED", acceptedAt: now, expiresAt: new Date(now.getTime() + 3 * 60 * 60_000) },
       });
       if (!result.count) return NextResponse.json({ message: "A chamada já foi respondida ou expirou." }, { status: 409 });
     } else {
