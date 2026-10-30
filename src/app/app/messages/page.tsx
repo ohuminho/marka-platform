@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/frontend/shell/AppShell";
 import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
@@ -168,5 +168,5 @@ function MessagesWorkspace() {
 }
 
 export default function MessagesPage() {
-  return <MessagesWorkspace />;
+  return <Suspense fallback={<div className="p-8 text-sm text-[var(--theme-text-muted)]">A carregar a caixa de entrada…</div>}><MessagesWorkspace /></Suspense>;
 }
