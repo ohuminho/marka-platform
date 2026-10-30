@@ -49,7 +49,7 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
       if (activeCallRef.current) {
         const refreshed = (data.calls as Call[] | undefined)?.find((call) => call.id === activeCallRef.current?.id);
         if (refreshed) setActiveCall(refreshed);
-      } else if (current?.callerId === data.actorId) setActiveCall(current);
+      } else if (current && current.callerId === data.actorId) setActiveCall(current);
     } catch {
       // The parent conversation endpoint remains the source of access control; transient polling errors are non-fatal.
     }
