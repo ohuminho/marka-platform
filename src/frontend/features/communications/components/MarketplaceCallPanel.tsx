@@ -142,15 +142,18 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
   async function startCall(mode: "AUDIO" | "VIDEO") {
     if (busy || activeCall) return;
     setBusy(true); setError("");
+    let createdCall: Call | null = null;
     try {
       const data = await jsonRequest(`/api/messages/${encodeURIComponent(conversationId)}/calls`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode }),
       });
       const call = data.call as Call;
+      createdCall = call;
       lastSignalAtRef.current = new Date(Date.now() - 60_000).toISOString();
       setActiveCall(call);
       await connect(call, true);
     } catch (e) {
+      if (createdCall) void jsonRequest(`/api/messages/calls/${encodeURIComponent(createdCall.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "END" }) }).catch(() => undefined);
       setError(e instanceof Error ? e.message : "Não foi possível iniciar a chamada.");
       closeMedia();
       setActiveCall(null);
@@ -166,6 +169,7 @@ export default function MarketplaceCallPanel({ conversationId }: { conversationI
       await connect({ ...call, status: "ACCEPTED" }, false);
       await processSignals({ ...call, status: "ACCEPTED" });
     } catch (e) {
+      void jsonRequest(`/api/messages/calls/${encodeURIComponent(call.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "END" }) }).catch(() => undefined);
       setError(e instanceof Error ? e.message : "Não foi possível aceitar a chamada.");
       closeMedia();
       setActiveCall(null);
