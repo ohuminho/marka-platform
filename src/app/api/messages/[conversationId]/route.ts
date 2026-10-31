@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { inspectMarketplaceMessage } from "@/core/marketplace/message-policy";
+import { reserveCommunicationWrite } from "@/core/communications/communication-write-limit";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -63,6 +64,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
     if (!conversation) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
 
     const result = await prisma.$transaction(async (tx) => {
+      if (!(await reserveCommunicationWrite(tx, actor.id, "SEND"))) return null;
       const created = await tx.marketplaceMessage.create({
         data: { conversationId, senderId: actor.id, body },
         include: { sender: { select: { id: true, name: true } } },
@@ -70,6 +72,7 @@ export async function POST(request: Request, context: { params: Promise<{ conver
       await tx.marketplaceConversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date() } });
       return created;
     });
+    if (!result) return NextResponse.json({ message: "Atingiste o limite de 20 mensagens por minuto. Aguarda um minuto." }, { status: 429, headers: { "Retry-After": "60", "Cache-Control": "no-store" } });
     return NextResponse.json({ message: result }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[MARKETPLACE_MESSAGE_SEND]", error);
@@ -96,14 +99,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ conve
       select: { id: true },
     });
     if (!conversation) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
-    const updated = await prisma.marketplaceMessage.updateMany({
-      where: { id: messageId, conversationId, senderId: actor.id },
-      data: { body, editedAt: new Date() },
+    const result = await prisma.$transaction(async (tx) => {
+      if (!(await reserveCommunicationWrite(tx, actor.id, "EDIT"))) return { limited: true as const };
+      const updated = await tx.marketplaceMessage.updateMany({
+        where: { id: messageId, conversationId, senderId: actor.id },
+        data: { body, editedAt: new Date() },
+      });
+      if (!updated.count) return { missing: true as const };
+      const message = await tx.marketplaceMessage.findUnique({
+        where: { id: messageId }, include: { sender: { select: { id: true, name: true } } },
+      });
+      return { message };
     });
-    if (!updated.count) return NextResponse.json({ message: "Mensagem não encontrada ou não pertence a ti." }, { status: 404 });
-    const message = await prisma.marketplaceMessage.findUnique({
-      where: { id: messageId }, include: { sender: { select: { id: true, name: true } } },
-    });
+    if ("limited" in result) return NextResponse.json({ message: "Atingiste o limite de 10 edições por minuto." }, { status: 429, headers: { "Retry-After": "60", "Cache-Control": "no-store" } });
+    if ("missing" in result) return NextResponse.json({ message: "Mensagem não encontrada ou não pertence a ti." }, { status: 404 });
+    const message = result.message;
     return NextResponse.json({ message }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[MARKETPLACE_MESSAGE_EDIT]", error);
