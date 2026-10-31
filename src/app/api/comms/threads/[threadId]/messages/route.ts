@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
+import { reserveCommunicationWrite } from "@/core/communications/communication-write-limit";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -53,12 +54,7 @@ export async function POST(request: Request, context: Context) {
     const policy = inspectMarketplaceMessage(body);
     if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
     const result = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.id}))`;
-      const windowStart = new Date(Date.now() - 60_000);
-      const recentMessages = await tx.communicationThreadMessage.count({
-        where: { senderId: actor.id, createdAt: { gte: windowStart } },
-      });
-      if (recentMessages >= 20) return null;
+      if (!(await reserveCommunicationWrite(tx, actor.id, "SEND"))) return null;
       const created = await tx.communicationThreadMessage.create({
         data: { threadId, senderId: actor.id, body },
         include: { sender: { select: { id: true, name: true } } },
@@ -96,14 +92,21 @@ export async function PATCH(request: Request, context: Context) {
     const { inspectMarketplaceMessage } = await import("@/core/marketplace/message-policy");
     const policy = inspectMarketplaceMessage(body);
     if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
-    const updated = await prisma.communicationThreadMessage.updateMany({
-      where: { id: messageId, threadId, senderId: actor.id },
-      data: { body, editedAt: new Date() },
+    const result = await prisma.$transaction(async (tx) => {
+      if (!(await reserveCommunicationWrite(tx, actor.id, "EDIT"))) return { limited: true as const };
+      const updated = await tx.communicationThreadMessage.updateMany({
+        where: { id: messageId, threadId, senderId: actor.id },
+        data: { body, editedAt: new Date() },
+      });
+      if (!updated.count) return { missing: true as const };
+      const message = await tx.communicationThreadMessage.findUnique({
+        where: { id: messageId }, include: { sender: { select: { id: true, name: true } } },
+      });
+      return { message };
     });
-    if (!updated.count) return NextResponse.json({ message: "Mensagem não encontrada ou não pertence a ti." }, { status: 404 });
-    const message = await prisma.communicationThreadMessage.findUnique({
-      where: { id: messageId }, include: { sender: { select: { id: true, name: true } } },
-    });
+    if ("limited" in result) return NextResponse.json({ message: "Atingiste o limite de 10 edições por minuto." }, { status: 429, headers: { "Retry-After": "60", "Cache-Control": "no-store" } });
+    if ("missing" in result) return NextResponse.json({ message: "Mensagem não encontrada ou não pertence a ti." }, { status: 404 });
+    const message = result.message;
     return NextResponse.json({ message }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
