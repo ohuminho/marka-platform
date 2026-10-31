@@ -68,21 +68,24 @@ export async function POST(request: Request, context: { params: Promise<{ callId
     if (type === "OFFER" && actor.id !== call.callerId) return NextResponse.json({ message: "A oferta inicial pertence ao iniciador da chamada." }, { status: 403 });
     if (type === "ANSWER" && actor.id !== call.calleeId) return NextResponse.json({ message: "A resposta pertence ao destinatário da chamada." }, { status: 403 });
 
-    const windowStart = new Date(Date.now() - 60_000);
-    const recentSignals = await prisma.communicationCallSignal.count({
-      where: { senderId: actor.id, createdAt: { gte: windowStart } },
+    const signal = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.id}))`;
+      const windowStart = new Date(Date.now() - 60_000);
+      const recentSignals = await tx.communicationCallSignal.count({
+        where: { senderId: actor.id, createdAt: { gte: windowStart } },
+      });
+      if (recentSignals >= 120) return null;
+      return tx.communicationCallSignal.create({
+        data: { callId, senderId: actor.id, type, payload: input.payload as Prisma.InputJsonValue, expiresAt: new Date(Date.now() + 5 * 60_000) },
+        select: { id: true, type: true, createdAt: true },
+      });
     });
-    if (recentSignals >= 120) {
+    if (!signal) {
       return NextResponse.json({ message: "A sinalização desta chamada excedeu o limite temporário." }, {
         status: 429,
         headers: { "Retry-After": "60", "Cache-Control": "no-store" },
       });
     }
-
-    const signal = await prisma.communicationCallSignal.create({
-      data: { callId, senderId: actor.id, type, payload: input.payload as Prisma.InputJsonValue, expiresAt: new Date(Date.now() + 5 * 60_000) },
-      select: { id: true, type: true, createdAt: true },
-    });
     return NextResponse.json({ signal }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
