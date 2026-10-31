@@ -79,6 +79,13 @@ async function resolveContext(contextType: CommunicationContextType, contextId: 
   };
 }
 
+export async function assertCommunicationContextParticipant(contextType: CommunicationContextType, contextId: string, actorId: string) {
+  const resolved = await resolveContext(contextType, contextId);
+  if (!resolved.participants.some((participant) => participant.userId === actorId)) {
+    throw new CommunicationContextError("Não tens autorização para participar nesta conversa.", 403);
+  }
+}
+
 export async function syncCommunicationThread(contextType: CommunicationContextType, contextId: string) {
   const resolved = await resolveContext(contextType, contextId);
   const thread = await prisma.$transaction(async (tx) => {
