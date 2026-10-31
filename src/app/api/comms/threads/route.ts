@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
-import { CommunicationContextError, getAuthorizedCommunicationThread, syncCommunicationThread } from "@/core/communications/communication-context.service";
+import { CommunicationContextError, assertCommunicationContextParticipant, getAuthorizedCommunicationThread, syncCommunicationThread } from "@/core/communications/communication-context.service";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -53,10 +53,8 @@ export async function POST(request: Request) {
     const contextType = input?.contextType === "MOBILITY" || input?.contextType === "DELIVERY" ? input.contextType : null;
     const contextId = typeof input?.contextId === "string" ? input.contextId.trim() : "";
     if (!contextType || !contextId || contextId.length > 128) return NextResponse.json({ message: "Contexto de comunicação inválido." }, { status: 400 });
+    await assertCommunicationContextParticipant(contextType, contextId, actor.id);
     const thread = await syncCommunicationThread(contextType, contextId);
-    if (!thread.participants.some((participant) => participant.userId === actor.id)) {
-      return NextResponse.json({ message: "Não tens autorização para participar nesta conversa." }, { status: 403 });
-    }
     return NextResponse.json({ thread }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
