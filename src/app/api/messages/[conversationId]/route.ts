@@ -27,7 +27,6 @@ export async function GET(_request: Request, context: { params: Promise<{ conver
         seller: { select: { id: true, name: true } },
         store: { select: { id: true, name: true } },
         product: { select: { id: true, name: true, image: true } },
-        messages: { orderBy: { createdAt: "asc" }, take: 500, include: { sender: { select: { id: true, name: true } } } },
       },
     });
     if (!conversation) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
@@ -36,7 +35,13 @@ export async function GET(_request: Request, context: { params: Promise<{ conver
       where: { conversationId, senderId: { not: actor.id }, readAt: null },
       data: { readAt: new Date() },
     });
-    return NextResponse.json({ conversation, actorId: actor.id }, { headers: { "Cache-Control": "private, no-store" } });
+    const messages = await prisma.marketplaceMessage.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: "asc" },
+      take: 500,
+      include: { sender: { select: { id: true, name: true } } },
+    });
+    return NextResponse.json({ conversation: { ...conversation, messages }, actorId: actor.id }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("[MARKETPLACE_CONVERSATION_GET]", error);
     return NextResponse.json({ message: "Não foi possível carregar esta conversa." }, { status: 500 });
