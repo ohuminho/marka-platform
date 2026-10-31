@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
-import { CommunicationContextError, getAuthorizedCommunicationThread, syncCommunicationThread } from "@/core/communications/communication-context.service";
+import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -48,6 +48,18 @@ export async function POST(request: Request, context: Context) {
     const input = await request.json().catch(() => null) as { message?: unknown } | null;
     const body = typeof input?.message === "string" ? input.message.trim() : "";
     if (body.length < 2 || body.length > 5000) return NextResponse.json({ message: "A mensagem deve ter entre 2 e 5000 caracteres." }, { status: 400 });
+
+    const windowStart = new Date(Date.now() - 60_000);
+    const recentMessages = await prisma.communicationThreadMessage.count({
+      where: { senderId: actor.id, createdAt: { gte: windowStart } },
+    });
+    if (recentMessages >= 20) {
+      return NextResponse.json({ message: "Atingiste o limite temporário de mensagens. Aguarda um minuto." }, {
+        status: 429,
+        headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+      });
+    }
+
     const { inspectMarketplaceMessage } = await import("@/core/marketplace/message-policy");
     const policy = inspectMarketplaceMessage(body);
     if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
