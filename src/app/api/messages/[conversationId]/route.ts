@@ -76,3 +76,37 @@ export async function POST(request: Request, context: { params: Promise<{ conver
     return NextResponse.json({ message: "Não foi possível enviar a mensagem." }, { status: 500 });
   }
 }
+
+
+export async function PATCH(request: Request, context: { params: Promise<{ conversationId: string }> }) {
+  try {
+    const actor = await getActor();
+    if (!actor) return NextResponse.json({ message: "Inicia sessão para editar mensagens." }, { status: 401 });
+    const { conversationId } = await context.params;
+    const input = await request.json().catch(() => null) as { messageId?: unknown; message?: unknown } | null;
+    const messageId = typeof input?.messageId === "string" ? input.messageId.trim() : "";
+    const body = typeof input?.message === "string" ? input.message.trim() : "";
+    if (!messageId || body.length < 2 || body.length > 5000) {
+      return NextResponse.json({ message: "Mensagem inválida. O texto deve ter entre 2 e 5000 caracteres." }, { status: 400 });
+    }
+    const policy = inspectMarketplaceMessage(body);
+    if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
+    const conversation = await prisma.marketplaceConversation.findFirst({
+      where: { id: conversationId, OR: [{ buyerId: actor.id }, { sellerId: actor.id }] },
+      select: { id: true },
+    });
+    if (!conversation) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
+    const updated = await prisma.marketplaceMessage.updateMany({
+      where: { id: messageId, conversationId, senderId: actor.id },
+      data: { body, editedAt: new Date() },
+    });
+    if (!updated.count) return NextResponse.json({ message: "Mensagem não encontrada ou não pertence a ti." }, { status: 404 });
+    const message = await prisma.marketplaceMessage.findUnique({
+      where: { id: messageId }, include: { sender: { select: { id: true, name: true } } },
+    });
+    return NextResponse.json({ message }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    console.error("[MARKETPLACE_MESSAGE_EDIT]", error);
+    return NextResponse.json({ message: "Não foi possível editar a mensagem." }, { status: 500 });
+  }
+}
