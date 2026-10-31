@@ -50,9 +50,7 @@ export async function POST(request: Request, context: { params: Promise<{ callId
     const { callId } = await context.params;
     const input = await request.json().catch(() => null) as { type?: unknown; payload?: unknown } | null;
     const type = input?.type === "OFFER" || input?.type === "ANSWER" || input?.type === "ICE_CANDIDATE" ? input.type : null;
-    if (!type) {
-      return NextResponse.json({ message: "Tipo de sinalização inválido." }, { status: 400 });
-    }
+    if (!type) return NextResponse.json({ message: "Tipo de sinalização inválido." }, { status: 400 });
     if (!input?.payload || typeof input.payload !== "object" || Array.isArray(input.payload)) {
       return NextResponse.json({ message: "Payload WebRTC inválido." }, { status: 400 });
     }
@@ -69,6 +67,17 @@ export async function POST(request: Request, context: { params: Promise<{ callId
     if (call.threadId) await getAuthorizedCommunicationThread(call.threadId, actor.id);
     if (type === "OFFER" && actor.id !== call.callerId) return NextResponse.json({ message: "A oferta inicial pertence ao iniciador da chamada." }, { status: 403 });
     if (type === "ANSWER" && actor.id !== call.calleeId) return NextResponse.json({ message: "A resposta pertence ao destinatário da chamada." }, { status: 403 });
+
+    const windowStart = new Date(Date.now() - 60_000);
+    const recentSignals = await prisma.communicationCallSignal.count({
+      where: { senderId: actor.id, createdAt: { gte: windowStart } },
+    });
+    if (recentSignals >= 120) {
+      return NextResponse.json({ message: "A sinalização desta chamada excedeu o limite temporário." }, {
+        status: 429,
+        headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+      });
+    }
 
     const signal = await prisma.communicationCallSignal.create({
       data: { callId, senderId: actor.id, type, payload: input.payload as Prisma.InputJsonValue, expiresAt: new Date(Date.now() + 5 * 60_000) },
