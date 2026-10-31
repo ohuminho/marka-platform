@@ -23,6 +23,10 @@ export async function GET(_request: Request, context: Context) {
     if (!actor) return NextResponse.json({ message: "Inicia sessão para consultar mensagens." }, { status: 401 });
     const { threadId } = await context.params;
     await getAuthorizedCommunicationThread(threadId, actor.id);
+    await prisma.communicationThreadMessage.updateMany({
+      where: { threadId, senderId: { not: actor.id }, readAt: null },
+      data: { readAt: new Date() },
+    });
     const thread = await prisma.communicationThread.findUnique({
       where: { id: threadId },
       include: {
@@ -31,7 +35,6 @@ export async function GET(_request: Request, context: Context) {
       },
     });
     if (!thread) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
-    await prisma.communicationThreadMessage.updateMany({ where: { threadId, senderId: { not: actor.id }, readAt: null }, data: { readAt: new Date() } });
     return NextResponse.json({ thread, actorId: actor.id }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
