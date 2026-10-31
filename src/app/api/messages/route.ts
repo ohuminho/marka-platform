@@ -6,6 +6,7 @@ import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { inspectMarketplaceMessage } from "@/core/marketplace/message-policy";
 import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
+import { reserveCommunicationWrite } from "@/core/communications/communication-write-limit";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -87,19 +88,24 @@ export async function POST(request: Request) {
     const sellerId = product.store.vendor.ownerId;
     if (sellerId === actor.id) return NextResponse.json({ message: "Não podes iniciar uma conversa contigo próprio." }, { status: 409 });
 
-    const conversation = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
+      if (!(await reserveCommunicationWrite(tx, actor.id, "SEND"))) return null;
       const thread = await tx.marketplaceConversation.upsert({
         where: { buyerId_sellerId_productId: { buyerId: actor.id, sellerId, productId: product.id } },
         create: { buyerId: actor.id, sellerId, storeId: product.storeId, productId: product.id, subject: product.name },
         update: { lastMessageAt: new Date() },
         select: { id: true, buyerId: true, sellerId: true, productId: true, storeId: true },
       });
-      await tx.marketplaceMessage.create({ data: { conversationId: thread.id, senderId: actor.id, body } });
+      const message = await tx.marketplaceMessage.create({
+        data: { conversationId: thread.id, senderId: actor.id, body },
+        include: { sender: { select: { id: true, name: true } } },
+      });
       await tx.marketplaceConversation.update({ where: { id: thread.id }, data: { lastMessageAt: new Date() } });
-      return thread;
+      return { conversation: thread, message };
     });
+    if (!result) return NextResponse.json({ message: "Atingiste o limite de 20 mensagens por minuto. Aguarda um minuto." }, { status: 429, headers: { "Retry-After": "60", "Cache-Control": "no-store" } });
 
-    return NextResponse.json({ conversation }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(result, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[MARKETPLACE_MESSAGES_CREATE]", error);
     return NextResponse.json({ message: "Não foi possível abrir a conversa. Tenta novamente." }, { status: 500 });
