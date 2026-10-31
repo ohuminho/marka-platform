@@ -49,21 +49,16 @@ export async function POST(request: Request, context: Context) {
     const body = typeof input?.message === "string" ? input.message.trim() : "";
     if (body.length < 2 || body.length > 5000) return NextResponse.json({ message: "A mensagem deve ter entre 2 e 5000 caracteres." }, { status: 400 });
 
-    const windowStart = new Date(Date.now() - 60_000);
-    const recentMessages = await prisma.communicationThreadMessage.count({
-      where: { senderId: actor.id, createdAt: { gte: windowStart } },
-    });
-    if (recentMessages >= 20) {
-      return NextResponse.json({ message: "Atingiste o limite temporário de mensagens. Aguarda um minuto." }, {
-        status: 429,
-        headers: { "Retry-After": "60", "Cache-Control": "no-store" },
-      });
-    }
-
     const { inspectMarketplaceMessage } = await import("@/core/marketplace/message-policy");
     const policy = inspectMarketplaceMessage(body);
     if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
     const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.id}))`;
+      const windowStart = new Date(Date.now() - 60_000);
+      const recentMessages = await tx.communicationThreadMessage.count({
+        where: { senderId: actor.id, createdAt: { gte: windowStart } },
+      });
+      if (recentMessages >= 20) return null;
       const created = await tx.communicationThreadMessage.create({
         data: { threadId, senderId: actor.id, body },
         include: { sender: { select: { id: true, name: true } } },
@@ -71,6 +66,12 @@ export async function POST(request: Request, context: Context) {
       await tx.communicationThread.update({ where: { id: threadId }, data: { lastMessageAt: new Date() } });
       return created;
     });
+    if (!result) {
+      return NextResponse.json({ message: "Atingiste o limite temporário de mensagens. Aguarda um minuto." }, {
+        status: 429,
+        headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+      });
+    }
     return NextResponse.json({ message: result }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
