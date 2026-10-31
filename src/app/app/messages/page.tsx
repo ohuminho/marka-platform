@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import AppShell from "@/frontend/shell/AppShell";
 import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
 
-type Message = { id: string; body: string; senderId: string; createdAt: string; readAt?: string | null; sender?: { id: string; name: string } };
+type Message = { id: string; body: string; senderId: string; createdAt: string; readAt?: string | null; editedAt?: string | null; sender?: { id: string; name: string } };
 type ContextThread = {
   id: string; contextId: string; contextType: "MOBILITY" | "DELIVERY"; subject?: string | null; lastMessageAt: string;
   participants: Array<{ userId: string; role: string; user?: { id: string; name: string } }>;
@@ -32,6 +32,9 @@ function MessagesWorkspace() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [actorId, setActorId] = useState("");
   const [draft, setDraft] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState("");
+  const [editDraft, setEditDraft] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -97,6 +100,27 @@ function MessagesWorkspace() {
   useEffect(() => { const initial = window.setTimeout(() => void loadConversations(), 0); const timer = window.setInterval(() => void loadConversations(), 12000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [loadConversations]);
   useEffect(() => { if (!activeId) return; const initial = window.setTimeout(() => void loadThread(activeId), 0); const timer = window.setInterval(() => void loadThread(activeId), 5000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [activeId, loadThread]);
 
+  async function saveEdit(messageId: string) {
+    if (!activeId || editDraft.trim().length < 2 || savingEdit) return;
+    setSavingEdit(true); setError("");
+    try {
+      const endpoint = active?.communicationThreadId
+        ? `/api/comms/threads/${encodeURIComponent(active.communicationThreadId)}/messages`
+        : `/api/messages/${encodeURIComponent(activeId)}`;
+      const response = await fetch(endpoint, {
+        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, message: editDraft.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível editar a mensagem.");
+      setMessages((current) => current.map((item) => item.id === messageId ? data.message : item));
+      setEditingMessageId(""); setEditDraft("");
+      await loadConversations();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao editar mensagem.");
+    } finally { setSavingEdit(false); }
+  }
+
   async function sendMessage(event: React.FormEvent) {
     event.preventDefault();
     if (!activeId || draft.trim().length < 2 || sending) return;
@@ -155,7 +179,19 @@ function MessagesWorkspace() {
               <div className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
                 {messages.map((message) => <div key={message.id} className={`flex ${message.senderId === actorId ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[72%] ${message.senderId === actorId ? "rounded-br-md bg-[var(--theme-text)] text-[var(--theme-background)]" : "rounded-bl-md border border-[var(--theme-border)] bg-[var(--theme-background)] text-[var(--theme-text)]"}`}>
-                    <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body}</p><p className={`mt-2 text-right text-[9px] ${message.senderId === actorId ? "opacity-60" : "text-[var(--theme-text-faint)]"}`}>{stamp(message.createdAt)}</p>
+                    {editingMessageId === message.id ? <>
+                      <textarea value={editDraft} onChange={(event) => setEditDraft(event.target.value)} maxLength={5000} rows={3} className="w-full min-w-[220px] rounded-lg border border-current/20 bg-transparent p-2 text-sm outline-none" aria-label="Editar mensagem" />
+                      <div className="mt-2 flex justify-end gap-3 text-[10px] font-semibold uppercase tracking-wide">
+                        <button type="button" onClick={() => { setEditingMessageId(""); setEditDraft(""); }} disabled={savingEdit}>Cancelar</button>
+                        <button type="button" onClick={() => void saveEdit(message.id)} disabled={savingEdit || editDraft.trim().length < 2}>{savingEdit ? "A guardar…" : "Guardar"}</button>
+                      </div>
+                    </> : <>
+                      <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body}</p>
+                      <div className={`mt-2 flex items-center justify-end gap-2 text-[9px] ${message.senderId === actorId ? "opacity-60" : "text-[var(--theme-text-faint)]"}`}>
+                        {message.editedAt && <span>Editada</span>}<span>{stamp(message.createdAt)}</span>
+                        {message.senderId === actorId && <button type="button" onClick={() => { setEditingMessageId(message.id); setEditDraft(message.body); }} className="underline underline-offset-2">Editar</button>}
+                      </div>
+                    </>}
                   </div>
                 </div>)}
                 {messages.length === 0 && <p className="text-center text-xs text-[var(--theme-text-faint)]">Envia a primeira mensagem desta conversa.</p>}
