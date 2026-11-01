@@ -267,8 +267,9 @@ export default function Sidebar() {
     hasAnyPermission,
   } = useAuth();
 
+  // Verified platform founder receives global control navigation.
   const role =
-    user?.role || "CUSTOMER";
+    user?.isFounder ? "SUPER_ADMIN" : user?.role || "CUSTOMER";
 
   const configuredSections: NavigationSection[] =
     (NavigationConfig[
@@ -287,6 +288,7 @@ export default function Sidebar() {
               : undefined;
 
           return (
+            Boolean(user?.isFounder) ||
             !permissions ||
             permissions.length === 0 ||
             hasAnyPermission(permissions)
