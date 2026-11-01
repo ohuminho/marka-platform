@@ -23,7 +23,7 @@ const REQUIRED_DRIVER_DOCUMENTS = [
   },
   {
     documentType: "DRIVING_LICENSE",
-    label: "Carta de condução válida e adequada ao veículo",
+    label: "Carta ou licença de condução válida e adequada à categoria/cilindrada; para moto-táxi, habilitação e carteira profissional legalmente exigidas",
   },
   {
     documentType: "CRIMINAL_RECORD",
