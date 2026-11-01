@@ -19,9 +19,9 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, status: true, role: true },
+    select: { id: true, status: true, role: true, isFounder: true },
   });
-  if (!user || user.status !== "ACTIVE" || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+  if (!user || user.status !== "ACTIVE" || !(user.isFounder || ["ADMIN", "SUPER_ADMIN"].includes(user.role))) {
     return NextResponse.json({ message: "Administrative access required." }, { status: 403 });
   }
 
