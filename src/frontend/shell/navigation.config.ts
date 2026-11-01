@@ -201,6 +201,12 @@ export const NavigationConfig = {
           permissions: ["SYSTEM_ADMIN"],
         },
         {
+          title: "Store Approvals",
+          route: "/app/admin/vendors",
+          description: "Review and activate Marketplace sellers and stores",
+          permissions: ["ADMIN_ACCESS"],
+        },
+        {
           title: "Compliance",
           route: "/app/admin/compliance",
           description: "Review KYC, KYD, KYB and compliance cases",
@@ -259,6 +265,12 @@ export const NavigationConfig = {
           route: "/app/mobility",
           description: "Global Mobility control",
           permissions: ["ADMIN_ACCESS"],
+        },
+        {
+          title: "Store Approvals",
+          route: "/app/admin/vendors",
+          description: "Global Marketplace seller and store approvals",
+          permissions: ["SYSTEM_ADMIN"],
         },
         {
           title: "Compliance",
