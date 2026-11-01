@@ -90,7 +90,7 @@ export async function PATCH(request: Request) {
       where: { id: input.id },
       select: { subjectType: true, subjectId: true, organizationId: true },
     });
-    if (target?.subjectType === "KYC" && target.organizationId === null && target.subjectId === user.id) {
+    if (["KYC", "KYD"].includes(target?.subjectType ?? "") && target?.organizationId === null && target.subjectId === user.id) {
       return NextResponse.json(
         { message: "Independent review is required for your own identity profile." },
         { status: 403 },
