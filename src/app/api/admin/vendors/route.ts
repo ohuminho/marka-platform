@@ -31,7 +31,7 @@ export async function GET() {
   if ("error" in auth) return auth.error;
   const vendors = await prisma.vendor.findMany({
     include: {
-      owner: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true, phoneVerifiedAt: true } },
       organization: { select: { id: true, name: true } },
       store: { select: { id: true, name: true, status: true } },
     },
@@ -42,7 +42,8 @@ export async function GET() {
     vendors: vendors.map((vendor) => ({
       id: vendor.id, name: vendor.name, businessType: vendor.businessType, phone: vendor.phone,
       country: vendor.country, status: vendor.status, verified: vendor.verified,
-      createdAt: vendor.createdAt.toISOString(), owner: vendor.owner,
+      createdAt: vendor.createdAt.toISOString(),
+      owner: { ...vendor.owner, phoneVerified: Boolean(vendor.owner.phoneVerifiedAt), phoneVerifiedAt: undefined },
       organization: vendor.organization, store: vendor.store,
     })),
   }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
@@ -56,24 +57,47 @@ export async function PATCH(request: Request) {
   const { vendorId, status, reason } = parsed.data;
   if (status !== "ACTIVE" && !reason) return NextResponse.json({ message: "Indique o motivo da suspensão ou rejeição." }, { status: 422 });
 
-  const vendor = await prisma.vendor.findUnique({ where: { id: vendorId }, include: { store: true } });
+  const vendor = await prisma.vendor.findUnique({
+    where: { id: vendorId },
+    include: { store: true, owner: { select: { id: true, phoneVerifiedAt: true } } },
+  });
   if (!vendor) return NextResponse.json({ message: "Candidatura de loja não encontrada." }, { status: 404 });
 
+  let identityLevel: "BUSINESS_VERIFIED" | "IDENTITY_VERIFIED" | "LIMITED_PHONE_VERIFIED" | null = null;
   if (status === "ACTIVE") {
-    const subjectType = vendor.businessType === "COMPANY" ? "KYB" : "KYC";
-    const subjectId = subjectType === "KYB" ? vendor.organizationId : vendor.ownerId;
+    const isCompany = vendor.businessType === "COMPANY";
+    const subjectType = isCompany ? "KYB" : "KYC";
+    const subjectId = isCompany ? vendor.organizationId : vendor.ownerId;
     const profile = await prisma.complianceProfile.findFirst({
-      where: { subjectType, subjectId, organizationId: subjectType === "KYB" ? vendor.organizationId : null },
+      where: { subjectType, subjectId, organizationId: isCompany ? vendor.organizationId : null },
       include: { documents: true },
       orderBy: { updatedAt: "desc" },
     });
     const now = new Date();
-    const validEvidence = !!profile && profile.status === "VERIFIED" && profile.documents.length > 0 &&
-      profile.documents.every((document) => document.status === "VERIFIED" && (!document.expiresAt || document.expiresAt > now));
-    if (!validEvidence) return NextResponse.json({
-      message: "A loja só pode ser ativada depois de a identidade ou documentação comercial estar verificada e válida no Centro de Conformidade.",
-      code: "VENDOR_COMPLIANCE_INCOMPLETE",
-    }, { status: 422 });
+    const validEvidence = Boolean(profile && profile.status === "VERIFIED" &&
+      profile.documents.length > 0 &&
+      profile.documents.every((document) => document.status === "VERIFIED" && (!document.expiresAt || document.expiresAt > now)));
+
+    if (isCompany && !validEvidence) {
+      return NextResponse.json({
+        message: "Uma empresa só pode ser ativada depois da verificação KYB e da documentação comercial válida.",
+        code: "VENDOR_KYB_REQUIRED",
+      }, { status: 422 });
+    }
+
+    if (isCompany) {
+      identityLevel = "BUSINESS_VERIFIED";
+    } else if (validEvidence) {
+      identityLevel = "IDENTITY_VERIFIED";
+    } else if (vendor.owner.phoneVerifiedAt) {
+      // Human approval is allowed for individual micro-sellers, but this is not civil-identity verification.
+      identityLevel = "LIMITED_PHONE_VERIFIED";
+    } else {
+      return NextResponse.json({
+        message: "Para aprovar um vendedor individual sem BI, confirma primeiro o telefone da conta. A aprovação será limitada e não atribuirá selo de identidade verificada.",
+        code: "VENDOR_PHONE_VERIFICATION_REQUIRED",
+      }, { status: 422 });
+    }
   }
 
   const requestHeaders = await headers();
@@ -81,20 +105,39 @@ export async function PATCH(request: Request) {
   const userAgent = requestHeaders.get("user-agent")?.slice(0, 500) ?? null;
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.vendor.update({ where: { id: vendor.id }, data: { status, verified: status === "ACTIVE" } });
+      await tx.vendor.update({
+        where: { id: vendor.id },
+        data: {
+          status,
+          // A phone-verified individual seller is not represented as civil-identity verified.
+          verified: status === "ACTIVE" && identityLevel !== "LIMITED_PHONE_VERIFIED",
+        },
+      });
       if (vendor.store) {
-        await tx.store.update({ where: { id: vendor.store.id }, data: { status: status === "ACTIVE" ? "ACTIVE" : status === "SUSPENDED" ? "SUSPENDED" : "INACTIVE" } });
+        await tx.store.update({
+          where: { id: vendor.store.id },
+          data: { status: status === "ACTIVE" ? "ACTIVE" : status === "SUSPENDED" ? "SUSPENDED" : "INACTIVE" },
+        });
       }
       await tx.auditLog.create({
         data: {
           actorUserId: auth.user.id, actorType: "ADMIN", organizationId: vendor.organizationId,
           action: status === "ACTIVE" ? "VENDOR_APPROVED" : status === "SUSPENDED" ? "VENDOR_SUSPENDED" : "VENDOR_REJECTED",
           entityType: "Vendor", entityId: vendor.id, ipAddress, userAgent,
-          metadata: { status, reason: reason?.trim() || null, ownerId: vendor.ownerId, storeId: vendor.store?.id ?? null },
+          metadata: {
+            status, reason: reason?.trim() || null, ownerId: vendor.ownerId,
+            storeId: vendor.store?.id ?? null, verificationLevel: identityLevel,
+            approvalMode: identityLevel === "LIMITED_PHONE_VERIFIED" ? "HUMAN_REVIEW_LIMITED" : "DOCUMENT_VERIFIED",
+          },
         },
       });
     });
-    return NextResponse.json({ success: true, vendorId: vendor.id, status, message: status === "ACTIVE" ? "Loja aprovada e ativada." : status === "SUSPENDED" ? "Loja suspensa." : "Candidatura rejeitada." });
+    const message = status !== "ACTIVE"
+      ? status === "SUSPENDED" ? "Loja suspensa." : "Candidatura rejeitada."
+      : identityLevel === "LIMITED_PHONE_VERIFIED"
+        ? "Loja aprovada com verificação limitada por revisão humana. Não recebe selo de identidade verificada."
+        : "Loja aprovada e ativada com documentação verificada.";
+    return NextResponse.json({ success: true, vendorId: vendor.id, status, verificationLevel: identityLevel, message });
   } catch (error) {
     console.error("[MARKA_VENDOR_REVIEW]", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json({ message: "Não foi possível guardar a decisão." }, { status: 500 });
