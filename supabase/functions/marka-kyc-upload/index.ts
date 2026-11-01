@@ -42,7 +42,7 @@ Deno.serve(async (request: Request) => {
       const { data: profile, error: profileError } = await supabase.from("ComplianceProfile")
         .select("id,subjectType,subjectId,organizationId").eq("id", document.profileId).maybeSingle();
       if (profileError || !profile) return json({ message: "Compliance profile not found." }, 404);
-      if (profile.subjectType === "KYC" && profile.subjectId === user.id) {
+      if (["KYC", "KYD"].includes(profile.subjectType) && profile.subjectId === user.id) {
         return json({ message: "You cannot review your own identity evidence." }, 403);
       }
       const { data: signed, error: signedError } = await supabase.storage.from("marka-kyc-evidence")
