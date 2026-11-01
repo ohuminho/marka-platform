@@ -201,6 +201,12 @@ export const NavigationConfig = {
           permissions: ["SYSTEM_ADMIN"],
         },
         {
+          title: "Driver Reviews",
+          route: "/app/admin/mobility/drivers",
+          description: "Review driver identity, licences and vehicle evidence",
+          permissions: ["ADMIN_ACCESS"],
+        },
+        {
           title: "Store Approvals",
           route: "/app/admin/vendors",
           description: "Review and activate Marketplace sellers and stores",
@@ -265,6 +271,12 @@ export const NavigationConfig = {
           route: "/app/mobility",
           description: "Global Mobility control",
           permissions: ["ADMIN_ACCESS"],
+        },
+        {
+          title: "Driver Reviews",
+          route: "/app/admin/mobility/drivers",
+          description: "Global driver and vehicle verification",
+          permissions: ["SYSTEM_ADMIN"],
         },
         {
           title: "Store Approvals",
