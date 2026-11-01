@@ -15,6 +15,8 @@ export default function AdminPage() {
           </header>
           <section className="grid gap-4 md:grid-cols-3">
             <a href="/app/admin/users" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Users</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Community administration.</p></a>
+            <a href="/app/admin/compliance" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Compliance</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Identity, driver and business verification.</p></a>
+            <a href="/app/admin/vendors" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Store Approvals</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Review and activate Marketplace stores.</p></a>
             <a href="/app/admin/delivery-agents" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Delivery Agents</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Delivery operations.</p></a>
             <a href="/app/admin/reports" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Reports</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Platform intelligence.</p></a>
           </section>
