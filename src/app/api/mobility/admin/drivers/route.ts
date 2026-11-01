@@ -20,8 +20,8 @@ async function authorizeAdmin() {
   if (!token) return { error: NextResponse.json({ message: "Autenticação necessária." }, { status: 401 }) };
   const session = await new SessionService().validate(token);
   if (!session) return { error: NextResponse.json({ message: "Sessão inválida." }, { status: 401 }) };
-  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, role: true, status: true } });
-  if (!user || user.status !== "ACTIVE" || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, role: true, status: true, isFounder: true } });
+  if (!user || user.status !== "ACTIVE" || !(user.isFounder || ["ADMIN", "SUPER_ADMIN"].includes(user.role))) {
     return { error: NextResponse.json({ message: "Apenas administradores autorizados podem rever motoristas." }, { status: 403 }) };
   }
   return { user, session };
