@@ -36,7 +36,7 @@ type VehicleResponse = { vehicle: Vehicle | null; requiredVehicleDocuments?: Arr
 
 const DEFAULT_DRIVER_DOCUMENTS = [
   { documentType: "IDENTITY_DOCUMENT", label: "BI, passaporte ou autorização de residência válida" },
-  { documentType: "DRIVING_LICENSE", label: "Carta de condução válida e adequada ao veículo" },
+  { documentType: "DRIVING_LICENSE", label: "Carta ou licença de condução válida e adequada à categoria/cilindrada; para moto-táxi, habilitação e carteira profissional legalmente exigidas" },
   { documentType: "CRIMINAL_RECORD", label: "Registo criminal, quando exigido pelas regras oficiais aplicáveis" },
 ];
 const DEFAULT_VEHICLE_DOCUMENTS = [
