@@ -26,14 +26,14 @@ Deno.serve(async (request: Request) => {
       return json({ message: "Session expired or invalid." }, 401);
     }
     const { data: user, error: userError } = await supabase.from("User")
-      .select("id,status,role").eq("id", session.userId).maybeSingle();
+      .select("id,status,role,isFounder").eq("id", session.userId).maybeSingle();
     if (userError || !user || user.status !== "ACTIVE") return json({ message: "Active account required." }, 403);
 
     const form = await request.formData();
     const action = String(form.get("action") ?? "upload");
 
     if (action === "signed-url" || action === "review-document") {
-      if (!["ADMIN", "SUPER_ADMIN"].includes(user.role)) return json({ message: "Administrative access required." }, 403);
+      if (!(user.isFounder || ["ADMIN", "SUPER_ADMIN"].includes(user.role))) return json({ message: "Administrative access required." }, 403);
       const documentId = String(form.get("documentId") ?? "").trim();
       if (!documentId) return json({ message: "Document reference required." }, 400);
       const { data: document, error: documentError } = await supabase.from("ComplianceDocument")
