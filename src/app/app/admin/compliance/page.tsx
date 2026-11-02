@@ -23,6 +23,7 @@ type Profile = {
 
 export default function AdminCompliancePage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +35,9 @@ export default function AdminCompliancePage() {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.message ?? "Unable to load the compliance queue.");
     }
-    const data = (await response.json()) as { profiles?: Profile[] };
+    const data = (await response.json()) as { profiles?: Profile[]; currentUserId?: string };
     setProfiles(data.profiles ?? []);
+    setCurrentUserId(data.currentUserId ?? null);
   };
 
   useEffect(() => {
@@ -51,7 +53,11 @@ export default function AdminCompliancePage() {
     setError(null);
     setNotice(null);
     let reason: string | undefined;
-    if (status === "REJECTED" || status === "SUSPENDED") {
+    const isOwnIdentity = profile.subjectId === currentUserId && profile.organizationId == null && ["KYC", "KYD"].includes(profile.subjectType);
+    if (isOwnIdentity && status === "VERIFIED") {
+      reason = window.prompt("Founder self-attestation: explain why you are certifying your own identity (this will be permanently audited and will not count as independent verification):")?.trim() ?? "";
+      if (!reason) { setError("A justification is required for founder self-attestation."); return; }
+    } else if (status === "REJECTED" || status === "SUSPENDED") {
       reason = window.prompt(status === "REJECTED" ? "Reason for rejection (required):" : "Reason for suspension (required):")?.trim() ?? "";
       if (!reason) {
         setError("A clear reason is required.");
@@ -77,11 +83,15 @@ export default function AdminCompliancePage() {
     }
   };
 
-  const reviewDocument = async (document: ComplianceDocument, action: "signed-url" | "review-document", status?: "VERIFIED" | "REJECTED") => {
+  const reviewDocument = async (profile: Profile, document: ComplianceDocument, action: "signed-url" | "review-document", status?: "VERIFIED" | "REJECTED") => {
     setError(null);
     setNotice(null);
     let reason: string | undefined;
-    if (status === "REJECTED") {
+    const isOwnIdentity = profile.subjectId === currentUserId && profile.organizationId == null && ["KYC", "KYD"].includes(profile.subjectType);
+    if (isOwnIdentity && status === "VERIFIED") {
+      reason = window.prompt("Founder self-attestation: explain why you are certifying this document (this will be permanently audited and will not count as independent verification):")?.trim() ?? "";
+      if (!reason) { setError("A justification is required for founder self-attestation."); return; }
+    } else if (status === "REJECTED") {
       reason = window.prompt("Reason for rejecting this document (required):")?.trim() ?? "";
       if (!reason) {
         setError("A clear document rejection reason is required.");
@@ -126,7 +136,7 @@ export default function AdminCompliancePage() {
           <p className="text-sm font-medium text-[var(--theme-muted)]">Administration</p>
           <h1 className="mt-2 text-3xl font-semibold text-[var(--theme-text)]">Compliance Center</h1>
           <p className="mt-2 max-w-3xl text-[var(--theme-muted)]">
-            Inspect private evidence using short-lived links, review each document, and then decide the overall profile. Identity owners cannot approve their own KYC.
+            Inspect private evidence using short-lived links and review each document. Founder self-attestation is available as an audited exception, but never counts as independent verification or driver activation approval.
           </p>
         </div>
         <a href="/app/admin/mobility/drivers" className="rounded-xl border border-[var(--theme-border)] px-4 py-3 text-sm font-semibold text-[var(--theme-text)] transition hover:opacity-80">Revisão e ativação de motoristas</a>
@@ -175,13 +185,13 @@ export default function AdminCompliancePage() {
                                 {document.expiresAt && <p className="mt-1 text-xs text-[var(--theme-muted)]">Expires {new Date(document.expiresAt).toLocaleDateString()}</p>}
                                 {document.rejectionReason && <p className="mt-1 text-xs text-red-500">{document.rejectionReason}</p>}
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                  <button disabled={busy} onClick={() => void reviewDocument(document, "signed-url")} className="rounded-lg border border-[var(--theme-border)] px-2.5 py-1.5 text-xs text-[var(--theme-text)] disabled:opacity-40">
+                                  <button disabled={busy} onClick={() => void reviewDocument(profile, document, "signed-url")} className="rounded-lg border border-[var(--theme-border)] px-2.5 py-1.5 text-xs text-[var(--theme-text)] disabled:opacity-40">
                                     {busyId === document.id ? "Working…" : "View evidence"}
                                   </button>
-                                  <button disabled={busy || document.status === "VERIFIED" || Boolean(document.expiresAt && new Date(document.expiresAt).getTime() <= Date.now())} onClick={() => void reviewDocument(document, "review-document", "VERIFIED")} className="rounded-lg border border-emerald-600/40 px-2.5 py-1.5 text-xs text-[var(--theme-text)] disabled:opacity-40">
+                                  <button disabled={busy || document.status === "VERIFIED" || Boolean(document.expiresAt && new Date(document.expiresAt).getTime() <= Date.now())} onClick={() => void reviewDocument(profile, document, "review-document", "VERIFIED")} className="rounded-lg border border-emerald-600/40 px-2.5 py-1.5 text-xs text-[var(--theme-text)] disabled:opacity-40">
                                     Approve document
                                   </button>
-                                  <button disabled={busy} onClick={() => void reviewDocument(document, "review-document", "REJECTED")} className="rounded-lg border border-red-500/40 px-2.5 py-1.5 text-xs text-[var(--theme-text)] disabled:opacity-40">
+                                  <button disabled={busy} onClick={() => void reviewDocument(profile, document, "review-document", "REJECTED")} className="rounded-lg border border-red-500/40 px-2.5 py-1.5 text-xs text-[var(--theme-text)] disabled:opacity-40">
                                     Reject document
                                   </button>
                                 </div>
