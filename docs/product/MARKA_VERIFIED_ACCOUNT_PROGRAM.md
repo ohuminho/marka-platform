@@ -1,78 +1,95 @@
-# MARKA Verified Account Program — Product and Trust Specification
+# MARKA Trust, Verified Accounts and Seller Reputation
 
-**Status:** Product specification; not yet a live paid product.
-**Scope:** MARKA consumer accounts and public Marketplace identity surfaces. This is separate from driver onboarding (KYD) and business verification (KYB).
+**Status:** Approved product direction; implementation must reuse existing compliance and marketplace foundations.
+**Scope:** Individual sellers, business sellers, public seller/store profiles, Marketplace discovery and seller performance.
 
-## 1. Recommendation
+## 1. Core product rule
 
-Use a **recurring subscription** for the premium MARKA Verified package, with monthly and annual options. Do not sell a permanent one-time paid badge.
+MARKA is open to individuals and registered businesses. A person must be able to create a seller profile and list an eligible product without first creating a company or joining an organization.
 
-Important distinction from Facebook: Meta announced a free, selfie-based Facebook Verified badge for eligible personal profiles in July 2026, while Meta Verified for creators/businesses is a paid subscription product. So MARKA should not assume every Facebook verification badge is paid; the strongest commercial precedent is the subscription bundle that adds support and impersonation protection, not a one-time sale of a checkmark. Availability and methods can vary by market, so do not assume the same flow is available in Angola.
+Identity verification is a trust and safety process, not a paid product. Never sell the blue identity check, infer verification from a subscription, or let payment bypass KYC review.
 
-Identity review and the paid badge are different controls:
+A buyer must see the seller's verification state clearly before deciding to contact or transact.
 
-- **KYC identity review:** establishes that the person behind the account has been reviewed. It is evidence-based, may require document expiry/re-review, and must not be bypassed by payment.
-- **MARKA Verified subscription:** pays for the active public badge and its associated trust/support benefits. The badge is displayed only when KYC is approved, the subscription is active, and the account is in good standing.
+## 2. Public identity states
 
-A paid subscription must never turn a pending, rejected, expired, or suspended KYC profile into a verified identity.
+- **Identidade verificada** — blue check; identity review approved, current and account in good standing.
+- **Verificação em análise** — neutral status only where appropriate; never display a blue check.
+- **Ainda não verificada** — clearly state that MARKA has not confirmed the seller's identity.
+- **Verificação expirada / suspensa** — remove the check immediately and show the account owner the private next step.
 
-## 2. Badge and account states
+The public badge is derived server-side. It is not a user-editable boolean, profile decoration, vendor approval flag, subscription benefit or client-supplied claim.
 
-| KYC state | Subscription | Public badge |
-| --- | --- | --- |
-| Not started / pending / in review | Any | No verified check; show application state only to the account owner |
-| Rejected / expired / suspended | Active | No verified check; suspend badge and explain next step privately |
-| Verified and unexpired | Inactive / cancelled / expired | No paid badge |
-| Verified and unexpired | Active and paid/comped | Show verified check beside the display name |
-| Verified and unexpired | Payment grace period | Keep badge only during a short, clearly defined grace period |
-| Account suspended or high-risk lock | Any | Hide badge while the account is restricted |
+Reuse the existing ComplianceProfile and ComplianceDocument models. The public identity predicate must require KYC, the seller's actual user ID, organizationId null for personal identity, status VERIFIED, no expired profile/documents, and an active unrestricted user account. Do not create a second identity database. Never expose document references, ID numbers, private review notes or rejection reasons.
 
-The check must be a server-derived state. It must never be set by a client request, profile text, vendor self-service field, or a user-editable boolean.
+## 3. Listing access and progressive trust
 
-## 3. Suggested commercial packaging
+- A new account can create a profile and prepare listings.
+- Basic account security checks (verified phone/email where available, rate limits and abuse checks) are required before publishing.
+- Unverified sellers may publish eligible low-risk listings with a clear 'Ainda não verificada' label.
+- Higher-risk categories and sensitive actions may require identity verification before publication, buyer contact, reservation or transaction. Define this per category using a documented risk matrix; do not impose one blanket restriction on the Marketplace.
+- Sellers must see their verification status and next step in their account.
+- Fraud reports, identity mismatch, document expiry or material account changes can trigger review or re-verification.
+- Provide review, appeal and proportional restriction paths; do not suspend accounts automatically from a single unverified report.
 
-- **Monthly subscription:** accessible entry price, automatically renewed only with clear consent.
-- **Annual subscription:** discounted relative to twelve monthly payments.
-- **Founder identity is not a verification privilege:** do not grant a blue identity check merely because someone created or owns MARKA, and do not make payment a requirement for the founder's identity to be reviewed. The founder can receive a separate, clearly labelled “Fundador MARKA” role marker based on the platform's ownership records. The blue identity check must mean that the account identity was reviewed and approved through a documented process. To avoid a self-approval conflict, the founder's KYC decision should be recorded by a second authorized reviewer, or by a formally documented independent verification method. Any complimentary MARKA Verified subscription is a separate commercial entitlement and must never itself approve KYC.
-- Do not set prices in code until Angolan payment costs, taxes, consumer terms, chargeback risk, and local willingness-to-pay are reviewed.
+For vehicles, property, high-value goods and regulated services, add relevant ownership/authority and category-specific checks in addition to personal identity. KYC alone does not prove ownership of an item, property title or authority to sell.
 
-Benefits should be explicit and operationally deliverable: visible verification check, stronger impersonation reporting, priority account-support queue, and a clear verification-status page. Do not promise reach, sales, ranking, or guaranteed protection.
+## 4. Verification operations
 
-## 4. Reuse existing MARKA compliance infrastructure
+Build a clear account verification area: current status and last review date; required steps and accepted documents; secure document submission; pending/approved/rejected/expired/suspended states; private actionable rejection reason and resubmission; reviewer identity and immutable audit event; expiry reminders; and an admin review queue with role-based access and separation of duties.
 
-The repository already has the Compliance layer with KYC, KYD, and KYB profiles and review states. Reuse it; do not create a competing KYC database.
+Do not claim that identity verification guarantees honesty, product quality, ownership or transaction success. MARKA checked the identity; it does not guarantee the seller.
 
-The public badge predicate should be equivalent to:
+## 5. Seller reputation and gamification
 
-1. KYC profile belongs to the authenticated user and has no organization scope.
-2. KYC status is `VERIFIED`.
-3. `expiresAt` is null or in the future.
-4. Account is active and not restricted.
-5. MARKA Verified entitlement is active (paid or explicitly comped).
+Reward consistently good service, not vanity metrics or paid popularity.
 
-KYC document references, IDs, review notes, and rejection reasons must never be exposed on public profiles.
+### Signals
 
-## 5. Implementation sequence
+Use reliable, auditable events: completed transactions/services; buyer reviews linked to completed transactions; rating distribution; cancellation/no-show rate with fair attribution; substantiated dispute/refund rate; response time/rate; on-time delivery/service completion where supported; account age and verified identity as trust context, not a substitute for performance.
 
-1. **Trust baseline:** confirm KYC review and expiry handling; add audit events for decisions and badge changes.
-2. **Billing entitlement:** add a subscription/entitlement record using the existing payment infrastructure; persist provider subscription IDs, status, plan, current period, cancellation and grace-period dates. Never trust a client-side payment-success redirect.
-3. **Server-derived badge:** create one shared badge component and one server-side status resolver used by Marketplace profile cards, seller/store pages, account header, and other public name surfaces.
-4. **Founder account:** identify the exact account using authenticated account records, never by guessing from a GitHub username or display name. Record the founder role separately from KYC. Do not mark identity verified until an authorized, independent review has approved the relevant KYC profile. A founder role badge may be displayed separately and must not resemble the blue identity check.
-5. **Self-service:** pricing/benefits page, checkout, renewal/cancellation controls, invoices/receipts, and clear status messages.
-6. **Operations:** admin review queue, audit log, abuse/impersonation reports, renewal failure notifications, and suspension/revocation path.
-7. **Launch gates:** payment webhook tests, expiry tests, KYC rejection tests, subscription cancellation tests, permission tests, and public/private data-leak checks.
+Do not reward raw views, clicks, followers, paid advertising, self-reviews, review exchanges or transactions designed to manipulate ranking. Detect suspicious patterns and discount or exclude them.
 
-## 6. UX direction
+### Reputation levels
 
-Use a small, crisp blue verification check immediately after the display name, with an accessible tooltip such as “Identidade verificada pela MARKA”. Keep the subscription/renewal details private in account settings. The visual badge must be recognizable but restrained and consistent across Marketplace, account profiles, and seller surfaces.
+- **Novo vendedor** — new account; no performance claim yet.
+- **Vendedor ativo** — minimum activity and completed transactions.
+- **Vendedor de confiança** — verified identity plus sufficient completed transactions, strong feedback and low substantiated issue rates.
+- **Destaque MARKA** — sustained top performance over a rolling period, with minimum sample size and anti-manipulation checks.
 
-Do not use a gold “founder” ornament as a substitute for the blue verified check. The “Fundador MARKA” marker confirms platform role/ownership only; the blue check confirms identity review. These two claims must be visually and technically distinct.
+Calibrate thresholds from real platform data; do not invent public numerical cut-offs before sufficient volume exists. With too few completed transactions, show 'Dados insuficientes', not a misleading 5-star score.
 
-## 7. Safety and launch constraints
+### Discovery and benefits
 
-- Payment is not identity evidence.
-- Email verification is not KYC.
-- A profile photo or document upload is not proof of authenticity by itself.
-- Reverification is event-driven (document expiry, account changes, credible fraud signals, legal requirements), not an arbitrary recurring identity fee.
-- Do not activate the paid badge until subscription state is linked to confirmed billing events.
-- Do not manually mark the owner verified until the exact MARKA account is identified and its KYC review is approved.
+Provide buyer filters for identity-verified and top-rated sellers. Organic ranking should balance relevance, location, freshness, availability, transaction quality and reputation. Give a modest earned discovery advantage to sustained high performers, subject to relevance and category fit; never guarantee first position or sales. Clearly label sponsored placements and keep them separate from organic reputation ranking.
+
+Benefits may include a reputation badge, profile insights, eligibility for curated collections, priority support for proven sellers and seller education. Do not promise fee discounts or preferential settlement until economics and legal terms are approved.
+
+## 6. Reviews and fairness
+
+Only a buyer associated with a completed eligible transaction can review. One review per transaction; edits only within a documented window and with history preserved. Sellers may respond but cannot delete legitimate negative reviews. Provide reporting, moderation, evidence review and appeal. Separate product quality, seller conduct and delivery/service quality where supported. Do not punish sellers for buyer cancellations, PSP outages, platform failures or events outside their control. Display rating count and distribution, not only a rounded average.
+
+## 7. Founder and business identity markers
+
+A founder marker, if used, confirms a platform role only. It must be visually distinct from the blue identity check and never substitute for KYC. For business sellers, show a separate KYB state only after the legal entity and representative authority have been reviewed. An individual's verified identity does not automatically verify their company.
+
+## 8. Implementation sequence
+
+1. Audit existing ComplianceProfile/KYC submission, review, expiry and audit APIs.
+2. Implement one server-side identity-status resolver and reusable public badge component.
+3. Surface status in seller profile, store page, product card and account verification page.
+4. Add category risk rules and ownership/authority checks for high-risk listings.
+5. Audit completed-order and review infrastructure; implement verified-purchase reviews if missing.
+6. Add reputation aggregation from server-side transaction events, with anti-fraud controls and rolling windows.
+7. Add seller levels, filters and ranking signals only after event quality and sample-size gates pass.
+8. Test privacy, authorization, KYC expiry/revocation, review manipulation, appeals and ranking fairness.
+
+## 9. Non-negotiable safeguards
+
+- Identity verification is not for sale.
+- A verified badge means identity review, not a guarantee of the seller or product.
+- No public KYC documents or private compliance data.
+- No fake reviews, bought rankings or hidden sponsored results.
+- No ranking based only on popularity or volume.
+- No blanket exclusion of legitimate individual sellers.
+- No parallel KYC, wallet, payment or reputation database where an existing domain service can be reused.
