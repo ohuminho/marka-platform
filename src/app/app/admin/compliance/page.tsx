@@ -13,6 +13,7 @@ type Profile = {
   id: string;
   subjectType: string;
   subjectId: string;
+  organizationId: string | null;
   status: string;
   submittedAt: string | null;
   verifiedAt: string | null;
