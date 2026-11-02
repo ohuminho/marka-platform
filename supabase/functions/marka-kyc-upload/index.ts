@@ -37,13 +37,14 @@ Deno.serve(async (request: Request) => {
       const documentId = String(form.get("documentId") ?? "").trim();
       if (!documentId) return json({ message: "Document reference required." }, 400);
       const { data: document, error: documentError } = await supabase.from("ComplianceDocument")
-        .select("id,profileId,documentRef,expiresAt,status").eq("id", documentId).maybeSingle();
+        .select("id,profileId,documentRef,expiresAt,status,metadata").eq("id", documentId).maybeSingle();
       if (documentError || !document || !document.documentRef) return json({ message: "Evidence not found." }, 404);
       const { data: profile, error: profileError } = await supabase.from("ComplianceProfile")
         .select("id,subjectType,subjectId,organizationId").eq("id", document.profileId).maybeSingle();
       if (profileError || !profile) return json({ message: "Compliance profile not found." }, 404);
-      if (["KYC", "KYD"].includes(profile.subjectType) && profile.subjectId === user.id) {
-        return json({ message: "You cannot review your own identity evidence." }, 403);
+      const isOwnIdentity = ["KYC", "KYD"].includes(profile.subjectType) && profile.subjectId === user.id;
+      if (isOwnIdentity && !user.isFounder) {
+        return json({ message: "Independent review is required for your own identity evidence." }, 403);
       }
       const { data: signed, error: signedError } = await supabase.storage.from("marka-kyc-evidence")
         .createSignedUrl(document.documentRef, 300);
@@ -54,15 +55,23 @@ Deno.serve(async (request: Request) => {
       const reason = String(form.get("reason") ?? "").trim();
       if (!["VERIFIED", "REJECTED"].includes(status)) return json({ message: "Invalid document decision." }, 400);
       if (status === "REJECTED" && !reason) return json({ message: "A rejection reason is required." }, 400);
+      if (isOwnIdentity && !reason) return json({ message: "Founder self-attestation requires an explicit reason.", code: "FOUNDER_SELF_ATTESTATION_REASON_REQUIRED" }, 422);
       if (status === "VERIFIED" && document.expiresAt && new Date(document.expiresAt).getTime() <= Date.now()) {
         return json({ message: "Expired evidence cannot be verified." }, 400);
       }
+      const reviewedAt = new Date().toISOString();
+      const previousMetadata = document.metadata && typeof document.metadata === "object" && !Array.isArray(document.metadata)
+        ? document.metadata as Record<string, unknown>
+        : {};
+      const reviewMetadata = isOwnIdentity
+        ? { ...previousMetadata, selfAttested: true, selfAttestedBy: user.id, selfAttestedAt: reviewedAt, selfAttestationReason: reason, reviewMode: "FOUNDER_SELF_ATTESTATION" }
+        : { ...previousMetadata, selfAttested: false, reviewMode: "INDEPENDENT_REVIEW" };
       const { data: updated, error: updateError } = await supabase.from("ComplianceDocument").update({
-        status, reviewedAt: new Date().toISOString(), reviewedBy: user.id,
+        status, reviewedAt, reviewedBy: user.id, metadata: reviewMetadata,
         rejectionReason: status === "REJECTED" ? reason : null,
       }).eq("id", document.id).select("id,documentType,status,expiresAt,rejectionReason").single();
       if (updateError || !updated) return json({ message: "Document review could not be saved." }, 500);
-      return json({ document: updated });
+      return json({ document: updated, selfAttested: isOwnIdentity, reviewMode: isOwnIdentity ? "FOUNDER_SELF_ATTESTATION" : "INDEPENDENT_REVIEW" });
     }
 
     const file = form.get("file");
