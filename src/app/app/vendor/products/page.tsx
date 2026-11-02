@@ -106,7 +106,7 @@ export default function VendorProductsPage() {
   const [form, setForm] = useState({
     name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros",
     brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "",
-    propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "",
+    propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", enableSpaceBooking: false,
     serviceType: "", availability: "", duration: "", productType: "", customProductType: "", unit: "Unidade", capacity: "",
   });
 
@@ -219,7 +219,7 @@ export default function VendorProductsPage() {
           stock: Number(form.stock),
           currency: "AOA",
           brand: form.brand, model: form.model, year: form.year, mileage: form.mileage, condition: form.condition, fuel: form.fuel, transmission: form.transmission,
-          propertyType: form.propertyType, transactionType: form.transactionType, bedrooms: form.bedrooms, bathrooms: form.bathrooms, area: form.area, location: form.location,
+          propertyType: form.propertyType, transactionType: form.transactionType, bedrooms: form.bedrooms, bathrooms: form.bathrooms, area: form.area, location: form.location, spaceBookingEnabled: form.enableSpaceBooking,
           serviceType: form.serviceType, availability: form.availability, duration: form.duration,
           productType: form.productType === "Outros" ? form.customProductType : form.productType, unit: form.unit, capacity: form.capacity, images: productImages, videos: productVideos,
         }),
@@ -227,7 +227,7 @@ export default function VendorProductsPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível guardar o anúncio.");
       setNotice(data.message || "Anúncio guardado como rascunho.");
-      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros", brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "", propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", serviceType: "", availability: "", duration: "", productType: "", customProductType: "", unit: "Unidade", capacity: "" });
+      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros", brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "", propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", enableSpaceBooking: false, serviceType: "", availability: "", duration: "", productType: "", customProductType: "", unit: "Unidade", capacity: "" });
       setProductImages([]);
       setProductVideos([]);
       await load();
@@ -384,7 +384,10 @@ export default function VendorProductsPage() {
                       <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="propertyType">Tipo de imóvel</label><select id="propertyType" className={field} value={form.propertyType} onChange={(e) => setForm({ ...form, propertyType: e.target.value })}><option>Apartamento</option><option>Casa</option><option>Vivenda</option><option>Quarto</option><option>Terreno residencial</option><option>Loja</option><option>Espaço comercial</option><option>Escritório</option><option>Sala de reuniões</option><option>Sala de conferências</option><option>Sala de formação</option><option>Coworking</option><option>Armazém</option><option>Armazém logístico</option><option>Centro de distribuição</option><option>Pavilhão industrial</option><option>Fábrica</option><option>Terreno industrial</option><option>Terreno agrícola</option><option>Quinta</option><option>Espaço para eventos</option><option>Hotel ou pensão</option></select></div><div><label className={label} htmlFor="transactionType">Finalidade</label><select id="transactionType" className={field} value={form.transactionType} onChange={(e) => setForm({ ...form, transactionType: e.target.value })}><option>Arrendamento</option><option>Venda</option></select></div>
                       <div><label className={label} htmlFor="propertyBedrooms">Quartos</label><input id="propertyBedrooms" className={field} type="number" min="0" value={form.bedrooms} onChange={(e) => setForm({ ...form, bedrooms: e.target.value })} /></div><div><label className={label} htmlFor="propertyBathrooms">Casas de banho</label><input id="propertyBathrooms" className={field} type="number" min="0" value={form.bathrooms} onChange={(e) => setForm({ ...form, bathrooms: e.target.value })} /></div>
                       <div><label className={label} htmlFor="propertyArea">Área (m²)</label><input id="propertyArea" className={field} type="number" min="1" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} /></div><div><label className={label} htmlFor="propertyLocation">Localização</label><input id="propertyLocation" className={field} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Município, bairro" /></div></div>
-                    </fieldset>}
+                    <div className="sm:col-span-2 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
+                        <label className="flex items-start gap-3 text-sm text-[var(--theme-text)]"><input type="checkbox" className="mt-1 h-4 w-4 accent-current" checked={form.enableSpaceBooking} disabled={!["Sala de reuniões","Sala de conferências","Sala de formação","Coworking","Espaço para eventos"].includes(form.propertyType)} onChange={(e) => setForm({ ...form, enableSpaceBooking: e.target.checked })} /><span><strong>Ativar reservas online</strong><span className="mt-1 block text-xs leading-5 text-[var(--theme-text-muted)]">Disponível apenas para salas de reuniões, conferências, formação, coworking e espaços para eventos. O cliente consulta horários e envia um pedido; o proprietário define o preço e aceita. Não há cobrança automática nesta fase.</span></span></label>
+                        {["Sala de reuniões","Sala de conferências","Sala de formação","Coworking","Espaço para eventos"].includes(form.propertyType) && <div className="mt-3"><label className={label} htmlFor="spaceCapacity">Capacidade de participantes</label><input id="spaceCapacity" type="number" min="1" max="1000" className={field} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="Ex.: 24" /></div>}
+                      </div></fieldset>}
                     {form.categoryName.startsWith("Serviços") && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do serviço</legend>
                       <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="serviceAvailability">Disponibilidade</label><input id="serviceAvailability" className={field} value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })} placeholder="Ex.: Segunda a sábado" /></div><div><label className={label} htmlFor="serviceDuration">Duração estimada</label><input id="serviceDuration" className={field} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="Ex.: 2 horas" /></div></div>
                     </fieldset>}
