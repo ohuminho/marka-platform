@@ -367,7 +367,7 @@ export default function ProductDetails({
             {Object.entries(attributes).filter(([key,value]) => !["galleryImages","galleryVideos"].includes(key) && typeof value !== "object" && value !== "").map(([key,value]) => <div key={key} className="rounded-xl border border-[var(--theme-border)] p-3"><p className="text-[10px] uppercase tracking-wider text-[var(--theme-text)]/45">{({productType:"Tipo de produto",unit:"Unidade de venda",capacity:"Capacidade / medida",propertyType:"Tipo de imóvel",transactionType:"Finalidade",bedrooms:"Quartos",bathrooms:"Casas de banho",area:"Área (m²)",location:"Localização",serviceType:"Serviço"} as Record<string,string>)[key] ?? key}</p><p className="mt-1 font-medium text-[var(--theme-text)]">{String(value)}</p></div>)}
           </div>
 
-          {attributes.spaceBookingEnabled === true && <div className="mt-8"><SpaceBookingPanel productId={product.id} /></div>}
+          {(attributes.spaceBookingEnabled === true || attributes.spaceBookingEnabled === "true") && <div className="mt-8"><SpaceBookingPanel productId={product.id} /></div>}
 
           <div className="mt-8 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Falar com o vendedor</p>
