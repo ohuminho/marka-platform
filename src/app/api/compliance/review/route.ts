@@ -168,7 +168,7 @@ export async function PATCH(request: Request) {
       const previous = target.metadata as Record<string, unknown>;
       if (previous.selfAttested === true) {
         const { selfAttested, selfAttestedBy, selfAttestedAt, selfAttestationReason, reviewMode, ...remaining } = previous;
-        await prisma.complianceProfile.update({ where: { id: input.id }, data: { metadata: remaining } });
+        await prisma.complianceProfile.update({ where: { id: input.id }, data: { metadata: remaining as Prisma.InputJsonObject } });
       }
     }
 
