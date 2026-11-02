@@ -139,6 +139,14 @@ export async function POST(request: Request) {
 
     const input = parsed.data;
     const categoryName = input.categoryName.toLocaleLowerCase();
+    const isServiceCategory = categoryName.startsWith("serviços");
+    const isPropertyCategory = categoryName === "imóveis e arrendamento";
+    if (isServiceCategory && !input.serviceType.trim()) {
+      return NextResponse.json({ message: "Escolha o tipo de serviço que presta." }, { status: 400 });
+    }
+    if (!isServiceCategory && !isPropertyCategory && !input.productType.trim()) {
+      return NextResponse.json({ message: "Escolha o tipo de produto ou mercadoria que vende." }, { status: 400 });
+    }
     const details: string[] = [];
     const attributes: Record<string, string> = {};
     const addDetail = (label: string, value: unknown) => {
