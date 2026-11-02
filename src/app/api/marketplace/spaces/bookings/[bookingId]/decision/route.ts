@@ -52,6 +52,9 @@ export async function POST(request: Request, context: { params: Promise<{ bookin
       return NextResponse.json({ message: "Dados de decisão inválidos.", code: "INVALID_BOOKING_DECISION", errors: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
     const input = parsed.data;
+    if (input.decision === "accept" && Number(input.quoteAmount) <= 0) {
+      return NextResponse.json({ message: "O valor da proposta deve ser superior a zero.", code: "INVALID_QUOTE_AMOUNT" }, { status: 400 });
+    }
 
     const booking = await prisma.spaceBooking.findFirst({
       where: { id: bookingId, product: { store: { vendor: { ownerId: user.id } } } },
