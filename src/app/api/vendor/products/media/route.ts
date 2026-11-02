@@ -32,9 +32,12 @@ export async function POST(request: Request) {
 
     const form = await request.formData();
     const file = form.get("file");
-    if (!(file instanceof File)) return NextResponse.json({ message: "Escolha uma fotografia." }, { status: 400 });
-    if (file.size < 1 || file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ message: "A imagem deve ter até 5 MB." }, { status: 413 });
+    if (!(file instanceof File)) return NextResponse.json({ message: "Escolha uma imagem ou vídeo." }, { status: 400 });
+    const isImage = ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+    const isVideo = ["video/mp4", "video/webm", "video/quicktime"].includes(file.type);
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    if ((!isImage && !isVideo) || file.size < 1 || file.size > maxSize) {
+      return NextResponse.json({ message: "Formato não suportado ou ficheiro acima do limite (imagem 5 MB; vídeo 50 MB)." }, { status: 413 });
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
