@@ -12,21 +12,7 @@ interface MarketplaceQuery {
 export class MarketplaceService {
   async getCategories() {
     return prisma.category.findMany({
-      where: {
-        status: "ACTIVE",
-        products: {
-          some: {
-            status: "ACTIVE",
-            stock: { gt: 0 },
-            store: {
-              is: {
-                status: "ACTIVE",
-                vendor: { is: { status: "ACTIVE" } },
-              },
-            },
-          },
-        },
-      },
+      where: { status: "ACTIVE" },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
