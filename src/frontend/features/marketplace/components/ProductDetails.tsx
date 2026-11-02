@@ -299,13 +299,7 @@ export default function ProductDetails({
 
             <VendorTrustBadge
 
-              verified={
-                product.store.verified
-              }
-
-              rating={
-                product.store.rating
-              }
+              verified={product.store.verified}
 
             />
 
