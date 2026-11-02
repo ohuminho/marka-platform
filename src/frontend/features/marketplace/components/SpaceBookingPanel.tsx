@@ -22,7 +22,8 @@ function dayBounds(date: string) {
   const now = new Date();
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
   const currentTime = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
-  return { from: date === today ? date + "T" + currentTime + ":00+01:00" : date + "T00:00:00+01:00", to: date + "T23:59:59+01:00" };
+  const preciseNow = new Date(now.getTime() + 60 * 60 * 1000).toISOString().replace("Z", "+01:00");
+  return { from: date === today ? preciseNow : date + "T00:00:00+01:00", to: date + "T23:59:59+01:00" };
 }
 
 export default function SpaceBookingPanel({ productId }: { productId: string }) {
