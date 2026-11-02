@@ -40,6 +40,8 @@ const createProductSchema = z.object({
   bedrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")), bathrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
   area: z.coerce.number().positive().max(10_000_000).optional().or(z.literal("")), location: z.string().trim().max(200).optional().default(""),
   serviceType: z.string().trim().max(160).optional().default(""), availability: z.string().trim().max(120).optional().default(""), duration: z.string().trim().max(80).optional().default(""),
+  productType: z.string().trim().max(160).optional().default(""), unit: z.string().trim().max(60).optional().default(""), capacity: z.string().trim().max(120).optional().default(""),
+  images: z.array(z.string().trim().url().max(2048)).max(10).optional().default([]),
 });
 
 const productActionSchema = z.object({
@@ -156,6 +158,10 @@ export async function POST(request: Request) {
       addDetail("Especialidade", input.serviceType); addDetail("Disponibilidade", input.availability); addDetail("Duração estimada", input.duration);
       for (const [key, value] of Object.entries({ serviceType: input.serviceType, availability: input.availability, duration: input.duration })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
     }
+    if (input.productType) { addDetail("Tipo de produto", input.productType); attributes.productType = input.productType; }
+    if (input.unit) { addDetail("Unidade de venda", input.unit); attributes.unit = input.unit; }
+    if (input.capacity) { addDetail("Capacidade / medida", input.capacity); attributes.capacity = input.capacity; }
+    if (input.images.length) attributes.galleryImages = JSON.stringify(input.images);
     const completeDescription = [input.description, details.length ? `Detalhes do anúncio:\n${details.join("\n")}` : ""].filter(Boolean).join("\n\n").slice(0, 5000);
     let categoryId: string | null = null;
     if (input.categoryName) {
@@ -176,7 +182,7 @@ export async function POST(request: Request) {
         description: completeDescription || null,
         attributes: Object.keys(attributes).length ? attributes : undefined,
         sku: input.sku || `MK-${crypto.randomUUID()}`,
-        image: input.image || null,
+        image: input.image || input.images[0] || null,
         price: input.price.toFixed(4),
         currency: input.currency.toUpperCase(),
         stock: input.stock,
