@@ -221,6 +221,39 @@ export default function MobilityExperience() {
         </div>
       </section>
 
+      <section className="space-y-5 rounded-[1.7rem] border border-[#e9bd58]/20 bg-[#090b10] p-5 sm:p-7">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[.24em] text-[#e9bd58]">MARKA Mobility · expansão de serviços</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Mais do que transporte de passageiros.</h2>
+            <p className="mt-2 max-w-2xl text-xs leading-6 text-white/50">O ecossistema inclui transporte de mercadorias e assistência rodoviária. Estes serviços têm fluxos próprios de cotação, pagamento e despacho — não são enviados como uma viagem de táxi.</p>
+          </div>
+          <Link href="/app/mobility/parceiros" className="rounded-full border border-[#e9bd58]/40 px-4 py-2.5 text-xs font-semibold text-[#f2cd70] transition hover:bg-[#e9bd58]/10">Área de parceiros ↗</Link>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">MARKA Cargo</p><h3 className="mt-1 text-lg font-semibold text-white">Transporte de mercadorias</h3></div>
+              <span className="text-2xl" aria-hidden="true">▰</span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-white/50">Contratação de transporte completo com veículo e motorista do parceiro.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {["Triciclo de carga","Pick-up aberta","Carrinha fechada / caixa","Camião ligeiro","Camião de plataforma","Camião basculante","Camião pesado","Cisterna de água"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
+            </div>
+          </article>
+          <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">MARKA Assist</p><h3 className="mt-1 text-lg font-semibold text-white">Assistência e reboque</h3></div>
+              <span className="text-2xl" aria-hidden="true">↗</span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-white/50">Apoio ao veículo imobilizado, com prestador compatível e despacho condicionado à confirmação de pagamento no servidor.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {["Reboque / remoção","Recuperação após acidente","Desempanagem no local","Assistência de pneus e bateria"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
+            </div>
+          </article>
+        </div>
+      </section>
+
       <form onSubmit={submitRide} className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="rounded-[1.7rem] border border-white/10 bg-[#0a0c11] p-4 sm:p-6">
           <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">01 · Serviço</p><h2 className="mt-1 text-xl font-semibold">Escolha o tipo de viagem</h2><p className="mt-2 text-xs leading-5 text-white/45">O tipo seleccionado é enviado ao dispatch, que procura veículos compatíveis e motoristas elegíveis.</p></div>
