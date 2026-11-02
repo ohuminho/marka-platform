@@ -6,7 +6,7 @@ export class VendorService {
     input: { storeName: string; businessType: "INDIVIDUAL" | "COMPANY"; phone?: string; country?: string; organizationId?: string }
   ) {
     const existing = await prisma.vendor.findFirst({
-      where: { ownerId, status: { notIn: ["SUSPENDED", "CLOSED"] } },
+      where: { ownerId },
       select: { id: true },
     });
     if (existing) {
