@@ -86,6 +86,31 @@ export async function POST(
       );
     }
 
+    const passengerCount =
+      Number.isInteger(body?.passengerCount)
+        ? Number(body.passengerCount)
+        : 1;
+
+    if (passengerCount < 1 || passengerCount > 100) {
+      return NextResponse.json(
+        {
+          message: "O número de passageiros deve estar entre 1 e 100.",
+          code: "INVALID_PASSENGER_COUNT",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (serviceType === "MOTO_TAXI" && passengerCount !== 1) {
+      return NextResponse.json(
+        {
+          message: "O serviço de moto-táxi aceita apenas um passageiro.",
+          code: "MOTO_TAXI_PASSENGER_LIMIT",
+        },
+        { status: 400 },
+      );
+    }
+
     const safetyMode =
       normalizeSafetyMode(
         body?.safetyMode,
@@ -171,6 +196,7 @@ export async function POST(
           ),
 
           safetyMode,
+          passengerCount,
         },
       });
 
