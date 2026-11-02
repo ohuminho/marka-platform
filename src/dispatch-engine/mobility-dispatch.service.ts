@@ -59,6 +59,15 @@ export interface MobilityDispatchResult {
     | null;
 }
 
+const SERVICE_VEHICLE_TYPES: Record<string, string[]> = {
+  TAXI: ["CAR"],
+  MOTO_TAXI: ["MOTORCYCLE"],
+  VAN: ["VAN"],
+  MINIBUS: ["MINIBUS"],
+  BUS: ["BUS"],
+  COACH: ["COACH"],
+};
+
 export class MobilityDispatchService {
   async dispatch(
     input: MobilityDispatchSearchInput
@@ -88,14 +97,7 @@ export class MobilityDispatchService {
 
         vehicleTypes:
           input.vehicleTypes ??
-          ({
-            TAXI: ["CAR"],
-            MOTO_TAXI: ["MOTORCYCLE"],
-            VAN: ["VAN"],
-            MINIBUS: ["MINIBUS"],
-            BUS: ["BUS"],
-            COACH: ["COACH"],
-          }[ride.serviceType] ?? undefined),
+          SERVICE_VEHICLE_TYPES[ride.serviceType],
 
         radiusMeters:
           input.radiusMeters,
