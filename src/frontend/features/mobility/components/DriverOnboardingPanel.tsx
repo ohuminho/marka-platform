@@ -82,10 +82,9 @@ export default function DriverOnboardingPanel() {
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
-    if (!organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const headers = { "X-Organization-Id": organizationId };
+      const headers: Record<string, string> = organizationId ? { "X-Organization-Id": organizationId } : {};
       const [driverResponse, vehicleResponse] = await Promise.all([
         fetch("/api/mobility/driver/onboarding", { credentials: "include", cache: "no-store", headers }),
         fetch("/api/mobility/driver/vehicle", { credentials: "include", cache: "no-store", headers }),
@@ -134,12 +133,11 @@ export default function DriverOnboardingPanel() {
   async function acceptTerms() {
     setError(""); setNotice("");
     if (!termsChecked) { setError("Abre e lê os Termos de Adesão e assinala a caixa de aceitação expressa."); return; }
-    if (!organizationId) { setError("Seleciona primeiro a organização MARKA."); return; }
     setSubmitting(true);
     try {
       const response = await fetch("/api/mobility/driver/accept-terms", {
         method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+        headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
         body: JSON.stringify({ accepted: true }),
       });
       const data = await response.json().catch(() => ({}));
@@ -160,7 +158,7 @@ export default function DriverOnboardingPanel() {
     try {
       const response = await fetch("/api/mobility/driver/onboarding", {
         method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+        headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
         body: JSON.stringify({ displayName: displayName.trim() || undefined, licenseNumber: licenseNumber.trim() || undefined, countryCode: "AO" }),
       });
       const data = await response.json() as OnboardingResponse;
