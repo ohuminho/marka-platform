@@ -77,8 +77,8 @@ export async function PATCH(request: Request) {
   const driver = await prisma.mobilityDriver.findUnique({
     where: { id: driverId },
     include: {
-      verifications: { select: { documentType: true, status: true, documentExpiry: true } },
-      vehicles: { where: { activeUntil: null, isPrimary: true }, include: { vehicle: { include: { verifications: { select: { documentType: true, status: true, documentExpiry: true } } } } } },
+      verifications: { select: { documentType: true, status: true, documentExpiry: true, reviewedBy: true } },
+      vehicles: { where: { activeUntil: null, isPrimary: true }, include: { vehicle: { include: { verifications: { select: { documentType: true, status: true, documentExpiry: true, reviewedBy: true } } } } } },
     },
   });
   if (!driver) return NextResponse.json({ message: "Candidatura de motorista não encontrada." }, { status: 404 });
