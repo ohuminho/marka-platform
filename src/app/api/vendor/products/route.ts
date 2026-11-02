@@ -152,8 +152,8 @@ export async function POST(request: Request) {
       addDetail("Quartos", input.bedrooms); addDetail("Casas de banho", input.bathrooms);
       addDetail("Área (m²)", input.area); addDetail("Localização", input.location);
       for (const [key, value] of Object.entries({ propertyType: input.propertyType, transactionType: input.transactionType, bedrooms: input.bedrooms, bathrooms: input.bathrooms, area: input.area, location: input.location })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
-    } else if (categoryName === "serviços") {
-      addDetail("Tipo de serviço", input.serviceType); addDetail("Disponibilidade", input.availability); addDetail("Duração estimada", input.duration);
+    } else if (categoryName.startsWith("serviços")) {
+      addDetail("Especialidade", input.serviceType); addDetail("Disponibilidade", input.availability); addDetail("Duração estimada", input.duration);
       for (const [key, value] of Object.entries({ serviceType: input.serviceType, availability: input.availability, duration: input.duration })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
     }
     const completeDescription = [input.description, details.length ? `Detalhes do anúncio:\n${details.join("\n")}` : ""].filter(Boolean).join("\n\n").slice(0, 5000);
