@@ -1,85 +1,22 @@
 interface VendorTrustBadgeProps {
-
   verified?: boolean;
-
-  rating?: number;
-
 }
 
-
-
-export default function VendorTrustBadge({
-
-  verified,
-
-  rating,
-
-}: VendorTrustBadgeProps) {
-
-
-  return (
-
-    <div className="
-      flex
-      items-center
-      gap-3
-      text-sm
-    ">
-
-
-      {
-        verified
-          ?
-          <span className="
-            rounded-full
-            border
-            border-white/20
-            bg-white/10
-            px-3
-            py-1
-          ">
-
-            Verified Vendor
-
-          </span>
-
-          :
-
-          <span className="
-            rounded-full
-            border
-            border-white/10
-            bg-white/5
-            px-3
-            py-1
-            text-white/50
-          ">
-
-            Standard Vendor
-
-          </span>
-      }
-
-
-
-      {
-        typeof rating === "number" &&
-        (
-
-          <span className="
-            text-white/60
-          ">
-
-            ★ {rating.toFixed(1)}
-
-          </span>
-
-        )
-      }
-
-
-    </div>
-
+export default function VendorTrustBadge({ verified = false }: VendorTrustBadgeProps) {
+  return verified ? (
+    <span
+      className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+      aria-label="Identidade do vendedor verificada pela MARKA"
+    >
+      <span aria-hidden="true">✓</span>
+      Identidade verificada
+    </span>
+  ) : (
+    <span
+      className="inline-flex items-center gap-2 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-1.5 text-xs text-[var(--theme-text-muted)]"
+      aria-label="A identidade deste vendedor ainda não foi verificada"
+    >
+      Identidade ainda não verificada
+    </span>
   );
-
 }
