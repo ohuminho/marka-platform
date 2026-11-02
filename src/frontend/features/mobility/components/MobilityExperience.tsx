@@ -46,6 +46,7 @@ export default function MobilityExperience() {
   const [origin, setOrigin] = useState<MapPoint | null>(null);
   const [destination, setDestination] = useState<MapPoint | null>(null);
   const [serviceType, setServiceType] = useState<string>("TAXI");
+  const [passengerCount, setPassengerCount] = useState(1);
   const [safetyMode, setSafetyMode] = useState<"STANDARD" | "TRUSTED" | "CHILD">("STANDARD");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export default function MobilityExperience() {
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({
           serviceType,
+          passengerCount,
           currency: "AOA",
           pickupLatitude: origin.lat,
           pickupLongitude: origin.lon,
@@ -141,6 +143,20 @@ export default function MobilityExperience() {
               <span className="rounded-full border border-white/15 bg-black/25 px-3 py-2 backdrop-blur-sm">GPS do dispositivo</span>
               <span className="rounded-full border border-white/15 bg-black/25 px-3 py-2 backdrop-blur-sm">Rotas OpenStreetMap</span>
               <span className="rounded-full border border-[#e9bd58]/35 bg-[#e9bd58]/[.08] px-3 py-2 text-[#f2cd70] backdrop-blur-sm">Pedido registado no sistema</span>
+            </div>
+            <div className="mt-5 max-w-xs">
+              <label htmlFor="mobility-passengers" className="mb-2 block text-xs font-semibold text-white/75">Número de passageiros</label>
+              <input
+                id="mobility-passengers"
+                type="number"
+                min={1}
+                max={serviceType === "MOTO_TAXI" ? 1 : 100}
+                value={serviceType === "MOTO_TAXI" ? 1 : passengerCount}
+                disabled={serviceType === "MOTO_TAXI"}
+                onChange={(event) => setPassengerCount(Math.max(1, Math.min(100, Number(event.target.value) || 1)))}
+                className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-[#e9bd58]"
+              />
+              <p className="mt-1 text-[11px] text-white/45">A atribuição considera a lotação registada e aprovada da viatura.</p>
             </div>
             <div className="mt-6 grid grid-cols-3 gap-2">
               {[
