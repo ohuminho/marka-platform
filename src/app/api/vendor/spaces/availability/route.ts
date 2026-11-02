@@ -58,8 +58,16 @@ async function ownedSpace(productId: string, ownerId: string) {
       category: { name: { equals: "Imóveis e arrendamento", mode: "insensitive" }, status: "ACTIVE" },
       store: { vendor: { ownerId, status: "ACTIVE" } },
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, attributes: true },
   });
+  if (!product) return null;
+  const attributes = product.attributes && typeof product.attributes === "object" && !Array.isArray(product.attributes)
+    ? product.attributes as Record<string, unknown>
+    : {};
+  const eligibleTypes = ["sala de reuniões", "sala de conferências", "sala de formação", "coworking", "espaço para eventos"];
+  const propertyType = String(attributes.propertyType ?? "").trim().toLocaleLowerCase();
+  if ((attributes.spaceBookingEnabled !== true && attributes.spaceBookingEnabled !== "true") || !eligibleTypes.includes(propertyType)) return null;
+  return { id: product.id, name: product.name };
 }
 
 export async function GET(request: Request) {
