@@ -38,13 +38,17 @@ export async function getPublicSellerVerification(
   ]);
 
   const activeOwnerIds = new Set(users.map((user) => user.id));
-  const validProfiles = profiles.filter((profile) =>
+  const validProfiles = profiles.filter((profile) => {
+    const metadata = profile.metadata && typeof profile.metadata === "object" && !Array.isArray(profile.metadata)
+      ? profile.metadata as Record<string, unknown>
+      : {};
+    return metadata.selfAttested !== true &&
     profile.documents.length > 0 &&
     profile.documents.every((document) =>
       document.status === "VERIFIED" &&
       (!document.expiresAt || document.expiresAt > now)
-    )
-  );
+    );
+  });
 
   for (const seller of activeSellers) {
     if (!activeOwnerIds.has(seller.ownerId)) continue;
