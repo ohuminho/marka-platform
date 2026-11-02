@@ -227,7 +227,7 @@ export default function VendorProductsPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível guardar o anúncio.");
       setNotice(data.message || "Anúncio guardado como rascunho.");
-      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros", brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "", propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", serviceType: "", availability: "", duration: "", productType: "", unit: "Unidade", capacity: "" });
+      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros", brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "", propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", serviceType: "", availability: "", duration: "", productType: "", customProductType: "", unit: "Unidade", capacity: "" });
       setProductImages([]);
       setProductVideos([]);
       await load();
