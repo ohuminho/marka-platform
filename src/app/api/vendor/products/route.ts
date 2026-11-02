@@ -246,7 +246,7 @@ export async function POST(request: Request) {
             : "Produto publicado. A identidade do vendedor ainda não foi verificada.")
         : (sensitiveCategory
             ? "Anúncio guardado como rascunho. Esta categoria ou valor exige verificação de identidade e validação adicional."
-            : "Produto guardado como rascunho. Adicione stock ou aguarde a aprovação da loja.");
+            : "Produto guardado como rascunho. Adicione stock ou aguarde a aprovação da loja."),
     }, { status: 201 });
   } catch (error) {
     console.error("[VENDOR_PRODUCTS_POST]", error);
