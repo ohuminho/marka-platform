@@ -188,7 +188,9 @@ export async function POST(request: Request) {
     const attributes = product.attributes && typeof product.attributes === "object" && !Array.isArray(product.attributes)
       ? product.attributes as Record<string, unknown>
       : {};
-    if (attributes.spaceBookingEnabled !== true && attributes.spaceBookingEnabled !== "true") {
+    const eligibleSpaceTypes = ["sala de reuniões", "sala de conferências", "sala de formação", "coworking", "espaço para eventos"];
+    const propertyType = String(attributes.propertyType ?? "").trim().toLocaleLowerCase();
+    if ((attributes.spaceBookingEnabled !== true && attributes.spaceBookingEnabled !== "true") || !eligibleSpaceTypes.includes(propertyType)) {
       return NextResponse.json({ message: "Este anúncio não está configurado para reservas de espaços.", code: "SPACE_BOOKING_NOT_ENABLED" }, { status: 404 });
     }
     const rawCapacity = attributes.capacity ?? attributes.participantCapacity;
