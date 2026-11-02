@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
           currency: product.currency || "AOA",
           // No amount is charged or guessed at request time. The owner must confirm
           // the final quote before a payment intent can be created.
-          totalAmount: new prisma.Prisma.Decimal(0),
+          totalAmount: new Prisma.Decimal(0),
           priceSnapshot: {
             pricingStatus: "OWNER_QUOTE_REQUIRED",
             listedPrice: product.price.toString(),
