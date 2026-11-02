@@ -10,6 +10,28 @@ interface MarketplaceQuery {
 }
 
 export class MarketplaceService {
+  async getCategories() {
+    return prisma.category.findMany({
+      where: {
+        status: "ACTIVE",
+        products: {
+          some: {
+            status: "ACTIVE",
+            stock: { gt: 0 },
+            store: {
+              is: {
+                status: "ACTIVE",
+                vendor: { is: { status: "ACTIVE" } },
+              },
+            },
+          },
+        },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
   async getProducts(query?: MarketplaceQuery) {
     let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: "desc" };
     if (query?.sortBy === "price_asc") orderBy = { price: "asc" };
