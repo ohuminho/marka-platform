@@ -23,6 +23,7 @@ import {
 type MarketplaceProductsResponse = {
   products: MarketplaceProduct[];
 };
+type MarketplaceCategory = { id: string; name: string };
 
 export default function ProductGrid() {
   const { language } = usePlatformPreferences();
@@ -38,6 +39,21 @@ export default function ProductGrid() {
   ] = useState(true);
 
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/marketplace/categories", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data.categories) ? data.categories as MarketplaceCategory[] : [];
+      })
+      .then((items) => { if (!cancelled) setCategories(items); })
+      .catch(() => { if (!cancelled) setCategories([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
