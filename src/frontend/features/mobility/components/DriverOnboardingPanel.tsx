@@ -30,6 +30,7 @@ type Vehicle = {
   year: number | null;
   color: string | null;
   capacity: number | null;
+  metadata?: unknown;
   verifications?: Verification[];
 };
 type VehicleResponse = { vehicle: Vehicle | null; requiredVehicleDocuments?: Array<{ documentType: string; label: string }>; message?: string };
@@ -71,7 +72,7 @@ export default function DriverOnboardingPanel() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [files, setFiles] = useState<Record<string, File | undefined>>({});
   const [expiryDates, setExpiryDates] = useState<Record<string, string>>({});
-  const [vehicleForm, setVehicleForm] = useState({ type: "CAR", registrationNumber: "", make: "", model: "", year: String(new Date().getFullYear()), color: "", capacity: "4" });
+  const [vehicleForm, setVehicleForm] = useState({ type: "CAR", registrationNumber: "", make: "", model: "", year: String(new Date().getFullYear()), color: "", capacity: "4", ownershipType: "DRIVER_OWNED", ownerName: "", ownerPhone: "" });
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -106,6 +107,9 @@ export default function DriverOnboardingPanel() {
           year: String(vehicleData.vehicle.year || new Date().getFullYear()),
           color: vehicleData.vehicle.color || "",
           capacity: String(vehicleData.vehicle.capacity || 4),
+          ownershipType: (vehicleData.vehicle.metadata as Record<string, unknown> | undefined)?.ownershipType === "THIRD_PARTY_AUTHORIZED" ? "THIRD_PARTY_AUTHORIZED" : "DRIVER_OWNED",
+          ownerName: String((vehicleData.vehicle.metadata as Record<string, unknown> | undefined)?.ownerName || ""),
+          ownerPhone: String((vehicleData.vehicle.metadata as Record<string, unknown> | undefined)?.ownerPhone || ""),
         });
       }
       setError("");
@@ -305,9 +309,14 @@ export default function DriverOnboardingPanel() {
       </section>
 
       <section className="space-y-4 rounded-2xl border border-[var(--theme-border)] p-4 sm:p-5">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">Etapa 04 · Veículo</p><h3 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">Registar a viatura que será utilizada</h3><p className="mt-1 text-sm text-[var(--theme-text-muted)]">A matrícula e os dados ficam associados ao teu perfil. Não carregues documentos antes de guardar os dados da viatura.</p></div>
+        <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">Etapa 04 · Veículo</p><h3 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">Registar a viatura que será utilizada</h3><p className="mt-1 text-sm text-[var(--theme-text-muted)]">Regista o táxi ou motociclo que vais conduzir. O veículo pode ser teu ou de terceiro, desde que tenhas autorização legítima para o utilizar. Se pertencer a terceiro, identifica o titular e envia a respetiva autorização no documento de propriedade/uso.</p></div>
         <form onSubmit={saveVehicle} className="grid gap-4 sm:grid-cols-2">
-          <label className={labelClass}>Categoria<select value={vehicleForm.type} onChange={(event) => setVehicleForm((v) => ({ ...v, type: event.target.value }))} className={inputClass}><option value="CAR">Carro</option><option value="MOTORCYCLE">Motociclo</option><option value="VAN">Carrinha</option><option value="MINIBUS">Minibus</option><option value="BUS">Autocarro</option><option value="OTHER">Outro</option></select></label>
+          <label className={labelClass}>Categoria<select value={vehicleForm.type} onChange={(event) => setVehicleForm((v) => ({ ...v, type: event.target.value }))} className={inputClass}><option value="CAR">Táxi ligeiro</option><option value="MOTORCYCLE">Moto-táxi</option></select></label>
+          <label className={labelClass}>Titularidade do veículo<select value={vehicleForm.ownershipType} onChange={(event) => setVehicleForm((v) => ({ ...v, ownershipType: event.target.value, ownerName: event.target.value === "DRIVER_OWNED" ? "" : v.ownerName }))} className={inputClass}><option value="DRIVER_OWNED">O veículo é meu</option><option value="THIRD_PARTY_AUTHORIZED">O veículo pertence a outra pessoa/empresa</option></select></label>
+          {vehicleForm.ownershipType === "THIRD_PARTY_AUTHORIZED" && <>
+            <label className={labelClass}>Nome do proprietário/titular<input required value={vehicleForm.ownerName} onChange={(event) => setVehicleForm((v) => ({ ...v, ownerName: event.target.value }))} maxLength={120} className={inputClass} /></label>
+            <label className={labelClass}>Contacto do proprietário (opcional)<input value={vehicleForm.ownerPhone} onChange={(event) => setVehicleForm((v) => ({ ...v, ownerPhone: event.target.value }))} maxLength={40} className={inputClass} /></label>
+          </> }
           <label className={labelClass}>Matrícula<input required value={vehicleForm.registrationNumber} onChange={(event) => setVehicleForm((v) => ({ ...v, registrationNumber: event.target.value.toUpperCase() }))} maxLength={32} className={inputClass} /></label>
           <label className={labelClass}>Marca<input required value={vehicleForm.make} onChange={(event) => setVehicleForm((v) => ({ ...v, make: event.target.value }))} maxLength={80} className={inputClass} /></label>
           <label className={labelClass}>Modelo<input required value={vehicleForm.model} onChange={(event) => setVehicleForm((v) => ({ ...v, model: event.target.value }))} maxLength={80} className={inputClass} /></label>
