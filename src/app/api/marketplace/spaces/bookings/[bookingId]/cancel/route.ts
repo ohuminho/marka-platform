@@ -79,6 +79,7 @@ export async function POST(
           id: true,
           reference: true,
           status: true,
+          cancelledAt: true,
           customerId: true,
           payment: { select: { id: true, status: true } },
         },
