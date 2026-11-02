@@ -55,11 +55,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Espaço não encontrado ou indisponível.", code: "SPACE_NOT_FOUND" }, { status: 404 });
     }
 
-    await prisma.spaceBooking.updateMany({
-      where: { productId: product.id, status: "PAYMENT_PENDING", holdExpiresAt: { lte: now } },
-      data: { status: "EXPIRED", holdExpiresAt: null },
-    });
-
     const [rules, exceptions, bookings] = await Promise.all([
       prisma.spaceAvailabilityRule.findMany({
         where: { productId: product.id, isActive: true },
@@ -74,7 +69,13 @@ export async function GET(request: Request) {
       prisma.spaceBooking.findMany({
         where: {
           productId: product.id,
-          status: { in: ["ACCEPTED", "PAYMENT_PENDING", "CONFIRMED", "COMPLETED"] },
+          OR: [
+            { status: { in: ["ACCEPTED", "CONFIRMED", "COMPLETED"] } },
+            {
+              status: "PAYMENT_PENDING",
+              OR: [{ holdExpiresAt: null }, { holdExpiresAt: { gt: now } }],
+            },
+          ],
           startAt: { lt: to }, endAt: { gt: from },
         },
         select: { startAt: true, endAt: true },
