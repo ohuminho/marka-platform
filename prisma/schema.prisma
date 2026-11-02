@@ -945,8 +945,8 @@ model Vendor {
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
 
+  @@unique([ownerId])
   @@index([organizationId])
-  @@index([ownerId])
   @@index([status])
 }
 
