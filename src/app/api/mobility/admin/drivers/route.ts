@@ -27,8 +27,13 @@ async function authorizeAdmin() {
   return { user, session };
 }
 
-function isCurrentVerified(items: Array<{ documentType: string; status: string; documentExpiry: Date | null }>, type: string, now: Date) {
-  return items.some((item) => item.documentType === type && item.status === "VERIFIED" && (!item.documentExpiry || item.documentExpiry > now));
+function isCurrentVerified(items: Array<{ documentType: string; status: string; documentExpiry: Date | null; reviewedBy: string | null }>, type: string, now: Date, driverUserId: string) {
+  return items.some((item) =>
+    item.documentType === type &&
+    item.status === "VERIFIED" &&
+    item.reviewedBy !== driverUserId &&
+    (!item.documentExpiry || item.documentExpiry > now)
+  );
 }
 
 export async function GET() {
@@ -38,8 +43,8 @@ export async function GET() {
     include: {
       user: { select: { id: true, name: true, email: true } },
       organization: { select: { id: true, name: true, slug: true } },
-      verifications: { select: { id: true, documentType: true, status: true, documentExpiry: true, rejectionReason: true } },
-      vehicles: { where: { activeUntil: null, isPrimary: true }, include: { vehicle: { include: { verifications: { select: { id: true, documentType: true, status: true, documentExpiry: true, rejectionReason: true } } } } } },
+      verifications: { select: { id: true, documentType: true, status: true, documentExpiry: true, rejectionReason: true, reviewedBy: true } },
+      vehicles: { where: { activeUntil: null, isPrimary: true }, include: { vehicle: { include: { verifications: { select: { id: true, documentType: true, status: true, documentExpiry: true, rejectionReason: true, reviewedBy: true } } } } } },
     },
     orderBy: { updatedAt: "desc" },
     take: 200,
@@ -80,9 +85,9 @@ export async function PATCH(request: Request) {
 
   if (status === "ACTIVE") {
     const now = new Date();
-    const missingDriverDocuments = DRIVER_DOCUMENTS.filter((type) => !isCurrentVerified(driver.verifications, type, now));
+    const missingDriverDocuments = DRIVER_DOCUMENTS.filter((type) => !isCurrentVerified(driver.verifications, type, now, driver.userId));
     const primaryVehicle = driver.vehicles[0]?.vehicle;
-    const missingVehicleDocuments = primaryVehicle ? VEHICLE_DOCUMENTS.filter((type) => !isCurrentVerified(primaryVehicle.verifications, type, now)) : ["VEHICLE_NOT_REGISTERED"];
+    const missingVehicleDocuments = primaryVehicle ? VEHICLE_DOCUMENTS.filter((type) => !isCurrentVerified(primaryVehicle.verifications, type, now, driver.userId)) : ["VEHICLE_NOT_REGISTERED"];
     if (missingDriverDocuments.length || missingVehicleDocuments.length || !primaryVehicle) {
       return NextResponse.json({
         message: "Ativação bloqueada: todos os documentos obrigatórios têm de estar verificados e dentro da validade, e deve existir uma viatura registada.",
