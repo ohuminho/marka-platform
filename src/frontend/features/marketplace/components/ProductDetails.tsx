@@ -66,6 +66,17 @@ export default function ProductDetails({
 
   const [contactText, setContactText] = useState("Olá! Tenho interesse neste produto. Pode dar-me mais informações?");
   const [contacting, setContacting] = useState(false);
+  const attributes = product?.attributes ?? {};
+  const readGallery = (key: string): string[] => {
+    const value = attributes[key];
+    if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+    if (typeof value === "string") { try { const parsed: unknown = JSON.parse(value); return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : []; } catch { return []; } }
+    return [];
+  };
+  const photos = product ? [...new Set([product.image, ...readGallery("galleryImages")].filter((item): item is string => Boolean(item)))] : [];
+  const videos = readGallery("galleryVideos");
+  const unit = typeof attributes.unit === "string" ? attributes.unit : "";
+  const stockLabel = product && product.stock > 0 ? `${product.stock} disponível(is)` : "Sem stock disponível";
 
 
 
@@ -259,47 +270,12 @@ export default function ProductDetails({
       ">
 
 
-        <div className="
-          aspect-square
-          rounded-2xl
-          bg-[var(--theme-surface-strong)]/10
-          flex
-          items-center
-          justify-center
-        ">
-
-
-          {
-            product.image
-
-              ?
-
-              <img
-
-                src={product.image}
-
-                alt={product.name}
-
-                className="
-                  h-full
-                  w-full
-                  rounded-2xl
-                  object-cover
-                "
-
-              />
-
-              :
-
-              <span className="text-[var(--theme-text)]/40">
-
-                Product Image
-
-              </span>
-
-          }
-
-
+        <div className="space-y-3">
+          <div className="aspect-square rounded-2xl bg-[var(--theme-surface-strong)]/10 flex items-center justify-center overflow-hidden">
+            {photos[0] ? <img src={photos[0]} alt={product.name} className="h-full w-full rounded-2xl object-cover" /> : <span className="text-[var(--theme-text)]/40">Sem fotografia</span>}
+          </div>
+          {photos.length > 1 && <div className="grid grid-cols-4 gap-2">{photos.slice(1).map((url,index)=><img key={url} src={url} alt={`${product.name} — fotografia ${index+2}`} className="aspect-square w-full rounded-xl border border-[var(--theme-border)] object-cover" />)}</div>}
+          {videos.length > 0 && <section className="space-y-3"><h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Vídeos e visita virtual</h2>{videos.map((url,index)=><video key={url} controls playsInline preload="metadata" className="w-full rounded-2xl bg-black" aria-label={`Vídeo ${index+1} de ${product.name}`}><source src={url} /></video>)}</section>}
         </div>
 
 
@@ -355,7 +331,7 @@ export default function ProductDetails({
             font-semibold
           ">
 
-            {product.price} AOA
+            {new Intl.NumberFormat("pt-AO", { style: "currency", currency: product.currency || "AOA", maximumFractionDigits: 0 }).format(product.price)}{unit ? <span className="ml-2 text-base font-normal text-[var(--theme-text)]/60">/ {unit}</span> : null}
 
           </div>
 
@@ -373,7 +349,7 @@ export default function ProductDetails({
 
 
             <p>
-              Stock: {product.stock}
+              Stock: {stockLabel}
             </p>
 
 
@@ -385,6 +361,10 @@ export default function ProductDetails({
           </div>
 
 
+
+          <div className="mt-6 grid grid-cols-2 gap-3 text-xs">
+            {Object.entries(attributes).filter(([key,value]) => !["galleryImages","galleryVideos"].includes(key) && typeof value !== "object" && value !== "").map(([key,value]) => <div key={key} className="rounded-xl border border-[var(--theme-border)] p-3"><p className="text-[10px] uppercase tracking-wider text-[var(--theme-text)]/45">{({productType:"Tipo de produto",unit:"Unidade de venda",capacity:"Capacidade / medida",propertyType:"Tipo de imóvel",transactionType:"Finalidade",bedrooms:"Quartos",bathrooms:"Casas de banho",area:"Área (m²)",location:"Localização",serviceType:"Serviço"} as Record<string,string>)[key] ?? key}</p><p className="mt-1 font-medium text-[var(--theme-text)]">{String(value)}</p></div>)}
+          </div>
 
           <div className="mt-8 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Falar com o vendedor</p>
