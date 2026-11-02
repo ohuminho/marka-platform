@@ -69,7 +69,7 @@ export async function GET(
           ? { id: product.category.id, name: product.category.name }
           : null,
       },
-    }, { headers: { "Cache-Control": "no-store"" } });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[MARKETPLACE_PRODUCT_ERROR]", error);
     return NextResponse.json(
