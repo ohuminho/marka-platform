@@ -112,9 +112,35 @@ export default function ProductGrid() {
         </nav>
       )}
 
+      {categories.length > 0 && (
+        <section aria-label="Diretório de indústrias MARKA" className="mt-8">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Ecossistema multi-indústria</p>
+              <h3 className="marka-editorial mt-1 text-2xl text-[var(--theme-text)]">Explore por indústria.</h3>
+              <p className="mt-2 text-xs text-[var(--theme-text-muted)]">Comércio, serviços, espaços e soluções empresariais numa única plataforma.</p>
+            </div>
+            <span className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">{categories.length} categorias activas</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {categories.map((category, index) => (
+              <button key={category.id} type="button" onClick={() => { setCategoryId(category.id); document.getElementById("marketplace-offers")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                aria-pressed={categoryId === category.id}
+                className={`group flex min-h-[76px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${categoryId === category.id ? "border-[var(--theme-text)] bg-[var(--theme-text)] text-[var(--theme-background)]" : "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)] hover:-translate-y-0.5 hover:border-[var(--theme-accent)]"}`}>
+                <span className="min-w-0">
+                  <span className="block text-[9px] uppercase tracking-[0.18em] opacity-55">Indústria {String(index + 1).padStart(2, "0")}</span>
+                  <span className="mt-1 block text-xs font-semibold leading-5">{category.name}</span>
+                </span>
+                <span aria-hidden="true" className="shrink-0 text-base opacity-55 transition group-hover:translate-x-0.5">↗</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <MarketplaceFilters verifiedOnly={verifiedOnly} onVerifiedChange={setVerifiedOnly} sortBy={sortBy} onSortChange={setSortBy} />
 
-      {loading ? (
+      <div id="marketplace-offers" />\n\n      {loading ? (
         <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((item) => <div key={item} className="aspect-[4/4.3] animate-pulse rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)]" />)}
         </div>
