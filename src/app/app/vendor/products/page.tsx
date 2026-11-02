@@ -29,6 +29,7 @@ const categories = [
   "Beleza e cuidados", "Desporto e lazer", "Livros e media", "Automóveis",
   "Motociclos", "Imóveis e arrendamento",
   "Indústria e produção", "Agricultura e agropecuária", "Materiais de construção e ferragens",
+  "Iluminação e material elétrico", "Portas, janelas e carpintaria", "Calçado", "Mobiliário e decoração",
   "Equipamentos e máquinas", "Embalagens e consumíveis", "Água e bebidas", "Produtos por atacado",
   "Serviços — Eventos e festas", "Serviços — Música e entretenimento", "Serviços — Catering e cozinha",
   "Serviços — Decoração, som e iluminação", "Serviços — Fotografia e vídeo", "Serviços — Casa e manutenção",
@@ -37,12 +38,54 @@ const categories = [
   "Lojas de bairro", "Outros",
 ];
 
+const productTypesByCategory: Record<string, string[]> = {
+  "Materiais de construção e ferragens": [
+    "Cimento", "Areia", "Brita", "Blocos", "Tijolos", "Varão de aço", "Ferro e perfis metálicos",
+    "Chapas de zinco", "Telhas", "Madeira", "Pregos e parafusos", "Ferramentas", "Tintas e vernizes",
+    "Colas e impermeabilizantes", "Tubos e canalização", "Louças sanitárias", "Torneiras e acessórios",
+    "Pavimentos e revestimentos", "Cerâmica", "Gesso e pladur", "Vidros", "Outros materiais de construção",
+  ],
+  "Iluminação e material elétrico": [
+    "Candeeiros", "Lâmpadas LED", "Projetores", "Painéis LED", "Iluminação pública", "Iluminação industrial",
+    "Fitas LED", "Lustres", "Apliques", "Material elétrico", "Cabos e fios", "Tomadas e interruptores",
+    "Disjuntores e quadros", "Geradores", "Transformadores", "Acessórios elétricos", "Outros",
+  ],
+  "Portas, janelas e carpintaria": [
+    "Portas de madeira", "Portas metálicas", "Portas de alumínio", "Portas de vidro", "Janelas de alumínio",
+    "Janelas de PVC", "Janelas de madeira", "Grades e portões", " fechaduras e dobradiças", "Molduras",
+    "Carpintaria por medida", "Outros",
+  ],
+  "Calçado": ["Sapatos", "Sapatilhas", "Sandálias", "Botas", "Chinelos", "Calçado de segurança", "Calçado infantil", "Outros"],
+  "Mobiliário e decoração": ["Mesas", "Cadeiras", "Sofás", "Camas", "Colchões", "Armários", "Estantes", "Cozinhas", "Mobiliário de escritório", "Cortinas e tapetes", "Decoração", "Outros"],
+  "Água e bebidas": ["Água engarrafada", "Água em garrafões", "Água em bidões", "Água a granel", "Fornecimento por tanque/cisterna", "Refrigerantes", "Sumos", "Bebidas energéticas", "Outras bebidas"],
+  "Agricultura e agropecuária": ["Milho", "Feijão", "Arroz", "Mandioca", "Batata", "Tomate", "Cebola", "Frutas", "Hortícolas", "Café", "Cacau", "Ração animal", "Aves", "Gado bovino", "Gado caprino", "Suínos", "Ovos", "Outros produtos agrícolas"],
+  "Embalagens e consumíveis": ["Caixas de cartão", "Sacos", "Garrafas", "Frascos", "Embalagens alimentares", "Filme plástico", "Paletes", "Etiquetas", "Papel", "Consumíveis industriais", "Outros"],
+  "Equipamentos e máquinas": ["Máquinas industriais", "Equipamentos agrícolas", "Bombas de água", "Motores", "Compressores", "Geradores", "Ferramentas elétricas", "Equipamentos de oficina", "Peças e acessórios", "Outros"],
+  "Indústria e produção": ["Produtos fabricados", "Matéria-prima", "Peças industriais", "Produtos metalúrgicos", "Produtos químicos autorizados", "Cerâmica", "Plásticos", "Produtos transformados", "Outros"],
+  "Produtos por atacado": ["Alimentação", "Bebidas", "Higiene e limpeza", "Material escolar", "Material elétrico", "Construção", "Vestuário", "Calçado", "Embalagens", "Outros"],
+};
+const serviceTypesByCategory: Record<string, string[]> = {
+  "Serviços — Eventos e festas": ["Organização de eventos", "DJ", "Mestre de cerimónias", "Músico ou banda", "Animação", "Aluguer de espaço", "Outros"],
+  "Serviços — Música e entretenimento": ["DJ", "Músico", "Banda", "Cantor", "Animador", "Apresentador", "Outros"],
+  "Serviços — Catering e cozinha": ["Catering", "Cozinheiro para festas", "Cozinheira para festas", "Buffet", "Churrasco", "Bolos e pastelaria", "Salgados", "Preparação de refeições", "Outros"],
+  "Serviços — Decoração, som e iluminação": ["Decoração", "Aluguer de som", "Iluminação", "Palco e estruturas", "Tendas e mobiliário", "Flores", "Montagem", "Outros"],
+  "Serviços — Fotografia e vídeo": ["Fotografia", "Videografia", "Transmissão em direto", "Edição de vídeo", "Cobertura de eventos", "Outros"],
+  "Serviços — Casa e manutenção": ["Canalizador", "Eletricista", "Carpinteiro", "Serralheiro", "Pintor", "Mecânico", "Ar condicionado", "Instalação solar", "Reparações", "Outros"],
+  "Serviços — Beleza e bem-estar": ["Cabeleireiro", "Barbeiro", "Maquilhagem", "Manicure", "Estética", "Massagem", "Outros"],
+  "Serviços — Limpeza e apoio": ["Limpeza doméstica", "Limpeza pós-obra", "Lavandaria", "Jardinagem", "Apoio a eventos", "Outros"],
+  "Serviços — Educação e formação": ["Explicações", "Formação profissional", "Aulas de música", "Idiomas", "Outros"],
+  "Serviços — Tecnologia e profissionais": ["Assistência informática", "Redes", "Desenvolvimento de software", "Design", "Consultoria", "Contabilidade", "Tradução", "Outros"],
+  "Serviços — Outros": ["Serviço profissional", "Serviço empresarial", "Outro"],
+};
+const productUnits = ["Unidade", "Conjunto", "Caixa", "Saco", "Pacote", "Quilograma (kg)", "Tonelada (t)", "Litro (L)", "Metro cúbico (m³)", "Metro (m)", "Metro quadrado (m²)", "Rolo", "Palete", "Bidão de 20 L", "Garrafão de 20 L", "Tanque de 1.000 L", "Cisterna", "Outro"];
+
 export default function VendorProductsPage() {
   const [vendor, setVendor] = useState<SellerStore | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [productImages, setProductImages] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -54,7 +97,7 @@ export default function VendorProductsPage() {
     name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros",
     brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "",
     propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "",
-    serviceType: "", availability: "", duration: "",
+    serviceType: "", availability: "", duration: "", productType: "", unit: "Unidade", capacity: "",
   });
 
   const load = useCallback(async () => {
@@ -139,7 +182,10 @@ export default function VendorProductsPage() {
       });
       const data = await response.json();
       if (!response.ok || !data.imageUrl) throw new Error(data.message || "Não foi possível carregar a imagem.");
-      if (target === "product") setForm((current) => ({ ...current, image: data.imageUrl }));
+      if (target === "product") {
+        setProductImages((current) => current.includes(data.imageUrl) ? current : [...current, data.imageUrl].slice(0, 10));
+        setForm((current) => ({ ...current, image: current.image || data.imageUrl }));
+      }
       else setStoreProfile((current) => ({ ...current, [target]: data.imageUrl }));
       setNotice(target === "product" ? "Imagem carregada com segurança e pronta para associar ao anúncio." : "Imagem da identidade comercial carregada com segurança.");
     } catch (e) {
@@ -165,12 +211,14 @@ export default function VendorProductsPage() {
           brand: form.brand, model: form.model, year: form.year, mileage: form.mileage, condition: form.condition, fuel: form.fuel, transmission: form.transmission,
           propertyType: form.propertyType, transactionType: form.transactionType, bedrooms: form.bedrooms, bathrooms: form.bathrooms, area: form.area, location: form.location,
           serviceType: form.serviceType, availability: form.availability, duration: form.duration,
+          productType: form.productType, unit: form.unit, capacity: form.capacity, images: productImages,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível guardar o anúncio.");
       setNotice(data.message || "Anúncio guardado como rascunho.");
-      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros", brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "", propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", serviceType: "", availability: "", duration: "" });
+      setForm({ name: "", description: "", image: "", price: "", stock: "1", categoryName: "Outros", brand: "", model: "", year: "", mileage: "", condition: "Usado", fuel: "", transmission: "", propertyType: "Apartamento", transactionType: "Arrendamento", bedrooms: "", bathrooms: "", area: "", location: "", serviceType: "", availability: "", duration: "", productType: "", unit: "Unidade", capacity: "" });
+      setProductImages([]);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível guardar o anúncio.");
@@ -301,18 +349,20 @@ export default function VendorProductsPage() {
                     <div><label className={label} htmlFor="productName">Nome do produto</label><input id="productName" className={field} required minLength={2} maxLength={180} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Candeeiro artesanal" /></div>
                     <div><label className={label} htmlFor="productDescription">Descrição</label><textarea id="productDescription" className={field} rows={4} maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalhes, estado, dimensões, garantia…" /></div>
                     <div>
-                      <label className={label} htmlFor="productImageFile">Fotografia do produto</label>
-                      <input id="productImageFile" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className={field} disabled={uploadingImage} onChange={(e) => void uploadImage(e.target.files?.[0])} />
-                      <p className="mt-2 text-xs text-[var(--theme-text-faint)]">{uploadingImage ? "A carregar e validar a imagem…" : "JPG, PNG ou WebP · máximo 5 MB."}</p>
-                      <label className={label} htmlFor="productImage">Ou URL de imagem já alojada</label>
+                      <label className={label} htmlFor="productImageFile">Fotografias do produto (até 10)</label>
+                      <input id="productImageFile" type="file" multiple accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className={field} disabled={uploadingImage || productImages.length >= 10} onChange={async (e) => { const files = Array.from(e.target.files ?? []).slice(0, 10 - productImages.length); for (const file of files) await uploadImage(file); e.currentTarget.value = ""; }} />
+                      <p className="mt-2 text-xs text-[var(--theme-text-faint)]">{uploadingImage ? "A carregar e validar as fotografias…" : "JPG, PNG ou WebP · até 5 MB por fotografia. Pode adicionar várias perspetivas do mesmo produto."}</p>
+                      <label className={label} htmlFor="productImage">URL da fotografia principal (opcional)</label>
                       <input id="productImage" type="url" className={field} value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="https://…" />
-                      {form.image && <img src={form.image} alt="Pré-visualização do produto" className="mt-3 h-36 w-36 rounded-xl border border-[var(--theme-border)] object-cover" />}
+                      {(productImages.length > 0 || form.image) && <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">{(productImages.length ? productImages : [form.image]).filter(Boolean).map((url, index) => <div key={url} className="relative"><img src={url} alt={`Fotografia ${index + 1} do produto`} className="h-24 w-full rounded-xl border border-[var(--theme-border)] object-cover" /><button type="button" onClick={() => { setProductImages((current) => current.filter((item) => item !== url)); if (form.image === url) setForm((current) => ({ ...current, image: productImages.find((item) => item !== url) ?? "" })); }} className="absolute right-1 top-1 rounded-full bg-black/70 px-2 py-1 text-xs text-white" aria-label="Remover fotografia">×</button></div>)}</div>}
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div><label className={label} htmlFor="productPrice">Preço (Kz)</label><input id="productPrice" className={field} type="number" min="0.01" step="0.01" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="15000" /></div>
-                      <div><label className={label} htmlFor="productStock">Stock disponível</label><input id="productStock" className={field} type="number" min="0" step="1" required value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
+                      <div><label className={label} htmlFor="productStock">Quantidade disponível</label><input id="productStock" className={field} type="number" min="0" step="1" required value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                     </div>
-                    <div><label className={label} htmlFor="productCategory">Categoria</label><select id="productCategory" className={field} value={form.categoryName} onChange={(e) => setForm({ ...form, categoryName: e.target.value })}>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></div>
+                    <div><label className={label} htmlFor="productCategory">Categoria principal</label><select id="productCategory" className={field} value={form.categoryName} onChange={(e) => setForm({ ...form, categoryName: e.target.value, productType: "", serviceType: "" })}>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></div>
+                    {form.categoryName.startsWith("Serviços") ? <div><label className={label} htmlFor="serviceType">Tipo de serviço prestado</label><select id="serviceType" className={field} value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })}><option value="">Escolher especialidade</option>{(serviceTypesByCategory[form.categoryName] ?? ["Outro serviço"]).map((type) => <option key={type} value={type}>{type}</option>)}</select></div> : form.categoryName !== "Imóveis e arrendamento" && <div><label className={label} htmlFor="productType">Tipo de produto / mercadoria</label><select id="productType" className={field} value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value })}><option value="">Escolher tipo de produto</option>{(productTypesByCategory[form.categoryName] ?? ["Outros produtos"]).map((type) => <option key={type} value={type}>{type}</option>)}</select></div>}
+                    {!form.categoryName.startsWith("Serviços") && form.categoryName !== "Imóveis e arrendamento" && <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="productUnit">Unidade de venda</label><select id="productUnit" className={field} value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>{productUnits.map((unit) => <option key={unit}>{unit}</option>)}</select></div><div><label className={label} htmlFor="productCapacity">Capacidade / medida (opcional)</label><input id="productCapacity" className={field} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} placeholder="Ex.: 1.000 litros, 50 kg, 6 metros" /></div></div>}
                     {(form.categoryName === "Automóveis" || form.categoryName === "Motociclos") && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do veículo</legend>
                       <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="vehicleBrand">Marca</label><input id="vehicleBrand" className={field} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Toyota" /></div><div><label className={label} htmlFor="vehicleModel">Modelo</label><input id="vehicleModel" className={field} value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="Corolla" /></div>
                       <div><label className={label} htmlFor="vehicleYear">Ano</label><input id="vehicleYear" className={field} type="number" min="1950" max="2035" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} placeholder="2020" /></div><div><label className={label} htmlFor="vehicleMileage">Quilometragem (km)</label><input id="vehicleMileage" className={field} type="number" min="0" value={form.mileage} onChange={(e) => setForm({ ...form, mileage: e.target.value })} placeholder="85000" /></div>
@@ -325,7 +375,6 @@ export default function VendorProductsPage() {
                       <div><label className={label} htmlFor="propertyArea">Área (m²)</label><input id="propertyArea" className={field} type="number" min="1" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} /></div><div><label className={label} htmlFor="propertyLocation">Localização</label><input id="propertyLocation" className={field} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Município, bairro" /></div></div>
                     </fieldset>}
                     {form.categoryName.startsWith("Serviços") && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do serviço</legend>
-                      <div><label className={label} htmlFor="serviceType">Tipo de serviço</label><input id="serviceType" className={field} value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })} placeholder="Ex.: DJ, organização de eventos, cozinheira para festas, catering, canalizador…" /></div>
                       <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="serviceAvailability">Disponibilidade</label><input id="serviceAvailability" className={field} value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })} placeholder="Ex.: Segunda a sábado" /></div><div><label className={label} htmlFor="serviceDuration">Duração estimada</label><input id="serviceDuration" className={field} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="Ex.: 2 horas" /></div></div>
                     </fieldset>}
                     <button disabled={saving || uploadingImage} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A guardar…" : "Guardar anúncio como rascunho"}</button>
