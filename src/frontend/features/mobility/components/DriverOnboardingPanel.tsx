@@ -153,7 +153,6 @@ export default function DriverOnboardingPanel() {
     event.preventDefault();
     setError(""); setNotice("");
     if (!termsAccepted) { setError("Aceita primeiro os Termos de Adesão."); return; }
-    if (!organizationId) { setError("Seleciona primeiro a organização MARKA."); return; }
     setSubmitting(true);
     try {
       const response = await fetch("/api/mobility/driver/onboarding", {
@@ -176,12 +175,11 @@ export default function DriverOnboardingPanel() {
     setError(""); setNotice("");
     if (!termsAccepted) { setError("Aceita primeiro os Termos de Adesão."); return; }
     if (!profile) { setError("Regista primeiro a candidatura de motorista."); return; }
-    if (!organizationId) { setError("Seleciona primeiro a organização MARKA."); return; }
     setSavingVehicle(true);
     try {
       const response = await fetch("/api/mobility/driver/vehicle", {
         method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+        headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
         body: JSON.stringify({ ...vehicleForm, year: Number(vehicleForm.year), capacity: Number(vehicleForm.capacity) }),
       });
       const data = await response.json() as VehicleResponse;
