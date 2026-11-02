@@ -52,6 +52,7 @@ export async function GET() {
         status: document.status,
         expiresAt: document.expiresAt?.toISOString() ?? null,
         rejectionReason: document.rejectionReason,
+        selfAttested: Boolean(document.metadata && typeof document.metadata === "object" && !Array.isArray(document.metadata) && (document.metadata as Record<string, unknown>).selfAttested === true),
       })),
       cases: profile.cases.map((item) => ({
         id: item.id,
