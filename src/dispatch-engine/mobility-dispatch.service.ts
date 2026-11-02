@@ -88,11 +88,14 @@ export class MobilityDispatchService {
 
         vehicleTypes:
           input.vehicleTypes ??
-          (ride.serviceType === "MOTO_TAXI"
-            ? ["MOTORCYCLE"]
-            : ride.serviceType === "TAXI"
-              ? ["CAR"]
-              : undefined),
+          ({
+            TAXI: ["CAR"],
+            MOTO_TAXI: ["MOTORCYCLE"],
+            VAN: ["VAN"],
+            MINIBUS: ["MINIBUS"],
+            BUS: ["BUS"],
+            COACH: ["COACH"],
+          }[ride.serviceType] ?? undefined),
 
         radiusMeters:
           input.radiusMeters,
