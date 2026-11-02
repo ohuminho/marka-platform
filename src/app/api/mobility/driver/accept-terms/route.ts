@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { resolveDriverOrganizationId } from "@/app/api/mobility/_lib/driver-organization";
 
 export const dynamic = "force-dynamic";
 export const DRIVER_TERMS_VERSION = "MARKA-MOBILITY-DRIVER-2026-10-29";
@@ -17,15 +18,10 @@ export async function POST(request: Request) {
   try { body = await request.json(); } catch { return NextResponse.json({ message: "Pedido inválido." }, { status: 400 }); }
   if (body.accepted !== true) return NextResponse.json({ message: "É necessário assinalar a aceitação expressa dos termos." , code: "EXPLICIT_ACCEPTANCE_REQUIRED" }, { status: 422 });
 
-  const organizationId = request.headers.get("X-Organization-Id")?.trim();
-  if (!organizationId) return NextResponse.json({ message: "Seleciona a organização MARKA.", code: "ORGANIZATION_ID_REQUIRED" }, { status: 400 });
   const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, status: true } });
   if (!user || user.status !== "ACTIVE") return NextResponse.json({ message: "A conta MARKA deve estar ativa.", code: "USER_NOT_ACTIVE" }, { status: 403 });
-  const membership = await prisma.organizationMembership.findFirst({
-    where: { userId: user.id, organizationId, status: "ACTIVE", organization: { status: "ACTIVE" } },
-    select: { organizationId: true },
-  });
-  if (!membership) return NextResponse.json({ message: "Acesso à organização negado.", code: "ORGANIZATION_ACCESS_DENIED" }, { status: 403 });
+  const organizationId = await resolveDriverOrganizationId(user.id, request.headers.get("X-Organization-Id")?.trim());
+  if (!organizationId) return NextResponse.json({ message: "A conta ainda não tem uma associação MARKA ativa.", code: "MARKA_MEMBERSHIP_REQUIRED" }, { status: 403 });
 
   const requestHeaders = await headers();
   const forwardedFor = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
