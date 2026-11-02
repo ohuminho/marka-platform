@@ -76,3 +76,57 @@ All MARKA imagery must look premium, realistic and locally relevant:
 - Industrial verticals are data-driven/configurable.
 - Vehicle-owner live tracking remains explicitly out of scope until consent, permissions, retention and audit controls are implemented.
 - Vehicle imagery is category-correct, premium and free of third-party promotional branding.
+
+## 6. Catálogo multi-indústria e serviços — extensão do Marketplace existente
+
+Esta expansão NÃO cria um produto separado chamado MARKA Business. O conceito já existente mantém-se: uma conta pode abrir uma loja como pessoa singular/individual ou como empresa. A mesma loja/catálogo suporta revendedor, fabricante, fábrica, distribuidor, grossista, agricultor, cooperativa ou prestador de serviços, através de categorias e atributos adequados. Não duplicar contas, lojas, catálogos, checkout ou sistemas de encomendas.
+
+### Categorias de serviços a disponibilizar no catálogo existente
+- Eventos e festas: DJs, organizadores/ produtores de eventos, mestres de cerimónia/apresentadores, músicos, bandas, animadores, artistas e anfitriões.
+- Catering e cozinha: cozinheiros e cozinheiras para festas, catering, buffets, preparação de refeições, pastelaria, bolos, salgados, churrasco e equipas de serviço.
+- Produção técnica e decoração: aluguer de som, iluminação, palcos, geradores, tendas, cadeiras, mesas, decoração, flores e montagem.
+- Fotografia e audiovisual: fotógrafos, videógrafos, transmissão/live streaming, edição e cobertura de eventos.
+- Espaços e hospitalidade: salões, quintas, jardins, restaurantes para eventos, alojamento e espaços para conferências.
+- Casa e manutenção: eletricistas, canalizadores, carpinteiros, serralheiros, pintores, técnicos de frio/ar condicionado, instaladores solares, limpeza e reparações.
+- Beleza e bem-estar: cabeleireiros, barbeiros, maquilhadores, esteticistas, manicures e profissionais de bem-estar.
+- Educação e profissionais: explicadores, formadores, tradutores, consultores, contabilistas e serviços administrativos.
+- Tecnologia: assistência informática, redes, desenvolvimento de software, instalação e suporte técnico.
+- Serviços empresariais: manutenção industrial, segurança quando devidamente licenciada, facilities, recrutamento e apoio operacional.
+
+As categorias são taxonomia de descoberta, não novos módulos. Manter campos comuns simples (especialidade, descrição, preço ou orçamento, disponibilidade, duração, área de serviço, imagens e estado de verificação). Só acrescentar campos específicos quando forem necessários para cotação, elegibilidade ou segurança.
+
+### Imobiliário residencial, comercial e logístico
+O tipo de imóvel deve contemplar casas, apartamentos, quartos, terrenos, lojas, escritórios, espaços comerciais, armazéns, armazéns logísticos, centros de distribuição, pavilhões industriais, fábricas, terrenos industriais e agrícolas, quintas, hotéis/pensões e espaços para eventos. Os anúncios continuam a ser publicados na categoria imobiliária existente. A MARKA não compra, aluga, opera nem mantém imóveis ou armazéns próprios.
+
+### Modelo asset-light obrigatório
+A MARKA é intermediária tecnológica. Produtos, stock, veículos, motoristas, estafetas, cozinhas, equipamentos, imóveis e instalações pertencem aos parceiros. O parceiro é responsável por disponibilidade, qualidade, licenças, execução, garantias e obrigações fiscais/legais que lhe caibam. A MARKA presta descoberta, comunicação, cotação, checkout quando suportado, coordenação, prova de serviço, suporte e mecanismos de confiança. Não assumir posse, armazenamento, compra antecipada, financiamento ou frota própria como pressuposto do produto.
+
+## 7. Proteção de receita, prevenção de desintermediação e integridade comercial
+
+A política de comunicação já existente deve ser aplicada no servidor, não apenas na interface. Contactos externos e tentativas explícitas de contornar o checkout podem ser bloqueados ou sinalizados de acordo com a categoria e o estado da transação. Não prometer deteção perfeita: imagens, linguagem codificada, chamadas externas e contactos presenciais podem escapar aos filtros automáticos.
+
+### Regras comerciais
+1. Cada lead, pedido de orçamento, visita, proposta, reserva, encomenda e transação originados na MARKA recebe um identificador e registo temporal.
+2. Antes de iniciar contacto ou visita, as partes aceitam termos claros: não contornar deliberadamente a MARKA para evitar uma comissão previamente apresentada quando a oportunidade foi gerada e materialmente facilitada pela plataforma.
+3. A comissão, o evento que a desencadeia, a base de cálculo, o momento de vencimento, impostos e cancelamentos devem ser apresentados antes de a parte aceitar o lead ou serviço. Não criar comissões retroativas ou escondidas.
+4. Para negócios de elevado valor (imóveis, contratos B2B, eventos), registar pedido, consentimentos, visitas, propostas, contrapropostas, aceitação e comprovativo de conclusão. Usar confirmação bilateral e evidência documental proporcional.
+5. Aplicar uma janela de atribuição limitada e expressa, definida por categoria e revista por assessoria jurídica angolana. A comissão só é devida quando se demonstrar nexo entre a oportunidade introduzida pela MARKA e o negócio concluído, nos termos aceites pelas partes.
+6. Disponibilizar denúncia, contestação e revisão humana. Suspensão temporária só com critérios, registo e possibilidade de recurso; não reter valores sem base contratual/legal.
+7. Reincidência comprovada pode levar a suspensão/encerramento da conta, cobrança de valores contratualmente devidos e ação judicial ou arbitragem quando aplicável e proporcional.
+
+### Prova e privacidade
+- Preservar logs de acesso, IDs de lead, mensagens dentro da plataforma, propostas, alterações, aceitação de termos, pagamentos, recibos, provas de entrega/serviço e decisões de suporte.
+- Registar visitas e reuniões apenas com conhecimento das partes. Não gravar chamadas ou recolher localização contínua sem fundamento legal, transparência e consentimento quando exigido.
+- Definir retenção por finalidade, acesso restrito, exportação para disputa e cadeia de custódia. Não recolher dados excessivos para tentar provar uma infração.
+- Não acusar nem penalizar automaticamente com base em palavras-chave, contacto presencial ou simples ausência de pagamento na plataforma. Exigir análise contextual e oportunidade de resposta.
+
+### Limite jurídico
+Os termos devem ser redigidos e validados por advogado habilitado em Angola, considerando regras de comércio eletrónico, proteção de dados, defesa do consumidor, concorrência, intermediação imobiliária, pagamentos, prestação de serviços e processo civil. A MARKA não deve ameaçar genericamente “levar todos ao tribunal”: deve reservar direitos e agir apenas quando exista contrato válido, prova suficiente, dano ou valor devido e fundamento legal. Nenhuma cláusula garante risco zero ou torna automaticamente exigível qualquer multa.
+
+## 8. Sequência de implementação sem duplicar sistemas
+1. Expandir a taxonomia e os atributos do formulário atual de loja/anúncio.
+2. Reutilizar Vendor, Store, Product, Category, Order, Fulfillment, Dispatch, Messaging, Payments e ledger existentes.
+3. Confirmar que serviços e imóveis não ficam incorretamente sujeitos a stock físico: onde o modelo atual exigir stock, usar uma disponibilidade representativa e documentar a limitação antes de abrir reservas automáticas.
+4. Depois implementar RFQ/propostas, reservas/visitas e contratos de serviço como estados de negócio ligados ao mesmo catálogo e às mesmas contas.
+5. Só introduzir novas tabelas quando a auditoria provar que os modelos atuais não suportam a necessidade; não criar um segundo Business/Marketplace.
+
