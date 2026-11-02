@@ -133,9 +133,23 @@ export async function GET(
         status: "VERIFIED",
         OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
-      select: { id: true },
+      include: {
+        documents: {
+          select: { status: true, expiresAt: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
     });
-    const isIdentityVerified = Boolean(verifiedIdentityProfile);
+    const now = new Date();
+    const isIdentityVerified = Boolean(
+      verifiedIdentityProfile &&
+      verifiedIdentityProfile.documents.length > 0 &&
+      verifiedIdentityProfile.documents.every(
+        (document) =>
+          document.status === "VERIFIED" &&
+          (!document.expiresAt || document.expiresAt > now),
+      ),
+    );
 
     const membershipOrganizationIds =
       user.memberships.map(
