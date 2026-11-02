@@ -8,7 +8,10 @@ import { prisma } from "@/database/client/prisma";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  type: z.enum(["CAR", "MOTORCYCLE", "VAN", "MINIBUS", "BUS", "COACH", "TRUCK", "OTHER"]),
+  type: z.enum(["CAR", "MOTORCYCLE"]),
+  ownershipType: z.enum(["DRIVER_OWNED", "THIRD_PARTY_AUTHORIZED"]),
+  ownerName: z.string().trim().min(2).max(120),
+  ownerPhone: z.string().trim().max(40).optional().default(""),
   registrationNumber: z.string().trim().min(3).max(32),
   make: z.string().trim().min(1).max(80),
   model: z.string().trim().min(1).max(80),
@@ -85,10 +88,10 @@ export async function POST(request: Request) {
       const vehicle = currentLink
         ? await tx.mobilityVehicle.update({
             where: { id: currentLink.vehicleId },
-            data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING" },
+            data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ownershipType: input.ownershipType, ownerName: input.ownerName, ownerPhone: input.ownerPhone || null, ownershipDeclarationAt: new Date().toISOString() } },
           })
         : await tx.mobilityVehicle.create({
-            data: { organizationId, type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING" },
+            data: { organizationId, type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ownershipType: input.ownershipType, ownerName: input.ownerName, ownerPhone: input.ownerPhone || null, ownershipDeclarationAt: new Date().toISOString() } },
           });
 
       if (currentLink) {
