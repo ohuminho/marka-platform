@@ -9,7 +9,7 @@ import { resolveDriverOrganizationId } from "@/app/api/mobility/_lib/driver-orga
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  type: z.enum(["CAR", "MOTORCYCLE"]),
+  type: z.enum(["CAR", "MOTORCYCLE", "VAN", "MINIBUS", "BUS", "COACH"]),
   ownershipType: z.enum(["DRIVER_OWNED", "THIRD_PARTY_AUTHORIZED"]),
   ownerName: z.string().trim().max(120).optional().default(""),
   ownerPhone: z.string().trim().max(40).optional().default(""),
