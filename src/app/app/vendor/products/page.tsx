@@ -27,7 +27,14 @@ type Product = {
 const categories = [
   "Eletrónica", "Moda e acessórios", "Casa e jardim", "Alimentação e mercearia",
   "Beleza e cuidados", "Desporto e lazer", "Livros e media", "Automóveis",
-  "Motociclos", "Imóveis e arrendamento", "Serviços", "Lojas de bairro", "Outros",
+  "Motociclos", "Imóveis e arrendamento",
+  "Indústria e produção", "Agricultura e agropecuária", "Materiais de construção e ferragens",
+  "Equipamentos e máquinas", "Embalagens e consumíveis", "Água e bebidas", "Produtos por atacado",
+  "Serviços — Eventos e festas", "Serviços — Música e entretenimento", "Serviços — Catering e cozinha",
+  "Serviços — Decoração, som e iluminação", "Serviços — Fotografia e vídeo", "Serviços — Casa e manutenção",
+  "Serviços — Beleza e bem-estar", "Serviços — Limpeza e apoio", "Serviços — Educação e formação",
+  "Serviços — Tecnologia e profissionais", "Serviços — Outros",
+  "Lojas de bairro", "Outros",
 ];
 
 export default function VendorProductsPage() {
@@ -271,7 +278,7 @@ export default function VendorProductsPage() {
               <aside className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-background)] p-7 sm:p-10">
                 <p className="marka-kicker">UM MERCADO, VÁRIOS SETORES</p>
                 <div className="mt-6 grid grid-cols-2 gap-3">
-                  {["Produtos", "Automóveis", "Motociclos", "Imóveis", "Serviços", "Lojas locais"].map((item) => <div key={item} className="rounded-xl border border-[var(--theme-border)] p-4"><span className="text-sm text-[var(--theme-text)]">{item}</span></div>)}
+                  {["Produtos", "Indústria", "Agricultura", "Imóveis e armazéns", "Eventos e catering", "Serviços profissionais"].map((item) => <div key={item} className="rounded-xl border border-[var(--theme-border)] p-4"><span className="text-sm text-[var(--theme-text)]">{item}</span></div>)}
                 </div>
                 <p className="mt-6 text-sm leading-7 text-[var(--theme-text-muted)]">A MARKA permite preparar anúncios de produtos, veículos, imóveis e serviços no mesmo espaço. Cada categoria apresenta campos próprios; todos os anúncios começam como rascunho e a publicação depende da aprovação comercial.</p>
               </aside>
@@ -313,12 +320,12 @@ export default function VendorProductsPage() {
                       <div className="sm:col-span-2"><label className={label} htmlFor="vehicleTransmission">Transmissão</label><select id="vehicleTransmission" className={field} value={form.transmission} onChange={(e) => setForm({ ...form, transmission: e.target.value })}><option value="">Selecionar</option><option>Manual</option><option>Automática</option></select></div></div>
                     </fieldset>}
                     {form.categoryName === "Imóveis e arrendamento" && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do imóvel</legend>
-                      <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="propertyType">Tipo de imóvel</label><select id="propertyType" className={field} value={form.propertyType} onChange={(e) => setForm({ ...form, propertyType: e.target.value })}><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Escritório</option><option>Espaço comercial</option><option>Armazém</option></select></div><div><label className={label} htmlFor="transactionType">Finalidade</label><select id="transactionType" className={field} value={form.transactionType} onChange={(e) => setForm({ ...form, transactionType: e.target.value })}><option>Arrendamento</option><option>Venda</option></select></div>
+                      <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="propertyType">Tipo de imóvel</label><select id="propertyType" className={field} value={form.propertyType} onChange={(e) => setForm({ ...form, propertyType: e.target.value })}><option>Apartamento</option><option>Casa</option><option>Vivenda</option><option>Quarto</option><option>Terreno residencial</option><option>Loja</option><option>Espaço comercial</option><option>Escritório</option><option>Armazém</option><option>Armazém logístico</option><option>Centro de distribuição</option><option>Pavilhão industrial</option><option>Fábrica</option><option>Terreno industrial</option><option>Terreno agrícola</option><option>Quinta</option><option>Espaço para eventos</option><option>Hotel ou pensão</option></select></div><div><label className={label} htmlFor="transactionType">Finalidade</label><select id="transactionType" className={field} value={form.transactionType} onChange={(e) => setForm({ ...form, transactionType: e.target.value })}><option>Arrendamento</option><option>Venda</option></select></div>
                       <div><label className={label} htmlFor="propertyBedrooms">Quartos</label><input id="propertyBedrooms" className={field} type="number" min="0" value={form.bedrooms} onChange={(e) => setForm({ ...form, bedrooms: e.target.value })} /></div><div><label className={label} htmlFor="propertyBathrooms">Casas de banho</label><input id="propertyBathrooms" className={field} type="number" min="0" value={form.bathrooms} onChange={(e) => setForm({ ...form, bathrooms: e.target.value })} /></div>
                       <div><label className={label} htmlFor="propertyArea">Área (m²)</label><input id="propertyArea" className={field} type="number" min="1" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} /></div><div><label className={label} htmlFor="propertyLocation">Localização</label><input id="propertyLocation" className={field} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Município, bairro" /></div></div>
                     </fieldset>}
-                    {form.categoryName === "Serviços" && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do serviço</legend>
-                      <div><label className={label} htmlFor="serviceType">Tipo de serviço</label><input id="serviceType" className={field} value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })} placeholder="Ex.: Reparação de eletrodomésticos" /></div>
+                    {form.categoryName.startsWith("Serviços") && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do serviço</legend>
+                      <div><label className={label} htmlFor="serviceType">Tipo de serviço</label><input id="serviceType" className={field} value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })} placeholder="Ex.: DJ, organização de eventos, cozinheira para festas, catering, canalizador…" /></div>
                       <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="serviceAvailability">Disponibilidade</label><input id="serviceAvailability" className={field} value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })} placeholder="Ex.: Segunda a sábado" /></div><div><label className={label} htmlFor="serviceDuration">Duração estimada</label><input id="serviceDuration" className={field} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="Ex.: 2 horas" /></div></div>
                     </fieldset>}
                     <button disabled={saving || uploadingImage} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A guardar…" : "Guardar anúncio como rascunho"}</button>
