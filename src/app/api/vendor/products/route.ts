@@ -36,6 +36,7 @@ const createProductSchema = z.object({
   brand: z.string().trim().max(100).optional().default(""), model: z.string().trim().max(100).optional().default(""),
   year: z.coerce.number().int().min(1950).max(2035).optional().or(z.literal("")), mileage: z.coerce.number().int().min(0).max(10_000_000).optional().or(z.literal("")),
   condition: z.string().trim().max(40).optional().default(""), fuel: z.string().trim().max(40).optional().default(""), transmission: z.string().trim().max(40).optional().default(""),
+  spaceBookingEnabled: z.boolean().optional().default(false),
   propertyType: z.string().trim().max(80).optional().default(""), transactionType: z.string().trim().max(40).optional().default(""),
   bedrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")), bathrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
   area: z.coerce.number().positive().max(10_000_000).optional().or(z.literal("")), location: z.string().trim().max(200).optional().default(""),
@@ -163,6 +164,7 @@ export async function POST(request: Request) {
       addDetail("Quartos", input.bedrooms); addDetail("Casas de banho", input.bathrooms);
       addDetail("Área (m²)", input.area); addDetail("Localização", input.location);
       for (const [key, value] of Object.entries({ propertyType: input.propertyType, transactionType: input.transactionType, bedrooms: input.bedrooms, bathrooms: input.bathrooms, area: input.area, location: input.location })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
+      if (input.spaceBookingEnabled && ["sala de reuniões","sala de conferências","sala de formação","coworking","espaço para eventos"].includes(input.propertyType.toLocaleLowerCase())) attributes.spaceBookingEnabled = "true";
     } else if (categoryName.startsWith("serviços")) {
       addDetail("Especialidade", input.serviceType); addDetail("Disponibilidade", input.availability); addDetail("Duração estimada", input.duration);
       for (const [key, value] of Object.entries({ serviceType: input.serviceType, availability: input.availability, duration: input.duration })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
