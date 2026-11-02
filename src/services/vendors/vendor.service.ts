@@ -81,12 +81,14 @@ export class VendorService {
           businessType: input.businessType,
           phone: input.phone?.trim() || null,
           country: input.country?.trim() || null,
-          status: "PENDING",
+          // Individual sellers can start listing ordinary, low-risk items immediately.
+          // Verification remains visible and is required before sensitive categories.
+          status: input.businessType === "INDIVIDUAL" ? "ACTIVE" : "PENDING",
           verified: false,
           store: {
             create: {
               name: input.storeName.trim(),
-              status: "INACTIVE",
+              status: input.businessType === "INDIVIDUAL" ? "ACTIVE" : "INACTIVE",
             },
           },
         },
