@@ -19,7 +19,10 @@ function offsetIso(value: string) {
   return value.length === 16 ? value + ":00+01:00" : value + "+01:00";
 }
 function dayBounds(date: string) {
-  return { from: date + "T00:00:00+01:00", to: date + "T23:59:59+01:00" };
+  const now = new Date();
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const currentTime = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
+  return { from: date === today ? date + "T" + currentTime + ":00+01:00" : date + "T00:00:00+01:00", to: date + "T23:59:59+01:00" };
 }
 
 export default function SpaceBookingPanel({ productId }: { productId: string }) {
@@ -45,6 +48,7 @@ export default function SpaceBookingPanel({ productId }: { productId: string }) 
   const slotState = useMemo(() => {
     if (!availability || !interval) return "unknown";
     const { from, to } = interval;
+    if (from <= new Date()) return "past";
     const weekday = from.getDay();
     const day = date;
     const openException = availability.exceptions?.some((item) => item.type === "OPEN" && new Date(item.startAt) <= from && new Date(item.endAt) >= to);
@@ -106,7 +110,7 @@ export default function SpaceBookingPanel({ productId }: { productId: string }) 
       <label className="mt-3 block text-xs text-[var(--theme-text-muted)]">Informações adicionais<textarea className={field+" mt-2"} rows={3} maxLength={1500} value={note} onChange={(e)=>setNote(e.target.value)} placeholder="Objetivo da reunião, disposição da sala, equipamentos ou necessidades…" /></label>
       <button type="button" disabled={checking || !interval || date < today} onClick={()=>void checkAvailability()} className="mt-4 w-full rounded-full border border-[var(--theme-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-text)] disabled:opacity-50">{checking ? "A consultar…" : "Verificar disponibilidade"}</button>
       {availability && <div className="mt-4 rounded-xl border border-[var(--theme-border)] p-4" aria-live="polite">
-        <p className={"text-sm font-semibold "+(slotState==="available"?"text-emerald-600":slotState==="busy"?"text-red-500":"text-[var(--theme-text)]")}>{slotState==="available"?"Horário disponível":slotState==="busy"?"Horário ocupado":"Fora do horário disponibilizado"}</p>
+        <p className={"text-sm font-semibold "+(slotState==="available"?"text-emerald-600":slotState==="busy"?"text-red-500":"text-[var(--theme-text)]")}>{slotState==="available"?"Horário disponível":slotState==="busy"?"Horário ocupado":slotState==="past"?"Horário já ultrapassado":"Fora do horário disponibilizado"}</p>
         <p className="mt-1 text-xs text-[var(--theme-text-muted)]">Fuso horário: Africa/Luanda. A disponibilidade será novamente validada no servidor ao enviar o pedido.</p>
         {slotState==="available" && <button type="button" onClick={()=>void requestBooking()} disabled={sending} className="mt-4 w-full rounded-full bg-[var(--theme-text)] px-5 py-3 text-xs font-bold uppercase tracking-[0.15em] text-[var(--theme-background)] disabled:opacity-50">{sending?"A enviar pedido…":"Solicitar reserva"}</button>}
       </div>}
