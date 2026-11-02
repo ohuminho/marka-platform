@@ -86,6 +86,22 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum SpaceBookingStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  PAYMENT_PENDING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  COMPLETED
+}
+
+enum SpaceAvailabilityExceptionType {
+  CLOSED
+  OPEN
+}
+
 enum FinancialInstrumentType {
   BANK_ACCOUNT
   CARD
@@ -748,6 +764,7 @@ model User {
   financialInstruments FinancialInstrument[] @relation("UserFinancialInstruments")
   carts                Cart[]
   orders               Order[]               @relation("OrderCustomer")
+  spaceBookings        SpaceBooking[]         @relation("SpaceBookingCustomer")
   buyerConversations    MarketplaceConversation[] @relation("MarketplaceConversationBuyer")
   sellerConversations   MarketplaceConversation[] @relation("MarketplaceConversationSeller")
   marketplaceMessages   MarketplaceMessage[] @relation("MarketplaceMessageSender")
@@ -992,6 +1009,9 @@ model Product {
   cartItems  CartItem[]
   orderItems OrderItem[]
   conversations MarketplaceConversation[]
+  spaceBookings SpaceBooking[]
+  availabilityRules SpaceAvailabilityRule[]
+  availabilityExceptions SpaceAvailabilityException[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1340,6 +1360,7 @@ model Payment {
   id            String        @id @default(uuid())
   transactionId String?       @unique
   orderId       String?
+  spaceBookingId String? @unique
   amountMinor   BigInt
   currency      String        @db.Char(3)
   status        PaymentStatus @default(CREATED)
@@ -1351,6 +1372,7 @@ model Payment {
 
   transaction Transaction? @relation(fields: [transactionId], references: [id])
   order       Order?      @relation(fields: [orderId], references: [id])
+  spaceBooking SpaceBooking? @relation(fields: [spaceBookingId], references: [id], onDelete: SetNull)
 
   refunds Refund[]
 
@@ -2172,4 +2194,88 @@ model CommunicationThreadMessage {
   @@index([threadId, createdAt])
   @@index([senderId, createdAt])
   @@index([threadId, readAt])
+}
+
+
+model SpaceBooking {
+  id               String             @id @default(uuid())
+  reference        String             @unique
+  productId        String
+  customerId       String
+  status           SpaceBookingStatus @default(REQUESTED)
+  startAt          DateTime           @db.Timestamptz(3)
+  endAt            DateTime           @db.Timestamptz(3)
+  timezone         String
+  participantCount Int
+  currency         String             @default("AOA") @db.Char(3)
+  totalAmount      Decimal            @db.Decimal(20, 4)
+  priceSnapshot    Json
+  customerNote     String?            @db.Text
+  ownerNote        String?            @db.Text
+  holdExpiresAt    DateTime?          @db.Timestamptz(3)
+  acceptedAt       DateTime?
+  confirmedAt      DateTime?
+  cancelledAt      DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  product  Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  customer User    @relation("SpaceBookingCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  payment  Payment?
+  events   SpaceBookingEvent[]
+
+  @@index([productId, startAt, endAt])
+  @@index([customerId, createdAt])
+  @@index([status, holdExpiresAt])
+}
+
+model SpaceAvailabilityRule {
+  id          String   @id @default(uuid())
+  productId   String
+  weekday     Int
+  startTime   String
+  endTime     String
+  timezone    String
+  activeFrom  DateTime? @db.Date
+  activeUntil DateTime? @db.Date
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, weekday, isActive])
+}
+
+model SpaceAvailabilityException {
+  id        String                         @id @default(uuid())
+  productId String
+  type      SpaceAvailabilityExceptionType
+  startAt   DateTime                       @db.Timestamptz(3)
+  endAt     DateTime                       @db.Timestamptz(3)
+  reason    String?
+  createdAt DateTime                       @default(now())
+  updatedAt DateTime                       @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, startAt, endAt])
+}
+
+model SpaceBookingEvent {
+  id             String   @id @default(uuid())
+  bookingId      String
+  actorUserId    String?
+  action         String
+  fromStatus     SpaceBookingStatus?
+  toStatus       SpaceBookingStatus
+  idempotencyKey String   @unique
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  booking SpaceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+  @@index([actorUserId, createdAt])
 }
