@@ -74,9 +74,14 @@ export async function PATCH(request: Request) {
       orderBy: { updatedAt: "desc" },
     });
     const now = new Date();
-    const validEvidence = Boolean(profile && profile.status === "VERIFIED" &&
+    const validEvidence = Boolean(profile &&
+      profile.status === "VERIFIED" &&
+      (!profile.expiresAt || profile.expiresAt > now) &&
       profile.documents.length > 0 &&
-      profile.documents.every((document) => document.status === "VERIFIED" && (!document.expiresAt || document.expiresAt > now)));
+      profile.documents.every((document) =>
+        document.status === "VERIFIED" &&
+        (!document.expiresAt || document.expiresAt > now)
+      ));
 
     if (isCompany && !validEvidence) {
       return NextResponse.json({
