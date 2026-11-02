@@ -34,6 +34,28 @@ function money(value:string,currency:string) {
   return new Intl.NumberFormat("pt-PT",{style:"currency",currency:currency||"AOA",maximumFractionDigits:2}).format(Number(value));
 }
 
+
+type SpaceOption={id:string;name:string;attributes?:Record<string,unknown>|null};
+const weekdays=["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
+function WeeklySchedule(){
+ const [spaces,setSpaces]=useState<SpaceOption[]>([]);
+ const [selected,setSelected]=useState("");
+ const [days,setDays]=useState(Array.from({length:7},(_,weekday)=>({weekday,enabled:weekday>0&&weekday<6,startTime:"09:00",endTime:"18:00"})));
+ const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);const [message,setMessage]=useState("");const [error,setError]=useState("");
+ useEffect(()=>{let active=true;fetch("/api/vendor/products",{credentials:"include",cache:"no-store"}).then(r=>r.json()).then(data=>{if(!active)return;const eligible=(Array.isArray(data.products)?data.products:[]).filter((p:SpaceOption)=>p.attributes?.spaceBookingEnabled===true||p.attributes?.spaceBookingEnabled==="true");setSpaces(eligible);if(eligible[0])setSelected(eligible[0].id);}).catch(()=>{if(active)setError("Não foi possível carregar os espaços.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
+ useEffect(()=>{if(!selected)return;let active=true;setError("");setMessage("");fetch("/api/vendor/spaces/availability?productId="+encodeURIComponent(selected),{credentials:"include",cache:"no-store"}).then(async r=>{const data=await r.json();if(!r.ok)throw new Error(data.message||"Não foi possível carregar os horários.");if(!active)return;const existing=Array.isArray(data.rules)?data.rules:[];if(existing.length){setDays(current=>current.map(day=>{const rule=existing.find((item:{weekday:number})=>item.weekday===day.weekday);return rule?{...day,enabled:true,startTime:rule.startTime,endTime:rule.endTime}: {...day,enabled:false};}));}}).catch(e=>{if(active)setError(e instanceof Error?e.message:"Falha ao carregar horários.");});return()=>{active=false;};},[selected]);
+ async function save(){const rules=days.filter(d=>d.enabled).map(({weekday,startTime,endTime})=>({weekday,startTime,endTime,timezone:"Africa/Luanda"}));if(!rules.length){setError("Ative pelo menos um dia de funcionamento.");return;}if(rules.some(r=>r.endTime<=r.startTime)){setError("A hora final deve ser posterior à inicial em todos os dias.");return;}setSaving(true);setError("");setMessage("");try{const response=await fetch("/api/vendor/spaces/availability",{method:"PUT",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:selected,rules})});const data=await response.json();if(!response.ok)throw new Error(data.message||"Não foi possível guardar os horários.");setMessage("Horários guardados. A disponibilidade pública já utiliza estas regras.");}catch(e){setError(e instanceof Error?e.message:"Falha ao guardar horários.");}finally{setSaving(false);}}
+ return <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6"><div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="marka-kicker">CONFIGURAÇÃO DO ESPAÇO</p><h2 className="mt-2 text-xl font-semibold text-[var(--theme-text)]">Horários de funcionamento</h2><p className="mt-1 text-sm text-[var(--theme-text-muted)]">Defina quando cada espaço pode receber pedidos.</p></div></div>
+ {loading?<p className="mt-5 text-sm text-[var(--theme-text-muted)]">A carregar os seus espaços…</p>:spaces.length===0?<p className="mt-5 rounded-xl bg-[var(--theme-background)] p-4 text-sm leading-6 text-[var(--theme-text-muted)]">Ainda não tem anúncios com reservas online ativadas. Ative esta opção num anúncio de sala ou espaço para configurar a agenda.</p>:<>
+ <label className="mt-5 block text-xs text-[var(--theme-text-muted)]">Espaço<select className={inputClass+" mt-2"} value={selected} onChange={e=>setSelected(e.target.value)}>{spaces.map(space=><option key={space.id} value={space.id}>{space.name}</option>)}</select></label>
+ <div className="mt-4 divide-y divide-[var(--theme-border)] rounded-xl border border-[var(--theme-border)]">{days.map(day=><div key={day.weekday} className="grid grid-cols-[minmax(0,1fr)_1fr_1fr] items-center gap-2 p-3 sm:grid-cols-[minmax(0,1.2fr)_1fr_1fr] sm:gap-4"><label className="flex items-center gap-2 text-xs font-medium text-[var(--theme-text)]"><input type="checkbox" className="h-4 w-4 accent-current" checked={day.enabled} onChange={e=>setDays(current=>current.map(d=>d.weekday===day.weekday?{...d,enabled:e.target.checked}:d))}/><span>{weekdays[day.weekday]}</span></label><input aria-label={"Abertura "+weekdays[day.weekday]} className={inputClass+" px-2 py-2 text-xs"} type="time" disabled={!day.enabled} value={day.startTime} onChange={e=>setDays(current=>current.map(d=>d.weekday===day.weekday?{...d,startTime:e.target.value}:d))}/><input aria-label={"Fecho "+weekdays[day.weekday]} className={inputClass+" px-2 py-2 text-xs"} type="time" disabled={!day.enabled} value={day.endTime} onChange={e=>setDays(current=>current.map(d=>d.weekday===day.weekday?{...d,endTime:e.target.value}:d))}/></div>)}</div>
+ <p className="mt-3 text-xs leading-5 text-[var(--theme-text-muted)]">Fuso horário aplicado: Africa/Luanda. As alterações substituem as regras ativas anteriores, que permanecem preservadas no histórico.</p>
+ <button onClick={()=>void save()} disabled={saving||!selected} className="mt-4 w-full rounded-full bg-[var(--theme-text)] px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--theme-background)] disabled:opacity-50">{saving?"A guardar…":"Guardar horários"}</button>
+ </>}
+ {error&&<p role="alert" className="mt-3 text-sm text-red-500">{error}</p>}{message&&<p role="status" className="mt-3 text-sm text-emerald-600">{message}</p>}
+ </section>;
+}
+
 function ReservationsWorkspace() {
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [loading,setLoading]=useState(true);
@@ -90,6 +112,7 @@ function ReservationsWorkspace() {
         <div><p className="marka-kicker">MARKA / BUSINESS / RESERVAS</p><h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-5xl">Reservas de espaços</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Uma visão clara dos pedidos, propostas e reservas dos seus espaços.</p></div>
         <Link href="/app/vendor/products" className="inline-flex w-fit rounded-full border border-[var(--theme-border)] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--theme-text)]">Gerir anúncios</Link>
       </header>
+      <WeeklySchedule />
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[["Todos os pedidos",counts.all],["A aguardar",counts.pending],["Com proposta",counts.accepted],["Confirmadas",counts.confirmed]].map(([label,value])=><div key={label} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--theme-text-muted)]">{label}</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[var(--theme-text)]">{value}</p></div>)}
       </section>
