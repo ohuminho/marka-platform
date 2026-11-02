@@ -68,6 +68,12 @@ const SERVICE_VEHICLE_TYPES: Record<string, string[]> = {
   COACH: ["COACH"],
 };
 
+function readPassengerCount(metadata: unknown): number {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return 1;
+  const value = (metadata as Record<string, unknown>).passengerCount;
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 100 ? value : 1;
+}
+
 export class MobilityDispatchService {
   async dispatch(
     input: MobilityDispatchSearchInput
@@ -94,6 +100,8 @@ export class MobilityDispatchService {
 
         serviceType:
           ride.serviceType,
+
+        passengerCount: readPassengerCount(ride.metadata),
 
         vehicleTypes:
           input.vehicleTypes ??
@@ -541,6 +549,8 @@ export class MobilityDispatchService {
 
         serviceType:
           ride.serviceType,
+
+        passengerCount: readPassengerCount(ride.metadata),
 
         radiusMeters:
           input.radiusMeters,
