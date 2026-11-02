@@ -63,9 +63,9 @@ Deno.serve(async (request: Request) => {
       const previousMetadata = document.metadata && typeof document.metadata === "object" && !Array.isArray(document.metadata)
         ? document.metadata as Record<string, unknown>
         : {};
-      const reviewMetadata = isOwnIdentity
+      const reviewMetadata = isOwnIdentity && status === "VERIFIED"
         ? { ...previousMetadata, selfAttested: true, selfAttestedBy: user.id, selfAttestedAt: reviewedAt, selfAttestationReason: reason, reviewMode: "FOUNDER_SELF_ATTESTATION" }
-        : { ...previousMetadata, selfAttested: false, reviewMode: "INDEPENDENT_REVIEW" };
+        : { ...previousMetadata, selfAttested: false, reviewMode: isOwnIdentity ? "FOUNDER_SELF_REVIEW" : "INDEPENDENT_REVIEW" };
       const { data: updated, error: updateError } = await supabase.from("ComplianceDocument").update({
         status, reviewedAt, reviewedBy: user.id, metadata: reviewMetadata,
         rejectionReason: status === "REJECTED" ? reason : null,
