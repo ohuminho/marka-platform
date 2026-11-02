@@ -48,7 +48,7 @@ export async function getPublicSellerVerification(
 
   for (const seller of activeSellers) {
     if (!activeOwnerIds.has(seller.ownerId)) continue;
-    const isCompany = seller.businessType === "COMPANY";
+    if (seller.businessType !== "COMPANY" && seller.businessType !== "INDIVIDUAL") continue;\n    const isCompany = seller.businessType === "COMPANY";
     const valid = validProfiles.some((profile) =>
       isCompany
         ? profile.subjectType === "KYB" &&
