@@ -67,6 +67,31 @@ async function main() {
       },
     });
 
+  const marketplaceCategories = [
+    "Eletrónica", "Moda e acessórios", "Casa e jardim", "Alimentação e mercearia",
+    "Beleza e cuidados", "Desporto e lazer", "Livros e media", "Automóveis",
+    "Motociclos", "Imóveis e arrendamento", "Indústria e produção",
+    "Agricultura e agropecuária", "Materiais de construção e ferragens",
+    "Iluminação e material elétrico", "Portas, janelas e carpintaria", "Calçado",
+    "Mobiliário e decoração", "Equipamentos e máquinas", "Embalagens e consumíveis",
+    "Água e bebidas", "Produtos por atacado", "Serviços — Eventos e festas",
+    "Serviços — Música e entretenimento", "Serviços — Catering e cozinha",
+    "Serviços — Decoração, som e iluminação", "Serviços — Fotografia e vídeo",
+    "Serviços — Casa e manutenção", "Serviços — Beleza e bem-estar",
+    "Serviços — Limpeza e apoio", "Serviços — Educação e formação",
+    "Serviços — Tecnologia e profissionais", "Serviços — Outros", "Lojas de bairro", "Outros",
+  ];
+
+  for (const name of marketplaceCategories) {
+    const existing = await prisma.category.findFirst({
+      where: { name: { equals: name, mode: "insensitive" }, status: "ACTIVE" },
+      select: { id: true },
+    });
+    if (!existing) {
+      await prisma.category.create({ data: { name, status: "ACTIVE" } });
+    }
+  }
+
   const organization =
     await prisma.organization.upsert({
       where: {
