@@ -5,6 +5,7 @@ import { z } from "zod";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { resolveDriverOrganizationId } from "@/app/api/mobility/_lib/driver-organization";
 
 export const dynamic = "force-dynamic";
 
@@ -43,17 +44,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "Sessão inválida ou expirada.", code: "INVALID_SESSION" }, { status: 401 });
   }
 
-  const organizationId = request.headers.get("X-Organization-Id")?.trim();
+  const organizationId = await resolveDriverOrganizationId(session.userId, request.headers.get("X-Organization-Id")?.trim());
   if (!organizationId) {
-    return NextResponse.json({ message: "X-Organization-Id é obrigatório.", code: "ORGANIZATION_ID_REQUIRED" }, { status: 400 });
-  }
-
-  const membership = await prisma.organizationMembership.findFirst({
-    where: { userId: session.userId, organizationId, status: "ACTIVE", organization: { status: "ACTIVE" } },
-    select: { organizationId: true },
-  });
-  if (!membership) {
-    return NextResponse.json({ message: "Acesso à organização negado.", code: "ORGANIZATION_ACCESS_DENIED" }, { status: 403 });
+    return NextResponse.json({ message: "A conta ainda não tem uma associação MARKA ativa.", code: "MARKA_MEMBERSHIP_REQUIRED" }, { status: 403 });
   }
 
   const driver = await prisma.mobilityDriver.findFirst({
@@ -86,10 +79,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Sessão inválida ou expirada.", code: "INVALID_SESSION" }, { status: 401 });
   }
 
-  const organizationId = request.headers.get("X-Organization-Id")?.trim();
-  if (!organizationId) {
-    return NextResponse.json({ message: "X-Organization-Id é obrigatório.", code: "ORGANIZATION_ID_REQUIRED" }, { status: 400 });
-  }
+  const requestedOrganizationId = request.headers.get("X-Organization-Id")?.trim();
 
   let input: z.infer<typeof onboardingSchema>;
   try {
@@ -107,12 +97,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "A conta MARKA deve estar ativa.", code: "USER_NOT_ACTIVE" }, { status: 403 });
     }
 
-    const membership = await prisma.organizationMembership.findFirst({
-      where: { userId: user.id, organizationId, status: "ACTIVE", organization: { status: "ACTIVE" } },
-      select: { organizationId: true },
-    });
-    if (!membership) {
-      return NextResponse.json({ message: "Acesso à organização negado.", code: "ORGANIZATION_ACCESS_DENIED" }, { status: 403 });
+    const organizationId = await resolveDriverOrganizationId(user.id, requestedOrganizationId);
+    if (!organizationId) {
+      return NextResponse.json({ message: "A conta ainda não tem uma associação MARKA ativa.", code: "MARKA_MEMBERSHIP_REQUIRED" }, { status: 403 });
     }
 
     const termsAcceptance = await prisma.auditLog.findFirst({
