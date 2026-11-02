@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   type: z.enum(["CAR", "MOTORCYCLE"]),
   ownershipType: z.enum(["DRIVER_OWNED", "THIRD_PARTY_AUTHORIZED"]),
-  ownerName: z.string().trim().min(2).max(120),
+  ownerName: z.string().trim().max(120).optional().default(""),
   ownerPhone: z.string().trim().max(40).optional().default(""),
   registrationNumber: z.string().trim().min(3).max(32),
   make: z.string().trim().min(1).max(80),
@@ -18,6 +18,10 @@ const schema = z.object({
   year: z.coerce.number().int().min(1950).max(new Date().getFullYear() + 1),
   color: z.string().trim().min(2).max(40),
   capacity: z.coerce.number().int().min(1).max(100).default(4),
+}).superRefine((value, context) => {
+  if (value.ownershipType === "THIRD_PARTY_AUTHORIZED" && value.ownerName.trim().length < 2) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["ownerName"], message: "Indica o nome do proprietário do veículo." });
+  }
 });
 
 const REQUIRED = [
@@ -83,15 +87,24 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       const currentLink = await tx.mobilityDriverVehicle.findFirst({
         where: { driverId: driver.id, activeUntil: null, isPrimary: true },
-        select: { vehicleId: true },
+        select: { vehicleId: true, vehicle: { select: { metadata: true } } },
       });
+      const previousMetadata = currentLink?.vehicle.metadata && typeof currentLink.vehicle.metadata === "object" && !Array.isArray(currentLink.vehicle.metadata)
+        ? currentLink.vehicle.metadata as Record<string, unknown>
+        : {};
+      const ownershipMetadata = {
+        ownershipType: input.ownershipType,
+        ownerName: input.ownershipType === "THIRD_PARTY_AUTHORIZED" ? input.ownerName.trim() : null,
+        ownerPhone: input.ownershipType === "THIRD_PARTY_AUTHORIZED" ? input.ownerPhone || null : null,
+        ownershipDeclarationAt: new Date().toISOString(),
+      };
       const vehicle = currentLink
         ? await tx.mobilityVehicle.update({
             where: { id: currentLink.vehicleId },
-            data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ownershipType: input.ownershipType, ownerName: input.ownerName, ownerPhone: input.ownerPhone || null, ownershipDeclarationAt: new Date().toISOString() } },
+            data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ...previousMetadata, ...ownershipMetadata } },
           })
         : await tx.mobilityVehicle.create({
-            data: { organizationId, type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ownershipType: input.ownershipType, ownerName: input.ownerName, ownerPhone: input.ownerPhone || null, ownershipDeclarationAt: new Date().toISOString() } },
+            data: { organizationId, type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ...ownershipMetadata } },
           });
 
       if (currentLink) {
