@@ -12,8 +12,12 @@ type RideResult = {
 };
 
 const services = [
-  { id: "TAXI", name: "MARKA Go", detail: "Viagem urbana", seats: "Até 4 passageiros", badge: "Mais escolhido" },
-  { id: "MOTO_TAXI", name: "MARKA Moto", detail: "Deslocação ágil", seats: "1 passageiro", badge: "Urbano" },
+  { id: "TAXI", name: "MARKA Go", detail: "Automóvel para deslocações urbanas", seats: "Até 4 passageiros", badge: "Urbano" },
+  { id: "MOTO_TAXI", name: "MARKA Moto", detail: "Mototáxi para percursos rápidos", seats: "1 passageiro", badge: "Ágil" },
+  { id: "VAN", name: "MARKA Van", detail: "Viatura espaçosa para grupos e bagagem", seats: "Capacidade conforme viatura", badge: "Espaço extra" },
+  { id: "MINIBUS", name: "MARKA Minibus", detail: "Transporte colectivo de pequena capacidade", seats: "Capacidade conforme viatura", badge: "Colectivo" },
+  { id: "BUS", name: "MARKA Bus", detail: "Transporte colectivo de maior capacidade", seats: "Capacidade conforme viatura", badge: "Grupos" },
+  { id: "COACH", name: "MARKA Coach", detail: "Viagens de grupo e trajectos interurbanos", seats: "Capacidade conforme viatura", badge: "Longa distância" },
 ] as const;
 
 const statusLabels: Record<string, string> = {
@@ -204,7 +208,7 @@ export default function MobilityExperience() {
       <form onSubmit={submitRide} className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="rounded-[1.7rem] border border-white/10 bg-[#0a0c11] p-4 sm:p-6">
           <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">01 · Serviço</p><h2 className="mt-1 text-xl font-semibold">Escolha o tipo de viagem</h2><p className="mt-2 text-xs leading-5 text-white/45">O tipo seleccionado é enviado ao dispatch, que procura veículos compatíveis e motoristas elegíveis.</p></div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {services.map((service) => {
               const selected = serviceType === service.id;
               return (
