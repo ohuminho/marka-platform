@@ -53,6 +53,75 @@ function isUniqueError(error: unknown) {
     (error as { code?: unknown }).code === "P2002";
 }
 
+
+export async function GET(request: Request) {
+  try {
+    const token = (await cookies()).get("marka_session")?.value;
+    const session = token ? await new SessionService().validate(token) : null;
+    if (!session) {
+      return NextResponse.json({ message: "Inicie sessão para consultar as reservas.", code: "AUTHENTICATION_REQUIRED" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true, status: true },
+    });
+    if (!user || user.status !== "ACTIVE") {
+      return NextResponse.json({ message: "A conta não está ativa.", code: "USER_NOT_ACTIVE" }, { status: 403 });
+    }
+
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status");
+    const allowedStatuses = ["REQUESTED", "ACCEPTED", "DECLINED", "PAYMENT_PENDING", "CONFIRMED", "CANCELLED", "EXPIRED", "COMPLETED"];
+    if (status && !allowedStatuses.includes(status)) {
+      return NextResponse.json({ message: "Estado de reserva inválido.", code: "INVALID_BOOKING_STATUS" }, { status: 400 });
+    }
+
+    const bookings = await prisma.spaceBooking.findMany({
+      where: {
+        AND: [
+          { OR: [{ customerId: user.id }, { product: { store: { vendor: { ownerId: user.id } } } }] },
+          ...(status ? [{ status: status as "REQUESTED" | "ACCEPTED" | "DECLINED" | "PAYMENT_PENDING" | "CONFIRMED" | "CANCELLED" | "EXPIRED" | "COMPLETED" }] : []),
+        ],
+      },
+      include: {
+        product: {
+          select: { id: true, name: true, store: { select: { vendor: { select: { ownerId: true, name: true } } } } },
+        },
+        customer: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+
+    return NextResponse.json({
+      bookings: bookings.map((booking) => {
+        const isOwner = booking.product.store.vendor.ownerId === user.id;
+        return {
+          id: booking.id,
+          reference: booking.reference,
+          status: booking.status,
+          startAt: booking.startAt,
+          endAt: booking.endAt,
+          timezone: booking.timezone,
+          participantCount: booking.participantCount,
+          totalAmount: booking.totalAmount.toString(),
+          currency: booking.currency,
+          product: { id: booking.product.id, name: booking.product.name },
+          customer: isOwner ? { name: booking.customer.name } : undefined,
+          providerName: booking.product.store.vendor.name,
+          customerNote: isOwner || booking.customerId === user.id ? booking.customerNote : null,
+          ownerNote: isOwner || booking.customerId === user.id ? booking.ownerNote : null,
+          createdAt: booking.createdAt,
+        };
+      }),
+    }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    console.error("[SPACE_BOOKINGS_GET]", error);
+    return NextResponse.json({ message: "Não foi possível carregar as reservas.", code: "SPACE_BOOKINGS_LOAD_FAILED" }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const token = (await cookies()).get("marka_session")?.value;
