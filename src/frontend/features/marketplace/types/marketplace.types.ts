@@ -11,6 +11,8 @@ export interface MarketplaceProduct {
   image?: string;
 
   stock: number;
+  currency?: string;
+  attributes?: Record<string, unknown>;
 
   status: string;
 
