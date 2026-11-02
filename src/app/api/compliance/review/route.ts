@@ -34,6 +34,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
+    currentUserId: user.id,
     profiles: profiles.map((profile) => ({
       id: profile.id,
       subjectType: profile.subjectType,
@@ -84,16 +85,22 @@ export async function PATCH(request: Request) {
     });
     if (!profile) return NextResponse.json({ message: "Compliance profile not found." }, { status: 404 });
 
-    // A reviewer must never approve or reject their own personal identity profile.
-    // Founder ownership and administrator permissions do not override this control.
     const target = await prisma.complianceProfile.findUnique({
       where: { id: input.id },
-      select: { subjectType: true, subjectId: true, organizationId: true },
+      select: { subjectType: true, subjectId: true, organizationId: true, metadata: true },
     });
-    if (["KYC", "KYD"].includes(target?.subjectType ?? "") && target?.organizationId === null && target.subjectId === user.id) {
+    const isOwnIdentity = ["KYC", "KYD"].includes(target?.subjectType ?? "") &&
+      target?.organizationId === null && target.subjectId === user.id;
+    if (isOwnIdentity && !user.isFounder) {
       return NextResponse.json(
-        { message: "Independent review is required for your own identity profile." },
+        { message: "A tua própria identidade exige revisão independente. Apenas o fundador pode registar uma auto-declaração auditada." },
         { status: 403 },
+      );
+    }
+    if (isOwnIdentity && input.status === "VERIFIED" && !input.reason?.trim()) {
+      return NextResponse.json(
+        { message: "A auto-declaração do fundador exige uma justificação explícita.", code: "FOUNDER_SELF_ATTESTATION_REASON_REQUIRED" },
+        { status: 422 },
       );
     }
 
@@ -129,7 +136,30 @@ export async function PATCH(request: Request) {
       input.reason,
     );
 
-    return NextResponse.json({ profile: result });
+    if (isOwnIdentity && input.status === "VERIFIED") {
+      const previous = target?.metadata && typeof target.metadata === "object" && !Array.isArray(target.metadata)
+        ? target.metadata as Record<string, unknown>
+        : {};
+      await prisma.complianceProfile.update({
+        where: { id: input.id },
+        data: { metadata: {
+          ...previous,
+          selfAttested: true,
+          selfAttestedBy: user.id,
+          selfAttestedAt: new Date().toISOString(),
+          selfAttestationReason: input.reason!.trim(),
+          reviewMode: "FOUNDER_SELF_ATTESTATION",
+        } },
+      });
+    } else if (!isOwnIdentity && target?.metadata && typeof target.metadata === "object" && !Array.isArray(target.metadata)) {
+      const previous = target.metadata as Record<string, unknown>;
+      if (previous.selfAttested === true) {
+        const { selfAttested, selfAttestedBy, selfAttestedAt, selfAttestationReason, reviewMode, ...remaining } = previous;
+        await prisma.complianceProfile.update({ where: { id: input.id }, data: { metadata: remaining } });
+      }
+    }
+
+    return NextResponse.json({ profile: result, selfAttested: isOwnIdentity && input.status === "VERIFIED" });
   } catch (error) {
     console.error("[COMPLIANCE_REVIEW_ERROR]", error);
     return NextResponse.json({ message: "Unable to review compliance profile." }, { status: 400 });
