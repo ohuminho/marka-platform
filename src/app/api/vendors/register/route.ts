@@ -61,10 +61,10 @@ export async function POST(request: Request) {
     const prismaCode = typeof error === "object" && error !== null && "code" in error ? String(error.code) : null;
     console.error("[VENDOR_REGISTER_ERROR]", { referenceId, error });
 
-    if (message.includes("active organization")) {
+    if (message.includes("Company sellers must belong to an active organization")) {
       return NextResponse.json({
-        message: "Para abrir uma loja, a sua conta precisa de pertencer a uma organização ativa na MARKA. Peça ao administrador da organização para ativar a sua adesão.",
-        code: "ORGANIZATION_MEMBERSHIP_REQUIRED",
+        message: "Para registar uma empresa, associe a conta a uma organização ativa. Se está a vender em nome próprio, escolha Vendedor individual: não precisa de uma empresa nem de adesão a outra organização.",
+        code: "COMPANY_ORGANIZATION_REQUIRED",
       }, { status: 409 });
     }
 
