@@ -51,7 +51,7 @@ async function authenticatedOwner() {
 }
 
 async function ownedSpace(productId: string, ownerId: string) {
-  return prisma.product.findFirst({
+  const product = await prisma.product.findFirst({
     where: {
       id: productId,
       status: "ACTIVE",
