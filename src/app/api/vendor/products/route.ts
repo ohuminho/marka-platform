@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { getPublicSellerVerification } from "@/services/compliance/public-seller-verification.service";
 
 export const dynamic = "force-dynamic";
 
@@ -141,6 +142,17 @@ export async function POST(request: Request) {
 
     const input = parsed.data;
     const categoryName = input.categoryName.toLocaleLowerCase();
+    const sensitiveCategory =
+      ["automóveis", "motociclos", "imóveis e arrendamento"].includes(categoryName) ||
+      input.price >= 5_000_000;
+    const identity = await getPublicSellerVerification([{
+      id: vendor.id,
+      ownerId: vendor.ownerId,
+      organizationId: vendor.organizationId,
+      businessType: vendor.businessType,
+      status: vendor.status,
+    }]);
+    const identityVerified = identity.get(vendor.id) === true;
     const isServiceCategory = categoryName.startsWith("serviços");
     const isPropertyCategory = categoryName === "imóveis e arrendamento";
     if (isServiceCategory && !input.serviceType.trim()) {
@@ -198,7 +210,14 @@ export async function POST(request: Request) {
         price: input.price.toFixed(4),
         currency: input.currency.toUpperCase(),
         stock: input.stock,
-        status: "DRAFT",
+        status:
+          vendor.status === "ACTIVE" &&
+          vendor.store.status === "ACTIVE" &&
+          vendor.businessType === "INDIVIDUAL" &&
+          input.stock > 0 &&
+          !sensitiveCategory
+            ? "ACTIVE"
+            : "DRAFT",
         storeId: vendor.store.id,
         categoryId,
         inventory: {
@@ -221,7 +240,13 @@ export async function POST(request: Request) {
         status: product.status,
         category: product.category ? { id: product.category.id, name: product.category.name } : null,
       },
-      message: "Produto guardado como rascunho. Será publicado quando a loja estiver aprovada.",
+      message: product.status === "ACTIVE"
+        ? (identityVerified
+            ? "Produto publicado no Marketplace."
+            : "Produto publicado. A identidade do vendedor ainda não foi verificada.")
+        : (sensitiveCategory
+            ? "Anúncio guardado como rascunho. Esta categoria ou valor exige verificação de identidade e validação adicional."
+            : "Produto guardado como rascunho. Adicione stock ou aguarde a aprovação da loja.");
     }, { status: 201 });
   } catch (error) {
     console.error("[VENDOR_PRODUCTS_POST]", error);
@@ -245,12 +270,32 @@ export async function PATCH(request: Request) {
     if (!vendor?.store) return NextResponse.json({ message: "Loja não encontrada." }, { status: 404 });
 
     const { productId, action } = parsed.data;
-    const product = await prisma.product.findFirst({ where: { id: productId, storeId: vendor.store.id } });
+    const product = await prisma.product.findFirst({
+      where: { id: productId, storeId: vendor.store.id },
+      include: { category: true },
+    });
     if (!product) return NextResponse.json({ message: "Produto não encontrado nesta loja." }, { status: 404 });
 
     if (action === "publish") {
-      if (vendor.status !== "ACTIVE" || !vendor.verified || vendor.store.status !== "ACTIVE") {
-        return NextResponse.json({ message: "A publicação fica disponível depois da aprovação e verificação da loja.", code: "SELLER_APPROVAL_REQUIRED" }, { status: 409 });
+      if (vendor.status !== "ACTIVE" || vendor.store.status !== "ACTIVE") {
+        return NextResponse.json({ message: "A loja ainda aguarda aprovação ou está suspensa.", code: "SELLER_APPROVAL_REQUIRED" }, { status: 409 });
+      }
+      const categoryName = product.category?.name?.trim().toLocaleLowerCase() ?? "";
+      const sensitiveCategory =
+        ["automóveis", "motociclos", "imóveis e arrendamento"].includes(categoryName) ||
+        Number(product.price) >= 5_000_000;
+      if (sensitiveCategory) {
+        const identity = await getPublicSellerVerification([{
+          id: vendor.id,
+          ownerId: vendor.ownerId,
+          organizationId: vendor.organizationId,
+          businessType: vendor.businessType,
+          status: vendor.status,
+        }]);
+        if (identity.get(vendor.id) !== true) {
+          return NextResponse.json({ message: "Esta categoria ou valor exige identidade verificada antes da publicação.", code: "SELLER_VERIFICATION_REQUIRED" }, { status: 403 });
+        }
+        return NextResponse.json({ message: "A publicação desta categoria exige também validação documental de propriedade ou autorização.", code: "OWNERSHIP_REVIEW_REQUIRED" }, { status: 409 });
       }
       if (product.stock < 1) return NextResponse.json({ message: "Adicione stock antes de publicar." }, { status: 422 });
       const updated = await prisma.product.update({ where: { id: product.id }, data: { status: "ACTIVE" } });
