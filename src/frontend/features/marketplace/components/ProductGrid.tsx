@@ -140,7 +140,9 @@ export default function ProductGrid() {
 
       <MarketplaceFilters verifiedOnly={verifiedOnly} onVerifiedChange={setVerifiedOnly} sortBy={sortBy} onSortChange={setSortBy} />
 
-      <div id="marketplace-offers" />\n\n      {loading ? (
+      <div id="marketplace-offers" />
+
+      {loading ? (
         <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((item) => <div key={item} className="aspect-[4/4.3] animate-pulse rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)]" />)}
         </div>
