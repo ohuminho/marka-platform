@@ -13,6 +13,7 @@ export interface MobilityMatchRequest {
   pickupLongitude: number;
   serviceType: string;
   vehicleTypes?: string[];
+  passengerCount?: number;
   radiusMeters?: number;
   limit?: number;
 }
@@ -72,6 +73,9 @@ export class MobilityMatchingService {
                   activeUntil: null,
                   vehicle: {
                     status: MobilityVehicleStatus.ACTIVE,
+                    ...(input.passengerCount && input.passengerCount > 1
+                      ? { capacity: { gte: input.passengerCount } }
+                      : {}),
                     AND: requiredVehicleDocuments.map((documentType) => currentVerifiedDocument(documentType)),
                   },
                 },
