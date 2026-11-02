@@ -92,6 +92,9 @@ export async function GET(request: Request) {
     const attributes = product.attributes && typeof product.attributes === "object" && !Array.isArray(product.attributes)
       ? product.attributes as Record<string, unknown>
       : {};
+    if (attributes.spaceBookingEnabled !== true) {
+      return NextResponse.json({ message: "Este anúncio não está configurado para reservas de espaços.", code: "SPACE_BOOKING_NOT_ENABLED" }, { status: 404 });
+    }
 
     return NextResponse.json({
       space: {
