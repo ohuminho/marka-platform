@@ -89,7 +89,7 @@ export async function POST(request: Request, context: { params: Promise<{ bookin
                 quotedAt: new Date().toISOString(),
               },
             }
-          : { status: "DECLINED", ownerNote: input.ownerNote, cancelledAt: new Date() },
+          : { status: "DECLINED", ownerNote: input.ownerNote },
       });
       if (update.count !== 1) throw new Error("BOOKING_STATE_CHANGED");
 
