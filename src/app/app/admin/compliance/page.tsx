@@ -8,6 +8,7 @@ type ComplianceDocument = {
   status: string;
   expiresAt: string | null;
   rejectionReason: string | null;
+  selfAttested?: boolean;
 };
 type Profile = {
   id: string;
@@ -182,7 +183,7 @@ export default function AdminCompliancePage() {
                           <ul className="mt-3 space-y-4">
                             {profile.documents.map((document) => (
                               <li key={document.id} className="rounded-xl border border-[var(--theme-border)] p-3">
-                                <p className="text-xs text-[var(--theme-text)]"><strong>{document.documentType}</strong> · {document.status}</p>
+                                <p className="text-xs text-[var(--theme-text)]"><strong>{document.documentType}</strong> · {document.selfAttested ? "SELF-ATTESTED · NOT INDEPENDENT" : document.status}</p>
                                 {document.expiresAt && <p className="mt-1 text-xs text-[var(--theme-muted)]">Expires {new Date(document.expiresAt).toLocaleDateString()}</p>}
                                 {document.rejectionReason && <p className="mt-1 text-xs text-red-500">{document.rejectionReason}</p>}
                                 <div className="mt-3 flex flex-wrap gap-2">
@@ -200,7 +201,7 @@ export default function AdminCompliancePage() {
                             ))}
                           </ul>
                         )}
-                        {!hasCurrentVerifiedEvidence && <p className="mt-2 max-w-64 text-xs text-amber-600">Profile approval requires every document to be independently verified and current.</p>}
+                        {!hasCurrentVerifiedEvidence && <p className="mt-2 max-w-64 text-xs text-amber-600">Self-attested evidence is recorded for the founder but does not count as independent verification. A driver cannot be activated until a different authorized reviewer validates every required document.</p>}
                       </td>
                       <td className="px-5 py-4 text-xs text-[var(--theme-muted)]">{profile.submittedAt ? new Date(profile.submittedAt).toLocaleString() : "—"}</td>
                       <td className="px-5 py-4">
