@@ -34,7 +34,7 @@ export default function VendorOverview() {
         <p className="marka-kicker">MARKA / BUSINESS</p>
         <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-5xl">Vendor Command Center</h1>
         <p className="mt-3 text-[var(--theme-text-muted)]">O espaço de operação da sua loja, catálogo e atividade comercial.</p>
-        <Link href="/app/vendor/products" className="mt-5 inline-flex rounded-full bg-[var(--theme-text)] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--theme-background)]">Gerir loja e produtos</Link>
+        <div className="mt-5 flex flex-wrap gap-2"><Link href="/app/vendor/products" className="inline-flex rounded-full bg-[var(--theme-text)] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--theme-background)]">Gerir loja e produtos</Link><Link href="/app/vendor/reservations" className="inline-flex rounded-full border border-[var(--theme-border)] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Reservas de espaços</Link></div>
       </header>
       <RevenuePulse />
       {vendor.store ? <StoreLocationCard store={vendor.store} /> : null}
