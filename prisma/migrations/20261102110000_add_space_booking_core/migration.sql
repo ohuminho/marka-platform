@@ -60,3 +60,10 @@ ALTER TABLE "SpaceAvailabilityRule" ADD CONSTRAINT "SpaceAvailabilityRule_produc
 ALTER TABLE "SpaceAvailabilityException" ADD CONSTRAINT "SpaceAvailabilityException_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "SpaceBookingEvent" ADD CONSTRAINT "SpaceBookingEvent_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "SpaceBooking"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_spaceBookingId_fkey" FOREIGN KEY ("spaceBookingId") REFERENCES "SpaceBooking"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- New booking tables are backend-only. Keep the Supabase Data API deny-by-default.
+ALTER TABLE "SpaceBooking" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SpaceAvailabilityRule" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SpaceAvailabilityException" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SpaceBookingEvent" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL PRIVILEGES ON TABLE "SpaceBooking","SpaceAvailabilityRule","SpaceAvailabilityException","SpaceBookingEvent" FROM anon, authenticated;
