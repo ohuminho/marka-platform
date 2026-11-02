@@ -122,7 +122,7 @@ export class MarketplaceService {
 
           include: {
 
-            vendor: true,
+            vendor: { select: { id: true, ownerId: true, organizationId: true, businessType: true, status: true } },
 
           },
 
@@ -141,7 +141,7 @@ export class MarketplaceService {
     });
 
 
-    return products.map((product) => ({
+    const verification = await getPublicSellerVerification(products.map((product) => ({\n      id: product.store.vendor.id,\n      ownerId: product.store.vendor.ownerId,\n      organizationId: product.store.vendor.organizationId,\n      businessType: product.store.vendor.businessType,\n      status: product.store.vendor.status,\n    })));\n\n    const mapped = products.map((product) => ({
       id: product.id,
       name: product.name,
       description: product.description,
@@ -156,7 +156,7 @@ export class MarketplaceService {
         id: product.store.id,
         name: product.store.name,
         rating: Number(product.store.rating),
-        verified: product.store.vendor.verified,
+        verified: verification.get(product.store.vendor.id) ?? false,
       },
       category: product.category
         ? {
