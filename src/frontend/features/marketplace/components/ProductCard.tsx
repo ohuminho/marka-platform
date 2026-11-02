@@ -58,11 +58,7 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
           <span className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-header)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-muted)] backdrop-blur-xl">
             {product.category?.name || "MARKA"}
           </span>
-          {product.store.verified && (
-            <span className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-header)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text)] backdrop-blur-xl">
-              Verified
-            </span>
-          )}
+
         </div>
       </div>
 
@@ -78,7 +74,7 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
         </div>
 
         <div className="mt-4">
-          <VendorTrustBadge verified={product.store.verified} rating={product.store.rating} />
+          <VendorTrustBadge verified={product.store.verified} />
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-[var(--theme-border)] pt-4">
