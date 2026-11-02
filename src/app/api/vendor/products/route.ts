@@ -42,6 +42,7 @@ const createProductSchema = z.object({
   serviceType: z.string().trim().max(160).optional().default(""), availability: z.string().trim().max(120).optional().default(""), duration: z.string().trim().max(80).optional().default(""),
   productType: z.string().trim().max(160).optional().default(""), unit: z.string().trim().max(60).optional().default(""), capacity: z.string().trim().max(120).optional().default(""),
   images: z.array(z.string().trim().url().max(2048)).max(10).optional().default([]),
+  videos: z.array(z.string().trim().url().max(2048)).max(3).optional().default([]),
 });
 
 const productActionSchema = z.object({
@@ -170,6 +171,7 @@ export async function POST(request: Request) {
     if (input.unit) { addDetail("Unidade de venda", input.unit); attributes.unit = input.unit; }
     if (input.capacity) { addDetail("Capacidade / medida", input.capacity); attributes.capacity = input.capacity; }
     if (input.images.length) attributes.galleryImages = JSON.stringify(input.images);
+    if (input.videos.length) attributes.galleryVideos = JSON.stringify(input.videos);
     const completeDescription = [input.description, details.length ? `Detalhes do anúncio:\n${details.join("\n")}` : ""].filter(Boolean).join("\n\n").slice(0, 5000);
     let categoryId: string | null = null;
     if (input.categoryName) {
