@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -118,7 +119,18 @@ export async function PATCH(request: Request) {
             document.status === "VERIFIED" &&
             (!document.expiresAt || document.expiresAt > new Date()),
         );
-      if (!hasCurrentVerifiedEvidence) {
+      const hasSelfAttestableEvidence =
+        documents.length > 0 &&
+        documents.every(
+          (document) =>
+            document.status !== "REJECTED" &&
+            document.status !== "EXPIRED" &&
+            (!document.expiresAt || document.expiresAt > new Date()),
+        );
+      const evidenceIsAcceptable = isOwnIdentity && user.isFounder
+        ? hasSelfAttestableEvidence
+        : hasCurrentVerifiedEvidence;
+      if (!evidenceIsAcceptable) {
         return NextResponse.json(
           {
             message:
@@ -143,14 +155,14 @@ export async function PATCH(request: Request) {
         : {};
       await prisma.complianceProfile.update({
         where: { id: input.id },
-        data: { metadata: {
+        data: { metadata: ({
           ...previous,
           selfAttested: true,
           selfAttestedBy: user.id,
           selfAttestedAt: new Date().toISOString(),
           selfAttestationReason: input.reason!.trim(),
           reviewMode: "FOUNDER_SELF_ATTESTATION",
-        } },
+        } as Prisma.InputJsonObject) },
       });
     } else if (!isOwnIdentity && target?.metadata && typeof target.metadata === "object" && !Array.isArray(target.metadata)) {
       const previous = target.metadata as Record<string, unknown>;
