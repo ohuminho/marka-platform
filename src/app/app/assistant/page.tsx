@@ -102,9 +102,8 @@ export default function AssistantPage() {
                 <p className="text-xs font-semibold text-[var(--theme-text)]">MARKA AI</p>
                 <p className="mt-1 text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Núcleo inteligente partilhado</p>
               </div>
-              <span className="ml-auto flex items-center gap-2 text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text-faint)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Ligação protegida
+              <span className="ml-auto text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text-faint)]">
+                Acesso autenticado
               </span>
             </div>
 
