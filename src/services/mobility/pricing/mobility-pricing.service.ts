@@ -57,30 +57,27 @@ export class MobilityPricingService {
   ): MobilityPriceBreakdown {
     this.validate(input);
 
-    const distanceKm =
-      input.estimatedDistanceMeters / 1_000;
-
-    const durationMinutes =
-      input.estimatedDurationSeconds / 60;
+    // Keep all monetary arithmetic in bigint. Converting large minor-unit
+    // rates to Number can silently lose precision and under/overcharge.
+    // Route providers return metric measurements; normalize to whole metres
+    // and seconds, then round the resulting minor-unit amount half-up.
+    const distanceMeters = BigInt(
+      Math.round(input.estimatedDistanceMeters)
+    );
+    const durationSeconds = BigInt(
+      Math.round(input.estimatedDurationSeconds)
+    );
 
     const distanceFareMinor =
-      this.roundMinor(
-        BigInt(
-          Math.round(
-            Number(input.distanceRateMinorPerKm) *
-              distanceKm
-          )
-        )
+      this.roundRatio(
+        input.distanceRateMinorPerKm * distanceMeters,
+        BigInt(1_000)
       );
 
     const durationFareMinor =
-      this.roundMinor(
-        BigInt(
-          Math.round(
-            Number(input.durationRateMinorPerMinute) *
-              durationMinutes
-          )
-        )
+      this.roundRatio(
+        input.durationRateMinorPerMinute * durationSeconds,
+        BigInt(60)
       );
 
     const bookingFeeMinor =
@@ -195,7 +192,8 @@ export class MobilityPricingService {
 
     if (
       !Number.isFinite(input.estimatedDistanceMeters) ||
-      input.estimatedDistanceMeters < 0
+      input.estimatedDistanceMeters < 0 ||
+      input.estimatedDistanceMeters > Number.MAX_SAFE_INTEGER
     ) {
       throw new Error(
         "Estimated distance must be a valid non-negative number."
@@ -204,7 +202,8 @@ export class MobilityPricingService {
 
     if (
       !Number.isFinite(input.estimatedDurationSeconds) ||
-      input.estimatedDurationSeconds < 0
+      input.estimatedDurationSeconds < 0 ||
+      input.estimatedDurationSeconds > Number.MAX_SAFE_INTEGER
     ) {
       throw new Error(
         "Estimated duration must be a valid non-negative number."
@@ -224,12 +223,15 @@ export class MobilityPricingService {
     }
   }
 
-  private roundMinor(
-    amountMinor: bigint
+  private roundRatio(
+    numerator: bigint,
+    denominator: bigint
   ): bigint {
-    return amountMinor < BigInt(0)
-      ? BigInt(0)
-      : amountMinor;
+    if (numerator < BigInt(0) || denominator <= BigInt(0)) {
+      throw new Error("Mobility pricing ratio must be non-negative with a positive denominator.");
+    }
+
+    return (numerator + denominator / BigInt(2)) / denominator;
   }
 }
 
