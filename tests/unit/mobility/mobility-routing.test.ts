@@ -9,7 +9,7 @@ async function main(): Promise<void> {
 
   const validFetch: typeof fetch = async (input) => {
     const url = new URL(String(input));
-    assert.match(url.pathname, /route\\/v1\\/driving\\/4\\.9,-?8\\.8;13\\.2,-?8\\.8$/);
+    assert.equal(url.pathname, "/route/v1/driving/13.2,-8.8;4.9,-8.8");
     return new Response(JSON.stringify({
       code: "Ok",
       routes: [{ distance: 12_500.5, duration: 1_800 }],
