@@ -8,6 +8,9 @@ import { prisma } from "@/database/client/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Explicitly match the AI Core serverless budget instead of relying on the
+// platform default execution duration.
+export const maxDuration = 30;
 
 interface ChatBody {
   prompt?: unknown;
@@ -114,7 +117,7 @@ export async function POST(request: Request) {
     const correlationId = randomUUID();
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
     try {
       const upstream = await fetch(endpoint, {
         method: "POST",
@@ -153,9 +156,27 @@ export async function POST(request: Request) {
       if (Buffer.byteLength(raw, "utf8") > 2_000_000) {
         return jsonError("A resposta da IA excedeu o limite permitido.", 502);
       }
-      const payload = raw ? (JSON.parse(raw) as AiCoreResponse) : null;
+      let payload: AiCoreResponse | null = null;
+      if (raw) {
+        try {
+          payload = JSON.parse(raw) as AiCoreResponse;
+        } catch {
+          console.error("[MARKA_AI_UPSTREAM_INVALID_JSON]", {
+            correlationId,
+            upstreamStatus: upstream.status,
+            upstreamRequestId: upstream.headers.get("x-vercel-id"),
+          });
+          return jsonError("O serviço de IA devolveu uma resposta inválida.", 502);
+        }
+      }
 
       if (!upstream.ok) {
+        console.error("[MARKA_AI_UPSTREAM_FAILURE]", {
+          correlationId,
+          upstreamStatus: upstream.status,
+          upstreamRequestId: upstream.headers.get("x-vercel-id"),
+          aiCoreRequestId: payload?.requestId,
+        });
         const status = upstream.status === 429 ? 429 : upstream.status >= 500 ? 503 : 502;
         return jsonError(
           upstream.status === 429
@@ -179,11 +200,27 @@ export async function POST(request: Request) {
         },
         { headers: { "Cache-Control": "private, no-store" } },
       );
+    } catch (error) {
+      const timedOut = error instanceof Error && error.name === "AbortError";
+      console.error("[MARKA_AI_UPSTREAM_TRANSPORT_FAILURE]", {
+        correlationId,
+        failureType: timedOut ? "timeout" : "network",
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      });
+      return jsonError(
+        timedOut
+          ? "A resposta da IA demorou mais do que o esperado. Tenta novamente."
+          : "Não foi possível contactar o serviço de IA. Tenta novamente.",
+        timedOut ? 504 : 503,
+      );
     } finally {
       clearTimeout(timeout);
     }
   } catch (error) {
-    console.error("[MARKA_AI_CHAT]", error instanceof Error ? error.message : "unknown error");
-    return jsonError("Não foi possível contactar o serviço de IA. Tenta novamente.", 503);
+    console.error("[MARKA_AI_CHAT]", {
+      correlationId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return jsonError("Não foi possível processar o pedido da IA. Tenta novamente.", 503);
   }
 }
