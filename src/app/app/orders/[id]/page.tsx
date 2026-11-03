@@ -180,6 +180,9 @@ export default function OrderDetailPage({
 
   const [communicationLoading, setCommunicationLoading] = useState(false);
   const [communicationError, setCommunicationError] = useState<string | null>(null);
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+  const [deliveryConfirmationError, setDeliveryConfirmationError] = useState<string | null>(null);
+  const [deliveryConfirmationSent, setDeliveryConfirmationSent] = useState(false);
 
   const [tracking, setTracking] =
     useState<DeliveryTracking | null>(null);
@@ -304,6 +307,36 @@ export default function OrderDetailPage({
     } catch (error) {
       setCommunicationError(error instanceof Error ? error.message : "Não foi possível abrir a conversa.");
     } finally { setCommunicationLoading(false); }
+  };
+
+  const confirmDeliveryReceived = async () => {
+    if (!order || confirmingDelivery) return;
+    setConfirmingDelivery(true);
+    setDeliveryConfirmationError(null);
+    setDeliveryConfirmationSent(false);
+
+    try {
+      const response = await fetch(
+        `/api/orders/${encodeURIComponent(order.id)}/delivery-confirmation`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message ?? "Unable to confirm delivery.");
+      }
+      setDeliveryConfirmationSent(true);
+      await loadOrder(true);
+    } catch (error) {
+      setDeliveryConfirmationError(
+        error instanceof Error ? error.message : "Unable to confirm delivery.",
+      );
+    } finally {
+      setConfirmingDelivery(false);
+    }
   };
 
   const cancelOrder = async () => {
@@ -663,6 +696,32 @@ export default function OrderDetailPage({
                     ) : null}
                   </div>
                 ) : null}
+
+                {order.fulfillment.status === "IN_TRANSIT" && (
+                  <div className="space-y-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+                    <p className="text-sm text-[var(--theme-text)]/70">
+                      Quando receber a encomenda, confirme aqui. A entrega só será concluída depois da sua confirmação.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={confirmingDelivery}
+                      onClick={() => void confirmDeliveryReceived()}
+                      className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {confirmingDelivery ? "A confirmar recepção…" : "Confirmar que recebi a encomenda"}
+                    </button>
+                    {deliveryConfirmationSent && (
+                      <p role="status" className="text-xs text-emerald-300">
+                        Recepção confirmada. O parceiro pode agora concluir a entrega.
+                      </p>
+                    )}
+                    {deliveryConfirmationError && (
+                      <p role="alert" className="text-xs text-red-300">
+                        {deliveryConfirmationError}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {order.fulfillment.exceptionCode ? (
                   <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-300">
