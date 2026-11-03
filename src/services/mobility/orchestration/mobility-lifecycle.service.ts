@@ -18,6 +18,7 @@ import { mobilityFinancialOrchestratorService } from "@/services/mobility/financ
 import { mobilitySafetyService } from "@/services/mobility/safety/mobility-safety.service";
 
 import { mobilityRideService } from "@/services/mobility/rides/mobility-ride.service";
+import { mobilityPaymentEngineService } from "@/services/mobility/payments/mobility-payment-engine.service";
 
 import type {
   InitializeMobilityLifecycleInput,
@@ -1061,6 +1062,28 @@ export class MobilityLifecycleService {
           input,
           "TRIP_COMPLETED",
         );
+    }
+
+    // Never let the assigned driver establish the fare at trip completion.
+    // A payment record must already exist from a server-authorized quote.
+    const authorizedPayment =
+      await mobilityPaymentEngineService.getByRide(
+        input.rideId,
+      );
+
+    if (!authorizedPayment) {
+      throw new Error(
+        "Mobility trip cannot be financially finalized without a pre-authorized server-side fare. Client- or driver-submitted fares are not accepted.",
+      );
+    }
+
+    if (
+      BigInt(authorizedPayment.finalFareMinor) !==
+      input.finalFareMinor
+    ) {
+      throw new Error(
+        "Final fare does not match the previously authorized server-side fare.",
+      );
     }
 
     const policy =
