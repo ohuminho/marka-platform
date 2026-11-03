@@ -22,11 +22,12 @@ Set these variables on the MARKA Vercel project for Production:
 - `AI_CORE_BASE_URL`
 - `AI_CORE_API_KEY`
 - `AI_CONTEXT_SIGNING_SECRET`
+- `AI_CORE_VERCEL_BYPASS` (server-only; bypasses Vercel SSO protection on the AI Core deployment)
 - `AI_CORE_SPACE=marka`
 - `AI_CONTEXT_ISSUER=marka-api`
 - `AI_CONTEXT_AUDIENCE=ai-core`
 
-The AI Core project must allow `marka-api` in `AI_ALLOWED_CONTEXT_ISSUERS` and use the same audience and shared secrets.
+The AI Core project must allow `marka-api` in `AI_ALLOWED_CONTEXT_ISSUERS` and use the same audience and shared secrets. Because the AI Core deployment is protected by Vercel SSO, the server-side request also sends `x-vercel-protection-bypass`; the bypass secret must never reach the browser.
 
 ## API contract
 
