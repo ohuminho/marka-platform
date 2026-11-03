@@ -12,7 +12,7 @@ export default function MarkaHero() {
         className="
           relative
           flex
-          min-h-screen
+          min-h-[76vh]
           items-center
           justify-center
           overflow-hidden
@@ -97,7 +97,7 @@ export default function MarkaHero() {
             "
           >
             <span className="h-px w-10 bg-[var(--theme-surface-strong)]/15" />
-            <span>Global Digital Economy</span>
+            <span>ECOSSISTEMA DIGITAL AFRICANO</span>
             <span className="h-px w-10 bg-[var(--theme-surface-strong)]/15" />
           </div>
 
@@ -152,7 +152,7 @@ export default function MarkaHero() {
                 lg:text-4xl
               "
             >
-              The infrastructure of a new digital economy.
+              A infraestrutura de uma nova economia digital.
             </h2>
 
             <p
@@ -167,8 +167,7 @@ export default function MarkaHero() {
                 sm:leading-8
               "
             >
-              Commerce, payments, mobility, business and opportunity —
-              brought together in one intelligent global platform.
+              Comércio, mobilidade, serviços e oportunidades reunidos numa única plataforma inteligente.
             </p>
           </div>
 
@@ -225,7 +224,7 @@ export default function MarkaHero() {
               />
 
               <span className="relative">
-                Enter MARKA
+                Entrar na MARKA
               </span>
 
               <span
@@ -266,7 +265,7 @@ export default function MarkaHero() {
                 hover:text-[var(--theme-text)]
               "
             >
-              Explore the ecosystem
+              Explorar o Marketplace
             </Link>
 
             <Link
@@ -291,7 +290,7 @@ export default function MarkaHero() {
                 hover:text-[var(--theme-text)]
               "
             >
-              Advertise with MARKA
+              Anunciar na MARKA
             </Link>
           </div>
 
@@ -310,9 +309,9 @@ export default function MarkaHero() {
             "
           >
             {[
-              ["COMMERCE", "Global marketplace"],
-              ["PAYMENTS", "Financial infrastructure"],
-              ["MOBILITY", "Movement without borders"],
+              ["COMÉRCIO", "Marketplace multi-indústria"],
+              ["MOBILIDADE", "Pessoas, cargas e assistência"],
+              ["NEGÓCIOS", "Serviços e oportunidades"],
             ].map(([title, description], index) => (
               <div
                 key={title}
