@@ -218,7 +218,6 @@ export class MobilityFinancialOrchestratorService {
     // instead of allowing a client to assert arbitrary proceeds and source refs.
     if (
       payment.paymentMethod === "DIGITAL" &&
-      payment.status !== "COLLECTED" &&
       payment.status !== "SETTLED"
     ) {
       throw new Error(
