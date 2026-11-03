@@ -4,7 +4,7 @@ import {
   MobilityRoutingService,
 } from "../../../src/services/mobility/pricing/mobility-routing.service";
 
-const service = new MobilityRoutingService();
+async function main() {\nconst service = new MobilityRoutingService();
 
 const validFetch: typeof fetch = async (input) => {
   const url = new URL(String(input));
@@ -63,4 +63,4 @@ await assert.rejects(
     error.code === "MOBILITY_ROUTE_MEASUREMENTS_INVALID",
 );
 
-console.log("Mobility routing adapter tests passed.");
+console.log("Mobility routing adapter tests passed.");\n}\n\nvoid main().catch((error) => { console.error(error); process.exitCode = 1; });
