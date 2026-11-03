@@ -8,6 +8,8 @@ type IncomingCall = {
   conversationId: string | null; threadId: string | null; contextLabel: string;
 };
 
+const POLL_INTERVAL_MS = 6000;
+
 export default function IncomingCallListener() {
   const router = useRouter();
   const [call, setCall] = useState<IncomingCall | null>(null);
@@ -16,21 +18,50 @@ export default function IncomingCallListener() {
 
   useEffect(() => {
     let disposed = false;
+    let inFlight = false;
+    let activeController: AbortController | null = null;
+
     const refresh = async () => {
+      if (disposed || document.visibilityState !== "visible" || inFlight) return;
+      inFlight = true;
+      activeController = new AbortController();
       try {
-        const response = await fetch("/api/comms/incoming-calls", { credentials: "include", cache: "no-store" });
+        const response = await fetch("/api/comms/incoming-calls", {
+          credentials: "include",
+          cache: "no-store",
+          signal: activeController.signal,
+        });
         if (!response.ok) return;
         const data = await response.json();
         if (disposed) return;
         const incoming = (data.calls ?? []).find((item: IncomingCall) => item.id !== dismissedId);
         setCall(incoming ?? null);
-      } catch {
-        // Incoming call polling is best-effort; the durable call session remains on the server.
+      } catch (error) {
+        if (!(error instanceof Error && error.name === "AbortError")) {
+          // Incoming-call discovery is best-effort; call sessions remain durable server-side.
+        }
+      } finally {
+        inFlight = false;
+        activeController = null;
       }
     };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refresh();
+      else activeController?.abort();
+    };
+
     const initial = window.setTimeout(() => void refresh(), 0);
-    const timer = window.setInterval(() => void refresh(), 2200);
-    return () => { disposed = true; window.clearTimeout(initial); window.clearInterval(timer); };
+    const timer = window.setInterval(() => void refresh(), POLL_INTERVAL_MS);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      disposed = true;
+      activeController?.abort();
+      window.clearTimeout(initial);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [dismissedId]);
 
   async function reject() {
