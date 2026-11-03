@@ -105,7 +105,11 @@ export class MobilityMatchingService {
           },
 
           location: {
-            isNot: null,
+            is: {
+              recordedAt: {
+                gte: new Date(Date.now() - 2 * 60 * 1000),
+              },
+            },
           },
         },
 
