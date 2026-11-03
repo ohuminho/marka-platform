@@ -92,6 +92,12 @@ export class MobilityMatchingService {
               activeUntil: null,
               vehicle: {
                 status: MobilityVehicleStatus.ACTIVE,
+                capacity: {
+                  gte: input.passengerCount ?? 1,
+                },
+                AND: requiredVehicleDocuments.map((documentType) =>
+                  currentVerifiedDocument(documentType)
+                ),
                 ...(input.vehicleTypes &&
                 input.vehicleTypes.length > 0
                   ? {
