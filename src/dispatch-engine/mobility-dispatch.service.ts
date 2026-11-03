@@ -74,7 +74,7 @@ const SERVICE_VEHICLE_TYPES: Record<string, string[]> = {
  * vehicle class associated with a service (for example, request a car for
  * a motorcycle-taxi ride).
  */
-function resolveServiceVehicleTypes(
+export function resolveServiceVehicleTypes(
   serviceType: string,
   requestedVehicleTypes?: string[],
 ): string[] {
