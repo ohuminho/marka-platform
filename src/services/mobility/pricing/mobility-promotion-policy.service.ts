@@ -22,7 +22,7 @@ export interface MobilityPromotionInput {
 
 export interface MobilityPromotionResult {
   eligible: boolean;
-  reason: "DISABLED" | "SHORT_OFF_PEAK" | "ELIGIBLE";
+  reason: "DISABLED" | "SHORT_OFF_PEAK" | "BUDGET_INSUFFICIENT" | "MINIMUM_FARE_PROTECTED" | "ELIGIBLE";
   discountMinor: bigint;
   finalFareMinor: bigint;
   maximumDiscountMinor: bigint;
@@ -85,25 +85,37 @@ export function evaluateMobilityPromotion(
     };
   }
 
-  // The promotion must never make the fare negative or cross the configured floor.
-  const affordableDiscountMinor =
-    input.quotedFareMinor > input.minimumPayableFareMinor
-      ? input.quotedFareMinor - input.minimumPayableFareMinor
-      : BigInt(0);
+  // MARKA's published saving is a fixed minimum, not a variable partial
+  // discount. If the platform cannot fund the full amount or the fare floor
+  // would be breached, do not advertise/apply the promotion on this quote.
+  if (input.quotedFareMinor - maximumDiscountMinor < input.minimumPayableFareMinor) {
+    return {
+      eligible: false,
+      reason: "MINIMUM_FARE_PROTECTED",
+      discountMinor: BigInt(0),
+      finalFareMinor: input.quotedFareMinor,
+      maximumDiscountMinor,
+      fundingRequiredMinor: BigInt(0),
+    };
+  }
 
-  // The platform-funded budget caps the actual discount; driver earnings are untouched.
-  const discountMinor = [
-    maximumDiscountMinor,
-    affordableDiscountMinor,
-    input.availablePromotionBudgetMinor,
-  ].reduce((minimum, amount) => amount < minimum ? amount : minimum);
+  if (input.availablePromotionBudgetMinor < maximumDiscountMinor) {
+    return {
+      eligible: false,
+      reason: "BUDGET_INSUFFICIENT",
+      discountMinor: BigInt(0),
+      finalFareMinor: input.quotedFareMinor,
+      maximumDiscountMinor,
+      fundingRequiredMinor: BigInt(0),
+    };
+  }
 
   return {
     eligible: true,
     reason: "ELIGIBLE",
-    discountMinor,
-    finalFareMinor: input.quotedFareMinor - discountMinor,
+    discountMinor: maximumDiscountMinor,
+    finalFareMinor: input.quotedFareMinor - maximumDiscountMinor,
     maximumDiscountMinor,
-    fundingRequiredMinor: discountMinor,
+    fundingRequiredMinor: maximumDiscountMinor,
   };
 }
