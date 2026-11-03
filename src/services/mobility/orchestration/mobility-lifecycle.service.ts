@@ -1019,6 +1019,43 @@ export class MobilityLifecycleService {
         input.rideId,
       );
 
+    // Validate the immutable, previously authorized server-side fare before
+    // mutating the ride state. Otherwise a missing/mismatched payment could
+    // leave the ride marked completed while financial finalization has failed.
+    const authorizedPayment =
+      await mobilityPaymentEngineService.getByRide(
+        input.rideId,
+      );
+
+    if (!authorizedPayment) {
+      throw new Error(
+        "Mobility trip cannot be completed without a previously authorized server-side fare. Client- or driver-submitted fares are not accepted.",
+      );
+    }
+
+    if (
+      authorizedPayment.organizationId !==
+        input.organizationId ||
+      authorizedPayment.riderId !== ride.riderId ||
+      (
+        ride.driverId &&
+        authorizedPayment.driverId !== ride.driverId
+      )
+    ) {
+      throw new Error(
+        "Authorized Mobility payment does not match this ride's organization, rider, or assigned driver.",
+      );
+    }
+
+    if (
+      BigInt(authorizedPayment.finalFareMinor) !==
+      input.finalFareMinor
+    ) {
+      throw new Error(
+        "Final fare does not match the previously authorized server-side fare.",
+      );
+    }
+
     if (
       ride.status !==
       MobilityRideStatus.TRIP_COMPLETED
@@ -1062,28 +1099,6 @@ export class MobilityLifecycleService {
           input,
           "TRIP_COMPLETED",
         );
-    }
-
-    // Never let the assigned driver establish the fare at trip completion.
-    // A payment record must already exist from a server-authorized quote.
-    const authorizedPayment =
-      await mobilityPaymentEngineService.getByRide(
-        input.rideId,
-      );
-
-    if (!authorizedPayment) {
-      throw new Error(
-        "Mobility trip cannot be financially finalized without a pre-authorized server-side fare. Client- or driver-submitted fares are not accepted.",
-      );
-    }
-
-    if (
-      BigInt(authorizedPayment.finalFareMinor) !==
-      input.finalFareMinor
-    ) {
-      throw new Error(
-        "Final fare does not match the previously authorized server-side fare.",
-      );
     }
 
     const policy =
