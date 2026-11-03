@@ -16,6 +16,12 @@ const icons: Record<
   string,
   React.ReactNode
 > = {
+  "AI Assistant": (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M12 3.5 13.7 9l5.3 1.7-5.3 1.7-1.7 5.3-1.7-5.3L5 10.7 10.3 9 12 3.5Z" />
+      <path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z" />
+    </svg>
+  ),
   Overview: (
     <svg
       viewBox="0 0 24 24"
