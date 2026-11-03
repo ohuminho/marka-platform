@@ -83,3 +83,16 @@ O PSP só pode ser escolhido quando houver resposta escrita para:
 - O PaymentService actual está centrado em Order e não suporta ainda o ciclo de pagamento de SpaceBooking sem Order.
 - Não criar uma integração real ou activar cobrança com base apenas em documentação pública.
 - Próximo passo técnico: preparar adapter e contrato de domínio multi-beneficiário depois de confirmar com o PSP o modelo de liquidação. Até lá, manter o fluxo de reserva em pedido/cotação, sem pagamento.
+
+## 7. Contactos comerciais e diligência (03-11-2026)
+
+Canais publicados nos sites oficiais, para envio do pedido de informação:
+- AppyPay: comercial@appy.co.ao — https://www.appypay.co.ao/contacto
+- IZI Pay: info@izipay.ao — https://izipay.ao/
+- Banco BNI: bnicontactcenter@bni.ao — https://www.bni.ao/pt/contactos
+- FACI-X / FaciConnect: atendimento@faci-x.ao — https://faci-x.ao/
+
+Notas de diligência:
+- BitPay (bitpay.ao) declara publicamente que ainda não está em produção e aguarda certificação EMIS. Não tratar como gateway pronto para produção; pode ser contactado apenas para acompanhar a certificação e obter informação técnica/comercial.
+- Não foi possível identificar um fornecedor de pagamentos angolano verificável com o nome HappyPay e contacto oficial local. Não enviar dados comerciais para endereços homónimos estrangeiros sem confirmação da entidade pretendida.
+- Os contactos acima são canais institucionais publicados; não significam que o fornecedor tenha confirmado marketplace split settlement, liquidação directa multi-beneficiário ou elegibilidade regulatória para o caso MARKA.
