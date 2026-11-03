@@ -171,6 +171,20 @@ export async function POST(
       );
     }
 
+    // Pricing currently has no active, versioned server-side tariff source.
+    // Do not accept estimatedFareMinor or pricingSnapshot from the browser as
+    // authority for a financial commitment. Re-enable only after the quote
+    // endpoint calculates and persists a server-owned immutable quote.
+    return NextResponse.json(
+      {
+        message:
+          "Mobility fare authorization is temporarily unavailable until server-side tariff configuration is activated. No client-submitted fare can be authorized.",
+        code:
+          "MOBILITY_SERVER_PRICING_NOT_CONFIGURED",
+      },
+      { status: 503 },
+    );
+
     const paymentMethod =
       typeof body.paymentMethod ===
       "string"
