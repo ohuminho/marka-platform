@@ -65,3 +65,20 @@ The promotion evaluator is a domain component; it does not mean that end-to-end 
 - Production migration verification and end-to-end smoke tests.
 
 Until then, do not invent fare amounts or advertise live discounts as universally available.
+
+
+## Server-side peak-period evaluation
+
+A server-only evaluator now resolves current time in the `Africa/Luanda` timezone and matches version-controlled weekday/time windows. It supports overnight windows and uses inclusive start / exclusive end boundaries. Missing configuration means no peak-period discount is eligible.
+
+Configure `MOBILITY_PEAK_WINDOWS` as server-owned JSON, for example:
+
+```json
+[
+  { "dayOfWeek": 1, "start": "07:00", "end": "09:00" },
+  { "dayOfWeek": 1, "start": "16:30", "end": "19:30" },
+  { "dayOfWeek": 2, "start": "07:00", "end": "09:00" }
+]
+```
+
+Day numbering is Sunday=0 through Saturday=6. The example is illustrative only; it is not an approved operational schedule. Configure actual periods after analysing local trip demand. The evaluator and its boundary/timezone tests are implemented, but it is not yet wired to a live quote endpoint; do not accept a peak-hour flag from the browser.
