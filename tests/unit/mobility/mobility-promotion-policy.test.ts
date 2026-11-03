@@ -55,8 +55,10 @@ const budgetLimited = evaluateMobilityPromotion({
   availablePromotionBudgetMinor: BigInt(20_000),
 });
 
-assert.equal(budgetLimited.discountMinor, BigInt(20_000));
-assert.equal(budgetLimited.finalFareMinor, BigInt(480_000));
+assert.equal(budgetLimited.eligible, false);
+assert.equal(budgetLimited.reason, "BUDGET_INSUFFICIENT");
+assert.equal(budgetLimited.discountMinor, BigInt(0));
+assert.equal(budgetLimited.finalFareMinor, common.quotedFareMinor);
 
 const minimumFareProtected = evaluateMobilityPromotion({
   ...common,
@@ -65,8 +67,10 @@ const minimumFareProtected = evaluateMobilityPromotion({
   minimumPayableFareMinor: BigInt(110_000),
 });
 
-assert.equal(minimumFareProtected.discountMinor, BigInt(10_000));
-assert.equal(minimumFareProtected.finalFareMinor, BigInt(110_000));
+assert.equal(minimumFareProtected.eligible, false);
+assert.equal(minimumFareProtected.reason, "MINIMUM_FARE_PROTECTED");
+assert.equal(minimumFareProtected.discountMinor, BigInt(0));
+assert.equal(minimumFareProtected.finalFareMinor, BigInt(120_000));
 
 const disabled = evaluateMobilityPromotion({
   ...common,
