@@ -68,6 +68,42 @@ const SERVICE_VEHICLE_TYPES: Record<string, string[]> = {
   COACH: ["COACH"],
 };
 
+/**
+ * Resolve vehicle eligibility exclusively from the persisted service type.
+ * A client may narrow the eligible set, but cannot widen it or change the
+ * vehicle class associated with a service (for example, request a car for
+ * a motorcycle-taxi ride).
+ */
+function resolveServiceVehicleTypes(
+  serviceType: string,
+  requestedVehicleTypes?: string[],
+): string[] {
+  const allowed = SERVICE_VEHICLE_TYPES[serviceType.trim().toUpperCase()];
+
+  if (!allowed) {
+    throw new DispatchDomainError(
+      `Unsupported Mobility service type: ${serviceType}.`,
+      "UNSUPPORTED_MOBILITY_SERVICE_TYPE"
+    );
+  }
+
+  if (requestedVehicleTypes === undefined) {
+    return allowed;
+  }
+
+  if (
+    requestedVehicleTypes.length === 0 ||
+    requestedVehicleTypes.some((type) => !allowed.includes(type))
+  ) {
+    throw new DispatchDomainError(
+      "Requested vehicle types are not permitted for this Mobility service.",
+      "MOBILITY_SERVICE_VEHICLE_TYPE_MISMATCH"
+    );
+  }
+
+  return [...new Set(requestedVehicleTypes)];
+}
+
 function readPassengerCount(metadata: unknown): number {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return 1;
   const value = (metadata as Record<string, unknown>).passengerCount;
@@ -104,8 +140,10 @@ export class MobilityDispatchService {
         passengerCount: readPassengerCount(ride.metadata),
 
         vehicleTypes:
-          input.vehicleTypes ??
-          SERVICE_VEHICLE_TYPES[ride.serviceType],
+          resolveServiceVehicleTypes(
+            ride.serviceType,
+            input.vehicleTypes
+          ),
 
         radiusMeters:
           input.radiusMeters,
@@ -559,7 +597,10 @@ export class MobilityDispatchService {
           input.limit,
 
         vehicleTypes:
-          input.vehicleTypes,
+          resolveServiceVehicleTypes(
+            ride.serviceType,
+            input.vehicleTypes
+          ),
       });
 
     const safetyMode =
