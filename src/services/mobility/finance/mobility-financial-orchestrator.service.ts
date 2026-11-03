@@ -212,6 +212,20 @@ export class MobilityFinancialOrchestratorService {
     let payment =
       existingPayment;
 
+    // Digital settlement proceeds must originate from a verified payment
+    // provider notification, never from values submitted by a rider or driver.
+    // Until a provider webhook/verification adapter is connected, fail closed
+    // instead of allowing a client to assert arbitrary proceeds and source refs.
+    if (
+      payment.paymentMethod === "DIGITAL" &&
+      payment.status !== "COLLECTED" &&
+      payment.status !== "SETTLED"
+    ) {
+      throw new Error(
+        "Digital Mobility settlement requires verified payment-provider confirmation. Client-submitted proceeds are not accepted."
+      );
+    }
+
     if (
       payment.status !==
       "COLLECTED" &&
