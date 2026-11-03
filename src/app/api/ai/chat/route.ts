@@ -139,7 +139,7 @@ export async function POST(request: Request) {
             "Nunca peças palavras-passe, códigos OTP, dados completos de cartões ou credenciais bancárias.",
             "Promove transacções seguras dentro da MARKA e não recomendes contornar os mecanismos de segurança ou pagamentos da plataforma.",
             "Não afirmes que executaste uma acção ou alteraste dados sem confirmação de uma ferramenta autorizada.",
-          ].join("\\n"),
+          ].join("\n"),
           ...(typeof body.conversationId === "string"
             ? { conversationId: body.conversationId }
             : {}),
