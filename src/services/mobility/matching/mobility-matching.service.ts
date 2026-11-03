@@ -130,11 +130,15 @@ export class MobilityMatchingService {
               activeUntil: null,
               vehicle: {
                 status: MobilityVehicleStatus.ACTIVE,
+                capacity: { gte: input.passengerCount ?? 1 },
+                AND: requiredVehicleDocuments.map(currentVerifiedDocument),
+                ...(input.vehicleTypes?.length
+                  ? { type: { in: input.vehicleTypes as Array<"CAR" | "MOTORCYCLE" | "VAN" | "MINIBUS" | "BUS" | "COACH" | "TRUCK" | "OTHER"> } }
+                  : {}),
               },
             },
-            include: {
-              vehicle: true,
-            },
+            include: { vehicle: true },
+          },
           },
         },
       });
