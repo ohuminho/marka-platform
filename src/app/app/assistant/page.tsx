@@ -43,11 +43,11 @@ export default function AssistantPage() {
         }),
       });
       const payload = await response.json().catch(() => null) as
-        | { success?: boolean; content?: string; message?: string }
+        | { success?: boolean; content?: string; message?: string; correlationId?: string }
         | null;
 
       if (!response.ok || !payload?.success || typeof payload.content !== "string") {
-        throw new Error(payload?.message || "Não foi possível obter uma resposta da IA.");
+        throw new Error(`${payload?.message || "Não foi possível obter uma resposta da IA."}${payload?.correlationId ? ` (Referência: ${payload.correlationId.slice(0, 12)})` : ""}`);
       }
 
       setMessages((current) => [
