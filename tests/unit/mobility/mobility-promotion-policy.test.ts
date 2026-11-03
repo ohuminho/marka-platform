@@ -103,3 +103,51 @@ assert.equal(integratedPricing.promotion?.discountMinor, BigInt(100_000));
 assert.equal(integratedPricing.totalMinor, BigInt(400_000));
 
 console.log("Mobility pricing integration tests passed.");
+
+const precisionPricing = new MobilityPricingService().calculate({
+  currency: "AOA",
+  baseFareMinor: BigInt(0),
+  estimatedDistanceMeters: 1_000,
+  estimatedDurationSeconds: 60,
+  distanceRateMinorPerKm: BigInt("9007199254740993"),
+  durationRateMinorPerMinute: BigInt("9007199254740993"),
+});
+
+assert.equal(
+  precisionPricing.distanceFareMinor,
+  BigInt("9007199254740993"),
+);
+assert.equal(
+  precisionPricing.durationFareMinor,
+  BigInt("9007199254740993"),
+);
+assert.equal(
+  precisionPricing.totalMinor,
+  BigInt("18014398509481986"),
+);
+
+const roundedPrecisionPricing = new MobilityPricingService().calculate({
+  currency: "AOA",
+  baseFareMinor: BigInt(0),
+  estimatedDistanceMeters: 500,
+  estimatedDurationSeconds: 30,
+  distanceRateMinorPerKm: BigInt(101),
+  durationRateMinorPerMinute: BigInt(101),
+});
+
+assert.equal(roundedPrecisionPricing.distanceFareMinor, BigInt(51));
+assert.equal(roundedPrecisionPricing.durationFareMinor, BigInt(51));
+
+assert.throws(
+  () => new MobilityPricingService().calculate({
+    currency: "AOA",
+    baseFareMinor: BigInt(0),
+    estimatedDistanceMeters: Number.MAX_SAFE_INTEGER + 1,
+    estimatedDurationSeconds: 60,
+    distanceRateMinorPerKm: BigInt(1),
+    durationRateMinorPerMinute: BigInt(1),
+  }),
+  /Estimated distance must be a valid non-negative number/,
+);
+
+console.log("Mobility pricing precision tests passed.");
