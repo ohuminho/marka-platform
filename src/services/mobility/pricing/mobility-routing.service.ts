@@ -54,7 +54,7 @@ export class MobilityRoutingService {
     let endpoint: URL;
     try {
       endpoint = new URL(
-        `/route/v1/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`,
+        `route/v1/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`,
         ensureTrailingSlash(baseUrl),
       );
     } catch {
