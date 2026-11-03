@@ -36,6 +36,7 @@ function jsonError(message: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  const correlationId = randomUUID();
   try {
     const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
     if (!token) return jsonError("Inicia sessão para utilizar a IA do MARKA.", 401);
@@ -114,8 +115,6 @@ export async function POST(request: Request) {
       .update(encodedPayload)
       .digest("base64url");
     const contextToken = encodedPayload + "." + signature;
-    const correlationId = randomUUID();
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000);
     try {
