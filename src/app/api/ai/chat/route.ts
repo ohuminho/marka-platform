@@ -28,9 +28,9 @@ function encodeContext(payload: Record<string, unknown>): string {
   return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
 
-function jsonError(message: string, status: number) {
+function jsonError(message: string, status: number, correlationId?: string) {
   return NextResponse.json(
-    { success: false, message },
+    { success: false, message, ...(correlationId ? { correlationId } : {}) },
     { status, headers: { "Cache-Control": "private, no-store" } },
   );
 }
@@ -165,7 +165,7 @@ export async function POST(request: Request) {
             upstreamStatus: upstream.status,
             upstreamRequestId: upstream.headers.get("x-vercel-id"),
           });
-          return jsonError("O serviço de IA devolveu uma resposta inválida.", 502);
+          return jsonError("O serviço de IA devolveu uma resposta inválida.", 502, correlationId);
         }
       }
 
@@ -182,6 +182,7 @@ export async function POST(request: Request) {
             ? "O limite de utilização da IA foi atingido. Tenta novamente mais tarde."
             : "O serviço de IA não conseguiu processar o pedido.",
           status,
+          correlationId,
         );
       }
       if (!payload || typeof payload.text !== "string" || !payload.text.trim()) {
@@ -211,6 +212,7 @@ export async function POST(request: Request) {
           ? "A resposta da IA demorou mais do que o esperado. Tenta novamente."
           : "Não foi possível contactar o serviço de IA. Tenta novamente.",
         timedOut ? 504 : 503,
+        correlationId,
       );
     } finally {
       clearTimeout(timeout);
@@ -220,6 +222,6 @@ export async function POST(request: Request) {
       correlationId,
       errorName: error instanceof Error ? error.name : "UnknownError",
     });
-    return jsonError("Não foi possível processar o pedido da IA. Tenta novamente.", 503);
+    return jsonError("Não foi possível processar o pedido da IA. Tenta novamente.", 503, correlationId);
   }
 }
