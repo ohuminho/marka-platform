@@ -243,6 +243,21 @@ export class FulfillmentAdapter
       );
 
     if (existingDispatch) {
+      const existingRequest =
+        await dispatchAdapter.getRequest(
+          existingDispatch.id,
+        );
+
+      if (
+        existingRequest &&
+        (existingRequest.status === "CREATED" ||
+          existingRequest.status === "REASSIGNING")
+      ) {
+        await dispatchAdapter.discoverCandidates(
+          existingRequest,
+        );
+      }
+
       return request;
     }
 
@@ -294,6 +309,10 @@ export class FulfillmentAdapter
                 : null,
           },
         });
+
+      await dispatchAdapter.discoverCandidates(
+        dispatch,
+      );
 
       return prisma.fulfillmentRequest.update(
         {
