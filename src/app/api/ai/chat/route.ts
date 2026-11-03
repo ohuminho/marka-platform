@@ -69,11 +69,19 @@ export async function POST(request: Request) {
     const baseUrl = process.env.AI_CORE_BASE_URL?.trim();
     const apiKey = process.env.AI_CORE_API_KEY?.trim();
     const signingSecret = process.env.AI_CONTEXT_SIGNING_SECRET;
+    const vercelBypass = process.env.AI_CORE_VERCEL_BYPASS?.trim();
     const space = process.env.AI_CORE_SPACE?.trim() || "marka";
     const issuer = process.env.AI_CONTEXT_ISSUER?.trim() || "marka-api";
     const audience = process.env.AI_CONTEXT_AUDIENCE?.trim() || "ai-core";
 
-    if (!baseUrl || !apiKey || !signingSecret || apiKey.length < 32 || signingSecret.length < 32) {
+    if (
+      !baseUrl ||
+      !apiKey ||
+      !signingSecret ||
+      apiKey.length < 32 ||
+      signingSecret.length < 32 ||
+      (process.env.NODE_ENV === "production" && !vercelBypass)
+    ) {
       return jsonError("O serviço de IA ainda não está configurado para produção.", 503);
     }
 
@@ -116,6 +124,7 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           "x-ai-core-key": apiKey,
           "x-ai-context-token": contextToken,
+          ...(vercelBypass ? { "x-vercel-protection-bypass": vercelBypass } : {}),
           "x-correlation-id": correlationId,
         },
         body: JSON.stringify({
