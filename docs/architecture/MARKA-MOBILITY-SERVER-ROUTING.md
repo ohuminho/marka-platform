@@ -30,3 +30,38 @@ This adapter is not yet connected to fare authorization. The fare endpoint remai
 6. A production routing endpoint configured and health-checked.
 
 No default fares are invented. Taxi, moto-taxi, cargo and roadside assistance require separate tariff schedules.
+
+
+## Competitive passenger fare policy
+
+The approved product requirement is a fixed MARKA-funded passenger discount on eligible AOA trips:
+
+| Service class | Discount | Minor units used by the pricing engine |
+| --- | ---: | ---: |
+| Taxi / light passenger vehicle | 1,000 Kz | 100,000 |
+| Motorcycle taxi | 500 Kz | 50,000 |
+
+These values are fixed discounts, not percentages. Eligibility is long-distance OR configured peak period. They are not stacked. The current policy applies only to TAXI and MOTO_TAXI; cargo, vans, buses and roadside assistance need separate commercial schedules.
+
+The pure promotion evaluator already implements the fixed discounts, checks the minimum payable fare and requires the complete discount to fit within the available MARKA promotion budget. If the budget or minimum-fare condition fails, the quote receives no discount. Do not apply a partial discount or reduce driver earnings.
+
+Production callers must calculate peak eligibility on the server using the Africa/Luanda timezone and a versioned peak-window configuration. Never trust a browser-supplied peak flag, distance, duration, fare or discount. Long-distance thresholds and peak windows must be configured from observed local trip patterns, not guessed.
+
+The promotion is a MARKA commercial expense. It must be accounted separately from driver earnings, driver commissions and partner settlement. MARKA must not custody partner funds; partner proceeds continue to settle directly to their beneficiaries through an authorized payment arrangement.
+
+The passenger UI may show the actual saving against the undiscounted MARKA quote (for example, "Poupa 1.000 Kz nesta viagem"). It must not claim MARKA is cheaper than Yango, Heetch or Bolt unless a lawful, timestamped, like-for-like reference price exists for the same route, vehicle class and time.
+
+## Live activation gates
+
+The promotion evaluator is a domain component; it does not mean that end-to-end live quotations are operational. Keep live fare authorization fail-closed until all gates pass:
+
+- Approved base, per-kilometre and per-minute tariffs for each service class.
+- Minimum fare, booking/waiting fees and surge ceiling.
+- Configured long-distance threshold and peak windows.
+- Funded promotion budget with atomic reservation/consumption to prevent concurrent quotes overspending it.
+- Configured and monitored production routing endpoint.
+- Immutable quote persistence with unique ID, passenger/service binding, tariff and policy versions, expiry and complete amount breakdown.
+- Ride creation and payment authorization bound to the immutable quote; reject expired, altered, cross-user or wrong-service quotes.
+- Production migration verification and end-to-end smoke tests.
+
+Until then, do not invent fare amounts or advertise live discounts as universally available.
