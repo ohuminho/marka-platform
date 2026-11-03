@@ -139,7 +139,6 @@ export class MobilityMatchingService {
             },
             include: { vehicle: true },
           },
-          },
         },
       });
 
