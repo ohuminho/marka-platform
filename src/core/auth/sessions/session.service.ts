@@ -27,6 +27,11 @@ export class SessionService {
   private readonly sessionDurationMs =
     AuthConfig.session.durationHours * 60 * 60 * 1000;
 
+  // Session activity is persisted at most once every five minutes. Updating
+  // lastSeenAt on every API request creates avoidable write pressure on the
+  // small transaction pool used by serverless instances.
+  private readonly activityWriteIntervalMs = 5 * 60 * 1000;
+
   private hashToken(token: string): string {
     return createHash("sha256")
       .update(token)
@@ -88,26 +93,31 @@ export class SessionService {
       },
     });
 
-    if (!session) {
+    if (!session || session.revokedAt || session.expiresAt <= new Date()) {
       return null;
     }
 
-    if (session.revokedAt) {
-      return null;
-    }
+    const now = new Date();
+    const activityCutoff = new Date(
+      now.getTime() - this.activityWriteIntervalMs
+    );
 
-    if (session.expiresAt <= new Date()) {
-      return null;
+    // Conditional update makes concurrent requests safe: only the first
+    // request after the interval advances the activity timestamp.
+    if (!session.lastSeenAt || session.lastSeenAt <= activityCutoff) {
+      await prisma.session.updateMany({
+        where: {
+          id: session.id,
+          OR: [
+            { lastSeenAt: null },
+            { lastSeenAt: { lte: activityCutoff } },
+          ],
+        },
+        data: {
+          lastSeenAt: now,
+        },
+      });
     }
-
-    await prisma.session.update({
-      where: {
-        id: session.id,
-      },
-      data: {
-        lastSeenAt: new Date(),
-      },
-    });
 
     return {
       id: session.id,
