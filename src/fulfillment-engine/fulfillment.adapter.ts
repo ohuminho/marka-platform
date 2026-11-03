@@ -706,6 +706,7 @@ export class FulfillmentAdapter
               true,
             orderId: true,
             status: true,
+            metadata: true,
             pickupType: true,
             pickupId: true,
             destinationType:
@@ -734,6 +735,28 @@ export class FulfillmentAdapter
     ) {
       throw new Error(
         `Invalid fulfillment transition: ${current.status} -> COMPLETED.`,
+      );
+    }
+
+    const currentMetadata =
+      current.metadata &&
+      typeof current.metadata === "object" &&
+      !Array.isArray(current.metadata)
+        ? current.metadata as Record<string, unknown>
+        : {};
+    const deliveryProof =
+      currentMetadata.deliveryProof &&
+      typeof currentMetadata.deliveryProof === "object" &&
+      !Array.isArray(currentMetadata.deliveryProof)
+        ? currentMetadata.deliveryProof as Record<string, unknown>
+        : {};
+
+    if (
+      deliveryProof.method !== "CUSTOMER_CONFIRMATION" ||
+      typeof deliveryProof.confirmedAt !== "string"
+    ) {
+      throw new Error(
+        "Customer delivery confirmation is required before completion.",
       );
     }
 
