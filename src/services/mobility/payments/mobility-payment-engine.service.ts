@@ -409,8 +409,21 @@ export class MobilityPaymentEngineService {
             );
           }
 
+          // The fare is fixed when the rider initializes the payment.
+          // A driver/client must not be able to overwrite the persisted amount
+          // during completion or settlement. Any future fare adjustment must
+          // go through a separate server-authorized repricing workflow.
+          if (
+            input.finalFareMinor !==
+            existing.finalFareMinor
+          ) {
+            throw new Error(
+              "Final fare does not match the amount authorized for this ride."
+            );
+          }
+
           const finalFare =
-            input.finalFareMinor;
+            existing.finalFareMinor;
 
           const commission =
             this.calculateCommission(
