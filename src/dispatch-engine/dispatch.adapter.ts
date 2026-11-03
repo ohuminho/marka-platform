@@ -529,6 +529,27 @@ export class DispatchAdapter implements DispatchPort {
       );
 
     if (
+      request.serviceType === "DELIVERY" &&
+      request.subjectType === "FULFILLMENT"
+    ) {
+      const fulfillment =
+        await prisma.fulfillmentRequest.findUnique({
+          where: { id: request.subjectId },
+          select: { status: true },
+        });
+
+      if (
+        !fulfillment ||
+        (fulfillment.status !== "REQUESTED" &&
+          fulfillment.status !== "ASSIGNED")
+      ) {
+        throw new Error(
+          "Delivery cannot be reassigned after pickup or while in transit.",
+        );
+      }
+    }
+
+    if (
       request.status ===
         "COMPLETED" ||
       request.status ===
