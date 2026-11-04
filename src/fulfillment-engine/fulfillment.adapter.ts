@@ -853,21 +853,28 @@ export class FulfillmentAdapter
             },
           );
 
-          await database.deliveryAgent.updateMany(
-            {
+          const otherActiveDeliveries =
+            await database.dispatchRequest.count({
+              where: {
+                organizationId: current.organizationId,
+                serviceType: "DELIVERY",
+                acceptedAgentId: agentId,
+                status: "ACCEPTED",
+              },
+            });
+
+          if (otherActiveDeliveries === 0) {
+            await database.deliveryAgent.updateMany({
               where: {
                 id: agentId,
-                organizationId:
-                  current.organizationId,
-                availability:
-                  "BUSY",
+                organizationId: current.organizationId,
+                availability: "BUSY",
               },
               data: {
-                availability:
-                  "AVAILABLE",
+                availability: "AVAILABLE",
               },
-            },
-          );
+            });
+          }
 
           return result;
         },
