@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {
   assertDeliveryAgentAvailabilityChange,
-} from "@/services/delivery/agents/delivery-agent-availability.policy";
+} from "../../../src/services/delivery/agents/delivery-agent-availability.policy";
 
 assert.doesNotThrow(() =>
   assertDeliveryAgentAvailabilityChange(0, "AVAILABLE"),
