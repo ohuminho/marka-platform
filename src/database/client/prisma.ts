@@ -4,29 +4,30 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function getDatabaseUrlWithSafePoolLimit(): string | undefined {
-  const databaseUrl = process.env.DATABASE_URL;
+export function getDatabaseUrlWithSafePoolLimit(
+  databaseUrl: string | undefined,
+): string | undefined {
   if (!databaseUrl) return undefined;
 
   try {
     const url = new URL(databaseUrl);
 
-    // Vercel runs short-lived/serverless instances. Supabase session mode
-    // (5432) reserves one server connection per warm Prisma client and can
-    // exhaust the small session client cap under concurrent traffic.
-    // When the configured URL is Supabase's shared pooler in session mode,
-    // reuse the same credentials against its transaction endpoint instead.
-    // This preserves the password/username while changing only the pool mode.
-    if (
-      url.hostname.endsWith(".pooler.supabase.com") &&
-      (url.port === "" || url.port === "5432")
-    ) {
-      url.port = "6543";
-      // Prisma 6 must disable prepared statements with transaction pooling.
-      url.searchParams.set("pgbouncer", "true");
+    // Supabase transaction pooling uses port 6543. Prisma 6 must use
+    // pgbouncer=true unless the pooler is explicitly configured for named
+    // prepared statements. Normalize session-mode pooler URLs to transaction
+    // mode while preserving credentials and all unrelated query parameters.
+    if (url.hostname.endsWith(".pooler.supabase.com")) {
+      if (url.port === "" || url.port === "5432") {
+        url.port = "6543";
+      }
+
+      if (url.port === "6543") {
+        url.searchParams.set("pgbouncer", "true");
+      }
     }
 
-    // Keep Prisma's per-instance pool bounded on Vercel.
+    // Bound each serverless Prisma instance to one connection by default.
+    // Respect an explicit operator-provided limit.
     if (!url.searchParams.has("connection_limit")) {
       url.searchParams.set("connection_limit", "1");
     }
@@ -38,7 +39,9 @@ function getDatabaseUrlWithSafePoolLimit(): string | undefined {
   }
 }
 
-const datasourceUrl = getDatabaseUrlWithSafePoolLimit();
+const datasourceUrl = getDatabaseUrlWithSafePoolLimit(
+  process.env.DATABASE_URL,
+);
 
 export const prisma =
   globalForPrisma.prisma ??
