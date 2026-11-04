@@ -25,6 +25,7 @@ export default function LoginForm() {
 
   const [resending, setResending] =
     useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const [message, setMessage] =
     useState("");
@@ -106,6 +107,29 @@ export default function LoginForm() {
       }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handlePasswordRecovery() {
+    if (!email.trim()) {
+      setMessage("Introduz o teu email para receberes as instruções de recuperação.");
+      return;
+    }
+    setResetting(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/auth/password-reset/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || "Não foi possível solicitar a recuperação.");
+      setMessage(data?.message || "Se existir uma conta elegível, receberás instruções de recuperação.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível solicitar a recuperação.");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -329,6 +353,12 @@ export default function LoginForm() {
               : "Enter MARKA"}
         </button>
       </form>
+
+      {!isRegistering && (
+        <button type="button" onClick={handlePasswordRecovery} disabled={loading || resending || resetting} className="mt-4 w-full text-center text-sm text-[var(--theme-text-muted)] underline decoration-[var(--theme-border)] underline-offset-4 transition hover:text-[var(--theme-text)] disabled:opacity-50">
+          {resetting ? "A solicitar recuperação..." : "Esqueceste-te da palavra-passe?"}
+        </button>
+      )}
 
       {!isRegistering &&
         showResend && (
