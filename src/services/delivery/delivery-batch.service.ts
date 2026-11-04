@@ -135,6 +135,7 @@ export class DeliveryBatchService {
       ].join(":");
 
       let batchId: string | undefined;
+      let dispatchId: string | undefined;
       try {
         const batch = await prisma.$transaction(async (tx) => {
           const created = await tx.deliveryBatch.create({
@@ -194,6 +195,7 @@ export class DeliveryBatchService {
           },
         });
 
+        dispatchId = dispatch.id;
         await prisma.deliveryBatch.update({
           where: { id: batch.id },
           data: { dispatchRequestId: dispatch.id, status: "OFFERED" },
@@ -216,6 +218,9 @@ export class DeliveryBatchService {
         });
         createdCount += 1;
       } catch (error) {
+        if (dispatchId) {
+          await prisma.dispatchRequest.delete({ where: { id: dispatchId } }).catch(() => undefined);
+        }
         if (batchId) {
           await prisma.deliveryBatch.delete({ where: { id: batchId } }).catch(() => undefined);
         }
