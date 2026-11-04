@@ -730,7 +730,6 @@ model Organization {
   mobilityOrchestrationEvents MobilityRideOrchestrationEvent[]
 
   fulfillmentRequests FulfillmentRequest[]
-  deliveryBatches     DeliveryBatch[]
   dispatchRequests    DispatchRequest[]
   deliveryAgents      DeliveryAgent[]
 
@@ -1675,7 +1674,6 @@ model FulfillmentRequest {
   order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   assignment FulfillmentAssignment?
-  batchLeg DeliveryBatchLeg?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1683,76 +1681,6 @@ model FulfillmentRequest {
   @@index([organizationId, status])
   @@index([orderId])
   @@index([assignedAgentId])
-}
-
-enum DeliveryBatchStatus {
-  READY
-  OFFERED
-  ACCEPTED
-  PICKING_UP
-  IN_TRANSIT
-  COMPLETED
-  CANCELLED
-  EXCEPTION
-}
-
-enum DeliveryBatchLegStatus {
-  PENDING
-  ARRIVED_AT_PICKUP
-  PICKED_UP
-  DELIVERED
-  CANCELLED
-}
-
-model DeliveryBatch {
-  id                    String @id @default(uuid())
-  organizationId        String
-  customerId            String
-  destinationHash       String
-  destinationAddress    String
-  destinationLatitude   Decimal @db.Decimal(10, 7)
-  destinationLongitude  Decimal @db.Decimal(10, 7)
-  status                DeliveryBatchStatus @default(READY)
-  assignedAgentId       String?
-  dispatchRequestId     String? @unique
-  pickupCount           Int
-  routeDistanceMeters   Int?
-  metadata              Json?
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  dispatchRequest DispatchRequest? @relation(fields: [dispatchRequestId], references: [id], onDelete: SetNull)
-  legs DeliveryBatchLeg[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([organizationId, status, createdAt])
-  @@index([customerId, destinationHash, status])
-  @@index([assignedAgentId])
-}
-
-model DeliveryBatchLeg {
-  id                String @id @default(uuid())
-  batchId           String
-  fulfillmentId     String @unique
-  pickupSequence    Int
-  pickupStoreId     String
-  pickupLatitude    Decimal @db.Decimal(10, 7)
-  pickupLongitude   Decimal @db.Decimal(10, 7)
-  status            DeliveryBatchLegStatus @default(PENDING)
-  proofCodeHash     String?
-  pickedUpAt        DateTime?
-  deliveredAt       DateTime?
-  metadata          Json?
-
-  batch DeliveryBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  fulfillment FulfillmentRequest @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([batchId, pickupSequence])
-  @@index([batchId, status])
 }
 
 model FulfillmentAssignment {
@@ -1814,7 +1742,6 @@ model DispatchRequest {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   candidates DispatchCandidate[]
-  deliveryBatch DeliveryBatch?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
