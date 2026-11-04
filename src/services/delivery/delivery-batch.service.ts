@@ -28,6 +28,8 @@ export class DeliveryBatchService {
    * never substitute straight-line distance for road distance.
    */
   async preparePendingBatches(organizationId: string): Promise<number> {
+    if (!process.env.MOBILITY_ROUTING_BASE_URL) return 0;
+
     const fulfillments = await prisma.fulfillmentRequest.findMany({
       where: {
         organizationId,
@@ -57,6 +59,19 @@ export class DeliveryBatchService {
     });
 
     const grouped = new Map<string, Pickup[]>();
+    const storeIds = Array.from(new Set(
+      fulfillments.flatMap((item) =>
+        item.order.items
+          .map((line) => line.storeId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ));
+    const stores = await prisma.store.findMany({
+      where: { id: { in: storeIds } },
+      select: { id: true, latitude: true, longitude: true },
+    });
+    const storeById = new Map(stores.map((store) => [store.id, store]));
+
     for (const fulfillment of fulfillments) {
       const order = fulfillment.order;
       const itemStoreId = order.items[0]?.storeId;
@@ -68,10 +83,7 @@ export class DeliveryBatchService {
         (order.status !== "CONFIRMED" && order.status !== "PROCESSING")
       ) continue;
 
-      const store = await prisma.store.findUnique({
-        where: { id: itemStoreId },
-        select: { id: true, latitude: true, longitude: true },
-      });
+      const store = storeById.get(itemStoreId);
       if (!store || store.latitude === null || store.longitude === null) continue;
 
       const destinationLatitude = Number(order.deliveryLatitude);
