@@ -39,7 +39,7 @@ function contactHref(email: string, subject: string) {
 }
 
 export default function AdvertisePage() {
-  const salesEmail = process.env.NEXT_PUBLIC_MARKA_ADVERTISING_EMAIL;
+  const salesEmail = process.env.NEXT_PUBLIC_MARKA_ADVERTISING_EMAIL || "info@markaao.com";
 
   return (
     <main className="min-h-screen bg-[var(--theme-background)] px-5 py-10 text-[var(--theme-text)] sm:px-8 lg:px-12">
@@ -180,7 +180,11 @@ export default function AdvertisePage() {
 
         <footer className="flex flex-col gap-3 border-t border-[var(--theme-border)] py-8 text-xs text-[var(--theme-text-faint)] sm:flex-row sm:items-center sm:justify-between">
           <span>MARKA · Mobilidade, comércio e oportunidades.</span>
-          <Link href="/" className="underline underline-offset-4">Voltar à MARKA</Link>
+          <div className="flex flex-wrap gap-4">
+            <a href="https://markaao.com" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">markaao.com</a>
+            <a href="mailto:info@markaao.com" className="underline underline-offset-4">info@markaao.com</a>
+            <Link href="/" className="underline underline-offset-4">Voltar à MARKA</Link>
+          </div>
         </footer>
       </div>
     </main>

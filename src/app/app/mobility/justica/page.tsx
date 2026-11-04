@@ -31,7 +31,7 @@ const principles = [
 ];
 
 export default function MobilityFairnessPage() {
-  const supportEmail = process.env.NEXT_PUBLIC_MARKA_SUPPORT_EMAIL;
+  const supportEmail = process.env.NEXT_PUBLIC_MARKA_SUPPORT_EMAIL || "info@markaao.com";
 
   return (
     <DynamicBackground>
@@ -97,6 +97,10 @@ export default function MobilityFairnessPage() {
             ) : (
               <p className="mt-3 text-xs text-[var(--theme-text-faint)]">O contacto oficial de apoio será apresentado quando NEXT_PUBLIC_MARKA_SUPPORT_EMAIL estiver configurado em produção.</p>
             )}
+            <div className="mt-4 flex flex-wrap gap-3 text-xs text-[var(--theme-text-muted)]">
+              <a className="underline underline-offset-4" href="https://markaao.com" target="_blank" rel="noopener noreferrer">Website oficial: markaao.com</a>
+              <a className="underline underline-offset-4" href="mailto:info@markaao.com">info@markaao.com</a>
+            </div>
           </div>
         </div>
       </AppShell>
