@@ -577,6 +577,19 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
+            // Serialize reassignment with acceptance, completion and manual
+            // availability changes before counting remaining active deliveries.
+            await database.deliveryAgent.updateMany({
+              where: {
+                id: request.acceptedAgentId,
+                organizationId: request.organizationId,
+                availability: "BUSY",
+              },
+              data: {
+                availability: "BUSY",
+              },
+            });
+
             const otherActiveDeliveries =
               await database.dispatchRequest.count({
                 where: {
