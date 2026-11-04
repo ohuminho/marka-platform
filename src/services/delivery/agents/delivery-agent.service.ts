@@ -148,39 +148,62 @@ export class DeliveryAgentService {
       | "BUSY"
       | "SUSPENDED",
   ) {
-    const agent =
-      await prisma.deliveryAgent.findUnique({
-        where: {
-          id: agentId,
-        },
+    return prisma.$transaction(async (database) => {
+      const agent = await database.deliveryAgent.findUnique({
+        where: { id: agentId },
         select: {
           id: true,
+          organizationId: true,
           status: true,
+          availability: true,
         },
       });
 
-    if (!agent) {
-      throw new Error(
-        "DELIVERY_AGENT_NOT_FOUND",
-      );
-    }
+      if (!agent) {
+        throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      }
 
-    if (
-      agent.status !== "ACTIVE" &&
-      availability !== "OFFLINE"
-    ) {
-      throw new Error(
-        "DELIVERY_AGENT_NOT_ACTIVE",
-      );
-    }
+      if (
+        agent.status !== "ACTIVE" &&
+        availability !== "OFFLINE"
+      ) {
+        throw new Error("DELIVERY_AGENT_NOT_ACTIVE");
+      }
 
-    return prisma.deliveryAgent.update({
-      where: {
-        id: agentId,
-      },
-      data: {
-        availability,
-      },
+      // Lock the agent row before checking active work. Dispatch acceptance
+      // uses the same row, preventing availability changes racing with claims.
+      const locked = await database.deliveryAgent.updateMany({
+        where: {
+          id: agentId,
+          organizationId: agent.organizationId,
+          availability: agent.availability,
+        },
+        data: {
+          availability: agent.availability,
+        },
+      });
+
+      if (locked.count !== 1) {
+        throw new Error("DELIVERY_AGENT_AVAILABILITY_CHANGED_RETRY");
+      }
+
+      const activeDeliveries = await database.dispatchRequest.count({
+        where: {
+          organizationId: agent.organizationId,
+          serviceType: "DELIVERY",
+          status: "ACCEPTED",
+          acceptedAgentId: agentId,
+        },
+      });
+
+      if (activeDeliveries > 0 && availability !== "BUSY") {
+        throw new Error("DELIVERY_AGENT_HAS_ACTIVE_DELIVERY");
+      }
+
+      return database.deliveryAgent.update({
+        where: { id: agentId },
+        data: { availability },
+      });
     });
   }
 
