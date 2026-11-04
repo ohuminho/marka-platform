@@ -72,10 +72,38 @@ const pillars = [
   ["OPORTUNIDADES", "Um ponto de encontro entre pessoas, negócios e marcas."],
 ];
 
+const organizationStructuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      name: "MARKA",
+      url: "https://markaao.com",
+      email: "info@markaao.com",
+      description: "Plataforma digital de comércio, mobilidade, serviços e oportunidades.",
+      areaServed: { "@type": "Country", name: "Angola" },
+      parentOrganization: {
+        "@type": "Organization",
+        name: "Magestade Pura Digital",
+      },
+    },
+    {
+      "@type": "WebSite",
+      name: "MARKA",
+      url: "https://markaao.com",
+      inLanguage: "pt-AO",
+    },
+  ],
+};
+
 export default function Home() {
   return (
     <DynamicBackground>
       <div className="min-h-screen">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
+        />
         <header className="sticky top-0 z-40 border-b border-[var(--theme-border)] bg-[var(--theme-background)]/85 backdrop-blur-2xl">
           <nav aria-label="Navegação principal" className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
             <Link href="/" aria-label="MARKA início" className="text-xl font-semibold tracking-[-0.08em] text-[var(--theme-text)]">MARKA<span className="ml-1 text-[var(--theme-accent)]">.</span></Link>
