@@ -216,6 +216,147 @@ export class DeliveryBatchService {
     return createdCount;
   }
 
+  async transitionLeg(input: {
+    dispatchId: string;
+    batchId: string;
+    legId: string;
+    agentId: string;
+    action: "ARRIVED_AT_PICKUP" | "PICKED_UP" | "COMPLETED";
+  }) {
+    const dispatch = await prisma.dispatchRequest.findFirst({
+      where: {
+        id: input.dispatchId,
+        serviceType: "DELIVERY",
+        subjectType: "DELIVERY_BATCH",
+        subjectId: input.batchId,
+        status: "ACCEPTED",
+        acceptedAgentId: input.agentId,
+      },
+      select: { id: true, organizationId: true },
+    });
+    if (!dispatch) throw new Error("DELIVERY_BATCH_NOT_ASSIGNED_TO_AGENT");
+
+    return prisma.$transaction(async (tx) => {
+      const batch = await tx.deliveryBatch.findFirst({
+        where: {
+          id: input.batchId,
+          organizationId: dispatch.organizationId,
+          assignedAgentId: input.agentId,
+          status: { in: ["ACCEPTED", "PICKING_UP", "IN_TRANSIT"] },
+        },
+        include: {
+          legs: {
+            include: {
+              fulfillment: {
+                select: { id: true, orderId: true, status: true, metadata: true },
+              },
+            },
+          },
+        },
+      });
+      if (!batch) throw new Error("DELIVERY_BATCH_NOT_FOUND");
+
+      const leg = batch.legs.find((item) => item.id === input.legId);
+      if (!leg) throw new Error("DELIVERY_BATCH_LEG_NOT_FOUND");
+
+      if (input.action === "ARRIVED_AT_PICKUP") {
+        if (leg.status !== "PENDING") throw new Error("INVALID_BATCH_LEG_TRANSITION");
+        await tx.deliveryBatchLeg.update({
+          where: { id: leg.id },
+          data: { status: "ARRIVED_AT_PICKUP" },
+        });
+        await tx.deliveryBatch.update({
+          where: { id: batch.id },
+          data: { status: "PICKING_UP" },
+        });
+      } else if (input.action === "PICKED_UP") {
+        if (leg.status !== "ARRIVED_AT_PICKUP") throw new Error("INVALID_BATCH_LEG_TRANSITION");
+        await tx.deliveryBatchLeg.update({
+          where: { id: leg.id },
+          data: { status: "PICKED_UP", pickedUpAt: new Date() },
+        });
+        await tx.fulfillmentRequest.update({
+          where: { id: leg.fulfillmentId },
+          data: { status: "IN_TRANSIT" },
+        });
+        await tx.order.updateMany({
+          where: { id: leg.fulfillment.orderId, status: { in: ["CONFIRMED", "PROCESSING"] } },
+          data: { status: "SHIPPED" },
+        });
+      } else {
+        if (leg.status !== "PICKED_UP") throw new Error("INVALID_BATCH_LEG_TRANSITION");
+        const metadata = leg.fulfillment.metadata &&
+          typeof leg.fulfillment.metadata === "object" &&
+          !Array.isArray(leg.fulfillment.metadata)
+          ? leg.fulfillment.metadata as Record<string, unknown>
+          : {};
+        const proof = metadata.deliveryProof &&
+          typeof metadata.deliveryProof === "object" &&
+          !Array.isArray(metadata.deliveryProof)
+          ? metadata.deliveryProof as Record<string, unknown>
+          : {};
+        if (proof.method !== "CUSTOMER_CONFIRMATION" || typeof proof.confirmedAt !== "string") {
+          throw new Error("CUSTOMER_DELIVERY_CONFIRMATION_REQUIRED");
+        }
+        await tx.deliveryBatchLeg.update({
+          where: { id: leg.id },
+          data: { status: "DELIVERED", deliveredAt: new Date() },
+        });
+        await tx.fulfillmentRequest.update({
+          where: { id: leg.fulfillmentId },
+          data: { status: "COMPLETED", exceptionCode: null },
+        });
+        await tx.order.updateMany({
+          where: { id: leg.fulfillment.orderId, status: { in: ["SHIPPED", "PROCESSING"] } },
+          data: { status: "DELIVERED" },
+        });
+        await tx.fulfillmentAssignment.updateMany({
+          where: { fulfillmentId: leg.fulfillmentId, acceptedAt: null },
+          data: { acceptedAt: new Date() },
+        });
+      }
+
+      const refreshedLegs = await tx.deliveryBatchLeg.findMany({
+        where: { batchId: batch.id },
+        select: { status: true },
+      });
+      const allDelivered = refreshedLegs.every((item) => item.status === "DELIVERED");
+      const allPickedUp = refreshedLegs.every((item) =>
+        item.status === "PICKED_UP" || item.status === "DELIVERED",
+      );
+
+      if (allDelivered) {
+        await tx.deliveryBatch.update({
+          where: { id: batch.id },
+          data: { status: "COMPLETED" },
+        });
+        await tx.dispatchRequest.update({
+          where: { id: dispatch.id },
+          data: { status: "COMPLETED" },
+        });
+        await tx.deliveryAgent.updateMany({
+          where: {
+            id: input.agentId,
+            organizationId: dispatch.organizationId,
+            availability: "BUSY",
+          },
+          data: { availability: "AVAILABLE" },
+        });
+      } else if (allPickedUp) {
+        await tx.deliveryBatch.update({
+          where: { id: batch.id },
+          data: { status: "IN_TRANSIT" },
+        });
+      }
+
+      return {
+        batchId: batch.id,
+        status: allDelivered ? "COMPLETED" : allPickedUp ? "IN_TRANSIT" : "PICKING_UP",
+        legs: refreshedLegs,
+      };
+    });
+  }
+
   async listOffers(input: { agentId: string; organizationId: string }) {
     const candidates = await prisma.dispatchCandidate.findMany({
       where: {
