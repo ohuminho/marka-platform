@@ -487,6 +487,70 @@ export class DispatchAdapter implements DispatchPort {
             );
           }
 
+          if (
+            request.serviceType === "DELIVERY" &&
+            request.subjectType === "DELIVERY_BATCH"
+          ) {
+            const batch = await database.deliveryBatch.findUnique({
+              where: { id: request.subjectId },
+              include: { legs: true },
+            });
+
+            if (!batch || batch.organizationId !== request.organizationId) {
+              throw new Error("Delivery batch not found for dispatch.");
+            }
+            if (batch.status !== "OFFERED" || batch.assignedAgentId) {
+              throw new Error("Delivery batch is no longer available.");
+            }
+            if (batch.legs.length < 2) {
+              throw new Error("Delivery batch must contain at least two pickup legs.");
+            }
+
+            const batchClaim = await database.deliveryBatch.updateMany({
+              where: {
+                id: batch.id,
+                status: "OFFERED",
+                assignedAgentId: null,
+              },
+              data: {
+                status: "ACCEPTED",
+                assignedAgentId: agentId,
+              },
+            });
+            if (batchClaim.count !== 1) {
+              throw new Error("Delivery batch was accepted by another agent.");
+            }
+
+            const fulfillmentIds = batch.legs.map((leg) => leg.fulfillmentId);
+            const claimedLegs = await database.fulfillmentRequest.updateMany({
+              where: {
+                id: { in: fulfillmentIds },
+                organizationId: request.organizationId,
+                status: "REQUESTED",
+                assignedAgentId: null,
+              },
+              data: {
+                status: "ASSIGNED",
+                assignedAgentId: agentId,
+                exceptionCode: null,
+              },
+            });
+            if (claimedLegs.count !== fulfillmentIds.length) {
+              throw new Error("One or more delivery batch legs are no longer eligible.");
+            }
+
+            const now = new Date();
+            await database.fulfillmentAssignment.createMany({
+              data: fulfillmentIds.map((fulfillmentId) => ({
+                id: crypto.randomUUID(),
+                fulfillmentId,
+                agentId,
+                assignedAt: now,
+                acceptedAt: now,
+              })),
+            });
+          }
+
           return updatedRequest;
         },
       );
