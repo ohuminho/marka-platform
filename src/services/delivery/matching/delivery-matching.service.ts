@@ -31,7 +31,7 @@ export class DeliveryMatchingService {
       where: {
         organizationId: input.organizationId,
         status: "ACTIVE",
-        availability: "AVAILABLE",
+        availability: { in: ["AVAILABLE", "BUSY"] },
         latitude: { not: null },
         longitude: { not: null },
         lastLocationAt: {

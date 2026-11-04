@@ -89,8 +89,7 @@ export async function GET(request: Request) {
       url.searchParams.get("offset") ?? 0,
     );
 
-    const result =
-      await deliveryAgentOfferService.list({
+    const result = await deliveryAgentOfferService.list({
         agentId: agent.id,
         organizationId: agent.organizationId,
         limit: Number.isInteger(parsedLimit)
@@ -99,7 +98,7 @@ export async function GET(request: Request) {
         offset: Number.isInteger(parsedOffset)
           ? parsedOffset
           : 0,
-      });
+    });
 
     return NextResponse.json({
       offers: result.items,
