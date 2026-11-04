@@ -181,22 +181,26 @@ export class DeliveryBatchService {
           },
         });
 
-        await prisma.$transaction(async (tx) => {
-          await tx.deliveryBatch.update({
-            where: { id: batch.id },
-            data: { dispatchRequestId: dispatch.id, status: "OFFERED" },
-          });
-          await tx.dispatchRequest.updateMany({
-            where: {
-              serviceType: "DELIVERY",
-              subjectType: "FULFILLMENT",
-              subjectId: { in: ordered.map((leg) => leg.fulfillmentId) },
-              status: { in: ["CREATED", "SEARCHING", "OFFERED", "ASSIGNED"] },
-            },
-            data: { status: "CANCELLED" },
-          });
+        await prisma.deliveryBatch.update({
+          where: { id: batch.id },
+          data: { dispatchRequestId: dispatch.id, status: "OFFERED" },
         });
-        await dispatchAdapter.discoverCandidates(dispatch);
+        const candidates = await dispatchAdapter.discoverCandidates(dispatch);
+        if (candidates.length === 0) {
+          await prisma.dispatchRequest.delete({ where: { id: dispatch.id } });
+          await prisma.deliveryBatch.delete({ where: { id: batch.id } });
+          batchId = undefined;
+          continue;
+        }
+        await prisma.dispatchRequest.updateMany({
+          where: {
+            serviceType: "DELIVERY",
+            subjectType: "FULFILLMENT",
+            subjectId: { in: ordered.map((leg) => leg.fulfillmentId) },
+            status: { in: ["CREATED", "SEARCHING", "OFFERED", "ASSIGNED"] },
+          },
+          data: { status: "CANCELLED" },
+        });
         createdCount += 1;
       } catch (error) {
         if (batchId) {
