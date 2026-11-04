@@ -571,22 +571,29 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
-            await database.deliveryAgent.updateMany(
-              {
+            const otherActiveDeliveries =
+              await database.dispatchRequest.count({
                 where: {
-                  id:
-                    request.acceptedAgentId,
-                  organizationId:
-                    request.organizationId,
-                  availability:
-                    "BUSY",
+                  id: { not: requestId },
+                  organizationId: request.organizationId,
+                  serviceType: "DELIVERY",
+                  acceptedAgentId: request.acceptedAgentId,
+                  status: "ACCEPTED",
+                },
+              });
+
+            if (otherActiveDeliveries === 0) {
+              await database.deliveryAgent.updateMany({
+                where: {
+                  id: request.acceptedAgentId,
+                  organizationId: request.organizationId,
+                  availability: "BUSY",
                 },
                 data: {
-                  availability:
-                    "AVAILABLE",
+                  availability: "AVAILABLE",
                 },
-              },
-            );
+              });
+            }
           }
 
           if (
@@ -744,22 +751,29 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
-            await database.deliveryAgent.updateMany(
-              {
+            const otherActiveDeliveries =
+              await database.dispatchRequest.count({
                 where: {
-                  id:
-                    request.acceptedAgentId,
-                  organizationId:
-                    request.organizationId,
-                  availability:
-                    "BUSY",
+                  id: { not: requestId },
+                  organizationId: request.organizationId,
+                  serviceType: "DELIVERY",
+                  acceptedAgentId: request.acceptedAgentId,
+                  status: "ACCEPTED",
+                },
+              });
+
+            if (otherActiveDeliveries === 0) {
+              await database.deliveryAgent.updateMany({
+                where: {
+                  id: request.acceptedAgentId,
+                  organizationId: request.organizationId,
+                  availability: "BUSY",
                 },
                 data: {
-                  availability:
-                    "AVAILABLE",
+                  availability: "AVAILABLE",
                 },
-              },
-            );
+              });
+            }
           }
 
           return completed;
@@ -805,22 +819,29 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
-            await database.deliveryAgent.updateMany(
-              {
+            const otherActiveDeliveries =
+              await database.dispatchRequest.count({
                 where: {
-                  id:
-                    request.acceptedAgentId,
-                  organizationId:
-                    request.organizationId,
-                  availability:
-                    "BUSY",
+                  id: { not: requestId },
+                  organizationId: request.organizationId,
+                  serviceType: "DELIVERY",
+                  acceptedAgentId: request.acceptedAgentId,
+                  status: "ACCEPTED",
+                },
+              });
+
+            if (otherActiveDeliveries === 0) {
+              await database.deliveryAgent.updateMany({
+                where: {
+                  id: request.acceptedAgentId,
+                  organizationId: request.organizationId,
+                  availability: "BUSY",
                 },
                 data: {
-                  availability:
-                    "AVAILABLE",
+                  availability: "AVAILABLE",
                 },
-              },
-            );
+              });
+            }
           }
 
           return database.dispatchRequest.update(
@@ -885,22 +906,29 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
-            await database.deliveryAgent.updateMany(
-              {
+            const otherActiveDeliveries =
+              await database.dispatchRequest.count({
                 where: {
-                  id:
-                    request.acceptedAgentId,
-                  organizationId:
-                    request.organizationId,
-                  availability:
-                    "BUSY",
+                  id: { not: requestId },
+                  organizationId: request.organizationId,
+                  serviceType: "DELIVERY",
+                  acceptedAgentId: request.acceptedAgentId,
+                  status: "ACCEPTED",
+                },
+              });
+
+            if (otherActiveDeliveries === 0) {
+              await database.deliveryAgent.updateMany({
+                where: {
+                  id: request.acceptedAgentId,
+                  organizationId: request.organizationId,
+                  availability: "BUSY",
                 },
                 data: {
-                  availability:
-                    "AVAILABLE",
+                  availability: "AVAILABLE",
                 },
-              },
-            );
+              });
+            }
           }
 
           return database.dispatchRequest.update(
