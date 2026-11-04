@@ -1720,6 +1720,7 @@ model DeliveryBatch {
   metadata              Json?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dispatchRequest DispatchRequest? @relation(fields: [dispatchRequestId], references: [id], onDelete: SetNull)
   legs DeliveryBatchLeg[]
 
   createdAt DateTime @default(now())
@@ -1813,6 +1814,7 @@ model DispatchRequest {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   candidates DispatchCandidate[]
+  deliveryBatch DeliveryBatch?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
