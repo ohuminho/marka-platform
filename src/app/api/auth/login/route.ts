@@ -125,27 +125,18 @@ export async function POST(
       );
     }
 
-    const sessionService =
-      new SessionService();
-
-    const session =
-      await sessionService.create({
-        userId: user.id,
-        ipAddress:
-          getClientIp(request),
-        userAgent:
-          request.headers.get(
-            "user-agent"
-          ) ?? undefined,
-      });
-
+    // Persist account activity before issuing a session. If this write fails,
+    // no live session is left behind without a cookie being delivered.
     await prisma.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        lastLoginAt: new Date(),
-      },
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    const sessionService = new SessionService();
+    const session = await sessionService.create({
+      userId: user.id,
+      ipAddress: getClientIp(request),
+      userAgent: request.headers.get("user-agent") ?? undefined,
     });
 
     const response =
