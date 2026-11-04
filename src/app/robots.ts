@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/app/admin/", "/app/settings/"],
+      disallow: ["/api/", "/app/"],
     },
     sitemap: "https://markaao.com/sitemap.xml",
     host: "https://markaao.com",
