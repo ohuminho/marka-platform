@@ -5,7 +5,7 @@ import MarkaHero from "@/frontend/features/landing/components/MarkaHero";
 import ProductGrid from "@/frontend/features/marketplace/components/ProductGrid";
 
 export const metadata: Metadata = {
-  title: "MARKA — Comércio, mobilidade e oportunidades numa só plataforma",
+  title: "Comércio, mobilidade e oportunidades numa só plataforma",
   description:
     "Descubra a MARKA: marketplace multi-indústria, mobilidade, serviços e oportunidades para pessoas e empresas em Angola.",
   alternates: { canonical: "/" },
@@ -52,7 +52,7 @@ const pathways = [
     description:
       "Aceda à área MARKA para mobilidade, transporte e serviços associados. A adesão profissional está sujeita a validação.",
     action: "Conhecer a MARKA",
-    href: "/app",
+    href: "/app/mobility",
   },
   {
     number: "04",
