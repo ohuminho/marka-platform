@@ -63,3 +63,8 @@ ALTER TABLE "DeliveryBatchLeg"
 ALTER TABLE "DeliveryBatchLeg"
   ADD CONSTRAINT "DeliveryBatchLeg_fulfillmentId_fkey"
   FOREIGN KEY ("fulfillmentId") REFERENCES "FulfillmentRequest"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "DeliveryBatch"
+  ADD CONSTRAINT "DeliveryBatch_dispatchRequestId_fkey"
+  FOREIGN KEY ("dispatchRequestId") REFERENCES "DispatchRequest"("id")
+  ON DELETE SET NULL ON UPDATE CASCADE;
