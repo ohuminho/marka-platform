@@ -6,10 +6,12 @@ import { Permissions } from "@/core/authorization/permissions.catalog";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { fulfillmentAdapter } from "@/fulfillment-engine/fulfillment.adapter";
+import { deliveryBatchService } from "@/services/delivery/delivery-batch.service";
 import type { FulfillmentStatus } from "@/fulfillment-engine/fulfillment.contracts";
 
 const schema = z.object({
   status: z.enum([
+    "ARRIVED_AT_PICKUP",
     "PREPARING",
     "READY_FOR_PICKUP",
     "PICKED_UP",
@@ -18,6 +20,7 @@ const schema = z.object({
     "EXCEPTION",
   ]),
   reason: z.string().trim().max(500).optional(),
+  legId: z.string().trim().min(1).optional(),
 });
 
 function getToken(request: Request): string | null {
@@ -94,7 +97,7 @@ export async function POST(
         id,
         organizationId: agent.organizationId,
         serviceType: "DELIVERY",
-        subjectType: "FULFILLMENT",
+        subjectType: { in: ["FULFILLMENT", "DELIVERY_BATCH"] },
       },
       select: {
         id: true,
@@ -129,6 +132,43 @@ export async function POST(
         },
         { status: 409 },
       );
+    }
+
+    if (dispatch.subjectId && dispatch.subjectId.length > 0 && dispatch.status === "ACCEPTED") {
+      const dispatchDetails = await prisma.dispatchRequest.findUnique({
+        where: { id: dispatch.id },
+        select: { subjectType: true, subjectId: true },
+      });
+      if (dispatchDetails?.subjectType === "DELIVERY_BATCH") {
+        if (!parsed.data.legId) {
+          return NextResponse.json(
+            { message: "Batch leg id is required.", code: "DELIVERY_BATCH_LEG_REQUIRED" },
+            { status: 400 },
+          );
+        }
+        const action =
+          parsed.data.status === "ARRIVED_AT_PICKUP"
+            ? "ARRIVED_AT_PICKUP"
+            : parsed.data.status === "PICKED_UP"
+              ? "PICKED_UP"
+              : parsed.data.status === "COMPLETED"
+                ? "COMPLETED"
+                : null;
+        if (!action) {
+          return NextResponse.json(
+            { message: "Invalid batch leg transition.", code: "INVALID_BATCH_LEG_TRANSITION" },
+            { status: 400 },
+          );
+        }
+        const batch = await deliveryBatchService.transitionLeg({
+          dispatchId: dispatch.id,
+          batchId: dispatchDetails.subjectId,
+          legId: parsed.data.legId,
+          agentId: agent.id,
+          action,
+        });
+        return NextResponse.json({ batch });
+      }
     }
 
     const status = parsed.data.status as FulfillmentStatus;
