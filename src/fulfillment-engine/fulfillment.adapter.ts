@@ -763,6 +763,24 @@ export class FulfillmentAdapter
     const updated =
       await prisma.$transaction(
         async (database) => {
+          // Serialize completion for this agent so concurrent final deliveries
+          // cannot leave the agent incorrectly marked BUSY or AVAILABLE.
+          const lockedAgent = await database.deliveryAgent.updateMany({
+            where: {
+              id: agentId,
+              organizationId: current.organizationId,
+              status: "ACTIVE",
+              availability: "BUSY",
+            },
+            data: {
+              availability: "BUSY",
+            },
+          });
+
+          if (lockedAgent.count !== 1) {
+            throw new Error("Delivery agent is not active for completion.");
+          }
+
           const dispatch =
             await database.dispatchRequest.findFirst(
               {
