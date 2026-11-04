@@ -1,4 +1,5 @@
 import { prisma } from "@/database/client/prisma";
+import { assertDeliveryAgentAvailabilityChange } from "@/services/delivery/agents/delivery-agent-availability.policy";
 
 export interface RegisterDeliveryAgentInput {
   organizationId: string;
@@ -196,9 +197,7 @@ export class DeliveryAgentService {
         },
       });
 
-      if (activeDeliveries > 0 && availability !== "BUSY") {
-        throw new Error("DELIVERY_AGENT_HAS_ACTIVE_DELIVERY");
-      }
+      assertDeliveryAgentAvailabilityChange(activeDeliveries, availability);
 
       return database.deliveryAgent.update({
         where: { id: agentId },
