@@ -5,6 +5,7 @@ import { Permissions } from "@/core/authorization/permissions.catalog";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { deliveryAgentOfferService } from "@/services/delivery/agents/delivery-agent-offer.service";
+import { deliveryBatchService } from "@/services/delivery/delivery-batch.service";
 
 function getToken(request: Request): string | null {
   return (
@@ -89,8 +90,19 @@ export async function GET(request: Request) {
       url.searchParams.get("offset") ?? 0,
     );
 
-    const result =
-      await deliveryAgentOfferService.list({
+    // Coalesce compatible pending store fulfillments before returning offers.
+    // If OSRM is not configured, the batch service safely leaves them individual.
+    let batchesPrepared = 0;
+    try {
+      batchesPrepared = await deliveryBatchService.preparePendingBatches(
+        agent.organizationId,
+      );
+    } catch (batchError) {
+      console.error("[DELIVERY_BATCH_PREPARATION_ERROR]", batchError);
+    }
+
+    const [result, batchOffers] = await Promise.all([
+      deliveryAgentOfferService.list({
         agentId: agent.id,
         organizationId: agent.organizationId,
         limit: Number.isInteger(parsedLimit)
@@ -99,10 +111,17 @@ export async function GET(request: Request) {
         offset: Number.isInteger(parsedOffset)
           ? parsedOffset
           : 0,
-      });
+      }),
+      deliveryBatchService.listOffers({
+        agentId: agent.id,
+        organizationId: agent.organizationId,
+      }),
+    ]);
 
     return NextResponse.json({
       offers: result.items,
+      batchOffers,
+      batchesPrepared,
       pagination: {
         total: result.total,
         limit: result.limit,
