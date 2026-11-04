@@ -1,4 +1,5 @@
 import { prisma } from "@/database/client/prisma";
+import { assertDeliveryAgentAvailabilityChange } from "@/services/delivery/agents/delivery-agent-availability.policy";
 
 export interface RegisterDeliveryAgentInput {
   organizationId: string;
