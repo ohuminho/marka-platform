@@ -366,25 +366,31 @@ export class DispatchAdapter implements DispatchPort {
             );
 
           if (accepted.count !== 1) {
-            if (
-              deliveryAgentClaimed
-            ) {
-              await database.deliveryAgent.updateMany(
-                {
+            if (deliveryAgentClaimed) {
+              const otherActiveDeliveries =
+                await database.dispatchRequest.count({
+                  where: {
+                    id: { not: requestId },
+                    organizationId: request.organizationId,
+                    serviceType: "DELIVERY",
+                    acceptedAgentId: agentId,
+                    status: "ACCEPTED",
+                  },
+                });
+
+              if (otherActiveDeliveries === 0) {
+                await database.deliveryAgent.updateMany({
                   where: {
                     id: agentId,
-                    organizationId:
-                      request.organizationId,
+                    organizationId: request.organizationId,
                     status: "ACTIVE",
-                    availability:
-                      "BUSY",
+                    availability: "BUSY",
                   },
                   data: {
-                    availability:
-                      "AVAILABLE",
+                    availability: "AVAILABLE",
                   },
-                },
-              );
+                });
+              }
             }
 
             throw new Error(
