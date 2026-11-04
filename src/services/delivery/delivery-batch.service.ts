@@ -19,6 +19,7 @@ type Pickup = {
 
 const DESTINATION_PRECISION = 4;
 const MAX_ROUTE_DETOUR_RATIO = 1.8;
+const MAX_BATCH_PICKUPS = 5;
 
 export class DeliveryBatchService {
   /**
@@ -113,7 +114,7 @@ export class DeliveryBatchService {
     let createdCount = 0;
     for (const legs of grouped.values()) {
       const distinctStores = new Set(legs.map((leg) => leg.storeId));
-      if (legs.length < 2 || distinctStores.size < 2) continue;
+      if (legs.length < 2 || legs.length > MAX_BATCH_PICKUPS || distinctStores.size < 2) continue;
 
       const existing = await prisma.deliveryBatchLeg.findFirst({
         where: { fulfillmentId: { in: legs.map((leg) => leg.fulfillmentId) } },
@@ -463,39 +464,45 @@ export class DeliveryBatchService {
     }
 
     while (current) {
-      const next = remaining.length
-        ? remaining.sort((a, b) =>
-            this.haversine(current!, a) - this.haversine(current!, b),
-          )[0]
-        : undefined;
-      const target = next ?? {
-        latitude: current.destinationLatitude,
-        longitude: current.destinationLongitude,
-      };
-      const route = await mobilityRoutingService.estimate(
-        { latitude: current.latitude, longitude: current.longitude },
-        { latitude: target.latitude, longitude: target.longitude },
-      );
-      ordered.push({ ...current, routeToNextMeters: Math.round(route.distanceMeters) });
+      let next: Pickup | undefined;
+      let nextRouteMeters: number | undefined;
+
+      if (remaining.length > 0) {
+        // Select the next pickup using actual OSRM road distance, not straight-line distance.
+        const candidates = await Promise.all(
+          remaining.map(async (candidate) => ({
+            candidate,
+            route: await mobilityRoutingService.estimate(
+              { latitude: current!.latitude, longitude: current!.longitude },
+              { latitude: candidate.latitude, longitude: candidate.longitude },
+            ),
+          })),
+        );
+        candidates.sort((a, b) => a.route.distanceMeters - b.route.distanceMeters);
+        next = candidates[0].candidate;
+        nextRouteMeters = candidates[0].route.distanceMeters;
+      }
+
+      if (nextRouteMeters === undefined) {
+        const destinationRoute = await mobilityRoutingService.estimate(
+          { latitude: current.latitude, longitude: current.longitude },
+          { latitude: current.destinationLatitude, longitude: current.destinationLongitude },
+        );
+        nextRouteMeters = destinationRoute.distanceMeters;
+      }
+
+      ordered.push({ ...current, routeToNextMeters: Math.round(nextRouteMeters) });
       if (!next) break;
-      remaining.splice(remaining.findIndex((leg) => leg.fulfillmentId === next.fulfillmentId), 1);
+      remaining.splice(
+        remaining.findIndex((leg) => leg.fulfillmentId === next!.fulfillmentId),
+        1,
+      );
       current = next;
     }
 
     const totalMeters = ordered.reduce((sum, leg) => sum + leg.routeToNextMeters, 0);
     if (totalMeters > baselineMeters * MAX_ROUTE_DETOUR_RATIO) return null;
     return ordered;
-  }
-
-  private haversine(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
-    const radians = (value: number) => (value * Math.PI) / 180;
-    const dLat = radians(b.latitude - a.latitude);
-    const dLon = radians(b.longitude - a.longitude);
-    const value =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(radians(a.latitude)) * Math.cos(radians(b.latitude)) *
-      Math.sin(dLon / 2) ** 2;
-    return 6_371_000 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
   }
 }
 
