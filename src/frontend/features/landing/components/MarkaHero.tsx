@@ -8,7 +8,7 @@ import FadeIn from "@/design-system/motion/FadeIn";
 export default function MarkaHero() {
   return (
     <FadeIn>
-      <main
+      <section aria-label="Apresentação da MARKA"
         className="
           relative
           flex
@@ -114,7 +114,7 @@ export default function MarkaHero() {
               "
             />
 
-            <h1
+            <div aria-hidden="true"
               className="
                 relative
                 select-none
@@ -132,7 +132,7 @@ export default function MarkaHero() {
               "
             >
               MARKA
-            </h1>
+            </div>
           </div>
 
           <div
@@ -141,7 +141,7 @@ export default function MarkaHero() {
               max-w-3xl
             "
           >
-            <h2
+            <h1 id="marka-hero-title"
               className="
                 text-balance
                 text-2xl
@@ -153,7 +153,7 @@ export default function MarkaHero() {
               "
             >
               A infraestrutura de uma nova economia digital.
-            </h2>
+            </h1>
 
             <p
               className="
@@ -364,7 +364,7 @@ export default function MarkaHero() {
             African born · Globally built
           </p>
         </section>
-      </main>
+      </section>
     </FadeIn>
   );
 }
