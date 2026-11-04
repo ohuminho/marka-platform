@@ -148,39 +148,54 @@ export class DeliveryAgentService {
       | "BUSY"
       | "SUSPENDED",
   ) {
-    const agent =
-      await prisma.deliveryAgent.findUnique({
-        where: {
-          id: agentId,
-        },
+    return prisma.$transaction(async (database) => {
+      const agent = await database.deliveryAgent.findUnique({
+        where: { id: agentId },
         select: {
           id: true,
+          organizationId: true,
           status: true,
+          availability: true,
         },
       });
 
-    if (!agent) {
-      throw new Error(
-        "DELIVERY_AGENT_NOT_FOUND",
-      );
-    }
+      if (!agent) {
+        throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      }
 
-    if (
-      agent.status !== "ACTIVE" &&
-      availability !== "OFFLINE"
-    ) {
-      throw new Error(
-        "DELIVERY_AGENT_NOT_ACTIVE",
-      );
-    }
+      if (agent.status !== "ACTIVE" && availability !== "OFFLINE") {
+        throw new Error("DELIVERY_AGENT_NOT_ACTIVE");
+      }
 
-    return prisma.deliveryAgent.update({
-      where: {
-        id: agentId,
-      },
-      data: {
-        availability,
-      },
+      // Serialize availability changes with dispatch acceptance/completion.
+      const locked = await database.deliveryAgent.updateMany({
+        where: {
+          id: agentId,
+          organizationId: agent.organizationId,
+          availability: agent.availability,
+        },
+        data: { availability: agent.availability },
+      });
+
+      if (locked.count !== 1) {
+        throw new Error("DELIVERY_AGENT_AVAILABILITY_CHANGED_RETRY");
+      }
+
+      const activeDeliveries = await database.dispatchRequest.count({
+        where: {
+          organizationId: agent.organizationId,
+          serviceType: "DELIVERY",
+          status: "ACCEPTED",
+          acceptedAgentId: agentId,
+        },
+      });
+
+      assertDeliveryAgentAvailabilityChange(activeDeliveries, availability);
+
+      return database.deliveryAgent.update({
+        where: { id: agentId },
+        data: { availability },
+      });
     });
   }
 
@@ -193,54 +208,57 @@ export class DeliveryAgentService {
       | "BLOCKED"
       | "INACTIVE",
   ) {
-    const agent =
-      await prisma.deliveryAgent.findUnique({
-        where: {
-          id: agentId,
-        },
+    return prisma.$transaction(async (database) => {
+      const agent = await database.deliveryAgent.findUnique({
+        where: { id: agentId },
         select: {
           id: true,
           status: true,
           organizationId: true,
+          availability: true,
         },
       });
 
-    if (!agent) {
-      throw new Error(
-        "DELIVERY_AGENT_NOT_FOUND",
-      );
-    }
+      if (!agent) {
+        throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      }
 
-    if (status !== "ACTIVE") {
-      const activeDelivery =
-        await prisma.dispatchRequest.findFirst({
+      // Use the same row lock as acceptance and availability changes.
+      const locked = await database.deliveryAgent.updateMany({
+        where: {
+          id: agentId,
+          organizationId: agent.organizationId,
+          availability: agent.availability,
+        },
+        data: { availability: agent.availability },
+      });
+
+      if (locked.count !== 1) {
+        throw new Error("DELIVERY_AGENT_AVAILABILITY_CHANGED_RETRY");
+      }
+
+      if (status !== "ACTIVE") {
+        const activeDeliveries = await database.dispatchRequest.count({
           where: {
-            organizationId:
-              agent.organizationId,
+            organizationId: agent.organizationId,
             serviceType: "DELIVERY",
             status: "ACCEPTED",
             acceptedAgentId: agentId,
           },
-          select: {
-            id: true,
-          },
         });
 
-      if (activeDelivery) {
-        throw new Error(
-          "DELIVERY_AGENT_HAS_ACTIVE_DELIVERY",
-        );
+        if (activeDeliveries > 0) {
+          throw new Error("DELIVERY_AGENT_HAS_ACTIVE_DELIVERY");
+        }
       }
-    }
 
-    return prisma.deliveryAgent.update({
-      where: {
-        id: agentId,
-      },
-      data: {
-        status,
-        availability: "OFFLINE",
-      },
+      return database.deliveryAgent.update({
+        where: { id: agentId },
+        data: {
+          status,
+          availability: "OFFLINE",
+        },
+      });
     });
   }
 
