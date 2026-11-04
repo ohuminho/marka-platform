@@ -2,7 +2,6 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { prisma } from "@/database/client/prisma";
 import { passwordService } from "@/core/authentication/password.service";
-import { SessionService } from "@/core/auth/sessions/session.service";
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;
 
