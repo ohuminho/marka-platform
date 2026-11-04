@@ -730,6 +730,7 @@ model Organization {
   mobilityOrchestrationEvents MobilityRideOrchestrationEvent[]
 
   fulfillmentRequests FulfillmentRequest[]
+  deliveryBatches     DeliveryBatch[]
   dispatchRequests    DispatchRequest[]
   deliveryAgents      DeliveryAgent[]
 
@@ -1089,7 +1090,6 @@ model Order {
   commissions  Commission[]
 
   fulfillment FulfillmentRequest?
-  deliveryBatches DeliveryBatch[]
   conversations MarketplaceConversation[]
 
   createdAt DateTime @default(now())
