@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Vender online em Angola: crie a sua loja | MARKA",
+  title: "Vender online em Angola: crie a sua loja",
   description: "Abra uma loja na MARKA, publique produtos ou serviços e alcance potenciais compradores. Comece com um registo simples e solicite verificação quando estiver preparado.",
   alternates: { canonical: "/vender" },
   openGraph: {
