@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { reserveApiRequest } from "@/core/security/api-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ interface AiCoreResponse {
   provider?: string;
   model?: string;
   text?: string;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 function encodeContext(payload: Record<string, unknown>): string {
@@ -37,6 +40,7 @@ function jsonError(message: string, status: number, correlationId?: string) {
 
 export async function POST(request: Request) {
   const correlationId = randomUUID();
+  const startedAt = Date.now();
   try {
     const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
     if (!token) return jsonError("Inicia sessão para utilizar a IA do MARKA.", 401);
@@ -47,14 +51,19 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { id: true, role: true, status: true },
+      select: { id: true, role: true, status: true, isFounder: true },
     });
     if (!user || user.status !== "ACTIVE") {
       await sessionService.revoke(token);
       return jsonError("A conta não está activa.", 403);
     }
 
-    const body = (await request.json().catch(() => null)) as ChatBody | null;
+    const rawBody = await request.text();
+    if (Buffer.byteLength(rawBody, "utf8") > 65536) {
+      return jsonError("O pedido excede o tamanho permitido.", 413);
+    }
+    let body: ChatBody | null = null;
+    try { body = JSON.parse(rawBody) as ChatBody; } catch { body = null; }
     if (
       !body ||
       typeof body.prompt !== "string" ||
@@ -68,6 +77,23 @@ export async function POST(request: Request) {
       (typeof body.conversationId !== "string" || body.conversationId.length > 128)
     ) {
       return jsonError("O identificador da conversa é inválido.", 400);
+    }
+
+    const privileged = user.isFounder || ["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(user.role);
+    const quota = await reserveApiRequest({
+      scope: "AI_CHAT",
+      actorUserId: user.id,
+      bypass: privileged,
+      windows: [
+        { limit: 12, windowMs: 60_000 },
+        { limit: 120, windowMs: 24 * 60 * 60 * 1000 },
+      ],
+    });
+    if (!quota.allowed) {
+      return NextResponse.json(
+        { success: false, message: "Atingiste o limite temporário de utilização da IA. Tenta novamente mais tarde.", retryAfterSeconds: quota.retryAfterSeconds, correlationId },
+        { status: 429, headers: { "Cache-Control": "private, no-store", "Retry-After": String(quota.retryAfterSeconds) } },
+      );
     }
 
     // Ground Marketplace answers in the live catalogue owned by MARKA.
@@ -235,6 +261,29 @@ export async function POST(request: Request) {
       if (!payload || typeof payload.text !== "string" || !payload.text.trim()) {
         return jsonError("O serviço de IA devolveu uma resposta inválida.", 502);
       }
+
+      await prisma.securityEvent.create({
+        data: {
+          actorUserId: user.id,
+          type: "AI_CORE_USAGE",
+          severity: "INFO",
+          correlationId,
+          metadata: {
+            space,
+            requestId: payload.requestId ?? correlationId,
+            provider: payload.provider ?? null,
+            model: payload.model ?? null,
+            inputTokens: typeof payload.inputTokens === "number" && Number.isFinite(payload.inputTokens) ? Math.max(0, Math.floor(payload.inputTokens)) : null,
+            outputTokens: typeof payload.outputTokens === "number" && Number.isFinite(payload.outputTokens) ? Math.max(0, Math.floor(payload.outputTokens)) : null,
+            durationMs: Date.now() - startedAt,
+          },
+        },
+      }).catch((error) => {
+        console.error("[MARKA_AI_USAGE_AUDIT_FAILED]", {
+          correlationId,
+          errorName: error instanceof Error ? error.name : "UnknownError",
+        });
+      });
 
       return NextResponse.json(
         {
