@@ -23,6 +23,32 @@ export default function PublicProductPurchase({ productId, storeId }: { productI
         return;
       }
       if (!response.ok) throw new Error(payload?.message || "Não foi possível adicionar o produto ao carrinho.");
+      try {
+        if (window.localStorage.getItem("marka_growth_consent_v1") === "accepted") {
+          let visitorId = window.localStorage.getItem("marka_growth_visitor_v1");
+          if (!visitorId) {
+            visitorId = window.crypto?.randomUUID?.() ?? null;
+            if (visitorId) window.localStorage.setItem("marka_growth_visitor_v1", visitorId);
+          }
+          if (visitorId) {
+            void fetch("/api/growth/events", {
+              method: "POST",
+              credentials: "same-origin",
+              keepalive: true,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                event: "add_to_cart",
+                consent: true,
+                visitorId,
+                path: window.location.pathname.slice(0, 300),
+                entityId: productId,
+              }),
+            }).catch(() => undefined);
+          }
+        }
+      } catch {
+        // Analytics must not interrupt a successful cart operation.
+      }
       window.location.assign(`/app/cart?storeId=${encodeURIComponent(storeId)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Ocorreu um erro. Tente novamente.");
