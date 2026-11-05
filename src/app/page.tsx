@@ -108,6 +108,7 @@ export default function Home() {
             <Link href="/" className="text-sm font-medium text-[#f1c66e]">Início</Link>
             <a href="#sobre" className="text-sm text-white/75 transition hover:text-white">Sobre</a>
             <a href="#areas" className="text-sm text-white/75 transition hover:text-white">Categorias</a>
+            <a href="#inteligencia" className="text-sm text-white/75 transition hover:text-white">MARKA AI</a>
             <a href="#servicos" className="text-sm text-white/75 transition hover:text-white">Serviços</a>
             <a href="#contactos" className="text-sm text-white/75 transition hover:text-white">Contactos</a>
           </div>
@@ -197,6 +198,42 @@ export default function Home() {
                 </div>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section id="inteligencia" aria-labelledby="ai-title" className="mx-auto max-w-[1600px] px-5 pb-20 sm:px-8 lg:px-12">
+          <div className="relative isolate overflow-hidden rounded-[28px] border border-[#d7ad62]/40 bg-[linear-gradient(115deg,#211a10_0%,#111216_55%,#17130d_100%)] p-6 shadow-[0_24px_80px_rgba(0,0,0,.25)] sm:p-9 lg:p-12">
+            <div aria-hidden="true" className="absolute -right-16 -top-24 -z-10 h-80 w-80 rounded-full bg-[#d8a84d]/15 blur-3xl" />
+            <div className="grid gap-8 lg:grid-cols-[1.2fr_.8fr] lg:items-center">
+              <div className="max-w-3xl">
+                <p className="text-[10px] font-semibold uppercase tracking-[.3em] text-[#e3b968]">Inteligência artificial integrada</p>
+                <h2 id="ai-title" className="mt-4 text-3xl font-bold leading-tight tracking-[-.045em] text-white sm:text-4xl lg:text-5xl">MARKA AI. Inteligência ao serviço de cada pessoa e negócio.</h2>
+                <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
+                  Um assistente inteligente para esclarecer dúvidas, ajudar a compreender o ecossistema MARKA, organizar ideias e orientar tarefas — numa experiência que acompanha o idioma do utilizador.
+                </p>
+                <Link href="/app/assistant" className="mt-7 inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#f8dfaa] to-[#d9a947] px-7 text-xs font-bold text-[#17120a] shadow-[0_10px_32px_rgba(220,174,83,.2)] transition hover:-translate-y-0.5 hover:brightness-110">
+                  Experimentar MARKA AI <span aria-hidden="true">→</span>
+                </Link>
+                <p className="mt-3 text-[10px] text-white/40">O assistente requer sessão iniciada na MARKA.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                {[
+                  ["01", "Orientação inteligente", "Ajuda a encontrar o caminho certo dentro da plataforma."],
+                  ["02", "Apoio a negócios", "Ajuda a estruturar ideias e compreender oportunidades."],
+                  ["03", "Comunicação flexível", "Acompanha a língua em que o utilizador comunica."],
+                ].map(([number, title, description]) => (
+                  <div key={number} className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
+                    <div className="flex items-start gap-3">
+                      <span className="pt-0.5 text-xs font-semibold text-[#e4b963]">{number}</span>
+                      <div>
+                        <h3 className="text-sm font-semibold text-white">{title}</h3>
+                        <p className="mt-1 text-xs leading-5 text-white/55">{description}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
