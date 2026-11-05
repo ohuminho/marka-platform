@@ -119,6 +119,11 @@ Deno.serve(async (request: Request) => {
     let scopedOrganizationId: string | null = null;
     if (subjectType === "KYB") {
       if (!organizationId) return json({ message: "Select an organization for business verification." }, 400);
+      const { data: organization, error: organizationError } = await supabase.from("Organization")
+        .select("id,type,status").eq("id", organizationId).maybeSingle();
+      if (organizationError || !organization || organization.type !== "BUSINESS" || organization.status !== "ACTIVE") {
+        return json({ message: "KYB is available only for an active business organization.", code: "BUSINESS_ORGANIZATION_REQUIRED" }, 403);
+      }
       const { data: membership } = await supabase.from("OrganizationMembership").select("id")
         .eq("userId", user.id).eq("organizationId", organizationId).eq("status", "ACTIVE").maybeSingle();
       if (!membership) return json({ message: "Active organization membership required." }, 403);
