@@ -36,7 +36,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
       return NextResponse.json({ message: "Esta chamada já não está activa." }, { status: 409 });
     }
     if (call.status === "RINGING" && call.expiresAt <= now && action !== "END") {
-      await prisma.communicationCallSession.updateMany({ where: { id: callId, status: "RINGING" }, data: { status: "MISSED", endedAt: now } });
+      await prisma.$transaction(async (tx) => {
+        const updated = await tx.communicationCallSession.updateMany({
+          where: { id: callId, status: "RINGING" },
+          data: { status: "MISSED", endedAt: now },
+        });
+        if (updated.count === 1) {
+          await tx.notification.create({
+            data: {
+              userId: call.callerId,
+              type: "CALL_MISSED",
+              title: "Chamada não atendida",
+              message: "A tua chamada não foi atendida.",
+              data: { callId: call.id, threadId: call.threadId },
+            },
+          });
+        }
+      });
       return NextResponse.json({ message: "A chamada expirou." }, { status: 410 });
     }
     if ((action === "ACCEPT" || action === "REJECT" || action === "MISSED") && actor.id !== call.calleeId) {
@@ -50,9 +66,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
       if (!result.count) return NextResponse.json({ message: "A chamada já foi respondida ou expirou." }, { status: 409 });
     } else {
       const status = action === "REJECT" ? "REJECTED" : action === "MISSED" ? "MISSED" : "ENDED";
-      const result = await prisma.communicationCallSession.updateMany({
-        where: { id: callId, status: { in: ["RINGING", "ACCEPTED"] } },
-        data: { status, endedAt: now },
+      const result = await prisma.$transaction(async (tx) => {
+        const updated = await tx.communicationCallSession.updateMany({
+          where: { id: callId, status: { in: ["RINGING", "ACCEPTED"] } },
+          data: { status, endedAt: now },
+        });
+        if (updated.count === 1 && (action === "REJECT" || action === "MISSED")) {
+          await tx.notification.create({
+            data: {
+              userId: call.callerId,
+              type: action === "MISSED" ? "CALL_MISSED" : "CALL_REJECTED",
+              title: action === "MISSED" ? "Chamada não atendida" : "Chamada recusada",
+              message: action === "MISSED"
+                ? "A tua chamada não foi atendida."
+                : "O destinatário recusou a tua chamada.",
+              data: { callId: call.id, threadId: call.threadId },
+            },
+          });
+        }
+        return updated;
       });
       if (!result.count) return NextResponse.json({ message: "A chamada já foi encerrada." }, { status: 409 });
     }
