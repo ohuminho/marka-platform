@@ -9,9 +9,15 @@ self.addEventListener("push", (event) => {
 
   const title = typeof payload.title === "string" ? payload.title.slice(0, 80) : "MARKA";
   const body = typeof payload.body === "string" ? payload.body.slice(0, 180) : "Tens uma nova notificação.";
-  const url = typeof payload.url === "string" && payload.url.startsWith("/") && !payload.url.startsWith("//")
-    ? payload.url
-    : "/app/notifications";
+  let url = "/app/notifications";
+  if (typeof payload.url === "string" && payload.url.startsWith("/") && !payload.url.startsWith("//")) {
+    try {
+      const candidate = new URL(payload.url, self.location.origin);
+      if (candidate.origin === self.location.origin) url = candidate.href;
+    } catch {
+      // Keep the safe in-app notifications fallback.
+    }
+  }
 
   event.waitUntil(self.registration.showNotification(title, {
     body,
@@ -26,9 +32,16 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = event.notification.data && typeof event.notification.data.url === "string"
-    ? event.notification.data.url
-    : "/app/notifications";
+  let target = new URL("/app/notifications", self.location.origin).href;
+  const storedTarget = event.notification.data && event.notification.data.url;
+  if (typeof storedTarget === "string") {
+    try {
+      const candidate = new URL(storedTarget, self.location.origin);
+      if (candidate.origin === self.location.origin) target = candidate.href;
+    } catch {
+      // Keep the safe in-app notifications fallback.
+    }
+  }
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of windows) {
