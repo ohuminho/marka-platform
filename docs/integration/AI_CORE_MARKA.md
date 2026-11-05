@@ -59,4 +59,4 @@ The route enforces active account status, input length limits, a 30-second upstr
 
 The AI Core never connects directly to MARKA's PostgreSQL database. It receives only the user-scoped prompt and signed context. Product-specific data must be retrieved through explicitly authorized MARKA APIs/tools; it must not be inferred or fabricated by the model.
 
-AI model inference may incur provider charges. Do not enable unrestricted production traffic without a model choice, usage budget, and rate/quotas policy.
+The MARKA AI Core is a MARKA-owned platform component and remains the authoritative intelligence layer for MARKA. Its internal model/runtime configuration is managed by the MARKA team; this integration must not introduce a new external AI subscription or replace the owned AI Core. Before opening high-volume public traffic, keep rate limits, abuse protection, observability and operational capacity controls in place.
