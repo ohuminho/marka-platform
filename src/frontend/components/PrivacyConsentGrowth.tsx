@@ -24,12 +24,21 @@ export default function PrivacyConsentGrowth() {
   const [consent, setConsent] = useState<"unknown" | "accepted" | "declined">("unknown");
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(CONSENT_KEY);
-      if (saved === "accepted" || saved === "declined") setConsent(saved);
-    } catch {
-      setConsent("declined");
-    }
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      try {
+        const saved = window.localStorage.getItem(CONSENT_KEY);
+        if (saved === "accepted" || saved === "declined") {
+          setConsent(saved);
+        }
+      } catch {
+        setConsent("declined");
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
