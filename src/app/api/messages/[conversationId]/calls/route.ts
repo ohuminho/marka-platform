@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { expireRingingCalls } from "@/core/communications/expire-ringing-calls";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -27,10 +28,9 @@ export async function GET(_request: Request, context: Context) {
     if (!conversation) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
 
     const now = new Date();
-    await prisma.communicationCallSession.updateMany({
-      where: { conversationId, status: "RINGING", expiresAt: { lte: now } },
-      data: { status: "MISSED", endedAt: now },
-    });
+    await prisma.$transaction((tx) =>
+      expireRingingCalls(tx, { conversationId }, now),
+    );
     const calls = await prisma.communicationCallSession.findMany({
       where: { conversationId, OR: [{ callerId: actor.id }, { calleeId: actor.id }] },
       orderBy: { createdAt: "desc" }, take: 20,
@@ -64,10 +64,7 @@ export async function POST(request: Request, context: Context) {
       // Serialize call creation per conversation so simultaneous taps cannot create parallel ringing sessions.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${conversationId}))`;
       const now = new Date();
-      await tx.communicationCallSession.updateMany({
-        where: { conversationId, status: "RINGING", expiresAt: { lte: now } },
-        data: { status: "MISSED", endedAt: now },
-      });
+      await expireRingingCalls(tx, { conversationId }, now);
       const active = await tx.communicationCallSession.findFirst({
         where: { conversationId, status: { in: ["RINGING", "ACCEPTED"] }, expiresAt: { gt: now } },
         select: { id: true },
