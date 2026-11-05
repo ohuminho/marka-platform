@@ -26,7 +26,10 @@ export default function PushNotificationControl() {
     void fetch("/api/comms/push-subscriptions", { cache: "no-store" })
       .then(async response => {
         if (!response.ok) return null;
-        return await response.json() as PushConfig;
+        const value = await response.json() as PushConfig;
+        const registration = await navigator.serviceWorker.getRegistration("/");
+        const subscription = await registration?.pushManager.getSubscription();
+        return { ...value, subscribed: Boolean(subscription) };
       })
       .then(value => {
         if (active && value?.enabled && value.publicKey) setConfig(value);
@@ -69,7 +72,9 @@ export default function PushNotificationControl() {
         body: JSON.stringify(subscription.toJSON()),
       });
       if (!response.ok) {
-        if (!existing) await subscription.unsubscribe();
+        // Never leave a browser subscription locally active when the server did not
+        // bind it to the currently authenticated MARKA account.
+        await subscription.unsubscribe();
         throw new Error("Não foi possível registar este dispositivo.");
       }
       setConfig(current => current ? { ...current, subscribed: true } : current);
