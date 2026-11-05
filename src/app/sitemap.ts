@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/database/client/prisma";
 
 const baseUrl = "https://markaao.com";
+const MAX_DYNAMIC_URLS = 49_995;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = [
@@ -13,21 +14,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const [products, stores] = await Promise.all([
-      prisma.product.findMany({
-        where: { status: "ACTIVE", stock: { gt: 0 }, store: { status: "ACTIVE", vendor: { status: "ACTIVE" } } },
-        select: { id: true, updatedAt: true },
-        orderBy: { updatedAt: "desc" },
-        take: 49995,
-      }),
-    ]);
-    const remainingStoreSlots = Math.max(0, 49995 - products.length);
-    const stores = remainingStoreSlots > 0 ? await prisma.store.findMany({
-        where: { status: "ACTIVE", vendor: { status: "ACTIVE" }, products: { some: { status: "ACTIVE", stock: { gt: 0 } } } },
-        select: { id: true, updatedAt: true },
-        orderBy: { updatedAt: "desc" },
-        take: remainingStoreSlots,
-      }) : [];
+    const products = await prisma.product.findMany({
+      where: { status: "ACTIVE", stock: { gt: 0 }, store: { status: "ACTIVE", vendor: { status: "ACTIVE" } } },
+      select: { id: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: MAX_DYNAMIC_URLS,
+    });
+
+    const remainingStoreSlots = Math.max(0, MAX_DYNAMIC_URLS - products.length);
+    const stores = remainingStoreSlots > 0
+      ? await prisma.store.findMany({
+          where: { status: "ACTIVE", vendor: { status: "ACTIVE" }, products: { some: { status: "ACTIVE", stock: { gt: 0 } } } },
+          select: { id: true, updatedAt: true },
+          orderBy: { updatedAt: "desc" },
+          take: remainingStoreSlots,
+        })
+      : [];
 
     routes.push(
       ...products.map((product) => ({
