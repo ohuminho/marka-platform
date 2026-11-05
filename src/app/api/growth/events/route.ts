@@ -70,10 +70,12 @@ export async function POST(request: Request) {
         ? [
             { limit: 120, windowMs: 60_000 },
             { limit: 2000, windowMs: 60 * 60 * 1000 },
+            { limit: 5000, windowMs: 24 * 60 * 60 * 1000 },
           ]
         : [
             { limit: 60, windowMs: 60_000 },
             { limit: 300, windowMs: 60 * 60 * 1000 },
+            { limit: 1000, windowMs: 24 * 60 * 60 * 1000 },
           ],
     });
     if (!quota.allowed) {
