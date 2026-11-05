@@ -59,4 +59,20 @@ The route enforces active account status, input length limits, a 30-second upstr
 
 The AI Core never connects directly to MARKA's PostgreSQL database. It receives only the user-scoped prompt and signed context. Product-specific data must be retrieved through explicitly authorized MARKA APIs/tools; it must not be inferred or fabricated by the model.
 
-AI model inference may incur provider charges. Do not enable unrestricted production traffic without a model choice, usage budget, and rate/quotas policy.
+The MARKA AI Core is a MARKA-owned platform component and remains the authoritative intelligence layer for MARKA. Its internal model/runtime configuration is managed by the MARKA team; this integration must not introduce a new external AI subscription or replace the owned AI Core. Before opening high-volume public traffic, keep rate limits, abuse protection, observability and operational capacity controls in place.
+
+
+## MARKA-side quota and usage governance
+
+The MARKA gateway applies a database-backed quota before forwarding chat requests:
+
+- Standard active accounts: 12 requests per minute and 120 requests per 24 hours.
+- Founder, ADMIN, SUPER_ADMIN and SYSTEM_ADMIN accounts: exempt from the MARKA-side per-user quota. Exemption is decided from the active user record after session validation; browser-supplied roles are ignored.
+- Requests are recorded in `SecurityEvent` as `AI_CORE_USAGE` after a successful response. Only model/provider identifiers, token counts, request correlation and duration are stored; prompts and generated text are not persisted by this usage recorder.
+- Rate-limit counters use transaction advisory locks and the existing PostgreSQL `SecurityEvent` table. No new paid service or database migration is required.
+
+The shared AI Core currently enforces 30 requests/minute and 500,000 tokens/day per tenant and at platform level for standard contexts. A companion change is staged in AI Core PR #5: trusted signed `OWNER` contexts from the allowlisted `marka-api` issuer bypass both per-tenant and platform-wide request/token quotas. Usage audit events remain enabled, and sensitive writes still require human approval. This exemption becomes effective only after AI Core PR #5 is merged/deployed and the production `AI_OWNER_CONTEXT_ISSUERS` allowlist includes `marka-api`.
+
+## Usage analytics
+
+The protected MARKA admin endpoint `GET /api/admin/growth/analytics` aggregates consented growth events and AI Core usage for the last 30 days. The admin page is `/app/admin/growth`. It deliberately does not report sign-ups or purchases until those metrics are connected to authoritative server-side account and confirmed-payment events. Cart-to-purchase conversion remains unavailable rather than being fabricated.

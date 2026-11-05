@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 import { MarketplaceProduct } from "../types/marketplace.types";
@@ -45,7 +46,7 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
 
   return (
     <article className="group overflow-hidden rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2.5 backdrop-blur-xl transition duration-500 hover:-translate-y-1 hover:shadow-[0_32px_90px_rgba(0,0,0,0.16)]">
-      <div className="relative aspect-[4/4.3] overflow-hidden rounded-[1rem] bg-[var(--theme-background)]">
+      <Link href={`/produto/${product.id}`} aria-label={`Ver ${product.name}`} className="relative block aspect-[4/4.3] overflow-hidden rounded-[1rem] bg-[var(--theme-background)]">
         {product.image ? (
           <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]" />
         ) : (
@@ -60,12 +61,12 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
           </span>
 
         </div>
-      </div>
+      </Link>
 
       <div className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="truncate marka-editorial text-xl text-[var(--theme-text)]">{product.name}</h3>
+            <h3 className="truncate marka-editorial text-xl text-[var(--theme-text)]"><Link href={`/produto/${product.id}`} className="transition hover:underline">{product.name}</Link></h3>
             <p className="mt-1 truncate text-xs text-[var(--theme-text-muted)]">{product.store.name}</p>
           </div>
           <p className="shrink-0 text-sm font-semibold text-[var(--theme-text)]">

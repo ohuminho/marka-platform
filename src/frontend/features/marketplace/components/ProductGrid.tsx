@@ -11,6 +11,7 @@ import MarketplaceFilters from "./MarketplaceFilters";
 import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 import { MarketplaceProduct } from "../types/marketplace.types";
+import { trackGrowthEvent } from "@/frontend/features/growth/track-growth-event";
 
 type MarketplaceCategory = { id: string; name: string };
 type MarketplaceProductsResponse = {
@@ -30,6 +31,14 @@ export default function ProductGrid() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState("latest");
   const [categoryId, setCategoryId] = useState("");
+
+  useEffect(() => {
+    trackGrowthEvent("marketplace_view");
+  }, []);
+
+  useEffect(() => {
+    if (search.trim()) trackGrowthEvent("search");
+  }, [search]);
 
   useEffect(() => {
     let cancelled = false;

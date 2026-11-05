@@ -108,6 +108,8 @@ export default function Home() {
             <Link href="/" className="text-sm font-medium text-[#f1c66e]">Início</Link>
             <a href="#sobre" className="text-sm text-white/75 transition hover:text-white">Sobre</a>
             <a href="#areas" className="text-sm text-white/75 transition hover:text-white">Categorias</a>
+            <Link href="/vender" className="text-sm text-white/75 transition hover:text-white">Vender</Link>
+            <Link href="/mobilidade" className="text-sm text-white/75 transition hover:text-white">Mobilidade</Link>
             <a href="#inteligencia" className="text-sm text-white/75 transition hover:text-white">MARKA AI</a>
             <a href="#servicos" className="text-sm text-white/75 transition hover:text-white">Serviços</a>
             <a href="#contactos" className="text-sm text-white/75 transition hover:text-white">Contactos</a>
