@@ -18,15 +18,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         where: { status: "ACTIVE", stock: { gt: 0 }, store: { status: "ACTIVE", vendor: { status: "ACTIVE" } } },
         select: { id: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
-        take: 50000,
+        take: 49995,
       }),
-      prisma.store.findMany({
+    ]);
+    const remainingStoreSlots = Math.max(0, 49995 - products.length);
+    const stores = remainingStoreSlots > 0 ? await prisma.store.findMany({
         where: { status: "ACTIVE", vendor: { status: "ACTIVE" }, products: { some: { status: "ACTIVE", stock: { gt: 0 } } } },
         select: { id: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
-        take: 50000,
-      }),
-    ]);
+        take: remainingStoreSlots,
+      }) : [];
 
     routes.push(
       ...products.map((product) => ({
