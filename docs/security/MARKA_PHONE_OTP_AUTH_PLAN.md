@@ -64,15 +64,14 @@ Never commit secrets or expose them client-side.
 - Initial planning envelope: AOA 15,000, not a payment instruction. Reconcile VAT and exact tariff before production.
 - No WhatsApp spend, credentials, templates or delivery logic.
 
-## Required database changes
-Production User.email and User.emailNormalized are NOT NULL and unique. Profile.phone is nullable and not a verified identity key. User.phoneVerifiedAt exists, but no OTP challenge or SMS usage ledger exists.
-1. Make email and emailNormalized nullable while preserving uniqueness for non-null values.
-2. Add canonical User.phoneE164 nullable with a unique index; only verified numbers may be assigned.
-3. Add OTP challenge records: keyed hash, purpose, expiry, attempts, consumed timestamp and delivery state.
-4. Add SMS delivery/usage records for cost accounting and reconciliation.
-5. Keep Profile.phone as display/contact only.
-6. Preserve existing email users and sessions.
-No production migration until migration history/schema are reconciled, a reviewed migration is committed and exact DB target is confirmed.
+## Database implementation status
+- A Prisma schema foundation and migration `20261105090000_add_phone_otp_sms_ledger` have been added on the feature branch.
+- `User.phoneE164` is nullable and unique; existing `Profile.phone` remains display/contact data only.
+- `PhoneOtpChallenge` stores the challenge hash, purpose, expiry, attempts, consume state and delivery state.
+- `SmsDeliveryLedger` records provider, hashed destination, delivery lifecycle, optional tariff snapshot and timestamps.
+- Existing `User.email` and `User.emailNormalized` remain required in this phase. Making them nullable is intentionally deferred until registration, login, verification, recovery, profile, admin, Marketplace, Mobility and notification paths are audited and refactored together. This avoids creating phone-only accounts that current application flows cannot safely support.
+- Existing email users, Resend verification/recovery and sessions are unchanged.
+- The migration is not applied to production. It still requires Prisma validation and isolated-database migration testing before release.
 
 ## Application integration sequence
 1. Audit required-email assumptions across registration, login, recovery, profile, admin, Marketplace, Mobility, notifications and exports.
