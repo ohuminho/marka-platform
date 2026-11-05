@@ -1,23 +1,17 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 
 export default function ResetPasswordPage() {
-  const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const value = new URLSearchParams(window.location.search).get("token") || "";
-    setToken(value);
-    if (!value) setMessage("O link de recuperação está incompleto. Solicita um novo email de recuperação.");
-  }, []);
-
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    const token = new URLSearchParams(window.location.search).get("token") || "";
     if (!token) {
       setMessage("O link de recuperação está incompleto. Solicita um novo email de recuperação.");
       return;
@@ -42,7 +36,6 @@ export default function ResetPasswordPage() {
       setMessage(data?.message || "Palavra-passe atualizada.");
       setPassword("");
       setConfirmation("");
-      setToken("");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível atualizar a palavra-passe.");
     } finally {
@@ -60,7 +53,7 @@ export default function ResetPasswordPage() {
           <input type="password" autoComplete="new-password" required minLength={12} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Nova palavra-passe" className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-4 outline-none focus:border-[#e9bd58]" />
           <input type="password" autoComplete="new-password" required minLength={12} maxLength={128} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder="Confirmar palavra-passe" className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-4 outline-none focus:border-[#e9bd58]" />
           {message && <p role="status" aria-live="polite" className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white/75">{message}</p>}
-          <button disabled={loading || !token} className="w-full rounded-xl bg-[#e9bd58] px-4 py-4 font-semibold text-black disabled:opacity-50">{loading ? "A atualizar..." : "Atualizar palavra-passe"}</button>
+          <button disabled={loading} className="w-full rounded-xl bg-[#e9bd58] px-4 py-4 font-semibold text-black disabled:opacity-50">{loading ? "A atualizar..." : "Atualizar palavra-passe"}</button>
         </form>
         <a href="/auth/login" className="mt-6 block text-center text-sm text-white/60 underline underline-offset-4">Voltar ao início de sessão</a>
       </section>
