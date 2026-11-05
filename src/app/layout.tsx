@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import AppProvider from "@/frontend/providers/AppProvider";
+import PrivacyConsentGrowth from "@/frontend/components/PrivacyConsentGrowth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="pt-AO" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AppProvider>{children}</AppProvider>
+        <PrivacyConsentGrowth />
       </body>
     </html>
   );
