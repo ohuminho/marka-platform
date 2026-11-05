@@ -8,44 +8,74 @@ Repository and connected project checks:
 
 - The call-session migration `20261030150000_add_communication_call_sessions` and shared-context migration `20261030160000_add_shared_context_communication_threads` are present in the Supabase project's applied migration history.
 - The database exposes `CommunicationCallSession`, `CommunicationCallSignal`, `CommunicationThread` and `CommunicationThreadParticipant`; RLS is enabled on these tables.
-- The MARKA production project's Vercel environment-variable inventory does not currently contain `MARKA_TURN_URLS` or `MARKA_TURN_SHARED_SECRET`.
-- The ICE configuration route therefore intentionally returns HTTP 503 in production until TURN is configured. Do not bypass this guard or silently ship STUN-only production calling.
+- The MARKA production project's Vercel environment-variable inventory did not contain Coturn TURN variables during the last audit.
+- The ICE configuration route intentionally returns HTTP 503 in production until a TURN provider is configured. Do not bypass this guard or silently ship STUN-only production calling.
 - Repository code contains the authenticated call lifecycle, WebRTC signalling and browser call controls. This is not evidence of successful end-to-end media connectivity.
 
-### Remaining work before release
+## Provider options
 
-1. Provision a Coturn host with a public static IP, DNS name and TLS certificate. Prefer a low-cost/self-managed host only after checking bandwidth, UDP availability, firewall policy and monthly egress cost.
-2. Configure the exact same high-entropy REST shared secret on Coturn and the MARKA server environment. Store it only as a server-side encrypted/sensitive variable. Never use a `NEXT_PUBLIC_` name.
-3. Set `MARKA_TURN_URLS` to the reachable UDP and TLS endpoints; set `MARKA_STUN_URLS` only if a deliberate STUN configuration is required.
-4. Redeploy a non-production environment first and verify that the authenticated ICE endpoint returns time-limited credentials without exposing the shared secret.
-5. Test two real MARKA accounts on separate Android devices and independent networks (Wi-Fi to mobile data and mobile data to mobile data). Verify that TURN relay is actually selected for a forced-relay test.
-6. Test call authorization, expiry, denied permissions, incoming call, reject, hang-up from either side, network interruption/reconnect, and cleanup of expired signalling records.
-7. Review mobile background behaviour: browser polling is not a substitute for push delivery and may be suspended by Android when the app/browser is backgrounded.
-8. Only enable calling for the tested contexts after the security, privacy, capacity and operational gates pass.
+### Preferred no-VPS trial: Cloudflare Realtime TURN
 
-No TURN host was provisioned and no production environment variable was changed during this audit. Do not mark calling production-ready until the above tests pass.
+Cloudflare's current documentation describes a 1,000 GB/month free allowance shared by Realtime TURN and SFU, followed by US$0.05 per GB of billable egress. TURN used with Cloudflare Realtime SFU/Stream has separate internal billing treatment; MARKA's 1:1 peer-to-peer use should not assume that exemption.
 
-## Required production environment
+Official references:
+- https://developers.cloudflare.com/realtime/turn/
+- https://developers.cloudflare.com/realtime/turn/faq/
+- https://developers.cloudflare.com/realtime/turn/generate-credentials/
 
-Configure these variables on the server deployment (never expose the shared secret as a NEXT_PUBLIC variable):
+Create a TURN key and a scoped API token with the required Calls Write permission. Keep both values server-side. The API token is used by MARKA's backend to request one-hour credentials from Cloudflare; it must never be returned to a browser or committed to source control.
 
-- `MARKA_STUN_URLS`: comma-separated STUN URLs; optional, defaults to Google's public STUN endpoint.
-- `MARKA_TURN_URLS`: comma-separated TURN URLs, including UDP and preferably TURN/TLS endpoints, e.g. `turn:turn.example.com:3478?transport=udp,turns:turn.example.com:5349?transport=tcp`.
-- `MARKA_TURN_SHARED_SECRET`: long random secret shared with Coturn's `use-auth-secret` / `static-auth-secret` configuration.
+Server environment:
+- `MARKA_CLOUDFLARE_TURN_KEY_ID`: Cloudflare TURN key ID.
+- `MARKA_CLOUDFLARE_TURN_API_TOKEN`: secret API token associated with that TURN key.
 
-The authenticated ICE configuration endpoint issues time-limited TURN credentials using Coturn's REST-style HMAC-SHA1 credential scheme. Credentials expire after one hour and are scoped to the authenticated user identifier. Do not place the shared secret in browser code, client environment variables, logs, or source control.
+The application endpoint requests credentials with a 3,600-second TTL and returns the resulting ICE server list to an authenticated, active MARKA user. The provider response is not cached. A provider error fails closed with HTTP 503; it must not silently fall back to STUN-only calling in production.
 
-## Coturn baseline
+**Cost guard:** the free allowance is not a hard spending cap. Before enabling this provider in production, configure Cloudflare billing alerts and account-level controls where available, monitor usage, and agree a maximum spend. Do not add a payment method or enable paid usage without explicit owner approval. If Cloudflare cannot enforce a hard zero-spend cap, treat this as a controlled test only and stop before the free allowance is exhausted.
 
-Use a maintained Coturn release on a dedicated Linux host or managed VM. Configure TLS certificates, a restricted relay port range, firewall rules for the chosen UDP/TCP/TLS ports, `use-auth-secret`, `static-auth-secret`, and a public DNS name. Set realistic relay bandwidth and connection limits. Monitor allocation failures, relay traffic, CPU, memory and network egress.
+### Self-hosted alternative: Coturn
+
+Coturn remains supported as a separate provider mode:
+- `MARKA_TURN_URLS`: comma-separated TURN URLs.
+- `MARKA_TURN_SHARED_SECRET`: long random REST shared secret, shared with Coturn's `use-auth-secret` / `static-auth-secret` configuration.
+- `MARKA_STUN_URLS`: optional comma-separated STUN URLs; defaults to Google's public STUN endpoint.
+
+Coturn requires a Linux host with public IP, UDP/TCP reachability, TLS certificate, DNS, firewall configuration and bandwidth. Open-source software removes licence fees, not infrastructure or network costs.
+
+### Metered Open Relay
+
+Metered may be evaluated as a secondary trial option. Verify its current free quota, overage policy, supported protocols and account billing controls directly before configuring it. Do not rely on older third-party references for current pricing.
+
+## Remaining work before release
+
+1. Create the Cloudflare TURN key and scoped API token only after confirming account ownership and billing safeguards.
+2. Add the two Cloudflare environment variables to a non-production Vercel environment; never use a `NEXT_PUBLIC_` name.
+3. Deploy a preview and verify that the authenticated ICE endpoint returns time-limited credentials without exposing the API token or TURN key.
+4. Test two real MARKA accounts on separate Android devices and independent networks (Wi-Fi to mobile data and mobile data to mobile data). Verify TURN relay is actually selected for a forced-relay test.
+5. Test call authorization, expiry, denied permissions, incoming call, reject, hang-up from either side, network interruption/reconnect, and cleanup of expired signalling records.
+6. Review mobile background behaviour: browser polling is not a substitute for push delivery and may be suspended by Android when the app/browser is backgrounded.
+7. Monitor actual relayed GB, call duration, failure rate and latency before any wider rollout.
+8. Only enable calling for tested contexts after security, privacy, capacity and cost gates pass.
+
+No TURN provider credentials were provisioned and no production environment variable was changed during this implementation. Do not mark calling production-ready until the above tests pass.
+
+## Security requirements
+
+- Keep provider keys only in server-side encrypted environment variables.
+- Issue short-lived credentials only to authenticated active users.
+- Never log provider tokens, TURN credentials, SDP or ICE candidates.
+- Use private, no-store responses for ICE configuration.
+- Rate-limit credential issuance and monitor abuse before broad rollout.
+- Fail closed when a configured provider is incomplete or unavailable.
 
 ## Release gates (mandatory)
 
-1. Apply the Prisma migration and regenerate Prisma Client.
-2. Configure TURN and verify time-limited credentials against the Coturn secret.
+1. Configure a TURN provider in a non-production environment.
+2. Verify time-limited credentials and prove that secrets are absent from browser payloads and logs.
 3. Test audio and video between two real MARKA accounts on separate Android devices and independent networks, including mobile carrier NAT.
-4. Verify denied microphone/camera permissions, incoming call rejection, missed/expired calls, hang-up from either side, reconnect, and unauthorized signalling.
+4. Verify denied microphone/camera permissions, incoming call rejection, missed/expired calls, hang-up from either side, reconnect and unauthorized signalling.
 5. Confirm no SDP, ICE candidates, credentials or media are written to application logs.
-6. Load-test signalling and TURN relay capacity before enabling calls globally.
+6. Confirm the account's billing controls and agreed cost ceiling before enabling any paid overage.
+7. Load-test signalling and TURN relay capacity before enabling calls globally.
 
-Open-source software removes licence fees; it does not remove VM, bandwidth, egress, DNS or operational costs. Do not advertise production calling availability until the above gates pass.
+Do not advertise production calling availability until all release gates pass.
