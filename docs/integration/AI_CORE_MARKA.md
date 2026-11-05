@@ -71,7 +71,7 @@ The MARKA gateway applies a database-backed quota before forwarding chat request
 - Requests are recorded in `SecurityEvent` as `AI_CORE_USAGE` after a successful response. Only model/provider identifiers, token counts, request correlation and duration are stored; prompts and generated text are not persisted by this usage recorder.
 - Rate-limit counters use transaction advisory locks and the existing PostgreSQL `SecurityEvent` table. No new paid service or database migration is required.
 
-The shared AI Core also enforces its own per-tenant and platform-wide quotas. The current production configuration is 30 requests/minute and 500,000 tokens/day. These are service-level safety ceilings and are separate from MARKA's per-user policy. The current AI Core source connection is read-only, so an exemption for privileged MARKA roles inside the AI Core quota service still requires a write-enabled change to the AI Core repository. Do not claim that admins are globally unlimited while those shared-core ceilings remain active.
+The shared AI Core currently enforces 30 requests/minute and 500,000 tokens/day per tenant and at platform level for standard contexts. A companion change is staged in AI Core PR #5: trusted signed `OWNER` contexts from the allowlisted `marka-api` issuer bypass both per-tenant and platform-wide request/token quotas. Usage audit events remain enabled, and sensitive writes still require human approval. This exemption becomes effective only after AI Core PR #5 is merged/deployed and the production `AI_OWNER_CONTEXT_ISSUERS` allowlist includes `marka-api`.
 
 ## Usage analytics
 
