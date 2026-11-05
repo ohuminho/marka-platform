@@ -69,6 +69,8 @@ Never commit secrets or expose them client-side.
 - `User.phoneE164` is nullable and unique; existing `Profile.phone` remains display/contact data only.
 - `PhoneOtpChallenge` stores the challenge hash, purpose, expiry, attempts, consume state and delivery state.
 - `SmsDeliveryLedger` records provider, hashed destination, delivery lifecycle, optional tariff snapshot and timestamps.
+- A protected Super Admin usage API and dashboard page expose monthly budget, recorded spend, delivery states, country breakdown and provider readiness. They do not send SMS or query a MIMO balance.
+- Mobility contact verification now accepts either a verified phone or a verified email. Government identity/KYC and driver-document checks remain separate and mandatory.
 - Existing `User.email` and `User.emailNormalized` remain required in this phase. Making them nullable is intentionally deferred until registration, login, verification, recovery, profile, admin, Marketplace, Mobility and notification paths are audited and refactored together. This avoids creating phone-only accounts that current application flows cannot safely support.
 - Existing email users, Resend verification/recovery and sessions are unchanged.
 - The migration is not applied to production. It still requires Prisma validation and isolated-database migration testing before release.
