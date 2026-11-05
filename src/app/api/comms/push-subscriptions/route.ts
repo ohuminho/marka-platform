@@ -31,19 +31,13 @@ export async function GET() {
   try {
     const user = await authenticatedUser();
     if (!user) return NextResponse.json({ message: "Authentication required." }, { status: 401 });
-    const [count, subscriptions] = await Promise.all([
-      prisma.pushSubscription.count({ where: { userId: user.id, revokedAt: null } }),
-      prisma.pushSubscription.findMany({
-        where: { userId: user.id, revokedAt: null },
-        select: { endpoint: true },
-        take: 20,
-      }),
-    ]);
+    const count = await prisma.pushSubscription.count({
+      where: { userId: user.id, revokedAt: null },
+    });
     return NextResponse.json({
       enabled: isWebPushConfigured(),
       publicKey: getWebPushPublicKey(),
       subscribed: count > 0,
-      endpoints: subscriptions.map(item => item.endpoint),
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("[MARKA_PUSH_CONFIG]", error);
