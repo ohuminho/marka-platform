@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const eventSchema = z.object({
-  event: z.enum(["page_view", "marketplace_view", "product_view", "store_view", "search", "add_to_cart", "sign_up", "purchase"]),
+  event: z.enum(["page_view", "marketplace_view", "product_view", "store_view", "search", "add_to_cart"]),
   consent: z.literal(true),
   visitorId: z.string().uuid(),
   path: z.string().max(300).regex(/^\/[a-zA-Z0-9\/_~!$&'()*+,;=:@%-]*$/),
