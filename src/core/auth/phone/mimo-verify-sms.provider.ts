@@ -45,7 +45,26 @@ export class MimoVerifySmsProvider
       throw new Error("MIMO_VERIFY_AUTH_HEADER_NAME is invalid.");
     }
 
-    const response = await fetch(`${baseUrl}/v1/otp/send`, {
+    if (!/^\+[1-9]\d{7,14}$/.test(request.recipientE164)) {
+      throw new Error("MIMO Verify recipient must be a valid E.164 number.");
+    }
+
+    if (!/^\d{6}$/.test(request.code)) {
+      throw new Error("MIMO Verify only accepts a six-digit OTP code.");
+    }
+
+    let endpoint: URL;
+    try {
+      endpoint = new URL(`${baseUrl}/v1/otp/send`);
+    } catch {
+      throw new Error("MIMO_VERIFY_BASE_URL is invalid.");
+    }
+
+    if (endpoint.protocol !== "https:") {
+      throw new Error("MIMO Verify endpoint must use HTTPS.");
+    }
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
