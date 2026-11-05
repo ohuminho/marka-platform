@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Marketplace em Angola: produtos, lojas e serviços | MARKA",
+  title: "Marketplace em Angola: produtos, lojas e serviços",
   description: "Descubra lojas, produtos, serviços e oportunidades de diferentes setores no Marketplace MARKA. Explore ofertas ou comece a vender.",
   alternates: { canonical: "/marketplace" },
   openGraph: {
