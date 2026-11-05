@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
+import { expireRingingCalls } from "@/core/communications/expire-ringing-calls";
 
 export async function GET() {
   try {
@@ -15,10 +16,9 @@ export async function GET() {
     if (actor?.status !== "ACTIVE") return NextResponse.json({ message: "Conta sem autorização." }, { status: 403 });
 
     const now = new Date();
-    await prisma.communicationCallSession.updateMany({
-      where: { calleeId: actor.id, status: "RINGING", expiresAt: { lte: now } },
-      data: { status: "MISSED", endedAt: now },
-    });
+    await prisma.$transaction((tx) =>
+      expireRingingCalls(tx, { calleeId: actor.id }, now),
+    );
     const calls = await prisma.communicationCallSession.findMany({
       where: { calleeId: actor.id, status: "RINGING", expiresAt: { gt: now } },
       orderBy: { createdAt: "desc" }, take: 5,
