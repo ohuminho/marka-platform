@@ -51,6 +51,18 @@ export class AutomationService {
   }
 
   async processPending(limit = 20) {
+    // A crashed serverless worker can leave an event claimed forever. The
+    // platform worker budget is far below this lease, so recover old claims.
+    const staleBefore = new Date(Date.now() - 5 * 60 * 1000);
+    await prisma.domainEvent.updateMany({
+      where: { status: "PROCESSING", createdAt: { lte: staleBefore } },
+      data: {
+        status: "PENDING",
+        availableAt: new Date(),
+        lastError: "Recovered an expired processing claim.",
+      },
+    });
+
     const candidates = await prisma.domainEvent.findMany({
       where: { status: "PENDING", availableAt: { lte: new Date() } },
       orderBy: { createdAt: "asc" },
@@ -68,15 +80,25 @@ export class AutomationService {
       result.claimed++;
 
       try {
+        const eventPayload = record(event.payload) ? event.payload : {};
+        const organizationId = typeof eventPayload.organizationId === "string"
+          ? eventPayload.organizationId
+          : null;
         const rules = await prisma.automationRule.findMany({
-          where: { status: "ACTIVE", trigger: event.eventType },
+          where: {
+            status: "ACTIVE",
+            trigger: event.eventType,
+            ...(organizationId
+              ? { OR: [{ organizationId: null }, { organizationId }] }
+              : { organizationId: null }),
+          },
           orderBy: { priority: "asc" },
           take: 50,
           select: { id: true, conditions: true, actions: true },
         });
         for (const rule of rules) {
           const key = `domain-event:${event.id}:rule:${rule.id}`;
-          if (!conditionsMatch(rule.conditions, event.payload)) {
+          if (!conditionsMatch(rule.conditions, eventPayload)) {
             await prisma.automationExecution.upsert({
               where: { idempotencyKey: key },
               create: { ruleId: rule.id, idempotencyKey: key, status: "SKIPPED", input: { eventId: event.id } },
@@ -103,8 +125,8 @@ export class AutomationService {
             update: { status: "RUNNING", startedAt: new Date(), errorMessage: null },
           });
           try {
-            const payload = record(event.payload) ? event.payload : {};
-            const outputs = await prisma.$transaction(async (tx) => {
+            const payload = eventPayload;
+            await prisma.$transaction(async (tx) => {
               const created: Array<{ action: string; notificationId: string }> = [];
               for (const action of actions) {
                 const userId = action.userId ?? (action.userIdField ? atPath(payload, action.userIdField) : payload.userId);
