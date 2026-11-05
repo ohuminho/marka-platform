@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   type: z.enum(["CAR", "MOTORCYCLE", "VAN", "MINIBUS", "BUS", "COACH", "TRUCK", "OTHER"]),
-  vehicleSubtype: z.enum(["CARGO_TRICYCLE", "PICKUP", "CLOSED_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "DUMP_TRUCK", "HEAVY_TRUCK", "WATER_TANKER"]).optional(),
+  vehicleSubtype: z.enum(["SEDAN", "SUV", "HATCHBACK", "LUXURY_SEDAN", "CARGO_TRICYCLE", "PICKUP", "CLOSED_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "DUMP_TRUCK", "HEAVY_TRUCK", "WATER_TANKER"]).optional(),
   ownershipType: z.enum(["DRIVER_OWNED", "THIRD_PARTY_AUTHORIZED"]),
   ownerName: z.string().trim().max(120).optional().default(""),
   ownerPhone: z.string().trim().max(40).optional().default(""),
@@ -21,6 +21,9 @@ const schema = z.object({
   color: z.string().trim().min(2).max(40),
   capacity: z.coerce.number().int().min(1).max(100).default(4),
 }).superRefine((value, context) => {
+  if (value.type === "CAR" && !["SEDAN", "SUV", "HATCHBACK", "LUXURY_SEDAN", "PICKUP"].includes(value.vehicleSubtype ?? "")) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["vehicleSubtype"], message: "Seleciona a categoria do automóvel." });
+  }
   if (value.type === "TRUCK" && !value.vehicleSubtype) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["vehicleSubtype"], message: "Seleciona o tipo de veículo de carga." });
   }
@@ -96,7 +99,7 @@ export async function POST(request: Request) {
         ownerName: input.ownershipType === "THIRD_PARTY_AUTHORIZED" ? input.ownerName.trim() : null,
         ownerPhone: input.ownershipType === "THIRD_PARTY_AUTHORIZED" ? input.ownerPhone || null : null,
         ownershipDeclarationAt: new Date().toISOString(),
-        vehicleSubtype: input.type === "TRUCK" ? input.vehicleSubtype : null,
+        vehicleSubtype: input.type === "CAR" || input.type === "TRUCK" ? input.vehicleSubtype : null,
       };
       const vehicle = currentLink
         ? await tx.mobilityVehicle.update({
