@@ -1,7 +1,6 @@
 import {
   createECDH,
   createPrivateKey,
-  createPublicKey,
   hkdfSync,
   randomBytes,
   sign,
@@ -70,6 +69,7 @@ function vapidAuthorization(endpoint: string, config: NonNullable<ReturnType<typ
   const ecdh = createECDH("prime256v1");
   ecdh.setPrivateKey(config.privateBytes);
   const point = ecdh.getPublicKey(undefined, "uncompressed");
+  if (!point.equals(config.publicBytes)) throw new Error("MARKA VAPID public/private keys do not match.");
   const jwk = {
     kty: "EC",
     crv: "P-256",
@@ -135,7 +135,6 @@ async function sendOne(subscription: StoredSubscription, payload: PushPayload, c
       Authorization: vapidAuthorization(subscription.endpoint, config),
       "Content-Type": "application/octet-stream",
       "Content-Encoding": "aes128gcm",
-      "Content-Length": String(body.byteLength),
       TTL: "60",
       Urgency: payload.kind === "INCOMING_CALL" ? "high" : "normal",
     },
@@ -148,34 +147,41 @@ async function sendOne(subscription: StoredSubscription, payload: PushPayload, c
 }
 
 export async function sendUserWebPush(userId: string, payload: PushPayload) {
-  const config = vapidConfig();
-  if (!config) return { sent: 0, expired: 0, failed: 0, skipped: true };
-  const subscriptions = await prisma.pushSubscription.findMany({
-    where: { userId, revokedAt: null },
-    select: { id: true, endpoint: true, p256dh: true, auth: true },
-    take: 20,
-  });
-  let sent = 0;
-  let expired = 0;
-  let failed = 0;
-  for (const subscription of subscriptions) {
-    try {
-      const result = await sendOne(subscription, payload, config);
-      if (result === "sent") {
-        sent += 1;
-        await prisma.pushSubscription.update({ where: { id: subscription.id }, data: { lastUsedAt: new Date() } });
-      } else if (result === "expired" || result === "invalid") {
-        expired += 1;
-        await prisma.pushSubscription.update({ where: { id: subscription.id }, data: { revokedAt: new Date() } });
-      } else {
-        failed += 1;
+  try {
+    const config = vapidConfig();
+    if (!config) return { sent: 0, expired: 0, failed: 0, skipped: true };
+    const subscriptions = await prisma.pushSubscription.findMany({
+      where: { userId, revokedAt: null },
+      select: { id: true, endpoint: true, p256dh: true, auth: true },
+      take: 5,
+    });
+    const results = await Promise.all(subscriptions.map(async (subscription) => {
+      try {
+        const result = await sendOne(subscription, payload, config);
+        if (result === "sent") {
+          await prisma.pushSubscription.update({ where: { id: subscription.id }, data: { lastUsedAt: new Date() } });
+          return "sent" as const;
+        }
+        if (result === "expired" || result === "invalid") {
+          await prisma.pushSubscription.update({ where: { id: subscription.id }, data: { revokedAt: new Date() } });
+          return "expired" as const;
+        }
+        return "failed" as const;
+      } catch (error) {
+        console.error("[MARKA_WEB_PUSH_SEND]", error);
+        return "failed" as const;
       }
-    } catch (error) {
-      failed += 1;
-      console.error("[MARKA_WEB_PUSH_SEND]", error);
-    }
+    }));
+    return {
+      sent: results.filter(result => result === "sent").length,
+      expired: results.filter(result => result === "expired").length,
+      failed: results.filter(result => result === "failed").length,
+      skipped: false,
+    };
+  } catch (error) {
+    console.error("[MARKA_WEB_PUSH]", error);
+    return { sent: 0, expired: 0, failed: 1, skipped: false };
   }
-  return { sent, expired, failed, skipped: false };
 }
 
 export function getWebPushPublicKey() {
