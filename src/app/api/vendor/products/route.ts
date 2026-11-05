@@ -210,10 +210,12 @@ export async function POST(request: Request) {
         price: input.price.toFixed(4),
         currency: input.currency.toUpperCase(),
         stock: input.stock,
+        // Any approved seller type may publish eligible low-risk listings.
+        // Company sellers must not be forced into DRAFT solely because they are companies.
+        // High-risk categories and high-value listings remain gated below and in the publish action.
         status:
           vendor.status === "ACTIVE" &&
           vendor.store.status === "ACTIVE" &&
-          vendor.businessType === "INDIVIDUAL" &&
           input.stock > 0 &&
           !sensitiveCategory
             ? "ACTIVE"
