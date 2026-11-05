@@ -21,8 +21,8 @@ const eventSchema = z.object({
 }).strict();
 
 function clientIp(request: Request): string | null {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? request.headers.get("x-real-ip")?.trim()
+  return request.headers.get("x-real-ip")?.trim()
+    ?? request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
     ?? null;
 }
 
