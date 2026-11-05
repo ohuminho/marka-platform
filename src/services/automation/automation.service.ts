@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/database/client/prisma";
-import { notificationService } from "@/automation/notifications/notification.service";
 
 type JsonRecord = Record<string, unknown>;
 function record(value: unknown): value is JsonRecord {
@@ -105,19 +104,25 @@ export class AutomationService {
           });
           try {
             const payload = record(event.payload) ? event.payload : {};
-            const outputs: Array<{ action: string; notificationId: string }> = [];
-            for (const action of actions) {
-              const userId = action.userId ?? (action.userIdField ? atPath(payload, action.userIdField) : payload.userId);
-              if (typeof userId !== "string" || !userId) throw new Error("Notification target user is missing.");
-              const sent = await notificationService.send({
-                userId, title: action.title, message: action.message,
-                type: action.type ?? "AUTOMATION", data: { eventId: event.id, ruleId: rule.id },
+            const outputs = await prisma.$transaction(async (tx) => {
+              const created: Array<{ action: string; notificationId: string }> = [];
+              for (const action of actions) {
+                const userId = action.userId ?? (action.userIdField ? atPath(payload, action.userIdField) : payload.userId);
+                if (typeof userId !== "string" || !userId) throw new Error("Notification target user is missing.");
+                const sent = await tx.notification.create({
+                  data: {
+                    userId, title: action.title, message: action.message,
+                    type: action.type ?? "AUTOMATION",
+                    data: { eventId: event.id, ruleId: rule.id },
+                  },
+                });
+                created.push({ action: "notify_user", notificationId: sent.id });
+              }
+              await tx.automationExecution.update({
+                where: { id: execution.id },
+                data: { status: "SUCCEEDED", output: created as Prisma.InputJsonArray, completedAt: new Date(), errorMessage: null },
               });
-              outputs.push({ action: "notify_user", notificationId: sent.id });
-            }
-            await prisma.automationExecution.update({
-              where: { id: execution.id },
-              data: { status: "SUCCEEDED", output: outputs as Prisma.InputJsonArray, completedAt: new Date(), errorMessage: null },
+              return created;
             });
           } catch (error) {
             await prisma.automationExecution.update({
