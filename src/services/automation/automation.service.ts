@@ -64,13 +64,27 @@ export class AutomationService {
       },
     });
 
+    const result = { claimed: 0, processed: 0, failed: 0, skipped: 0 };
+    const activeTriggers = await prisma.automationRule.findMany({
+      where: { status: "ACTIVE" },
+      distinct: ["trigger"],
+      select: { trigger: true },
+    });
+    if (activeTriggers.length === 0) return result;
+
+    // Only claim events that can actually match an active rule. Growth and
+    // telemetry events remain available to analytics without starving the
+    // operational automation queue.
     const candidates = await prisma.domainEvent.findMany({
-      where: { status: "PENDING", availableAt: { lte: new Date() } },
+      where: {
+        status: "PENDING",
+        availableAt: { lte: new Date() },
+        eventType: { in: activeTriggers.map((rule) => rule.trigger) },
+      },
       orderBy: { createdAt: "asc" },
       take: Math.min(Math.max(Math.floor(limit), 1), 50),
       select: { id: true, eventType: true, payload: true, attempts: true },
     });
-    const result = { claimed: 0, processed: 0, failed: 0, skipped: 0 };
 
     for (const event of candidates) {
       const claim = await prisma.domainEvent.updateMany({
