@@ -153,15 +153,15 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="relative hidden h-[520px] lg:block">
+            <div className="relative block h-[300px] sm:h-[400px] lg:h-[520px]">
               <div aria-hidden="true" className="absolute right-4 top-1/2 h-[480px] w-[390px] -translate-y-1/2 rounded-[48%] bg-[#d7a64d]/15 blur-[90px]" />
               <div
                 role="img"
                 aria-label="Profissional a utilizar a MARKA num ambiente urbano moderno"
-                className="absolute bottom-0 right-0 h-[510px] w-[min(100%,520px)] bg-contain bg-bottom bg-no-repeat drop-shadow-[0_25px_55px_rgba(0,0,0,.45)]"
+                className="absolute inset-x-0 bottom-0 mx-auto h-[290px] w-full bg-contain bg-bottom bg-no-repeat drop-shadow-[0_25px_55px_rgba(0,0,0,.45)] sm:h-[390px] lg:right-0 lg:mx-0 lg:h-[510px] lg:w-[min(100%,520px)] lg:inset-x-auto"
                 style={{ backgroundImage: "url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1100&q=90')" }}
               />
-              <div className="absolute bottom-12 left-2 rounded-2xl border border-white/15 bg-black/45 px-5 py-4 shadow-2xl backdrop-blur-xl">
+              <div className="absolute bottom-4 left-2 rounded-2xl sm:bottom-8 lg:bottom-12 border border-white/15 bg-black/45 px-5 py-4 shadow-2xl backdrop-blur-xl">
                 <p className="text-[9px] uppercase tracking-[.24em] text-[#e8bd6a]">Um só ecossistema</p>
                 <p className="mt-1 text-sm font-semibold text-white">Tudo o que precisa. Num só lugar.</p>
               </div>
