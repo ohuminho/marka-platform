@@ -785,6 +785,7 @@ model User {
   supportTickets SupportTicket[] @relation("SupportTicketRequester")
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   notifications   Notification[]
+  pushSubscriptions PushSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2043,6 +2044,24 @@ model SupportMessage {
 
   @@index([ticketId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model PushSubscription {
+  id             String   @id @default(uuid())
+  userId         String
+  endpoint       String   @unique @db.Text
+  p256dh         String
+  auth           String
+  expirationTime DateTime?
+  userAgent      String?  @db.Text
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, updatedAt])
 }
 
 model Notification {
