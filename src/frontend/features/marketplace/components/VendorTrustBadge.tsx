@@ -6,10 +6,10 @@ export default function VendorTrustBadge({ verified = false }: VendorTrustBadgeP
   return verified ? (
     <span
       className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
-      aria-label="Identidade do vendedor verificada pela MARKA"
+      aria-label="Loja MARKA Verified: identidade e documentação verificadas"
     >
       <span aria-hidden="true">✓</span>
-      Identidade verificada
+      MARKA Verified
     </span>
   ) : (
     <span

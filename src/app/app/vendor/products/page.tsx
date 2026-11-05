@@ -145,7 +145,10 @@ export default function VendorProductsPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível criar a loja.");
-      setNotice("Pedido de abertura enviado. A loja fica em análise de conformidade; já pode preparar o catálogo.");
+      const createdVendor = data.vendor as { status?: string; store?: { status?: string } } | undefined;
+      setNotice(createdVendor?.status === "ACTIVE" && createdVendor.store?.status === "ACTIVE"
+        ? "Loja criada e ativa. Já pode adicionar produtos e publicar anúncios elegíveis. A verificação Verified é opcional e pode ser solicitada separadamente."
+        : "Pedido de abertura recebido. Pode preparar o catálogo enquanto a equipa analisa a loja; a publicação ficará disponível quando a loja for ativada.");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível criar a loja.");
@@ -291,18 +294,43 @@ export default function VendorProductsPage() {
               <p className="marka-kicker">MARKA / SELLER STUDIO</p>
               <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-6xl">A sua loja. O seu negócio.</h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--theme-text-muted)]">
-                Abra uma loja, organize o catálogo e prepare os seus anúncios num só espaço. A publicação comercial depende da aprovação da conta e da loja.
+                Abra uma loja com poucos dados, organize o catálogo e comece a vender. A verificação Verified é um processo separado e opcional, pensado para reforçar a confiança dos compradores.
               </p>
             </div>
             {vendor && <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-4">
               <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Estado do vendedor</p>
               <p className="mt-2 text-sm font-semibold text-[var(--theme-text)]">{vendor.status === "ACTIVE" ? "Conta ativa" : "Em análise"}</p>
-              <p className="mt-1 text-xs text-[var(--theme-text-muted)]">{vendor.verified ? "Identidade comercial verificada" : "Verificação comercial pendente"}</p>
+              <p className="mt-1 text-xs text-[var(--theme-text-muted)]">{vendor.verified ? "Selo MARKA Verified ativo" : "Loja sem selo Verified — pode solicitar verificação"}</p>
             </div>}
           </header>
 
           {error && <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-600">{error}</div>}
           {notice && <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-[var(--theme-text)]">{notice}</div>}
+
+          {vendor && (
+            <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-5">
+                <div className="max-w-2xl">
+                  <p className="marka-kicker">MARKA / VERIFIED</p>
+                  <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">Construa confiança. Verifique a sua loja.</h2>
+                  <p className="mt-3 text-sm leading-7 text-[var(--theme-text-muted)]">
+                    A abertura da loja e o selo Verified são processos diferentes. Pode vender sem o selo nas categorias elegíveis. Se quiser reforçar a confiança, submeta a documentação de identidade ou da empresa no Centro de Conformidade. O selo só é atribuído depois da análise e aprovação por um revisor autorizado.
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-[var(--theme-text-faint)]">
+                    A verificação é opcional. Qualquer eventual taxa e respetivo método de pagamento terão de ser apresentados antes da confirmação; não faça pagamentos fora dos canais oficiais da MARKA.
+                  </p>
+                </div>
+                <div className="flex min-w-52 flex-col gap-3">
+                  <span className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-center text-xs font-semibold text-[var(--theme-text)]">
+                    {vendor.verified ? "MARKA Verified" : "Ainda sem selo Verified"}
+                  </span>
+                  <a href="/app/compliance" className="rounded-full bg-[var(--theme-text)] px-6 py-3 text-center text-xs font-bold uppercase tracking-[0.14em] text-[var(--theme-background)] transition hover:opacity-85">
+                    {vendor.verified ? "Consultar verificação" : "Solicitar verificação"}
+                  </a>
+                </div>
+              </div>
+            </section>
+          )}
 
           {vendor && <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
             <div className="mb-6">
@@ -325,21 +353,21 @@ export default function VendorProductsPage() {
               <div className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-7 sm:p-10">
                 <p className="marka-kicker">COMECE A VENDER</p>
                 <h2 className="marka-editorial mt-4 text-3xl text-[var(--theme-text)] sm:text-4xl">Abra a sua loja na MARKA.</h2>
-                <p className="mt-4 text-sm leading-7 text-[var(--theme-text-muted)]">Venda produtos, construa uma marca e prepare-se para receber encomendas. A candidatura fica pendente de validação antes de os anúncios poderem ser publicados.</p>
+                <p className="mt-4 text-sm leading-7 text-[var(--theme-text-muted)]">Crie a loja com o nome e os dados essenciais. Para vendedores individuais, a loja pode ficar ativa de imediato; empresas podem aguardar validação da organização. A verificação Verified é opcional e não é condição para começar a vender nas categorias elegíveis.</p>
                 <form onSubmit={createStore} className="mt-8 space-y-4">
                   <div><label className={label} htmlFor="sellerType">Tipo de vendedor</label><select id="sellerType" className={field} value={sellerProfile.businessType} onChange={(e) => setSellerProfile({ ...sellerProfile, businessType: e.target.value as "INDIVIDUAL" | "COMPANY" })}><option value="INDIVIDUAL">Pessoa singular / vendedor individual</option><option value="COMPANY">Empresa / pessoa coletiva</option></select></div>
                   <div><label className={label} htmlFor="storeName">Nome da loja ou negócio</label><input id="storeName" className={field} required minLength={2} maxLength={160} value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Ex.: Mercado do Bairro" /></div>
                   <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="sellerPhone">Telefone de contacto</label><input id="sellerPhone" className={field} type="tel" autoComplete="tel" maxLength={40} value={sellerProfile.phone} onChange={(e) => setSellerProfile({ ...sellerProfile, phone: e.target.value })} placeholder="+244 9XX XXX XXX" /></div><div><label className={label} htmlFor="sellerCountry">País de operação</label><input id="sellerCountry" className={field} required maxLength={80} value={sellerProfile.country} onChange={(e) => setSellerProfile({ ...sellerProfile, country: e.target.value })} placeholder="Angola" /></div></div>
                   <button disabled={saving} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A criar candidatura…" : "Abrir a minha loja"}</button>
                 </form>
-                <p className="mt-4 text-xs leading-6 text-[var(--theme-text-faint)]">É necessário ter sessão iniciada e uma adesão ativa à MARKA. Pessoas singulares e empresas podem candidatar-se; a equipa valida os dados antes de ativar a loja e permitir publicações.</p>
+                <p className="mt-4 text-xs leading-6 text-[var(--theme-text-faint)]">É necessário ter uma conta MARKA ativa. O registo individual não exige empresa nem documentos comerciais para abrir a loja. Algumas categorias ou operações podem exigir verificação adicional por razões de segurança e conformidade.</p>
               </div>
               <aside className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-background)] p-7 sm:p-10">
                 <p className="marka-kicker">UM MERCADO, VÁRIOS SETORES</p>
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   {["Produtos", "Indústria", "Agricultura", "Imóveis e armazéns", "Eventos e catering", "Serviços profissionais"].map((item) => <div key={item} className="rounded-xl border border-[var(--theme-border)] p-4"><span className="text-sm text-[var(--theme-text)]">{item}</span></div>)}
                 </div>
-                <p className="mt-6 text-sm leading-7 text-[var(--theme-text-muted)]">A MARKA permite preparar anúncios de produtos, veículos, imóveis e serviços no mesmo espaço. Cada categoria apresenta campos próprios; todos os anúncios começam como rascunho e a publicação depende da aprovação comercial.</p>
+                <p className="mt-6 text-sm leading-7 text-[var(--theme-text-muted)]">A MARKA permite anunciar produtos, veículos, imóveis e serviços no mesmo espaço. Pode preparar anúncios desde o início; a publicação é imediata para lojas ativas e categorias elegíveis. Categorias reguladas ou de maior risco podem exigir documentação e aprovação específicas.</p>
               </aside>
             </section>
           ) : (
