@@ -9,7 +9,7 @@ type Analytics = {
   period: { from: string; to: string; days: number };
   totals: {
     events: number;
-    uniqueVisitors: number;
+    uniqueIdentities: number;
     pageViews: number;
     marketplaceViews: number;
     productViews: number;
@@ -109,7 +109,7 @@ function GrowthAnalyticsContent() {
       : data ? <>
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            ["Visitantes únicos", data.totals.uniqueVisitors],
+            ["Identificadores distintos", data.totals.uniqueIdentities],
             ["Eventos registados", data.totals.events],
             ["Pedidos AI Core", data.aiCore.requests],
             ["Tokens AI Core", data.aiCore.totalTokens],
