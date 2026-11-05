@@ -94,8 +94,6 @@ export async function POST(request: Request) {
         aggregateType: user ? "USER" : "ANONYMOUS_VISITOR",
         aggregateId: visitorId,
         eventType: `GROWTH.${parsed.data.event.toUpperCase()}`,
-        status: "PROCESSED",
-        processedAt: new Date(),
         payload: {
           visitorId: parsed.data.visitorId,
           authenticated: Boolean(user),
