@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
@@ -40,36 +40,44 @@ function percentage(value: number | null): string {
   return value === null ? "—" : new Intl.NumberFormat("pt-AO", { style: "percent", maximumFractionDigits: 1 }).format(value);
 }
 
+async function fetchAnalytics(): Promise<Analytics> {
+  const response = await fetch("/api/admin/growth/analytics", {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw new Error("Esta área está reservada a Founder, Super Admin e Admin.");
+  }
+  if (!response.ok) throw new Error("Não foi possível carregar as métricas.");
+  return await response.json() as Analytics;
+}
+
 function GrowthAnalyticsContent() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
-    else setLoading(true);
+  useEffect(() => {
+    let active = true;
+    fetchAnalytics()
+      .then((result) => { if (active) setData(result); })
+      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Erro ao consultar analytics."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  async function refresh() {
+    setRefreshing(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/growth/analytics", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      if (response.status === 401 || response.status === 403) {
-        throw new Error("Esta área está reservada a Founder, Super Admin e Admin.");
-      }
-      if (!response.ok) throw new Error("Não foi possível carregar as métricas.");
-      const result = await response.json() as Analytics;
-      setData(result);
+      setData(await fetchAnalytics());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Erro ao consultar analytics.");
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, []);
-
-  useEffect(() => { void load(); }, [load]);
+  }
 
   const events = data ? [
     ["Visualizações de página", data.totals.pageViews],
@@ -92,12 +100,12 @@ function GrowthAnalyticsContent() {
         </div>
         <div className="flex items-center gap-3">
           <Link href="/app/admin" className="text-xs text-[var(--theme-text)]/55 underline underline-offset-4">Admin Center</Link>
-          <button type="button" onClick={() => void load(true)} disabled={refreshing || loading} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)] disabled:opacity-40">{refreshing ? "A actualizar…" : "Actualizar"}</button>
+          <button type="button" onClick={() => void refresh()} disabled={refreshing || loading} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)] disabled:opacity-40">{refreshing ? "A actualizar…" : "Actualizar"}</button>
         </div>
       </header>
 
       {loading ? <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6 text-sm text-[var(--theme-text)]/50">A carregar métricas reais…</section>
-      : error ? <section role="alert" className="rounded-2xl border border-rose-400/25 bg-rose-400/[0.06] p-6"><p className="text-sm text-[var(--theme-text)]">{error}</p><button type="button" onClick={() => void load(true)} className="mt-4 rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs text-[var(--theme-text)]">Tentar novamente</button></section>
+      : error ? <section role="alert" className="rounded-2xl border border-rose-400/25 bg-rose-400/[0.06] p-6"><p className="text-sm text-[var(--theme-text)]">{error}</p><button type="button" onClick={() => void refresh()} className="mt-4 rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs text-[var(--theme-text)]">Tentar novamente</button></section>
       : data ? <>
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
