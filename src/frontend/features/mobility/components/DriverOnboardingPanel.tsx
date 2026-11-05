@@ -178,10 +178,16 @@ export default function DriverOnboardingPanel() {
     if (!profile) { setError("Regista primeiro a candidatura de motorista."); return; }
     setSavingVehicle(true);
     try {
+      const { vehicleSubtype, ...vehicleDetails } = vehicleForm;
       const response = await fetch("/api/mobility/driver/vehicle", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
-        body: JSON.stringify({ ...vehicleForm, year: Number(vehicleForm.year), capacity: Number(vehicleForm.capacity) }),
+        body: JSON.stringify({
+          ...vehicleDetails,
+          ...(vehicleSubtype ? { vehicleSubtype } : {}),
+          year: Number(vehicleForm.year),
+          capacity: Number(vehicleForm.capacity),
+        }),
       });
       const data = await response.json() as VehicleResponse;
       if (!response.ok) throw new Error(data.message || "Não foi possível guardar o veículo.");
