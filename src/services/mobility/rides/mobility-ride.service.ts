@@ -866,16 +866,31 @@ export class MobilityRideService {
           }
         }
 
-        return tx.mobilityRide.update({
+        // Compare-and-set prevents concurrent transitions from both
+        // succeeding after they read the same previous status. Availability
+        // changes above share this transaction and roll back on a lost claim.
+        const transitioned = await tx.mobilityRide.updateMany({
           where: {
             id: rideId,
+            status: ride.status,
           },
-
           data: {
             status: nextStatus,
             ...additionalData,
           },
+        });
 
+        if (transitioned.count !== 1) {
+          throw new MobilityDomainError(
+            "Ride state changed concurrently; reload before retrying.",
+            "RIDE_STATE_CONFLICT"
+          );
+        }
+
+        return tx.mobilityRide.findUniqueOrThrow({
+          where: {
+            id: rideId,
+          },
           include: {
             stops: {
               orderBy: {
