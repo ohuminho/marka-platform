@@ -20,6 +20,7 @@ export default function AdminPage() {
             <a href="/app/admin/vendors" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Store Approvals</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Review and activate Marketplace stores.</p></a>
             <a href="/app/admin/delivery-agents" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Delivery Agents</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Delivery operations.</p></a>
             <a href="/app/admin/reports" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Reports</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Platform intelligence.</p></a>
+            <a href="/app/admin/phone-otp" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">SMS & OTP Control</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">SMS spend, delivery status and monthly budget.</p></a>
           </section>
         </main>
       </AppShell>
