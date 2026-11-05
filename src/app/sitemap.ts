@@ -13,25 +13,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const products = await prisma.product.findMany({
-      where: {
-        status: "ACTIVE",
-        stock: { gt: 0 },
-        store: { status: "ACTIVE", vendor: { status: "ACTIVE" } },
-      },
-      select: { id: true, updatedAt: true },
-      orderBy: { updatedAt: "desc" },
-      take: 50000,
-    });
+    const [products, stores] = await Promise.all([
+      prisma.product.findMany({
+        where: { status: "ACTIVE", stock: { gt: 0 }, store: { status: "ACTIVE", vendor: { status: "ACTIVE" } } },
+        select: { id: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+        take: 50000,
+      }),
+      prisma.store.findMany({
+        where: { status: "ACTIVE", vendor: { status: "ACTIVE" }, products: { some: { status: "ACTIVE", stock: { gt: 0 } } } },
+        select: { id: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+        take: 50000,
+      }),
+    ]);
 
-    routes.push(...products.map((product) => ({
-      url: `${baseUrl}/produto/${product.id}`,
-      lastModified: product.updatedAt,
-      changeFrequency: "weekly" as const,
-      priority: 0.75,
-    })));
+    routes.push(
+      ...products.map((product) => ({
+        url: `${baseUrl}/produto/${product.id}`,
+        lastModified: product.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.75,
+      })),
+      ...stores.map((store) => ({
+        url: `${baseUrl}/loja/${store.id}`,
+        lastModified: store.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      })),
+    );
   } catch (error) {
-    console.error("[MARKA_SITEMAP_PRODUCTS_FAILED]", error);
+    console.error("[MARKA_SITEMAP_CATALOG_FAILED]", error);
   }
 
   return routes;
