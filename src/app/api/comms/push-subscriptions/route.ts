@@ -80,6 +80,14 @@ export async function POST(request: Request) {
     if (existing && existing.userId !== user.id) {
       return NextResponse.json({ message: "This device subscription is already associated with another MARKA account." }, { status: 409 });
     }
+    if (!existing) {
+      const activeCount = await prisma.pushSubscription.count({
+        where: { userId: user.id, revokedAt: null },
+      });
+      if (activeCount >= 5) {
+        return NextResponse.json({ message: "Limite de cinco dispositivos activos atingido." }, { status: 409 });
+      }
+    }
     const subscription = await prisma.pushSubscription.upsert({
       where: { endpoint },
       create: {
