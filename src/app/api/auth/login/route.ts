@@ -11,12 +11,6 @@ import { resolveLoginIdentifier } from "@/core/auth/phone/login-identifier";
 
 import { prisma } from "@/database/client/prisma";
 
-function normalizeEmail(
-  email: string
-): string {
-  return email.trim().toLowerCase();
-}
-
 function getClientIp(
   request: Request
 ): string | undefined {
