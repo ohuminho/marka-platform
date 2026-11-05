@@ -577,6 +577,33 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
+            // Serialize lifecycle transitions for this courier. Without this
+            // row lock, two concurrent deliveries can both observe zero remaining
+            // work and incorrectly set the courier AVAILABLE.
+            const agentLock = await database.deliveryAgent.updateMany({
+              where: {
+                id: request.acceptedAgentId,
+                organizationId: request.organizationId,
+                availability: "BUSY",
+              },
+              data: { availability: "BUSY" },
+            });
+            if (agentLock.count !== 1) {
+              throw new Error("DELIVERY_AGENT_STATE_CHANGED_RETRY");
+            }
+
+            const currentRequest = await database.dispatchRequest.findUnique({
+              where: { id: requestId },
+              select: { status: true, acceptedAgentId: true },
+            });
+            if (
+              !currentRequest ||
+              currentRequest.status !== request.status ||
+              currentRequest.acceptedAgentId !== request.acceptedAgentId
+            ) {
+              throw new Error("DISPATCH_REQUEST_STATE_CHANGED_RETRY");
+            }
+
             const otherActiveDeliveries =
               await database.dispatchRequest.count({
                 where: {
@@ -757,6 +784,33 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
+            // Serialize lifecycle transitions for this courier. Without this
+            // row lock, two concurrent deliveries can both observe zero remaining
+            // work and incorrectly set the courier AVAILABLE.
+            const agentLock = await database.deliveryAgent.updateMany({
+              where: {
+                id: request.acceptedAgentId,
+                organizationId: request.organizationId,
+                availability: "BUSY",
+              },
+              data: { availability: "BUSY" },
+            });
+            if (agentLock.count !== 1) {
+              throw new Error("DELIVERY_AGENT_STATE_CHANGED_RETRY");
+            }
+
+            const currentRequest = await database.dispatchRequest.findUnique({
+              where: { id: requestId },
+              select: { status: true, acceptedAgentId: true },
+            });
+            if (
+              !currentRequest ||
+              currentRequest.status !== request.status ||
+              currentRequest.acceptedAgentId !== request.acceptedAgentId
+            ) {
+              throw new Error("DISPATCH_REQUEST_STATE_CHANGED_RETRY");
+            }
+
             const otherActiveDeliveries =
               await database.dispatchRequest.count({
                 where: {
@@ -825,6 +879,33 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
+            // Serialize lifecycle transitions for this courier. Without this
+            // row lock, two concurrent deliveries can both observe zero remaining
+            // work and incorrectly set the courier AVAILABLE.
+            const agentLock = await database.deliveryAgent.updateMany({
+              where: {
+                id: request.acceptedAgentId,
+                organizationId: request.organizationId,
+                availability: "BUSY",
+              },
+              data: { availability: "BUSY" },
+            });
+            if (agentLock.count !== 1) {
+              throw new Error("DELIVERY_AGENT_STATE_CHANGED_RETRY");
+            }
+
+            const currentRequest = await database.dispatchRequest.findUnique({
+              where: { id: requestId },
+              select: { status: true, acceptedAgentId: true },
+            });
+            if (
+              !currentRequest ||
+              currentRequest.status !== request.status ||
+              currentRequest.acceptedAgentId !== request.acceptedAgentId
+            ) {
+              throw new Error("DISPATCH_REQUEST_STATE_CHANGED_RETRY");
+            }
+
             const otherActiveDeliveries =
               await database.dispatchRequest.count({
                 where: {
@@ -912,6 +993,33 @@ export class DispatchAdapter implements DispatchPort {
               "DELIVERY" &&
             request.acceptedAgentId
           ) {
+            // Serialize lifecycle transitions for this courier. Without this
+            // row lock, two concurrent deliveries can both observe zero remaining
+            // work and incorrectly set the courier AVAILABLE.
+            const agentLock = await database.deliveryAgent.updateMany({
+              where: {
+                id: request.acceptedAgentId,
+                organizationId: request.organizationId,
+                availability: "BUSY",
+              },
+              data: { availability: "BUSY" },
+            });
+            if (agentLock.count !== 1) {
+              throw new Error("DELIVERY_AGENT_STATE_CHANGED_RETRY");
+            }
+
+            const currentRequest = await database.dispatchRequest.findUnique({
+              where: { id: requestId },
+              select: { status: true, acceptedAgentId: true },
+            });
+            if (
+              !currentRequest ||
+              currentRequest.status !== request.status ||
+              currentRequest.acceptedAgentId !== request.acceptedAgentId
+            ) {
+              throw new Error("DISPATCH_REQUEST_STATE_CHANGED_RETRY");
+            }
+
             const otherActiveDeliveries =
               await database.dispatchRequest.count({
                 where: {
