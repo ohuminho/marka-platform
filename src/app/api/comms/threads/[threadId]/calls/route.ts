@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
+import { expireRingingCalls } from "@/core/communications/expire-ringing-calls";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -23,10 +24,9 @@ export async function GET(_request: Request, context: Context) {
     const { threadId } = await context.params;
     const thread = await getAuthorizedCommunicationThread(threadId, actor.id);
     const now = new Date();
-    await prisma.communicationCallSession.updateMany({
-      where: { threadId, status: "RINGING", expiresAt: { lte: now } },
-      data: { status: "MISSED", endedAt: now },
-    });
+    await prisma.$transaction((tx) =>
+      expireRingingCalls(tx, { threadId }, now),
+    );
     const calls = await prisma.communicationCallSession.findMany({
       where: { threadId, OR: [{ callerId: actor.id }, { calleeId: actor.id }] },
       orderBy: { createdAt: "desc" }, take: 20,
@@ -58,10 +58,7 @@ export async function POST(request: Request, context: Context) {
     const call = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${threadId}))`;
       const now = new Date();
-      await tx.communicationCallSession.updateMany({
-        where: { threadId, status: "RINGING", expiresAt: { lte: now } },
-        data: { status: "MISSED", endedAt: now },
-      });
+      await expireRingingCalls(tx, { threadId }, now);
       const active = await tx.communicationCallSession.findFirst({
         where: { threadId, status: { in: ["RINGING", "ACCEPTED"] }, expiresAt: { gt: now } },
         select: { id: true },
