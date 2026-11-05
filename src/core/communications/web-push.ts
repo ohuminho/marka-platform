@@ -131,6 +131,7 @@ async function sendOne(subscription: StoredSubscription, payload: PushPayload, c
   const body = encryptPayload(subscription, payload, config);
   const response = await fetch(subscription.endpoint, {
     method: "POST",
+    redirect: "manual",
     headers: {
       Authorization: vapidAuthorization(subscription.endpoint, config),
       "Content-Type": "application/octet-stream",
