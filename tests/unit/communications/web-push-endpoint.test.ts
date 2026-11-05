@@ -13,6 +13,14 @@ assert(
   "Mozilla push HTTPS endpoint should be accepted",
 );
 assert(
+  isAllowedPushEndpoint("https://web.push.apple.com/push/test-token"),
+  "Apple push HTTPS endpoints should be accepted",
+);
+assert(
+  isAllowedPushEndpoint("https://region.fcm.googleapis.com/fcm/send/test-token"),
+  "valid Google FCM subdomains should be accepted",
+);
+assert(
   isAllowedPushEndpoint("https://example.notify.windows.com/push/test-token"),
   "Windows push HTTPS endpoint should be accepted",
 );
@@ -27,6 +35,14 @@ assert(
 assert(
   !isAllowedPushEndpoint("https://fcm.googleapis.com.attacker.example/send/token"),
   "lookalike hostnames must be rejected",
+);
+assert(
+  !isAllowedPushEndpoint("https://example.notify.windows.com.attacker.example/push/token"),
+  "lookalike Windows push hostnames must be rejected",
+);
+assert(
+  !isAllowedPushEndpoint("https://fcm.googleapis.com:8443/send/token"),
+  "non-standard ports must be rejected",
 );
 assert(
   !isAllowedPushEndpoint("https://user:password@fcm.googleapis.com/send/token"),
