@@ -1,4 +1,4 @@
-export type PhoneOtpChannel = "sms" | "whatsapp" | "email";
+export type PhoneOtpChannel = "sms";
 
 export type PhoneOtpPurpose =
   | "SIGN_UP"
@@ -14,7 +14,6 @@ export type PhoneOtpDeliveryStatus =
 export interface PhoneOtpDeliveryRequest {
   recipientE164: string;
   code: string;
-  channel: PhoneOtpChannel;
   expiresInSeconds: number;
   idempotencyKey: string;
 }
@@ -29,13 +28,16 @@ export interface PhoneOtpDeliveryResult {
 export interface PhoneOtpDeliveryProvider {
   readonly name: string;
 
-  send(
-    request: PhoneOtpDeliveryRequest
-  ): Promise<PhoneOtpDeliveryResult>;
+  send(request: PhoneOtpDeliveryRequest): Promise<PhoneOtpDeliveryResult>;
 }
 
 /**
- * Provider contract only. A concrete paid provider must not be enabled
- * until its authentication headers, delivery semantics, pricing and
- * production credentials have been confirmed with the provider.
+ * SMS-only provider contract.
+ * Email verification and recovery remain separate flows using the
+ * existing MARKA email-delivery service. WhatsApp is intentionally
+ * excluded from the phone OTP delivery contract.
+ *
+ * A concrete paid SMS provider must not be enabled until its
+ * authentication headers, delivery semantics, pricing and production
+ * credentials have been confirmed.
  */
