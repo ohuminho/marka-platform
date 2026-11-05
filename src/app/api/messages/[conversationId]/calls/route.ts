@@ -55,7 +55,7 @@ export async function POST(request: Request, context: Context) {
 
     const conversation = await prisma.marketplaceConversation.findFirst({
       where: { id: conversationId, OR: [{ buyerId: actor.id }, { sellerId: actor.id }] },
-      select: { id: true, buyerId: true, sellerId: true, product: { select: { name: true } } },
+      select: { id: true, buyerId: true, sellerId: true },
     });
     if (!conversation) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
     const calleeId = conversation.buyerId === actor.id ? conversation.sellerId : conversation.buyerId;
