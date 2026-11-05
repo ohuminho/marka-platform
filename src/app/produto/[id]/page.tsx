@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/database/client/prisma";
 import { getPublicSellerVerification } from "@/services/compliance/public-seller-verification.service";
 import PublicProductPurchase from "@/frontend/features/marketplace/components/PublicProductPurchase";
+import GrowthEntityEvent from "@/frontend/components/GrowthEntityEvent";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -123,6 +124,7 @@ export default async function PublicProductPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#08090c] text-white">
+      <GrowthEntityEvent event="product_view" entityId={product.id} category={product.category} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
       <header className="border-b border-white/10">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
