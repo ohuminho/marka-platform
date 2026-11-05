@@ -179,7 +179,7 @@ export async function POST(request: Request) {
       exp: now + 240,
       iss: issuer,
       aud: audience,
-      accessLevel: "STANDARD",
+      accessLevel: privileged ? "OWNER" : "STANDARD",
     });
     const signature = createHmac("sha256", signingSecret)
       .update(encodedPayload)
