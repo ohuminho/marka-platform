@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 import { MarketplaceProduct } from "../types/marketplace.types";
