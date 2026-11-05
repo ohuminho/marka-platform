@@ -16,3 +16,7 @@ CREATE TABLE "PushSubscription" (
 
 CREATE UNIQUE INDEX "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");
 CREATE INDEX "PushSubscription_userId_revokedAt_updatedAt_idx" ON "PushSubscription"("userId", "revokedAt", "updatedAt");
+
+-- Push endpoints are bearer-like device identifiers. Browser/API roles must never read them directly.
+ALTER TABLE "PushSubscription" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "PushSubscription" FROM anon, authenticated;
