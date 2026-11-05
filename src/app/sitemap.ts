@@ -1,20 +1,38 @@
 import type { MetadataRoute } from "next";
+import { prisma } from "@/database/client/prisma";
 
 const baseUrl = "https://markaao.com";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const routes = [
-    { route: "/", priority: 1, changeFrequency: "daily" as const },
-    { route: "/marketplace", priority: 0.9, changeFrequency: "daily" as const },
-    { route: "/vender", priority: 0.8, changeFrequency: "weekly" as const },
-    { route: "/mobilidade", priority: 0.8, changeFrequency: "weekly" as const },
-    { route: "/advertise", priority: 0.7, changeFrequency: "weekly" as const },
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const routes: MetadataRoute.Sitemap = [
+    { url: baseUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
+    { url: `${baseUrl}/marketplace`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${baseUrl}/vender`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${baseUrl}/mobilidade`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${baseUrl}/advertise`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
   ];
 
-  return routes.map(({ route, priority, changeFrequency }) => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date(),
-    changeFrequency,
-    priority,
-  }));
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        status: "ACTIVE",
+        stock: { gt: 0 },
+        store: { status: "ACTIVE", vendor: { status: "ACTIVE" } },
+      },
+      select: { id: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: 50000,
+    });
+
+    routes.push(...products.map((product) => ({
+      url: `${baseUrl}/produto/${product.id}`,
+      lastModified: product.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.75,
+    })));
+  } catch (error) {
+    console.error("[MARKA_SITEMAP_PRODUCTS_FAILED]", error);
+  }
+
+  return routes;
 }
