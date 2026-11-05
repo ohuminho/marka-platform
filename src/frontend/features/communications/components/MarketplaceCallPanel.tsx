@@ -128,8 +128,6 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
       if (lastSignalIdRef.current) cursor.set("afterId", lastSignalIdRef.current);
       const data = await jsonRequest(`/api/messages/calls/${encodeURIComponent(call.id)}/signals?${cursor.toString()}`);
       for (const signal of (data.signals ?? []) as Signal[]) {
-        lastSignalAtRef.current = signal.createdAt;
-        lastSignalIdRef.current = signal.id;
         if (signal.type === "OFFER" && call.calleeId === actorIdRef.current && !pc.remoteDescription) {
           await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
           for (const candidate of pendingCandidatesRef.current) await pc.addIceCandidate(candidate).catch(() => undefined);
@@ -146,6 +144,10 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
           if (!pc.remoteDescription) pendingCandidatesRef.current.push(candidate);
           else try { await pc.addIceCandidate(candidate); } catch { /* Late ICE after teardown is ignored. */ }
         }
+        // Advance only after this signal has been handled, so a failed SDP
+        // operation is retried on the next poll instead of being skipped.
+        lastSignalAtRef.current = signal.createdAt;
+        lastSignalIdRef.current = signal.id;
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha na sinalização WebRTC.");
