@@ -35,6 +35,7 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
   const activeCallRef = useRef<Call | null>(null);
   const actorIdRef = useRef("");
   const lastSignalAtRef = useRef<string>("");
+  const lastSignalIdRef = useRef<string>("");
   const processingRef = useRef(false);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -123,10 +124,10 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
     if (!pc || processingRef.current) return;
     processingRef.current = true;
     try {
-      const after = encodeURIComponent(lastSignalAtRef.current);
-      const data = await jsonRequest(`/api/messages/calls/${encodeURIComponent(call.id)}/signals?after=${after}`);
+      const cursor = new URLSearchParams({ after: lastSignalAtRef.current });
+      if (lastSignalIdRef.current) cursor.set("afterId", lastSignalIdRef.current);
+      const data = await jsonRequest(`/api/messages/calls/${encodeURIComponent(call.id)}/signals?${cursor.toString()}`);
       for (const signal of (data.signals ?? []) as Signal[]) {
-        if (signal.createdAt > lastSignalAtRef.current) lastSignalAtRef.current = signal.createdAt;
         if (signal.type === "OFFER" && call.calleeId === actorIdRef.current && !pc.remoteDescription) {
           await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
           for (const candidate of pendingCandidatesRef.current) await pc.addIceCandidate(candidate).catch(() => undefined);
@@ -143,6 +144,10 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
           if (!pc.remoteDescription) pendingCandidatesRef.current.push(candidate);
           else try { await pc.addIceCandidate(candidate); } catch { /* Late ICE after teardown is ignored. */ }
         }
+        // Advance only after this signal has been handled, so a failed SDP
+        // operation is retried on the next poll instead of being skipped.
+        lastSignalAtRef.current = signal.createdAt;
+        lastSignalIdRef.current = signal.id;
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha na sinalização WebRTC.");
@@ -177,6 +182,7 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
       const call = data.call as Call;
       createdCall = call;
       lastSignalAtRef.current = new Date(Date.now() - 60_000).toISOString();
+      lastSignalIdRef.current = "";
       setActiveCall(call);
       await connect(call, true);
     } catch (e) {
@@ -192,6 +198,7 @@ export default function MarketplaceCallPanel({ conversationId, threadId }: { con
     try {
       await jsonRequest(`/api/messages/calls/${encodeURIComponent(call.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "ACCEPT" }) });
       lastSignalAtRef.current = new Date(Date.now() - 60_000).toISOString();
+      lastSignalIdRef.current = "";
       setActiveCall({ ...call, status: "ACCEPTED" });
       await connect({ ...call, status: "ACCEPTED" }, false);
       await processSignals({ ...call, status: "ACCEPTED" });

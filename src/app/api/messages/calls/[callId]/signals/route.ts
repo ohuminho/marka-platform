@@ -29,10 +29,18 @@ export async function GET(request: Request, context: { params: Promise<{ callId:
     const url = new URL(request.url);
     const afterRaw = url.searchParams.get("after");
     const after = afterRaw ? new Date(afterRaw) : new Date(Date.now() - 30_000);
-    if (Number.isNaN(after.getTime())) return NextResponse.json({ message: "Cursor inválido." }, { status: 400 });
+    const afterId = url.searchParams.get("afterId") ?? "";
+    if (Number.isNaN(after.getTime()) || afterId.length > 64) {
+      return NextResponse.json({ message: "Cursor inválido." }, { status: 400 });
+    }
+    // createdAt alone is not a unique cursor: multiple ICE candidates can share
+    // the same database timestamp. The id tie-breaker prevents lost signals.
+    const cursorFilter = afterId
+      ? { OR: [{ createdAt: { gt: after } }, { createdAt: after, id: { gt: afterId } }] }
+      : { createdAt: { gt: after } };
     const signals = await prisma.communicationCallSignal.findMany({
-      where: { callId, senderId: { not: actor.id }, expiresAt: { gt: new Date() }, createdAt: { gt: after } },
-      orderBy: { createdAt: "asc" }, take: 100,
+      where: { callId, senderId: { not: actor.id }, expiresAt: { gt: new Date() }, ...cursorFilter },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: 100,
       select: { id: true, type: true, payload: true, createdAt: true },
     });
     return NextResponse.json({ signals }, { headers: { "Cache-Control": "private, no-store" } });
