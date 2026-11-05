@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description = (product.description || `Descubra ${product.name} na loja ${product.store.name}, no Marketplace MARKA.`).slice(0, 155);
   const canonical = `/produto/${product.id}`;
   return {
-    title: `${product.name} | Comprar no Marketplace MARKA`,
+    title: `${product.name} | Comprar no Marketplace`,
     description,
     alternates: { canonical },
     openGraph: {
