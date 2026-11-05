@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 type SubjectType = "KYC" | "KYD" | "KYB";
+type BusinessOrganization = { id: string; name: string; slug: string };
 type Profile = {
   id: string;
   subjectType: SubjectType;
@@ -36,6 +37,7 @@ const faqs = [
 
 export default function CompliancePage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [organizations, setOrganizations] = useState<BusinessOrganization[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyType, setBusyType] = useState<SubjectType | null>(null);
   const [files, setFiles] = useState<Partial<Record<SubjectType, File>>>({});
@@ -53,7 +55,16 @@ export default function CompliancePage() {
       throw new Error(data.message ?? "Unable to load compliance status.");
     }
     const data = await response.json();
+    const availableOrganizations = Array.isArray(data.organizations) ? data.organizations as BusinessOrganization[] : [];
     setProfiles(data.profiles ?? []);
+    setOrganizations(availableOrganizations);
+    setOrganizationId((current) =>
+      availableOrganizations.some((organization) => organization.id === current)
+        ? current
+        : availableOrganizations.length === 1
+          ? availableOrganizations[0].id
+          : ""
+    );
   };
 
   useEffect(() => {
@@ -141,9 +152,12 @@ export default function CompliancePage() {
 
               {type === "KYB" && (
                 <label className="block text-sm text-[var(--theme-muted)]">
-                  Organization ID
-                  <input value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} placeholder="Organization UUID" className="mt-1 w-full rounded-xl border border-[var(--theme-border)] bg-transparent px-3 py-2 text-[var(--theme-text)]" />
-                  <span className="mt-1 block text-xs">Your account must have active membership.</span>
+                  Empresa / organização
+                  <select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} disabled={organizations.length === 0} className="mt-1 w-full rounded-xl border border-[var(--theme-border)] bg-transparent px-3 py-2 text-[var(--theme-text)]">
+                    <option value="">Selecionar empresa</option>
+                    {organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
+                  </select>
+                  <span className="mt-1 block text-xs">{organizations.length === 0 ? "Abra primeiro uma loja do tipo Empresa para criar o espaço empresarial." : "Só são apresentadas empresas activas às quais esta conta pertence."}</span>
                 </label>
               )}
 
