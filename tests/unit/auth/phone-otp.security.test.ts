@@ -36,6 +36,62 @@ const { MimoVerifySmsProvider } = await import(
 }
 
 {
+  const originalFetch = globalThis.fetch;
+  const previous = {
+    key: process.env.MIMO_VERIFY_API_KEY,
+    headerName: process.env.MIMO_VERIFY_AUTH_HEADER_NAME,
+    headerValue: process.env.MIMO_VERIFY_AUTH_HEADER_VALUE,
+    baseUrl: process.env.MIMO_VERIFY_BASE_URL,
+  };
+
+  process.env.MIMO_VERIFY_API_KEY = "unit-test-api-key";
+  process.env.MIMO_VERIFY_AUTH_HEADER_NAME = "Authorization";
+  process.env.MIMO_VERIFY_AUTH_HEADER_VALUE = "Token {API_KEY}";
+  delete process.env.MIMO_VERIFY_BASE_URL;
+
+  let sentBody: Record<string, unknown> | null = null;
+  let sentUrl = "";
+
+  globalThis.fetch = async (input, init) => {
+    sentUrl = String(input);
+    sentBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(JSON.stringify({ status: "OK", id: "mimo-test-123" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+
+  try {
+    const result = await new MimoVerifySmsProvider().send({
+      recipientE164: "+244923456789",
+      code: "123456",
+      expiresInSeconds: 300,
+      idempotencyKey: "unit-test-key",
+    });
+
+    assert.equal(sentUrl, "https://verify.mimo.ao/v1/otp/send");
+    assert.deepEqual(sentBody, {
+      recipient: "+244923456789",
+      channel: "sms",
+      code: "123456",
+      expires_in: 300,
+    });
+    assert.equal(result.status, "ACCEPTED");
+    assert.equal(result.providerMessageId, "mimo-test-123");
+  } finally {
+    globalThis.fetch = originalFetch;
+    const restore = (name: string, value: string | undefined) => {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    };
+    restore("MIMO_VERIFY_API_KEY", previous.key);
+    restore("MIMO_VERIFY_AUTH_HEADER_NAME", previous.headerName);
+    restore("MIMO_VERIFY_AUTH_HEADER_VALUE", previous.headerValue);
+    restore("MIMO_VERIFY_BASE_URL", previous.baseUrl);
+  }
+}
+
+{
   const names = [
     "MIMO_VERIFY_API_KEY",
     "MIMO_VERIFY_AUTH_HEADER_NAME",
