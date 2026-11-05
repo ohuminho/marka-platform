@@ -16,7 +16,7 @@ const { MimoVerifySmsProvider } = await import(
 
 {
   const code = generatePhoneOtp();
-  assert.match(code, /^\\d{6}$/);
+  assert.match(code, /^\d{6}$/);
 
   const challengeId = "challenge-unit-test";
   const hash = hashPhoneOtp(challengeId, code);
