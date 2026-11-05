@@ -14,7 +14,7 @@ const eventSchema = z.object({
   event: z.enum(["page_view", "marketplace_view", "product_view", "store_view", "search", "add_to_cart", "sign_up", "purchase"]),
   consent: z.literal(true),
   visitorId: z.string().uuid(),
-  path: z.string().max(300).regex(/^\/[a-zA-Z0-9\/_-]*$/),
+  path: z.string().max(300).regex(/^\/[a-zA-Z0-9\/_~!path: z.string().max(300).regex(/^\/[a-zA-Z0-9\/_-]*$/),'()*+,;=:@%-]*$/),
   entityId: z.string().uuid().optional(),
   category: z.string().max(80).optional(),
 }).strict();
