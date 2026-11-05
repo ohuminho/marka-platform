@@ -70,6 +70,49 @@ export async function POST(request: Request) {
       return jsonError("O identificador da conversa é inválido.", 400);
     }
 
+    // Ground Marketplace answers in the live catalogue owned by MARKA.
+    // Only active, in-stock products from active stores/vendors are exposed.
+    const searchTerms = [...new Set(
+      body.prompt.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+        .split(/[^a-z0-9]+/)
+        .filter((term) => term.length >= 3 && !["para", "com", "que", "uma", "uns", "the", "and", "por", "dos", "das", "quero", "preciso"].includes(term)),
+    )].slice(0, 6);
+    let catalogueContext: Array<Record<string, unknown>> = [];
+    if (searchTerms.length > 0) {
+      const products = await prisma.product.findMany({
+        where: {
+          status: "ACTIVE",
+          stock: { gt: 0 },
+          store: { status: "ACTIVE", vendor: { status: "ACTIVE" } },
+          OR: searchTerms.flatMap((term) => [
+            { name: { contains: term, mode: "insensitive" as const } },
+            { description: { contains: term, mode: "insensitive" as const } },
+          ]),
+        },
+        take: 8,
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          currency: true,
+          stock: true,
+          store: { select: { id: true, name: true } },
+        },
+      });
+      catalogueContext = products.map((product) => ({
+        productId: product.id,
+        name: product.name,
+        description: product.description?.slice(0, 500) ?? null,
+        price: Number(product.price),
+        currency: product.currency,
+        stock: product.stock,
+        storeId: product.store.id,
+        storeName: product.store.name,
+      }));
+    }
+
     const baseUrl = process.env.AI_CORE_BASE_URL?.trim();
     const apiKey = process.env.AI_CORE_API_KEY?.trim();
     const signingSecret = process.env.AI_CONTEXT_SIGNING_SECRET;
@@ -141,6 +184,8 @@ export async function POST(request: Request) {
             "Nunca peças palavras-passe, códigos OTP, dados completos de cartões ou credenciais bancárias.",
             "Promove transacções seguras dentro da MARKA e não recomendes contornar os mecanismos de segurança ou pagamentos da plataforma.",
             "Não afirmes que executaste uma acção ou alteraste dados sem confirmação de uma ferramenta autorizada.",
+            "Quando existir contexto de catálogo abaixo, recomenda apenas produtos presentes nessa lista e apresenta os preços, stock e lojas exactamente como fornecidos. Se a lista estiver vazia ou não for relevante, não inventes produtos nem disponibilidade.",
+            `Catálogo MARKA consultado em tempo real: ${JSON.stringify(catalogueContext)}`,
           ].join("\n"),
           ...(typeof body.conversationId === "string"
             ? { conversationId: body.conversationId }
