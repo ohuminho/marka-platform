@@ -73,6 +73,13 @@ export async function POST(request: Request) {
     if (expirationTime && Number.isNaN(expirationTime.getTime())) {
       return NextResponse.json({ message: "Invalid subscription expiry." }, { status: 400 });
     }
+    const existing = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+      select: { id: true, userId: true },
+    });
+    if (existing && existing.userId !== user.id) {
+      return NextResponse.json({ message: "This device subscription is already associated with another MARKA account." }, { status: 409 });
+    }
     const subscription = await prisma.pushSubscription.upsert({
       where: { endpoint },
       create: {
@@ -85,7 +92,6 @@ export async function POST(request: Request) {
         revokedAt: null,
       },
       update: {
-        userId: user.id,
         p256dh,
         auth,
         expirationTime,
