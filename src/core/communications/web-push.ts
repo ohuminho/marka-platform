@@ -44,7 +44,7 @@ export function isWebPushConfigured() {
   return Boolean(process.env.MARKA_VAPID_PUBLIC_KEY && process.env.MARKA_VAPID_PRIVATE_KEY);
 }
 
-function allowedPushEndpoint(endpoint: string) {
+export function isAllowedPushEndpoint(endpoint: string) {
   let url: URL;
   try { url = new URL(endpoint); } catch { return false; }
   if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) return false;
@@ -127,7 +127,7 @@ function encryptPayload(subscription: StoredSubscription, payload: PushPayload, 
 }
 
 async function sendOne(subscription: StoredSubscription, payload: PushPayload, config: NonNullable<ReturnType<typeof vapidConfig>>) {
-  if (!allowedPushEndpoint(subscription.endpoint)) return "invalid" as const;
+  if (!isAllowedPushEndpoint(subscription.endpoint)) return "invalid" as const;
   const body = encryptPayload(subscription, payload, config);
   const response = await fetch(subscription.endpoint, {
     method: "POST",
