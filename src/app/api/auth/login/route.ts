@@ -7,7 +7,7 @@ import {
 import {
   SessionService,
 } from "@/core/auth/sessions/session.service";
-import { normalizePhoneE164 } from "@/core/auth/phone/phone-number";
+import { resolveLoginIdentifier } from "@/core/auth/phone/login-identifier";
 
 import { prisma } from "@/database/client/prisma";
 
@@ -41,9 +41,9 @@ export async function POST(
 
     const suppliedIdentifier =
       typeof body.identifier === "string"
-        ? body.identifier.trim()
+        ? body.identifier
         : typeof body.email === "string"
-          ? body.email.trim()
+          ? body.email
           : "";
 
     const password =
@@ -51,7 +51,9 @@ export async function POST(
         ? body.password
         : "";
 
-    if (!suppliedIdentifier || !password) {
+    const identifier = resolveLoginIdentifier(suppliedIdentifier);
+
+    if (!identifier || !password) {
       return NextResponse.json(
         {
           message: "Invalid credentials.",
@@ -61,33 +63,18 @@ export async function POST(
       );
     }
 
-    const isPhoneIdentifier = suppliedIdentifier.startsWith("+");
-    let user;
+    const isPhoneIdentifier = identifier.kind === "phone";
 
-    if (isPhoneIdentifier) {
-      let phoneE164: string;
-      try {
-        phoneE164 = normalizePhoneE164(suppliedIdentifier);
-      } catch {
-        return NextResponse.json(
-          { message: "Invalid credentials.", code: "INVALID_CREDENTIALS" },
-          { status: 401 }
-        );
-      }
-
-      user = await prisma.user.findFirst({
-        where: {
-          phoneE164,
-          phoneVerifiedAt: { not: null },
-        },
-      });
-    } else {
-      user = await prisma.user.findUnique({
-        where: {
-          emailNormalized: normalizeEmail(suppliedIdentifier),
-        },
-      });
-    }
+    const user = isPhoneIdentifier
+      ? await prisma.user.findFirst({
+          where: {
+            phoneE164: identifier.value,
+            phoneVerifiedAt: { not: null },
+          },
+        })
+      : await prisma.user.findUnique({
+          where: { emailNormalized: identifier.value },
+        });
 
     if (!user) {
       return NextResponse.json(
