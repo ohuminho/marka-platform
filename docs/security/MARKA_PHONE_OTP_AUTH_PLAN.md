@@ -71,6 +71,8 @@ Never commit secrets or expose them client-side.
 - `SmsDeliveryLedger` records provider, hashed destination, delivery lifecycle, optional tariff snapshot and timestamps.
 - A protected Super Admin usage API and dashboard page expose monthly budget, recorded spend, delivery states, country breakdown and provider readiness. They do not send SMS or query a MIMO balance.
 - Mobility contact verification now accepts either a verified phone or a verified email. Government identity/KYC and driver-document checks remain separate and mandatory.
+- Existing-account login accepts email or an already verified E.164 phone with the same password. The lookup excludes unverified phone numbers; existing email login remains compatible.
+- Login UI now explains the two accepted identifiers. New phone registration and OTP challenge issuance remain disabled until persistent OTP services are complete.
 - Existing `User.email` and `User.emailNormalized` remain required in this phase. Making them nullable is intentionally deferred until registration, login, verification, recovery, profile, admin, Marketplace, Mobility and notification paths are audited and refactored together. This avoids creating phone-only accounts that current application flows cannot safely support.
 - Existing email users, Resend verification/recovery and sessions are unchanged.
 - The migration is not applied to production. It still requires Prisma validation and isolated-database migration testing before release.
@@ -79,7 +81,7 @@ Never commit secrets or expose them client-side.
 1. Audit required-email assumptions across registration, login, recovery, profile, admin, Marketplace, Mobility, notifications and exports.
 2. Add country picker and phone-first registration with optional email.
 3. Add OTP request/verify APIs with abuse controls and MIMO Verify SMS adapter.
-4. Update login to accept email or E.164 phone plus password.
+4. Extend login to accept email or already verified E.164 phone plus password (implemented on this branch); complete regression tests.
 5. Add phone-based recovery and change-phone confirmation.
 6. Add Super Admin SMS cost dashboard and budget circuit breaker.
 7. Test on isolated DB; run unit/integration tests; stage behind feature flag.
