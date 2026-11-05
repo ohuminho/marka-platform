@@ -4,7 +4,7 @@
 
 The MARKA API persists domain events. The scheduled GitHub Actions workflow invokes the internal worker every five minutes and processes a small batch of pending events. This keeps automation execution outside customer-facing requests and avoids introducing Redis, a paid queue provider, or a third-party scheduler.
 
-The worker endpoint is:
+The worker claims only pending event types with at least one active automation rule. Growth/analytics telemetry is persisted as processed data and does not consume automation queue capacity.\n\nThe worker endpoint is:
 
 `POST /api/internal/automation/process`
 
