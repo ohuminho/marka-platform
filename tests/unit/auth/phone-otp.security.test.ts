@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 process.env.PHONE_OTP_PEPPER = "unit-test-pepper-value-at-least-32-chars";
 
+async function main(): Promise<void> {
 const {
   generatePhoneOtp,
   hashPhoneOtp,
@@ -155,3 +156,10 @@ const { MimoVerifySmsProvider } = await import(
 }
 
 console.log("Phone OTP foundation tests passed.");
+}
+
+main().catch((error) => {
+  console.error("Phone OTP foundation tests failed.");
+  console.error(error);
+  process.exitCode = 1;
+});
