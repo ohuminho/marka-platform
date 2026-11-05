@@ -69,12 +69,7 @@ export async function authenticateMobilityRequest(
     },
   });
 
-  if (
-    !user ||
-    user.status === "SUSPENDED" ||
-    user.status === "LOCKED" ||
-    user.status === "DELETED"
-  ) {
+  if (!user || user.status !== "ACTIVE") {
     await sessionService.revoke(token);
 
     return {
