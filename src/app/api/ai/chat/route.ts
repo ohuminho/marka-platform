@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     // Ground Marketplace answers in the live catalogue owned by MARKA.
     // Only active, in-stock products from active stores/vendors are exposed.
     const searchTerms = [...new Set(
-      body.prompt.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+      body.prompt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .split(/[^a-z0-9]+/)
         .filter((term) => term.length >= 3 && !["para", "com", "que", "uma", "uns", "the", "and", "por", "dos", "das", "quero", "preciso"].includes(term)),
     )].slice(0, 6);
