@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Mobilidade e transporte em Angola | MARKA Mobility",
+  title: "Mobilidade e transporte em Angola",
   description: "Conheça a MARKA Mobility: uma experiência integrada para pedidos de táxi, moto-táxi, transporte de carga e assistência rodoviária, conforme disponibilidade.",
   alternates: { canonical: "/mobilidade" },
   openGraph: {
