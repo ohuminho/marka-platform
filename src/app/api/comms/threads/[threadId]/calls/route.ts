@@ -6,12 +6,13 @@ import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 import { expireRingingCalls } from "@/core/communications/expire-ringing-calls";
+import { sendUserWebPush } from "@/core/communications/web-push";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
   const session = token ? await new SessionService().validate(token) : null;
   if (!session) return null;
-  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, status: true } });
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, name: true, status: true } });
   return user?.status === "ACTIVE" ? user : null;
 }
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import NotificationButton from "./components/NotificationButton";
+import PushNotificationControl from "./components/PushNotificationControl";
 import CartButton from "./components/CartButton";
 import UserMenu from "./components/UserMenu";
 import ThemeSelector from "./components/ThemeSelector";
@@ -52,6 +53,7 @@ export default function TopNav() {
                 <path d="M8 8h8M8 11.5h5" />
               </svg>
             </Link>
+            <PushNotificationControl />
             <NotificationButton />
             <CartButton />
           </div>

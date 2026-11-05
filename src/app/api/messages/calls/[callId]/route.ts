@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
+import { sendUserWebPush } from "@/core/communications/web-push";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -27,7 +28,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
 
     const call = await prisma.communicationCallSession.findFirst({
       where: { id: callId, OR: [{ callerId: actor.id }, { calleeId: actor.id }] },
-      select: { id: true, callerId: true, calleeId: true, threadId: true, status: true, expiresAt: true },
+      select: { id: true, callerId: true, calleeId: true, threadId: true, conversationId: true, status: true, expiresAt: true },
     });
     if (!call) return NextResponse.json({ message: "Chamada não encontrada." }, { status: 404 });
     if (call.threadId) await getAuthorizedCommunicationThread(call.threadId, actor.id);
@@ -36,7 +37,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
       return NextResponse.json({ message: "Esta chamada já não está activa." }, { status: 409 });
     }
     if (call.status === "RINGING" && call.expiresAt <= now && action !== "END") {
-      await prisma.$transaction(async (tx) => {
+      const expired = await prisma.$transaction(async (tx) => {
         const updated = await tx.communicationCallSession.updateMany({
           where: { id: callId, status: "RINGING" },
           data: { status: "MISSED", endedAt: now },
@@ -52,7 +53,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
             },
           });
         }
+        return updated.count;
       });
+      if (expired === 1) {
+        await sendUserWebPush(call.callerId, {
+          title: "Chamada não atendida",
+          body: "A tua chamada não foi atendida.",
+          url: `/app/messages?conversationId=${encodeURIComponent(call.threadId ?? call.conversationId ?? "")}`,
+          tag: `marka-call-missed-${call.id}`,
+          kind: "GENERAL",
+        });
+      }
       return NextResponse.json({ message: "A chamada expirou." }, { status: 410 });
     }
     if ((action === "ACCEPT" || action === "REJECT" || action === "MISSED") && actor.id !== call.calleeId) {
@@ -87,6 +98,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ callI
         return updated;
       });
       if (!result.count) return NextResponse.json({ message: "A chamada já foi encerrada." }, { status: 409 });
+      if (action === "REJECT" || action === "MISSED") {
+        await sendUserWebPush(call.callerId, {
+          title: action === "MISSED" ? "Chamada não atendida" : "Chamada recusada",
+          body: action === "MISSED" ? "A tua chamada não foi atendida." : "O destinatário recusou a tua chamada.",
+          url: `/app/messages?conversationId=${encodeURIComponent(call.threadId ?? call.conversationId ?? "")}`,
+          tag: `marka-call-${action.toLowerCase()}-${call.id}`,
+          kind: "GENERAL",
+        });
+      }
     }
     return NextResponse.json({ success: true, action }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
