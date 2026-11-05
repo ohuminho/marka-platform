@@ -64,7 +64,11 @@ export async function GET() {
           _sum: { unitCost: true },
         }),
         prisma.smsDeliveryLedger.count({
-          where: { ...period, unitCost: null },
+          where: {
+            ...period,
+            status: { in: ["REQUESTED", "ACCEPTED", "DELIVERED", "UNKNOWN"] },
+            unitCost: null,
+          },
         }),
         prisma.smsDeliveryLedger.count({ where: period }),
       ]);
@@ -125,12 +129,20 @@ export async function GET() {
         provider: {
           name: "mimo-verify",
           smsOnly: true,
-          enabled: process.env.PHONE_OTP_ENABLED === "true",
           credentialsConfigured: Boolean(
             process.env.MIMO_VERIFY_API_KEY &&
             process.env.MIMO_VERIFY_AUTH_HEADER_NAME &&
             process.env.MIMO_VERIFY_AUTH_HEADER_VALUE
           ),
+          enabled:
+            process.env.PHONE_OTP_ENABLED === "true" &&
+            Boolean(
+              process.env.MIMO_VERIFY_API_KEY &&
+              process.env.MIMO_VERIFY_AUTH_HEADER_NAME &&
+              process.env.MIMO_VERIFY_AUTH_HEADER_VALUE &&
+              process.env.PHONE_OTP_PEPPER &&
+              process.env.PHONE_OTP_PEPPER.length >= 32
+            ),
           balanceAvailable: false,
           balanceAoa: null,
           note: "O saldo e os relatórios de entrega dependem da documentação e dos acessos confirmados pela MIMO.",
