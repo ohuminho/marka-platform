@@ -54,7 +54,7 @@ async function getStore(id: string) {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const store = await getStore(id);
-  if (!store) return { title: "Loja indisponível | MARKA", robots: { index: false, follow: true } };
+  if (!store) return { title: "Loja indisponível", robots: { index: false, follow: true } };
   const description = (store.description || `Conheça a loja ${store.name} no Marketplace MARKA e descubra os seus produtos e ofertas.`).slice(0, 155);
   const canonical = `/loja/${store.id}`;
   return {
