@@ -2,6 +2,29 @@
 
 The application uses browser-native WebRTC for 1:1 media and authenticated application APIs for signalling. The application does not record audio or video.
 
+## Verified deployment status — 2026-11-05
+
+Repository and connected project checks:
+
+- The call-session migration `20261030150000_add_communication_call_sessions` and shared-context migration `20261030160000_add_shared_context_communication_threads` are present in the Supabase project's applied migration history.
+- The database exposes `CommunicationCallSession`, `CommunicationCallSignal`, `CommunicationThread` and `CommunicationThreadParticipant`; RLS is enabled on these tables.
+- The MARKA production project's Vercel environment-variable inventory does not currently contain `MARKA_TURN_URLS` or `MARKA_TURN_SHARED_SECRET`.
+- The ICE configuration route therefore intentionally returns HTTP 503 in production until TURN is configured. Do not bypass this guard or silently ship STUN-only production calling.
+- Repository code contains the authenticated call lifecycle, WebRTC signalling and browser call controls. This is not evidence of successful end-to-end media connectivity.
+
+### Remaining work before release
+
+1. Provision a Coturn host with a public static IP, DNS name and TLS certificate. Prefer a low-cost/self-managed host only after checking bandwidth, UDP availability, firewall policy and monthly egress cost.
+2. Configure the exact same high-entropy REST shared secret on Coturn and the MARKA server environment. Store it only as a server-side encrypted/sensitive variable. Never use a `NEXT_PUBLIC_` name.
+3. Set `MARKA_TURN_URLS` to the reachable UDP and TLS endpoints; set `MARKA_STUN_URLS` only if a deliberate STUN configuration is required.
+4. Redeploy a non-production environment first and verify that the authenticated ICE endpoint returns time-limited credentials without exposing the shared secret.
+5. Test two real MARKA accounts on separate Android devices and independent networks (Wi-Fi to mobile data and mobile data to mobile data). Verify that TURN relay is actually selected for a forced-relay test.
+6. Test call authorization, expiry, denied permissions, incoming call, reject, hang-up from either side, network interruption/reconnect, and cleanup of expired signalling records.
+7. Review mobile background behaviour: browser polling is not a substitute for push delivery and may be suspended by Android when the app/browser is backgrounded.
+8. Only enable calling for the tested contexts after the security, privacy, capacity and operational gates pass.
+
+No TURN host was provisioned and no production environment variable was changed during this audit. Do not mark calling production-ready until the above tests pass.
+
 ## Required production environment
 
 Configure these variables on the server deployment (never expose the shared secret as a NEXT_PUBLIC variable):
