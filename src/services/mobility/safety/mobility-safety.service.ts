@@ -10,6 +10,7 @@ import { prisma } from "@/database/client/prisma";
 import {
   MobilityDomainError,
 } from "@/services/mobility/errors/mobility-domain.error";
+import { hasVerifiedContact } from "@/core/auth/phone/phone-identity.policy";
 
 import type {
   CreateTripSafetyInput,
@@ -129,9 +130,12 @@ export class MobilitySafetyService {
         driver.verifications
       );
 
-    const identityVerified =
-      driver.user.emailVerifiedAt !== null &&
-      driver.user.phoneVerifiedAt !== null;
+    // A verified phone is sufficient for phone-first accounts; existing
+    // email-verified accounts remain compatible during the transition.
+    const identityVerified = hasVerifiedContact({
+      emailVerifiedAt: driver.user.emailVerifiedAt,
+      phoneVerifiedAt: driver.user.phoneVerifiedAt,
+    });
 
     const driverDocumentsVerified =
       latestDriverVerifications.length > 0 &&

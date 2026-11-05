@@ -7,14 +7,9 @@ import {
 import {
   SessionService,
 } from "@/core/auth/sessions/session.service";
+import { resolveLoginIdentifier } from "@/core/auth/phone/login-identifier";
 
 import { prisma } from "@/database/client/prisma";
-
-function normalizeEmail(
-  email: string
-): string {
-  return email.trim().toLowerCase();
-}
 
 function getClientIp(
   request: Request
@@ -38,33 +33,42 @@ export async function POST(
     const body =
       await request.json();
 
-    const email =
-      typeof body.email === "string"
-        ? normalizeEmail(body.email)
-        : "";
+    const suppliedIdentifier =
+      typeof body.identifier === "string"
+        ? body.identifier
+        : typeof body.email === "string"
+          ? body.email
+          : "";
 
     const password =
       typeof body.password === "string"
         ? body.password
         : "";
 
-    if (!email || !password) {
+    const identifier = resolveLoginIdentifier(suppliedIdentifier);
+
+    if (!identifier || !password) {
       return NextResponse.json(
         {
-          message:
-            "Invalid credentials.",
+          message: "Invalid credentials.",
           code: "INVALID_CREDENTIALS",
         },
         { status: 401 }
       );
     }
 
-    const user =
-      await prisma.user.findUnique({
-        where: {
-          emailNormalized: email,
-        },
-      });
+    const isPhoneIdentifier = identifier.kind === "phone";
+
+    const user = isPhoneIdentifier
+      ? await prisma.user.findFirst({
+          where: {
+            phoneE164: identifier.value,
+            phoneVerifiedAt: { not: null },
+          },
+        })
+      : await prisma.user.findUnique({
+          where: { emailNormalized: identifier.value },
+        });
 
     if (!user) {
       return NextResponse.json(
@@ -95,8 +99,8 @@ export async function POST(
     }
 
     if (
-      user.status ===
-      "PENDING_VERIFICATION"
+      user.status === "PENDING_VERIFICATION" &&
+      !isPhoneIdentifier
     ) {
       return NextResponse.json(
         {
