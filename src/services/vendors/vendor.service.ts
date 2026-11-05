@@ -72,22 +72,8 @@ export class VendorService {
           throw new Error("The selected business organization is not available to this account.");
         }
 
-        const existingBusinessMembership = !input.organizationId
-          ? await tx.organizationMembership.findFirst({
-              where: {
-                userId: ownerId,
-                status: "ACTIVE",
-                organization: { status: "ACTIVE", type: "BUSINESS" },
-              },
-              orderBy: { joinedAt: "asc" },
-              select: { organizationId: true },
-            })
-          : null;
-
         if (requestedMembership) {
           organizationId = requestedMembership.organizationId;
-        } else if (existingBusinessMembership) {
-          organizationId = existingBusinessMembership.organizationId;
         } else {
           const tenant = await tx.tenant.findUnique({
             where: { key: "marka" },
@@ -97,6 +83,8 @@ export class VendorService {
             throw new Error("MARKA tenant is not initialized.");
           }
 
+          // Use a deterministic owner-scoped workspace instead of reusing
+          // an arbitrary employer/third-party business membership.
           const businessOrganization = await tx.organization.upsert({
             where: { slug: `business-${ownerId}` },
             update: {
