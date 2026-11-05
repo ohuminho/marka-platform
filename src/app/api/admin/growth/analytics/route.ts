@@ -80,7 +80,7 @@ export async function GET() {
       period: { from: from.toISOString(), to: now.toISOString(), days: 30 },
       totals: {
         events: total,
-        uniqueVisitors: Number(uniqueRows[0]?.unique_visitors ?? 0),
+        uniqueIdentities: Number(uniqueRows[0]?.unique_visitors ?? 0),
         pageViews: metric("PAGE_VIEW"),
         marketplaceViews: metric("MARKETPLACE_VIEW"),
         productViews: metric("PRODUCT_VIEW"),
@@ -103,7 +103,7 @@ export async function GET() {
         truncated: aiUsageEvents.length === 10000,
       },
       source: "MARKA_DOMAIN_EVENTS_AND_AI_CORE_USAGE",
-      note: "Os rácios são contagens de eventos, não conversões únicas por utilizador. Compras e inscrições não são apresentadas até estarem instrumentadas a partir de fontes transaccionais confirmadas. A utilização AI Core é registada sem guardar prompts ou respostas.",
+      note: "Os rácios são contagens de eventos, não conversões únicas por utilizador. Identificadores distintos não equivalem a indivíduos únicos: uma pessoa pode gerar um ID anónimo e outro autenticado. Compras e inscrições não são apresentadas até estarem instrumentadas a partir de fontes transaccionais confirmadas. A utilização AI Core é registada sem guardar prompts ou respostas.",
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("[MARKA_GROWTH_ANALYTICS]", error instanceof Error ? error.name : "UnknownError");
