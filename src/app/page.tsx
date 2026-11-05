@@ -114,7 +114,7 @@ export default function Home() {
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Link href="/auth/login" className="hidden h-11 items-center rounded-full border border-[#d8ad5d]/70 px-5 text-sm font-semibold text-[#f4d38e] transition hover:bg-[#d8ad5d]/10 sm:inline-flex">Entrar</Link>
-            <Link href="/auth/register" className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-[#f8dfaa] to-[#d9a947] px-5 text-sm font-bold text-[#17120a] shadow-[0_8px_30px_rgba(220,174,83,.2)] transition hover:brightness-110">Criar Conta <span aria-hidden="true">→</span></Link>
+            <Link href="/auth/login" className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-[#f8dfaa] to-[#d9a947] px-5 text-sm font-bold text-[#17120a] shadow-[0_8px_30px_rgba(220,174,83,.2)] transition hover:brightness-110">Criar Conta <span aria-hidden="true">→</span></Link>
           </div>
         </nav>
       </header>
