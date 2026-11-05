@@ -19,7 +19,7 @@ const steps = [
   ["1. Crie a sua loja", "Registe-se e escolha o tipo de atividade. O percurso deve ser simples para vendedores individuais e empresas."],
   ["2. Publique o catálogo", "Adicione fotografias, descrições, preços e informação de disponibilidade para ajudar o cliente a decidir."],
   ["3. Reforce a confiança", "Solicite a verificação MARKA quando estiver preparado. O selo só é atribuído após análise e aprovação."],
-  ["4. Cresça com visibilidade", "Acompanhe o desempenho das suas ofertas e candidate um produto elegível a destaque na MARKA."],
+  ["4. Mantenha a loja actualizada", "Revise preços, stock, fotografias e descrições para que os compradores encontrem informação correcta."],
 ];
 
 export default function SellerLandingPage() {
