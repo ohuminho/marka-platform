@@ -10,6 +10,9 @@ const {
 const { normalizePhoneE164 } = await import(
   "../../../src/core/auth/phone/phone-number"
 );
+const { hasVerifiedContact } = await import(
+  "../../../src/core/auth/phone/phone-identity.policy"
+);
 const { MimoVerifySmsProvider } = await import(
   "../../../src/core/auth/phone/mimo-verify-sms.provider"
 );
@@ -25,6 +28,21 @@ const { MimoVerifySmsProvider } = await import(
   assert.equal(verifyPhoneOtp("another-challenge", code, hash), false);
   assert.equal(verifyPhoneOtp(challengeId, "000000", "invalid"), false);
   assert.equal(verifyPhoneOtp(challengeId, "12345", hash), false);
+}
+
+{
+  assert.equal(hasVerifiedContact({
+    emailVerifiedAt: null,
+    phoneVerifiedAt: new Date(),
+  }), true);
+  assert.equal(hasVerifiedContact({
+    emailVerifiedAt: new Date(),
+    phoneVerifiedAt: null,
+  }), true);
+  assert.equal(hasVerifiedContact({
+    emailVerifiedAt: null,
+    phoneVerifiedAt: null,
+  }), false);
 }
 
 {
