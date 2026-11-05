@@ -7,6 +7,7 @@ import {
 import {
   SessionService,
 } from "@/core/auth/sessions/session.service";
+import { normalizePhoneE164 } from "@/core/auth/phone/phone-number";
 
 import { prisma } from "@/database/client/prisma";
 
@@ -38,33 +39,55 @@ export async function POST(
     const body =
       await request.json();
 
-    const email =
-      typeof body.email === "string"
-        ? normalizeEmail(body.email)
-        : "";
+    const suppliedIdentifier =
+      typeof body.identifier === "string"
+        ? body.identifier.trim()
+        : typeof body.email === "string"
+          ? body.email.trim()
+          : "";
 
     const password =
       typeof body.password === "string"
         ? body.password
         : "";
 
-    if (!email || !password) {
+    if (!suppliedIdentifier || !password) {
       return NextResponse.json(
         {
-          message:
-            "Invalid credentials.",
+          message: "Invalid credentials.",
           code: "INVALID_CREDENTIALS",
         },
         { status: 401 }
       );
     }
 
-    const user =
-      await prisma.user.findUnique({
+    const isPhoneIdentifier = suppliedIdentifier.startsWith("+");
+    let user;
+
+    if (isPhoneIdentifier) {
+      let phoneE164: string;
+      try {
+        phoneE164 = normalizePhoneE164(suppliedIdentifier);
+      } catch {
+        return NextResponse.json(
+          { message: "Invalid credentials.", code: "INVALID_CREDENTIALS" },
+          { status: 401 }
+        );
+      }
+
+      user = await prisma.user.findFirst({
         where: {
-          emailNormalized: email,
+          phoneE164,
+          phoneVerifiedAt: { not: null },
         },
       });
+    } else {
+      user = await prisma.user.findUnique({
+        where: {
+          emailNormalized: normalizeEmail(suppliedIdentifier),
+        },
+      });
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -95,8 +118,8 @@ export async function POST(
     }
 
     if (
-      user.status ===
-      "PENDING_VERIFICATION"
+      user.status === "PENDING_VERIFICATION" &&
+      !isPhoneIdentifier
     ) {
       return NextResponse.json(
         {
