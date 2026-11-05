@@ -5,12 +5,13 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { expireRingingCalls } from "@/core/communications/expire-ringing-calls";
+import { sendUserWebPush } from "@/core/communications/web-push";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
   const session = token ? await new SessionService().validate(token) : null;
   if (!session) return null;
-  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, status: true } });
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, name: true, status: true } });
   return user?.status === "ACTIVE" ? user : null;
 }
 
@@ -54,7 +55,7 @@ export async function POST(request: Request, context: Context) {
 
     const conversation = await prisma.marketplaceConversation.findFirst({
       where: { id: conversationId, OR: [{ buyerId: actor.id }, { sellerId: actor.id }] },
-      select: { id: true, buyerId: true, sellerId: true },
+      select: { id: true, buyerId: true, sellerId: true, product: { select: { name: true } } },
     });
     if (!conversation) return NextResponse.json({ message: "Conversa não encontrada." }, { status: 404 });
     const calleeId = conversation.buyerId === actor.id ? conversation.sellerId : conversation.buyerId;
