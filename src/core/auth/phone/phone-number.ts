@@ -8,9 +8,9 @@ export function normalizePhoneE164(input: string): string {
     throw new Error("Phone number must be a string.");
   }
 
-  const compact = input.trim().replace(/[\\s().-]/g, "");
+  const compact = input.trim().replace(/[\s().-]/g, "");
 
-  if (!/^\\+[1-9]\\d{7,14}$/.test(compact)) {
+  if (!/^\+[1-9]\d{7,14}$/.test(compact)) {
     throw new Error(
       "Phone number must include its country calling code in E.164 format."
     );
