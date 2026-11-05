@@ -45,8 +45,16 @@ export async function GET() {
     ];
 
     const memberships = await prisma.organizationMembership.findMany({
-      where: { userId: user.id, status: "ACTIVE" },
-      select: { organizationId: true },
+      where: {
+        userId: user.id,
+        status: "ACTIVE",
+        organization: { type: "BUSINESS", status: "ACTIVE" },
+      },
+      select: {
+        organizationId: true,
+        organization: { select: { id: true, name: true, slug: true } },
+      },
+      orderBy: { joinedAt: "asc" },
     });
 
     for (const membership of memberships) {
@@ -59,7 +67,10 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ profiles });
+    return NextResponse.json({
+      profiles,
+      organizations: memberships.map(({ organization }) => organization),
+    });
   } catch (error) {
     console.error("[COMPLIANCE_GET_ERROR]", error);
     return NextResponse.json({ message: "Unable to load compliance status." }, { status: 500 });
@@ -81,6 +92,7 @@ export async function POST(request: Request) {
           userId: user.id,
           organizationId: input.organizationId,
           status: "ACTIVE",
+          organization: { type: "BUSINESS", status: "ACTIVE" },
         },
         select: { id: true },
       });
