@@ -51,14 +51,15 @@ export class AutomationService {
   }
 
   async processPending(limit = 20) {
-    // A crashed serverless worker can leave an event claimed forever. The
-    // platform worker budget is far below this lease, so recover old claims.
-    const staleBefore = new Date(Date.now() - 5 * 60 * 1000);
+    // A crashed serverless worker can leave an event claimed forever.
+    // availableAt doubles as a processing lease while status is PROCESSING.
+    // Do not use createdAt here: old events can be actively processed now.
+    const now = new Date();
     await prisma.domainEvent.updateMany({
-      where: { status: "PROCESSING", createdAt: { lte: staleBefore } },
+      where: { status: "PROCESSING", availableAt: { lte: now } },
       data: {
         status: "PENDING",
-        availableAt: new Date(),
+        availableAt: now,
         lastError: "Recovered an expired processing claim.",
       },
     });
@@ -74,7 +75,11 @@ export class AutomationService {
     for (const event of candidates) {
       const claim = await prisma.domainEvent.updateMany({
         where: { id: event.id, status: "PENDING", availableAt: { lte: new Date() } },
-        data: { status: "PROCESSING", attempts: { increment: 1 } },
+        data: {
+          status: "PROCESSING",
+          attempts: { increment: 1 },
+          availableAt: new Date(Date.now() + 5 * 60 * 1000),
+        },
       });
       if (claim.count !== 1) continue;
       result.claimed++;
