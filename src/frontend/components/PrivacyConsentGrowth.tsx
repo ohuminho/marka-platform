@@ -2,22 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { trackGrowthEvent } from "@/frontend/features/growth/track-growth-event";
 
 const CONSENT_KEY = "marka_growth_consent_v1";
-const VISITOR_KEY = "marka_growth_visitor_v1";
-
-function getVisitorId(): string | null {
-  try {
-    const existing = window.localStorage.getItem(VISITOR_KEY);
-    if (existing) return existing;
-    const id = window.crypto?.randomUUID?.();
-    if (!id) return null;
-    window.localStorage.setItem(VISITOR_KEY, id);
-    return id;
-  } catch {
-    return null;
-  }
-}
 
 export default function PrivacyConsentGrowth() {
   const pathname = usePathname();
@@ -29,35 +16,16 @@ export default function PrivacyConsentGrowth() {
       if (!active) return;
       try {
         const saved = window.localStorage.getItem(CONSENT_KEY);
-        if (saved === "accepted" || saved === "declined") {
-          setConsent(saved);
-        }
+        if (saved === "accepted" || saved === "declined") setConsent(saved);
       } catch {
         setConsent("declined");
       }
     });
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    if (consent !== "accepted" || !pathname) return;
-    const visitorId = getVisitorId();
-    if (!visitorId) return;
-    const allowedPath = pathname.slice(0, 300);
-    void fetch("/api/growth/events", {
-      method: "POST",
-      credentials: "same-origin",
-      keepalive: true,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event: "page_view",
-        consent: true,
-        visitorId,
-        path: allowedPath,
-      }),
-    }).catch(() => undefined);
+    if (consent === "accepted" && pathname) trackGrowthEvent("page_view");
   }, [consent, pathname]);
 
   function choose(value: "accepted" | "declined") {
