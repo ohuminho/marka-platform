@@ -10,6 +10,9 @@ const {
 const { normalizePhoneE164 } = await import(
   "../../../src/core/auth/phone/phone-number"
 );
+const { resolveLoginIdentifier } = await import(
+  "../../../src/core/auth/phone/login-identifier"
+);
 const { hasVerifiedContact } = await import(
   "../../../src/core/auth/phone/phone-identity.policy"
 );
@@ -43,6 +46,20 @@ const { MimoVerifySmsProvider } = await import(
     emailVerifiedAt: null,
     phoneVerifiedAt: null,
   }), false);
+}
+
+{
+  assert.deepEqual(resolveLoginIdentifier("  USER@Example.COM "), {
+    kind: "email",
+    value: "user@example.com",
+  });
+  assert.deepEqual(resolveLoginIdentifier("+244 923 456 789"), {
+    kind: "phone",
+    value: "+244923456789",
+  });
+  assert.equal(resolveLoginIdentifier("+244 123"), null);
+  assert.equal(resolveLoginIdentifier("not-an-email"), null);
+  assert.equal(resolveLoginIdentifier(null), null);
 }
 
 {
