@@ -10,10 +10,11 @@ function createTransaction(options: {
 }) {
   const notifications: Array<Record<string, unknown>> = [];
   const updates: Array<Record<string, unknown>> = [];
+  let findManyArgs: Record<string, unknown> | null = null;
   const tx = {
     communicationCallSession: {
       findMany: async (args: Record<string, unknown>) => {
-        (tx as any).findManyArgs = args;
+        findManyArgs = args;
         return options.expired ?? [];
       },
       updateMany: async (args: Record<string, unknown>) => {
@@ -27,9 +28,8 @@ function createTransaction(options: {
         return { id: "notification-1" };
       },
     },
-    findManyArgs: null as Record<string, unknown> | null,
   };
-  return { tx, notifications, updates };
+  return { tx, notifications, updates, get findManyArgs() { return findManyArgs; } };
 }
 
 async function main(): Promise<void> {
