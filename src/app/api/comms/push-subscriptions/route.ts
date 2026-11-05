@@ -73,42 +73,61 @@ export async function POST(request: Request) {
     if (expirationTime && Number.isNaN(expirationTime.getTime())) {
       return NextResponse.json({ message: "Invalid subscription expiry." }, { status: 400 });
     }
-    const existing = await prisma.pushSubscription.findUnique({
-      where: { endpoint },
-      select: { id: true, userId: true },
+
+    // Serialize registrations per account and per endpoint. Without these
+    // transaction-scoped locks, concurrent requests could exceed the five-device
+    // cap or race the ownership check before the unique endpoint upsert.
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`user:${user.id}`}, 0))`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`push-endpoint:${endpoint}`}, 0))`;
+
+      const existing = await tx.pushSubscription.findUnique({
+        where: { endpoint },
+        select: { id: true, userId: true },
+      });
+      if (existing && existing.userId !== user.id) {
+        return { conflict: true as const };
+      }
+
+      if (!existing) {
+        const activeCount = await tx.pushSubscription.count({
+          where: { userId: user.id, revokedAt: null },
+        });
+        if (activeCount >= 5) {
+          return { limitReached: true as const };
+        }
+      }
+
+      const subscription = await tx.pushSubscription.upsert({
+        where: { endpoint },
+        create: {
+          userId: user.id,
+          endpoint,
+          p256dh,
+          auth,
+          expirationTime,
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+          revokedAt: null,
+        },
+        update: {
+          p256dh,
+          auth,
+          expirationTime,
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+          revokedAt: null,
+        },
+        select: { id: true },
+      });
+      return { subscription };
     });
-    if (existing && existing.userId !== user.id) {
+
+    if ("conflict" in result) {
       return NextResponse.json({ message: "This device subscription is already associated with another MARKA account." }, { status: 409 });
     }
-    if (!existing) {
-      const activeCount = await prisma.pushSubscription.count({
-        where: { userId: user.id, revokedAt: null },
-      });
-      if (activeCount >= 5) {
-        return NextResponse.json({ message: "Limite de cinco dispositivos activos atingido." }, { status: 409 });
-      }
+    if ("limitReached" in result) {
+      return NextResponse.json({ message: "Limite de cinco dispositivos activos atingido." }, { status: 409 });
     }
-    const subscription = await prisma.pushSubscription.upsert({
-      where: { endpoint },
-      create: {
-        userId: user.id,
-        endpoint,
-        p256dh,
-        auth,
-        expirationTime,
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-        revokedAt: null,
-      },
-      update: {
-        p256dh,
-        auth,
-        expirationTime,
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-        revokedAt: null,
-      },
-      select: { id: true },
-    });
-    return NextResponse.json({ saved: true, id: subscription.id }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ saved: true, id: result.subscription.id }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[MARKA_PUSH_SUBSCRIBE]", error);
     return NextResponse.json({ message: "Unable to save push subscription." }, { status: 500 });
