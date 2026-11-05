@@ -53,24 +53,64 @@ export class VendorService {
           create: { organizationId, userId: ownerId, status: "ACTIVE" },
         });
       } else {
-        // Company sellers must be attached to an existing, active organization.
-        const membership = await tx.organizationMembership.findFirst({
-          where: {
-            userId: ownerId,
-            status: "ACTIVE",
-            organization: {
-              status: "ACTIVE",
-              ...(input.organizationId ? { id: input.organizationId } : {}),
-            },
-          },
-          orderBy: { joinedAt: "asc" },
-          select: { organizationId: true },
-        });
+        // A company seller must never be attached to the shared MARKA platform
+        // organization. Reuse only a BUSINESS organization the user belongs to;
+        // otherwise create an isolated business workspace for this seller.
+        const requestedMembership = input.organizationId
+          ? await tx.organizationMembership.findFirst({
+              where: {
+                userId: ownerId,
+                organizationId: input.organizationId,
+                status: "ACTIVE",
+                organization: { status: "ACTIVE", type: "BUSINESS" },
+              },
+              select: { organizationId: true },
+            })
+          : null;
 
-        if (!membership) {
-          throw new Error("Company sellers must belong to an active organization.");
+        if (input.organizationId && !requestedMembership) {
+          throw new Error("The selected business organization is not available to this account.");
         }
-        organizationId = membership.organizationId;
+
+        if (requestedMembership) {
+          organizationId = requestedMembership.organizationId;
+        } else {
+          const tenant = await tx.tenant.findUnique({
+            where: { key: "marka" },
+            select: { id: true },
+          });
+          if (!tenant) {
+            throw new Error("MARKA tenant is not initialized.");
+          }
+
+          // Use a deterministic owner-scoped workspace instead of reusing
+          // an arbitrary employer/third-party business membership.
+          const businessOrganization = await tx.organization.upsert({
+            where: { slug: `business-${ownerId}` },
+            update: {
+              name: input.storeName.trim(),
+              tenantId: tenant.id,
+              type: "BUSINESS",
+            },
+            create: {
+              tenantId: tenant.id,
+              name: input.storeName.trim(),
+              slug: `business-${ownerId}`,
+              type: "BUSINESS",
+              status: "ACTIVE",
+            },
+            select: { id: true },
+          });
+          organizationId = businessOrganization.id;
+
+          await tx.organizationMembership.upsert({
+            where: {
+              organizationId_userId: { organizationId, userId: ownerId },
+            },
+            update: { status: "ACTIVE" },
+            create: { organizationId, userId: ownerId, status: "ACTIVE" },
+          });
+        }
       }
 
       return tx.vendor.create({
