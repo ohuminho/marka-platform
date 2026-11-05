@@ -6,13 +6,17 @@ import { usePathname } from "next/navigation";
 const CONSENT_KEY = "marka_growth_consent_v1";
 const VISITOR_KEY = "marka_growth_visitor_v1";
 
-function getVisitorId() {
-  let id = window.localStorage.getItem(VISITOR_KEY);
-  if (!id) {
-    id = window.crypto.randomUUID();
+function getVisitorId(): string | null {
+  try {
+    const existing = window.localStorage.getItem(VISITOR_KEY);
+    if (existing) return existing;
+    const id = window.crypto?.randomUUID?.();
+    if (!id) return null;
     window.localStorage.setItem(VISITOR_KEY, id);
+    return id;
+  } catch {
+    return null;
   }
-  return id;
 }
 
 export default function PrivacyConsentGrowth() {
@@ -20,12 +24,18 @@ export default function PrivacyConsentGrowth() {
   const [consent, setConsent] = useState<"unknown" | "accepted" | "declined">("unknown");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(CONSENT_KEY);
-    if (saved === "accepted" || saved === "declined") setConsent(saved);
+    try {
+      const saved = window.localStorage.getItem(CONSENT_KEY);
+      if (saved === "accepted" || saved === "declined") setConsent(saved);
+    } catch {
+      setConsent("declined");
+    }
   }, []);
 
   useEffect(() => {
     if (consent !== "accepted" || !pathname) return;
+    const visitorId = getVisitorId();
+    if (!visitorId) return;
     const allowedPath = pathname.slice(0, 300);
     void fetch("/api/growth/events", {
       method: "POST",
@@ -35,14 +45,18 @@ export default function PrivacyConsentGrowth() {
       body: JSON.stringify({
         event: "page_view",
         consent: true,
-        visitorId: getVisitorId(),
+        visitorId,
         path: allowedPath,
       }),
     }).catch(() => undefined);
   }, [consent, pathname]);
 
   function choose(value: "accepted" | "declined") {
-    window.localStorage.setItem(CONSENT_KEY, value);
+    try {
+      window.localStorage.setItem(CONSENT_KEY, value);
+    } catch {
+      if (value === "accepted") return;
+    }
     setConsent(value);
   }
 
