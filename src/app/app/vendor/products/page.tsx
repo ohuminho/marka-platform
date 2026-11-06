@@ -427,6 +427,7 @@ export default function VendorProductsPage() {
                   <div className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
                     <p className="marka-kicker">A SUA LOJA</p>
                     <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">{vendor.store.name}</h2>
+                    <Link href={`/loja/${vendor.store.id}`} target="_blank" className="mt-3 inline-flex text-xs font-semibold text-[var(--theme-text)] underline decoration-[var(--theme-border)] underline-offset-4">Ver loja pública →</Link>
                     <p className="mt-3 text-sm text-[var(--theme-text-muted)]">Estado da loja: {vendor.store.status} · Estado da conta: {vendor.status}</p>
                     <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">A sua loja está publicada e pode ser descoberta no Marketplace. A verificação MARKA Verified é opcional e acrescenta um sinal de confiança; não é necessária para vender.</p>
                   </div>
