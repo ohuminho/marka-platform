@@ -61,6 +61,7 @@ function VehicleArtwork({ kind, label }: { kind: VehicleKind; label: string }) {
         </linearGradient>
       </defs>
       <ellipse cx="320" cy="246" rx="238" ry="22" fill="#000" opacity=".42" />
+      {!isBike && <g>
       <path d="M70 224C90 208 112 201 151 195L205 130C222 109 245 99 275 96L395 96C426 97 451 111 471 139L511 188L554 199C572 204 584 217 586 235L585 247H55L56 237C58 231 63 227 70 224Z" fill={`url(#body-${kind})`} stroke="#F5D98F" strokeOpacity=".8" strokeWidth="3"/>
       <path d="M222 137C238 116 255 109 279 108H392C414 109 433 120 449 143L478 183H184L222 137Z" fill={`url(#glass-${kind})`} stroke="#F5D98F" strokeOpacity=".55" strokeWidth="3"/>
       <path d="M326 110V183M190 187H482" stroke="#F5D98F" strokeOpacity=".5" strokeWidth="3"/>
@@ -71,6 +72,7 @@ function VehicleArtwork({ kind, label }: { kind: VehicleKind; label: string }) {
       <circle cx="477" cy="237" r="39" fill="#080A0D" stroke="#A9A9A9" strokeWidth="5"/>
       <circle cx="477" cy="237" r="19" fill="#A78B58" stroke="#E9D5A5" strokeWidth="4"/>
       <path d="M108 180H150M493 181H530" stroke="#FFF1CC" strokeWidth="4" strokeLinecap="round"/>
+      </g>}
       {isBike && <g transform="translate(0 2)"><path d="M170 210L240 165L330 165L390 210L460 210" stroke="#E9BD58" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"/><path d="M240 165L280 115L355 115L390 165" stroke="#D9DDE0" strokeWidth="10" strokeLinecap="round"/><path d="M280 115L300 90H355" stroke="#E9BD58" strokeWidth="8" strokeLinecap="round"/><circle cx="170" cy="210" r="36" fill="#090B0E" stroke="#D6D6D6" strokeWidth="7"/><circle cx="460" cy="210" r="36" fill="#090B0E" stroke="#D6D6D6" strokeWidth="7"/></g>}
       {isVan && <path d="M354 112V188M385 112V188" stroke="#5D6670" strokeWidth="4" />}
       {kind === "executive" && <path d="M218 193H450" stroke="#FFF0C8" strokeOpacity=".35" strokeWidth="2" />}
