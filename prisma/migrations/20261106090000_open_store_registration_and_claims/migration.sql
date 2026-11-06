@@ -1,5 +1,15 @@
 -- Make store publication independent from verification.
 -- Pending legacy applications become visible; suspended/closed records remain untouched.
+-- Publish stocked draft listings that were held only because the legacy store application was pending.
+UPDATE "Product" AS product
+SET "status" = 'ACTIVE', "updatedAt" = CURRENT_TIMESTAMP
+FROM "Store" AS store
+JOIN "Vendor" AS vendor ON vendor."id" = store."vendorId"
+WHERE product."storeId" = store."id"
+  AND product."status" = 'DRAFT'
+  AND product."stock" > 0
+  AND (vendor."status" = 'PENDING' OR store."status" = 'INACTIVE');
+
 UPDATE "Vendor"
 SET "status" = 'ACTIVE', "updatedAt" = CURRENT_TIMESTAMP
 WHERE "status" = 'PENDING';
