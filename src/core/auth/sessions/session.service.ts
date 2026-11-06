@@ -27,11 +27,6 @@ export class SessionService {
   private readonly sessionDurationMs =
     AuthConfig.session.durationHours * 60 * 60 * 1000;
 
-  // Session activity is persisted at most once every five minutes. Updating
-  // lastSeenAt on every API request creates avoidable write pressure on the
-  // small transaction pool used by serverless instances.
-  private readonly activityWriteIntervalMs = 5 * 60 * 1000;
-
   private hashToken(token: string): string {
     return createHash("sha256")
       .update(token)
@@ -79,6 +74,10 @@ export class SessionService {
 
     const tokenHash = this.hashToken(token);
 
+    // Keep session validation read-only. Writing lastSeenAt on the
+    // authentication hot path adds a second database round-trip to
+    // nearly every authenticated request and can exhaust the small
+    // per-instance Prisma pool under serverless concurrency.
     const session = await prisma.session.findUnique({
       where: {
         tokenHash,
@@ -95,28 +94,6 @@ export class SessionService {
 
     if (!session || session.revokedAt || session.expiresAt <= new Date()) {
       return null;
-    }
-
-    const now = new Date();
-    const activityCutoff = new Date(
-      now.getTime() - this.activityWriteIntervalMs
-    );
-
-    // Conditional update makes concurrent requests safe: only the first
-    // request after the interval advances the activity timestamp.
-    if (!session.lastSeenAt || session.lastSeenAt <= activityCutoff) {
-      await prisma.session.updateMany({
-        where: {
-          id: session.id,
-          OR: [
-            { lastSeenAt: null },
-            { lastSeenAt: { lte: activityCutoff } },
-          ],
-        },
-        data: {
-          lastSeenAt: now,
-        },
-      });
     }
 
     return {
