@@ -164,13 +164,13 @@ export async function POST(request: Request) {
     const details: string[] = [];
     const attributes: Record<string, string> = {};
     const itemConditionLabels = { NEW: "Novo", USED: "Usado", REFURBISHED: "Recondicionado" } as const;
+    const addDetail = (label: string, value: unknown) => {
+      if (value !== undefined && value !== null && value !== "") details.push(`${label}: ${String(value)}`);
+    };
     if (input.itemCondition) {
       attributes.itemCondition = input.itemCondition;
       addDetail("Estado do artigo", itemConditionLabels[input.itemCondition]);
     }
-    const addDetail = (label: string, value: unknown) => {
-      if (value !== undefined && value !== null && value !== "") details.push(`${label}: ${String(value)}`);
-    };
     if (categoryName === "automóveis" || categoryName === "motociclos") {
       addDetail("Marca", input.brand); addDetail("Modelo", input.model); addDetail("Ano", input.year);
       addDetail("Quilometragem (km)", input.mileage);
