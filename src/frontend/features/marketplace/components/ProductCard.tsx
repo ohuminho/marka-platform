@@ -13,6 +13,13 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
   const currency = "AOA";
   const [adding, setAdding] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const canPurchase = product.status === "ACTIVE" && product.stock > 0;
+  const availabilityLabel = canPurchase ? "Disponível" : "Indisponível";
+  const stockLabel = product.stock < 1
+    ? "Sem stock"
+    : product.stock <= 3
+      ? `Últimas ${product.stock} unidades`
+      : `${product.stock} disponíveis`;
 
   async function addToCart() {
     if (adding || product.status !== "ACTIVE" || product.stock < 1) return;
@@ -48,7 +55,7 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
     <article className="group overflow-hidden rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2.5 backdrop-blur-xl transition duration-500 hover:-translate-y-1 hover:shadow-[0_32px_90px_rgba(0,0,0,0.16)]">
       <Link href={`/produto/${product.id}`} aria-label={`Ver ${product.name}`} className="relative block aspect-[4/4.3] overflow-hidden rounded-[1rem] bg-[var(--theme-background)]">
         {product.image ? (
-          <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]" />
+          <img src={product.image} alt={product.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]" />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
             <span className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text-faint)]">MARKA</span>
@@ -79,9 +86,11 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-[var(--theme-border)] pt-4">
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">{t.stock}: {product.stock}</span>
-          <span className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">
-            {product.status}
+          <span className="text-[10px] tracking-[0.04em] text-[var(--theme-text-faint)]" aria-label={`Stock: ${product.stock}`}>
+            {t.stock}: {stockLabel}
+          </span>
+          <span className={`rounded-full border px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] ${canPurchase ? "border-[var(--theme-border)] text-[var(--theme-text-muted)]" : "border-[var(--theme-border)] text-[var(--theme-text-faint)]"}`}>
+            {availabilityLabel}
           </span>
         </div>
 
@@ -89,10 +98,10 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
         <button
           type="button"
           onClick={() => void addToCart()}
-          disabled={adding || product.status !== "ACTIVE" || product.stock < 1}
+          disabled={adding || !canPurchase}
           className="mt-4 w-full rounded-full bg-[var(--theme-text)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {adding ? "A adicionar..." : product.status !== "ACTIVE" || product.stock < 1 ? "Indisponível" : "Adicionar ao carrinho"}
+          {adding ? "A adicionar..." : canPurchase ? "Adicionar ao carrinho" : "Indisponível"}
         </button>
       </div>
     </article>
