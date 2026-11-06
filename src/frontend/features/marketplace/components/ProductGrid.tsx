@@ -31,6 +31,8 @@ export default function ProductGrid() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState("latest");
   const [categoryId, setCategoryId] = useState("");
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const selectedCategory = categories.find((category) => category.id === categoryId);
 
   useEffect(() => {
     trackGrowthEvent("marketplace_view");
@@ -107,43 +109,67 @@ export default function ProductGrid() {
       </div>
 
       {categories.length > 0 && (
-        <nav aria-label="Categorias do Marketplace" className="mt-5 flex gap-2 overflow-x-auto pb-2">
-          <button type="button" onClick={() => setCategoryId("")} aria-pressed={!categoryId}
-            className={`shrink-0 rounded-full border px-4 py-2.5 text-xs transition ${!categoryId ? "border-[var(--theme-text)] bg-[var(--theme-text)] text-[var(--theme-background)]" : "border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:bg-[var(--theme-surface)]"}`}>
-            Todas as categorias
+        <section className="mt-5" aria-label="Selector de categorias do Marketplace">
+          <button
+            type="button"
+            onClick={() => setCategoriesOpen((open) => !open)}
+            aria-expanded={categoriesOpen}
+            aria-controls="marketplace-category-options"
+            className="flex w-full items-center justify-between gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-4 text-left transition hover:border-[var(--theme-accent)] sm:px-5"
+          >
+            <span className="min-w-0">
+              <span className="block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Filtrar ofertas</span>
+              <span className="mt-1 block truncate text-sm font-semibold text-[var(--theme-text)]">
+                {selectedCategory?.name ?? "Categorias"}
+              </span>
+              <span className="mt-1 block text-xs text-[var(--theme-text-muted)]">
+                {selectedCategory ? "Categoria seleccionada" : `Escolha entre ${categories.length} categorias disponíveis`}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-3">
+              <span className="hidden rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)] sm:inline">
+                {categories.length} categorias
+              </span>
+              <span aria-hidden="true" className={`text-xl text-[var(--theme-text-muted)] transition-transform ${categoriesOpen ? "rotate-180" : ""}`}>⌄</span>
+            </span>
           </button>
-          {categories.map((category) => (
-            <button key={category.id} type="button" onClick={() => setCategoryId(category.id)} aria-pressed={categoryId === category.id}
-              className={`shrink-0 rounded-full border px-4 py-2.5 text-xs transition ${categoryId === category.id ? "border-[var(--theme-text)] bg-[var(--theme-text)] text-[var(--theme-background)]" : "border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:bg-[var(--theme-surface)]"}`}>
-              {category.name}
-            </button>
-          ))}
-        </nav>
-      )}
 
-      {categories.length > 0 && (
-        <section aria-label="Diretório de indústrias MARKA" className="mt-8">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Ecossistema multi-indústria</p>
-              <h3 className="marka-editorial mt-1 text-2xl text-[var(--theme-text)]">Explore por indústria.</h3>
-              <p className="mt-2 text-xs text-[var(--theme-text-muted)]">Comércio, serviços, espaços e soluções empresariais numa única plataforma.</p>
+          {categoriesOpen && (
+            <div
+              id="marketplace-category-options"
+              className="mt-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:p-4"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Todas as categorias</p>
+                <button
+                  type="button"
+                  onClick={() => { setCategoryId(""); setCategoriesOpen(false); }}
+                  aria-pressed={!categoryId}
+                  className={`rounded-full border px-3 py-2 text-[10px] transition ${!categoryId ? "border-[var(--theme-text)] bg-[var(--theme-text)] text-[var(--theme-background)]" : "border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:bg-[var(--theme-background)]"}`}
+                >
+                  Ver tudo
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => {
+                      setCategoryId(category.id);
+                      setCategoriesOpen(false);
+                      document.getElementById("marketplace-offers")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    aria-pressed={categoryId === category.id}
+                    className={`flex min-h-12 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-xs transition ${categoryId === category.id ? "border-[var(--theme-text)] bg-[var(--theme-text)] font-semibold text-[var(--theme-background)]" : "border-[var(--theme-border)] text-[var(--theme-text)] hover:border-[var(--theme-accent)] hover:bg-[var(--theme-background)]"}`}
+                  >
+                    <span>{category.name}</span>
+                    <span aria-hidden="true" className="shrink-0 opacity-55">↗</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <span className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">{categories.length} categorias activas</span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {categories.map((category, index) => (
-              <button key={category.id} type="button" onClick={() => { setCategoryId(category.id); document.getElementById("marketplace-offers")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-                aria-pressed={categoryId === category.id}
-                className={`group flex min-h-[76px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${categoryId === category.id ? "border-[var(--theme-text)] bg-[var(--theme-text)] text-[var(--theme-background)]" : "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)] hover:-translate-y-0.5 hover:border-[var(--theme-accent)]"}`}>
-                <span className="min-w-0">
-                  <span className="block text-[9px] uppercase tracking-[0.18em] opacity-55">Indústria {String(index + 1).padStart(2, "0")}</span>
-                  <span className="mt-1 block text-xs font-semibold leading-5">{category.name}</span>
-                </span>
-                <span aria-hidden="true" className="shrink-0 text-base opacity-55 transition group-hover:translate-x-0.5">↗</span>
-              </button>
-            ))}
-          </div>
+          )}
         </section>
       )}
 
