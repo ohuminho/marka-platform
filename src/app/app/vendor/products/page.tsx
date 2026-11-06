@@ -145,10 +145,7 @@ export default function VendorProductsPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível criar a loja.");
-      const createdVendor = data.vendor as { status?: string; store?: { status?: string } } | undefined;
-      setNotice(createdVendor?.status === "ACTIVE" && createdVendor.store?.status === "ACTIVE"
-        ? "Loja criada e ativa. Já pode adicionar produtos e publicar anúncios elegíveis. A verificação Verified é opcional e pode ser solicitada separadamente."
-        : "Pedido de abertura recebido. Pode preparar o catálogo enquanto a equipa analisa a loja; a publicação ficará disponível quando a loja for ativada.");
+      setNotice("Loja criada e publicada. Já pode adicionar produtos e receber pedidos. A verificação MARKA Verified é opcional e pode ser solicitada separadamente para reforçar a confiança dos compradores.");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível criar a loja.");
@@ -422,7 +419,7 @@ export default function VendorProductsPage() {
                     {form.categoryName.startsWith("Serviços") && <fieldset className="space-y-4 rounded-xl border border-[var(--theme-border)] p-4"><legend className={label}>Detalhes do serviço</legend>
                       <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="serviceAvailability">Disponibilidade</label><input id="serviceAvailability" className={field} value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })} placeholder="Ex.: Segunda a sábado" /></div><div><label className={label} htmlFor="serviceDuration">Duração estimada</label><input id="serviceDuration" className={field} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="Ex.: 2 horas" /></div></div>
                     </fieldset>}
-                    <button disabled={saving || uploadingImage} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A guardar…" : "Guardar anúncio como rascunho"}</button>
+                    <button disabled={saving || uploadingImage} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A publicar…" : "Publicar anúncio"}</button>
                   </form>
                 </div>
 
@@ -431,11 +428,11 @@ export default function VendorProductsPage() {
                     <p className="marka-kicker">A SUA LOJA</p>
                     <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">{vendor.store.name}</h2>
                     <p className="mt-3 text-sm text-[var(--theme-text-muted)]">Estado da loja: {vendor.store.status} · Estado da conta: {vendor.status}</p>
-                    <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">Pode preparar anúncios enquanto a candidatura é analisada. A publicação e a receção de encomendas dependem da aprovação comercial.</p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">A sua loja está publicada e pode ser descoberta no Marketplace. A verificação MARKA Verified é opcional e acrescenta um sinal de confiança; não é necessária para vender.</p>
                   </div>
                   <div className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
                     <div className="flex items-center justify-between gap-4"><div><p className="marka-kicker">CATÁLOGO</p><h2 className="marka-editorial mt-2 text-2xl text-[var(--theme-text)]">Os seus anúncios</h2></div><button onClick={() => void load()} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs text-[var(--theme-text-muted)]">Atualizar</button></div>
-                    {products.length === 0 ? <div className="mt-6 rounded-xl border border-dashed border-[var(--theme-border)] p-8 text-center"><p className="text-sm text-[var(--theme-text)]">Ainda não tem anúncios.</p><p className="mt-2 text-xs leading-6 text-[var(--theme-text-muted)]">Use o formulário para criar o primeiro produto. Ele ficará guardado como rascunho até poder ser publicado.</p></div> : <div className="mt-6 space-y-3">
+                    {products.length === 0 ? <div className="mt-6 rounded-xl border border-dashed border-[var(--theme-border)] p-8 text-center"><p className="text-sm text-[var(--theme-text)]">Ainda não tem anúncios.</p><p className="mt-2 text-xs leading-6 text-[var(--theme-text-muted)]">Use o formulário para publicar o primeiro produto. Os anúncios elegíveis ficam visíveis no Marketplace assim que forem guardados.</p></div> : <div className="mt-6 space-y-3">
                       {products.map((product) => <article key={product.id} className="flex gap-4 rounded-xl border border-[var(--theme-border)] p-4">
                         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-[var(--theme-background)]">{product.image ? <img src={product.image} alt={product.name} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[9px] tracking-[0.2em] text-[var(--theme-text-faint)]">MARKA</div>}</div>
                         <div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-medium text-[var(--theme-text)]">{product.name}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase tracking-[0.15em] text-[var(--theme-text-muted)]">{product.status}</span></div><p className="mt-1 text-sm text-[var(--theme-text-muted)]">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(product.price)} · Stock {product.stock}</p><p className="mt-1 text-xs text-[var(--theme-text-faint)]">{product.category?.name ?? "Sem categoria"} · SKU {product.sku}</p>{product.attributes?.galleryImages && (() => { try { const gallery = JSON.parse(product.attributes.galleryImages) as string[]; return gallery.length > 1 ? <div className="mt-3 flex gap-2 overflow-x-auto">{gallery.map((url, index) => <img key={url} src={url} alt={`Fotografia ${index + 1} de ${product.name}`} className="h-14 w-14 shrink-0 rounded-lg border border-[var(--theme-border)] object-cover" />)}</div> : null; } catch { return null; } })()}
