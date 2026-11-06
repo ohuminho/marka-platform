@@ -54,10 +54,22 @@ export async function POST(request: Request) {
       },
       select: {
         id: true,
+        status: true,
       },
     });
 
     if (existingUser) {
+      if (existingUser.status === "PENDING_VERIFICATION") {
+        return NextResponse.json(
+          {
+            message:
+              "Esta conta já existe, mas ainda aguarda a confirmação do e-mail. Pode solicitar um novo link de verificação.",
+            code: "EMAIL_VERIFICATION_PENDING",
+          },
+          { status: 409 }
+        );
+      }
+
       return NextResponse.json(
         {
           message:

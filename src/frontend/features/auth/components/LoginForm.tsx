@@ -99,6 +99,9 @@ export default function LoginForm() {
         ) ||
         normalizedErrorMessage.includes(
           "verify your email"
+        ) ||
+        normalizedErrorMessage.includes(
+          "verifica"
         );
 
       if (requiresEmailVerification) {
@@ -330,8 +333,7 @@ export default function LoginForm() {
         </button>
       </form>
 
-      {!isRegistering &&
-        showResend && (
+      {showResend && (
           <button
             type="button"
             onClick={
