@@ -13,6 +13,9 @@ const requestSchema = z.object({
     .max(254),
 });
 
+const genericMessage =
+  "If the account exists and requires verification, a new verification email will be sent.";
+
 export async function POST(
   request: Request
 ) {
@@ -23,12 +26,9 @@ export async function POST(
       requestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return Response.json(
-        {
-          message:
-            "If the account exists and requires verification, a new verification email will be sent.",
-        }
-      );
+      return Response.json({
+        message: genericMessage,
+      });
     }
 
     const user =
@@ -56,8 +56,7 @@ export async function POST(
         "PENDING_VERIFICATION"
     ) {
       return Response.json({
-        message:
-          "If the account exists and requires verification, a new verification email will be sent.",
+        message: genericMessage,
       });
     }
 
@@ -84,8 +83,7 @@ export async function POST(
     });
 
     return Response.json({
-      message:
-        "If the account exists and requires verification, a new verification email will be sent.",
+      message: genericMessage,
     });
   } catch (error) {
     console.error(
@@ -93,9 +91,16 @@ export async function POST(
       error
     );
 
-    return Response.json({
-      message:
-        "If the account exists and requires verification, a new verification email will be sent.",
-    });
+    // Never report a successful resend when the database or email
+    // provider failed. The response remains generic and reveals no
+    // account details.
+    return Response.json(
+      {
+        message:
+          "Não foi possível enviar o e-mail de verificação neste momento. Tente novamente mais tarde.",
+        code: "VERIFICATION_EMAIL_DELIVERY_FAILED",
+      },
+      { status: 503 }
+    );
   }
 }
