@@ -759,6 +759,8 @@ model User {
   roles                   UserRole[]
 
   vendors              Vendor[]              @relation("VendorOwner")
+  storeClaimsSubmitted StoreClaimRequest[] @relation("StoreClaimClaimant")
+  storeClaimsReviewed  StoreClaimRequest[] @relation("StoreClaimReviewer")
   wallet               Wallet?
   accounts             Account[]             @relation("UserAccountOwner")
   financialInstruments FinancialInstrument[] @relation("UserFinancialInstruments")
@@ -966,12 +968,40 @@ model Store {
   vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   products Product[]
+  claimRequests StoreClaimRequest[]
   conversations MarketplaceConversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
+}
+
+model StoreClaimRequest {
+  id             String   @id @default(uuid())
+  storeId        String
+  claimantUserId String
+  claimantName   String
+  claimantPhone  String
+  claimantEmail  String?
+  businessType   String   @default("INDIVIDUAL")
+  reason         String   @db.Text
+  evidenceUrl    String?
+  status         String   @default("PENDING")
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  decisionNote   String?  @db.Text
+
+  store     Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  claimant  User  @relation("StoreClaimClaimant", fields: [claimantUserId], references: [id], onDelete: Cascade)
+  reviewer  User? @relation("StoreClaimReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, claimantUserId])
+  @@index([status, createdAt])
+  @@index([claimantUserId, createdAt])
 }
 
 model Category {
