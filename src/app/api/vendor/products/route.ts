@@ -5,7 +5,6 @@ import { z } from "zod";
 
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
-import { getPublicSellerVerification } from "@/services/compliance/public-seller-verification.service";
 
 export const dynamic = "force-dynamic";
 
@@ -142,17 +141,6 @@ export async function POST(request: Request) {
 
     const input = parsed.data;
     const categoryName = input.categoryName.toLocaleLowerCase();
-    const sensitiveCategory =
-      ["automóveis", "motociclos", "imóveis e arrendamento"].includes(categoryName) ||
-      input.price >= 5_000_000;
-    const identity = await getPublicSellerVerification([{
-      id: vendor.id,
-      ownerId: vendor.ownerId,
-      organizationId: vendor.organizationId,
-      businessType: vendor.businessType,
-      status: vendor.status,
-    }]);
-    const identityVerified = identity.get(vendor.id) === true;
     const isServiceCategory = categoryName.startsWith("serviços");
     const isPropertyCategory = categoryName === "imóveis e arrendamento";
     if (isServiceCategory && !input.serviceType.trim()) {
@@ -216,14 +204,12 @@ export async function POST(request: Request) {
         price: input.price.toFixed(4),
         currency: input.currency.toUpperCase(),
         stock: input.stock,
-        // Any approved seller type may publish eligible low-risk listings.
-        // Company sellers must not be forced into DRAFT solely because they are companies.
-        // High-risk categories and high-value listings remain gated below and in the publish action.
+        // Verification is a trust signal, not a publication prerequisite.
+        // Active stores may publish legal listings regardless of verification status.
         status:
           vendor.status === "ACTIVE" &&
           vendor.store.status === "ACTIVE" &&
-          input.stock > 0 &&
-          !sensitiveCategory
+          input.stock > 0
             ? "ACTIVE"
             : "DRAFT",
         storeId: vendor.store.id,
@@ -249,12 +235,8 @@ export async function POST(request: Request) {
         category: product.category ? { id: product.category.id, name: product.category.name } : null,
       },
       message: product.status === "ACTIVE"
-        ? (identityVerified
-            ? "Produto publicado no Marketplace."
-            : "Produto publicado. A identidade do vendedor ainda não foi verificada.")
-        : (sensitiveCategory
-            ? "Anúncio guardado como rascunho. Esta categoria ou valor exige verificação de identidade e validação adicional."
-            : "Produto guardado como rascunho. Adicione stock ou aguarde a aprovação da loja."),
+        ? "Produto publicado no Marketplace. A verificação MARKA Verified é opcional e reforça a confiança dos compradores."
+        : "Anúncio guardado como rascunho. Confirme que a loja está ativa e adicione stock para o publicar.",
     }, { status: 201 });
   } catch (error) {
     console.error("[VENDOR_PRODUCTS_POST]", error);
@@ -286,24 +268,7 @@ export async function PATCH(request: Request) {
 
     if (action === "publish") {
       if (vendor.status !== "ACTIVE" || vendor.store.status !== "ACTIVE") {
-        return NextResponse.json({ message: "A loja ainda aguarda aprovação ou está suspensa.", code: "SELLER_APPROVAL_REQUIRED" }, { status: 409 });
-      }
-      const categoryName = product.category?.name?.trim().toLocaleLowerCase() ?? "";
-      const sensitiveCategory =
-        ["automóveis", "motociclos", "imóveis e arrendamento"].includes(categoryName) ||
-        Number(product.price) >= 5_000_000;
-      if (sensitiveCategory) {
-        const identity = await getPublicSellerVerification([{
-          id: vendor.id,
-          ownerId: vendor.ownerId,
-          organizationId: vendor.organizationId,
-          businessType: vendor.businessType,
-          status: vendor.status,
-        }]);
-        if (identity.get(vendor.id) !== true) {
-          return NextResponse.json({ message: "Esta categoria ou valor exige identidade verificada antes da publicação.", code: "SELLER_VERIFICATION_REQUIRED" }, { status: 403 });
-        }
-        return NextResponse.json({ message: "A publicação desta categoria exige também validação documental de propriedade ou autorização.", code: "OWNERSHIP_REVIEW_REQUIRED" }, { status: 409 });
+        return NextResponse.json({ message: "A loja está suspensa ou indisponível. Contacte o suporte.", code: "STORE_NOT_AVAILABLE" }, { status: 409 });
       }
       if (product.stock < 1) return NextResponse.json({ message: "Adicione stock antes de publicar." }, { status: 422 });
       const updated = await prisma.product.update({ where: { id: product.id }, data: { status: "ACTIVE" } });
