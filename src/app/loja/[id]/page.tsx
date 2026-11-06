@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/database/client/prisma";
 import { getPublicSellerVerification } from "@/services/compliance/public-seller-verification.service";
 import GrowthEntityEvent from "@/frontend/components/GrowthEntityEvent";
+import StoreClaimForm from "@/frontend/features/marketplace/components/StoreClaimForm";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -113,12 +114,13 @@ export default async function PublicStorePage({ params }: PageProps) {
                 {store.verified && <span className="rounded-full border border-[#d9b36a]/40 bg-[#d9b36a]/10 px-3 py-1.5 text-[#f2d18e]">MARKA Verified</span>}
                 {store.location && <span>{store.location}</span>}
                 <span>{store.products.length} ofertas disponíveis</span>
-                <span>Proprietário: {store.owner.name}</span>
+                <Link href={`/perfil/${store.owner.id}`} className="underline decoration-white/30 underline-offset-4 hover:text-white">Proprietário: {store.owner.name}</Link>
               </div>
             </div>
           </div>
           {store.description && <p className="max-w-3xl px-6 pb-7 text-sm leading-7 text-white/65 sm:px-9">{store.description}</p>}
         </div>
+        <StoreClaimForm storeId={store.id} />
         <section className="mt-12">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div><p className="text-xs font-semibold uppercase tracking-[.24em] text-[#e4b963]">Catálogo</p><h2 className="mt-2 text-2xl font-bold">Produtos desta loja</h2></div>
