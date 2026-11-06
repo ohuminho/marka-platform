@@ -46,14 +46,14 @@ export default function LoginForm() {
     if (isRegistering) {
       if (password !== confirmPassword) {
         setMessage(
-          "Passwords do not match."
+          "As palavras-passe não coincidem."
         );
         return;
       }
 
       if (password.length < 12) {
         setMessage(
-          "Password must contain at least 12 characters."
+          "A palavra-passe deve conter pelo menos 12 caracteres."
         );
         return;
       }
@@ -70,7 +70,7 @@ export default function LoginForm() {
         );
 
         setMessage(
-          "Account created. Check your email to verify your account."
+          "Conta criada. Consulte o seu e-mail para confirmar a conta."
         );
 
         setPassword("");
@@ -86,7 +86,7 @@ export default function LoginForm() {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Unable to complete the request.";
+          : "Não foi possível concluir o pedido.";
 
       const normalizedErrorMessage =
         errorMessage.toLowerCase();
@@ -115,7 +115,7 @@ export default function LoginForm() {
   async function handleResendVerification() {
     if (!email.trim()) {
       setMessage(
-        "Enter your email address first."
+        "Introduza primeiro o seu endereço de e-mail."
       );
       return;
     }
@@ -147,12 +147,12 @@ export default function LoginForm() {
         throw new Error(
           typeof data?.message === "string"
             ? data.message
-            : "Unable to resend verification email."
+            : "Não foi possível reenviar o e-mail de verificação."
         );
       }
 
       setMessage(
-        "A new verification email has been sent. Please check your inbox."
+        "Foi enviado um novo e-mail de verificação. Consulte a sua caixa de entrada."
       );
       setShowResend(false);
     } catch (error) {
@@ -204,7 +204,7 @@ export default function LoginForm() {
               : "text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"
           }`}
         >
-          Sign in
+          Entrar
         </button>
 
         <button
@@ -218,7 +218,7 @@ export default function LoginForm() {
               : "text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"
           }`}
         >
-          Create account
+          Criar conta
         </button>
       </div>
 
@@ -244,7 +244,7 @@ export default function LoginForm() {
         {isRegistering && (
           <input
             type="text"
-            placeholder="Full name"
+            placeholder="Nome completo"
             value={name}
             onChange={(event) =>
               setName(event.target.value)
@@ -257,7 +257,7 @@ export default function LoginForm() {
 
         <input
           type="email"
-          placeholder="Email"
+          placeholder="E-mail"
           value={email}
           onChange={(event) =>
             setEmail(event.target.value)
@@ -269,7 +269,7 @@ export default function LoginForm() {
 
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Palavra-passe"
           value={password}
           onChange={(event) =>
             setPassword(event.target.value)
@@ -286,7 +286,7 @@ export default function LoginForm() {
         {isRegistering && (
           <input
             type="password"
-            placeholder="Confirm password"
+            placeholder="Confirmar palavra-passe"
             value={confirmPassword}
             onChange={(event) =>
               setConfirmPassword(
@@ -302,7 +302,7 @@ export default function LoginForm() {
         {isRegistering && (
           <div className="space-y-2 px-1">
             <p className="text-xs leading-5 text-[var(--theme-text-faint)]">
-              Your password must contain at least 12 characters.
+              A palavra-passe deve conter pelo menos 12 caracteres.
             </p>
             <p className="text-xs leading-5 text-[var(--theme-text-muted)]">
               Já tens uma conta MARKA? Inicia sessão com a mesma conta para pedir viagens ou candidatar-te como motorista. Não cries uma segunda conta para conduzir.
@@ -311,7 +311,7 @@ export default function LoginForm() {
         )}
 
         {message && (
-          <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.05] px-4 py-3 text-sm leading-5 text-[var(--theme-text-muted)]">
+          <div role="status" aria-live="polite" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.05] px-4 py-3 text-sm leading-5 text-[var(--theme-text-muted)]">
             {message}
           </div>
         )}
@@ -325,11 +325,11 @@ export default function LoginForm() {
         >
           {loading
             ? isRegistering
-              ? "Creating account..."
-              : "Authenticating..."
+              ? "A criar conta..."
+              : "A autenticar..."
             : isRegistering
-              ? "Create MARKA account"
-              : "Enter MARKA"}
+              ? "Criar conta MARKA"
+              : "Entrar na MARKA"}
         </button>
       </form>
 
@@ -345,17 +345,17 @@ export default function LoginForm() {
             className="mt-4 w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] py-3.5 text-sm font-medium text-[var(--theme-text-muted)] transition hover:bg-[var(--theme-surface-strong)] hover:text-[var(--theme-text)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {resending
-              ? "Sending verification email..."
-              : "Resend verification email"}
+              ? "A enviar e-mail de verificação..."
+              : "Reenviar e-mail de verificação"}
           </button>
         )}
 
       <p className="mt-8 text-center text-xs leading-5 text-[var(--theme-text-faint)]">
-        By continuing, you agree to use MARKA responsibly and securely.
+        Ao continuar, aceita utilizar a MARKA de forma responsável e segura.
       </p>
       <div className="mt-6 flex items-center justify-center gap-2 text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
         <span className="h-1.5 w-1.5 rounded-full bg-[#e9bd58]" />
-        Secure account access
+        Acesso seguro à sua conta
       </div>
       </div>
     </div>
