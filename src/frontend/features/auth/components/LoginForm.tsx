@@ -330,8 +330,7 @@ export default function LoginForm() {
         </button>
       </form>
 
-      {!isRegistering &&
-        showResend && (
+      {showResend && (
           <button
             type="button"
             onClick={
