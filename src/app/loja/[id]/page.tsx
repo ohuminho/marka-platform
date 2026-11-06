@@ -18,6 +18,7 @@ async function getStore(id: string) {
           organizationId: true,
           businessType: true,
           status: true,
+          owner: { select: { id: true, name: true, profile: { select: { displayName: true, avatarUrl: true } } } },
         },
       },
       products: {
@@ -44,6 +45,7 @@ async function getStore(id: string) {
     banner: store.banner,
     location: store.location,
     verified: verification.get(store.vendor.id) ?? false,
+    owner: { id: store.vendor.owner.id, name: store.vendor.owner.profile?.displayName || store.vendor.owner.name, avatarUrl: store.vendor.owner.profile?.avatarUrl ?? null },
     products: store.products.map((product) => ({
       ...product,
       price: Number(product.price),
@@ -111,6 +113,7 @@ export default async function PublicStorePage({ params }: PageProps) {
                 {store.verified && <span className="rounded-full border border-[#d9b36a]/40 bg-[#d9b36a]/10 px-3 py-1.5 text-[#f2d18e]">MARKA Verified</span>}
                 {store.location && <span>{store.location}</span>}
                 <span>{store.products.length} ofertas disponíveis</span>
+                <span>Proprietário: {store.owner.name}</span>
               </div>
             </div>
           </div>
