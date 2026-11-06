@@ -75,7 +75,7 @@ export async function PATCH(request: Request) {
         location: updated.location,
         status: updated.status,
       },
-      message: "Perfil da loja atualizado. As alterações comerciais continuam sujeitas ao estado de aprovação da loja.",
+      message: "Perfil público da loja atualizado.",
     });
   } catch (error) {
     console.error("[VENDOR_STORE_PROFILE_PATCH]", error);

@@ -14,6 +14,7 @@ import { MarketplaceProduct } from "../types/marketplace.types";
 import { trackGrowthEvent } from "@/frontend/features/growth/track-growth-event";
 
 type MarketplaceCategory = { id: string; name: string };
+type MarketplaceStore = { id: string; name: string; description: string | null; logo: string | null; location: string | null; productCount: number; verified: boolean; owner: { id: string; name: string; avatarUrl: string | null } };
 type MarketplaceProductsResponse = {
   products: MarketplaceProduct[];
   categories?: MarketplaceCategory[];
@@ -23,6 +24,7 @@ export default function ProductGrid() {
   const { language } = usePlatformPreferences();
   const t = usePlatformTranslation(language);
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
+  const [stores, setStores] = useState<MarketplaceStore[]>([]);
   const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
@@ -54,6 +56,25 @@ export default function ProductGrid() {
       .catch(() => { if (!cancelled) setAdvertisements([]); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStores() {
+      try {
+        const params = new URLSearchParams();
+        if (search.trim()) params.set("search", search.trim());
+        if (verifiedOnly) params.set("verifiedOnly", "true");
+        const response = await fetch("/api/marketplace/stores?" + params.toString(), { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Não foi possível carregar as lojas.");
+        if (!cancelled) setStores(Array.isArray(data.stores) ? data.stores as MarketplaceStore[] : []);
+      } catch {
+        if (!cancelled) setStores([]);
+      }
+    }
+    void loadStores();
+    return () => { cancelled = true; };
+  }, [search, verifiedOnly]);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,6 +195,20 @@ export default function ProductGrid() {
       )}
 
       <MarketplaceFilters verifiedOnly={verifiedOnly} onVerifiedChange={setVerifiedOnly} sortBy={sortBy} onSortChange={setSortBy} />
+
+      <section className="mt-8" aria-labelledby="marketplace-stores-title">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div><p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Descobrir comerciantes</p><h2 id="marketplace-stores-title" className="marka-editorial mt-1 text-2xl text-[var(--theme-text)]">Lojas no Marketplace</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Todas as lojas ativas são visíveis. O selo Verified distingue os vendedores que concluíram a verificação.</p></div>
+          <Link href="/app/vendor/products" className="text-xs font-semibold text-[var(--theme-text)] underline decoration-[var(--theme-border)] underline-offset-4">Criar a minha loja</Link>
+        </div>
+        {stores.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {stores.map((store) => <Link key={store.id} href={"/loja/" + store.id} className="flex min-w-0 items-center gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 transition hover:border-[var(--theme-accent)]">
+            {store.logo ? <img src={store.logo} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl border border-[var(--theme-border)] object-cover" /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--theme-background)] text-lg font-bold text-[var(--theme-text-muted)]">M</div>}
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[var(--theme-text)]">{store.name}</span><span className="mt-1 block truncate text-xs text-[var(--theme-text-muted)]">{store.owner.name}{store.location ? " · " + store.location : ""}</span><span className="mt-2 inline-flex rounded-full border border-[var(--theme-border)] px-2.5 py-1 text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-muted)]">{store.verified ? "MARKA Verified" : "Loja não verificada"}</span></span>
+            <span className="shrink-0 text-xs text-[var(--theme-text-faint)]">{store.productCount} ofertas</span>
+          </Link>)}
+        </div> : <p className="mt-4 rounded-xl border border-dashed border-[var(--theme-border)] p-5 text-xs text-[var(--theme-text-muted)]">{verifiedOnly ? "Ainda não existem lojas verificadas para este filtro." : "Ainda não existem lojas públicas com este termo de pesquisa."}</p>}
+      </section>
 
       <div id="marketplace-offers" />
 

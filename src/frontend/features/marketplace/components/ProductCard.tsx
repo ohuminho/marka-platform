@@ -76,7 +76,7 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="truncate marka-editorial text-xl text-[var(--theme-text)]"><Link href={`/produto/${product.id}`} className="transition hover:underline">{product.name}</Link></h3>
-            <p className="mt-1 truncate text-xs text-[var(--theme-text-muted)]">{product.store.name}</p>
+            <Link href={`/loja/${product.store.id}`} className="mt-1 block truncate text-xs text-[var(--theme-text-muted)] underline decoration-[var(--theme-border)] underline-offset-4 hover:text-[var(--theme-text)]">{product.store.name}</Link>
           </div>
           <p className="shrink-0 text-sm font-semibold text-[var(--theme-text)]">
             {new Intl.NumberFormat(language === "pt" ? "pt-AO" : language, { style: "currency", currency }).format(product.price)}

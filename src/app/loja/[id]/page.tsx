@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/database/client/prisma";
 import { getPublicSellerVerification } from "@/services/compliance/public-seller-verification.service";
 import GrowthEntityEvent from "@/frontend/components/GrowthEntityEvent";
+import StoreClaimForm from "@/frontend/features/marketplace/components/StoreClaimForm";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -18,6 +19,7 @@ async function getStore(id: string) {
           organizationId: true,
           businessType: true,
           status: true,
+          owner: { select: { id: true, name: true, profile: { select: { displayName: true, avatarUrl: true } } } },
         },
       },
       products: {
@@ -44,6 +46,7 @@ async function getStore(id: string) {
     banner: store.banner,
     location: store.location,
     verified: verification.get(store.vendor.id) ?? false,
+    owner: { id: store.vendor.owner.id, name: store.vendor.owner.profile?.displayName || store.vendor.owner.name, avatarUrl: store.vendor.owner.profile?.avatarUrl ?? null },
     products: store.products.map((product) => ({
       ...product,
       price: Number(product.price),
@@ -108,14 +111,16 @@ export default async function PublicStorePage({ params }: PageProps) {
               <p className="text-xs font-semibold uppercase tracking-[.24em] text-[#e4b963]">Loja no Marketplace MARKA</p>
               <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{store.name}</h1>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/55">
-                {store.verified && <span className="rounded-full border border-[#d9b36a]/40 bg-[#d9b36a]/10 px-3 py-1.5 text-[#f2d18e]">MARKA Verified</span>}
+                {store.verified ? <span className="rounded-full border border-[#d9b36a]/40 bg-[#d9b36a]/10 px-3 py-1.5 text-[#f2d18e]">MARKA Verified</span> : <span className="rounded-full border border-white/15 px-3 py-1.5 text-white/50">Loja não verificada</span>}
                 {store.location && <span>{store.location}</span>}
                 <span>{store.products.length} ofertas disponíveis</span>
+                <Link href={`/perfil/${store.owner.id}`} className="underline decoration-white/30 underline-offset-4 hover:text-white">Proprietário: {store.owner.name}</Link>
               </div>
             </div>
           </div>
           {store.description && <p className="max-w-3xl px-6 pb-7 text-sm leading-7 text-white/65 sm:px-9">{store.description}</p>}
         </div>
+        <StoreClaimForm storeId={store.id} />
         <section className="mt-12">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div><p className="text-xs font-semibold uppercase tracking-[.24em] text-[#e4b963]">Catálogo</p><h2 className="mt-2 text-2xl font-bold">Produtos desta loja</h2></div>
