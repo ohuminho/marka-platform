@@ -42,6 +42,42 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
   );
 }
 
+type VehicleKind = "sedan" | "executive" | "motorcycle" | "van";
+
+function VehicleArtwork({ kind, label }: { kind: VehicleKind; label: string }) {
+  const isBike = kind === "motorcycle";
+  const isVan = kind === "van";
+  return (
+    <svg viewBox="0 0 640 300" role="img" aria-label={label} className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`body-${kind}`} x1="120" y1="80" x2="500" y2="250" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#F5D98F" />
+          <stop offset=".48" stopColor="#B88935" />
+          <stop offset="1" stopColor="#51402A" />
+        </linearGradient>
+        <linearGradient id={`glass-${kind}`} x1="240" y1="90" x2="380" y2="180" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#D8E1E8" stopOpacity=".78" />
+          <stop offset="1" stopColor="#52616D" stopOpacity=".42" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="320" cy="246" rx="238" ry="22" fill="#000" opacity=".42" />
+      <path d="M70 224C90 208 112 201 151 195L205 130C222 109 245 99 275 96L395 96C426 97 451 111 471 139L511 188L554 199C572 204 584 217 586 235L585 247H55L56 237C58 231 63 227 70 224Z" fill={`url(#body-${kind})`} stroke="#F5D98F" strokeOpacity=".8" strokeWidth="3"/>
+      <path d="M222 137C238 116 255 109 279 108H392C414 109 433 120 449 143L478 183H184L222 137Z" fill={`url(#glass-${kind})`} stroke="#F5D98F" strokeOpacity=".55" strokeWidth="3"/>
+      <path d="M326 110V183M190 187H482" stroke="#F5D98F" strokeOpacity=".5" strokeWidth="3"/>
+      <path d="M82 215L148 204L176 211M510 202L554 211" stroke="#FFF0C8" strokeOpacity=".75" strokeWidth="5" strokeLinecap="round"/>
+      <path d="M70 231H120M530 231H577" stroke="#F6D98A" strokeWidth="5" strokeLinecap="round"/>
+      <circle cx="177" cy="237" r="39" fill="#080A0D" stroke="#A9A9A9" strokeWidth="5"/>
+      <circle cx="177" cy="237" r="19" fill="#A78B58" stroke="#E9D5A5" strokeWidth="4"/>
+      <circle cx="477" cy="237" r="39" fill="#080A0D" stroke="#A9A9A9" strokeWidth="5"/>
+      <circle cx="477" cy="237" r="19" fill="#A78B58" stroke="#E9D5A5" strokeWidth="4"/>
+      <path d="M108 180H150M493 181H530" stroke="#FFF1CC" strokeWidth="4" strokeLinecap="round"/>
+      {isBike && <g transform="translate(0 2)"><path d="M170 210L240 165L330 165L390 210L460 210" stroke="#E9BD58" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"/><path d="M240 165L280 115L355 115L390 165" stroke="#D9DDE0" strokeWidth="10" strokeLinecap="round"/><path d="M280 115L300 90H355" stroke="#E9BD58" strokeWidth="8" strokeLinecap="round"/><circle cx="170" cy="210" r="36" fill="#090B0E" stroke="#D6D6D6" strokeWidth="7"/><circle cx="460" cy="210" r="36" fill="#090B0E" stroke="#D6D6D6" strokeWidth="7"/></g>}
+      {isVan && <path d="M354 112V188M385 112V188" stroke="#5D6670" strokeWidth="4" />}
+      {kind === "executive" && <path d="M218 193H450" stroke="#FFF0C8" strokeOpacity=".35" strokeWidth="2" />}
+    </svg>
+  );
+}
+
 export default function MobilityExperience() {
   const [origin, setOrigin] = useState<MapPoint | null>(null);
   const [destination, setDestination] = useState<MapPoint | null>(null);
@@ -124,12 +160,6 @@ export default function MobilityExperience() {
       </header>
 
       <div className="relative isolate overflow-hidden rounded-[2rem] border border-[#e9bd58]/30 bg-[#07090d] shadow-[0_24px_90px_-38px_rgba(233,189,88,.22)]">
-        <img
-          src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=2000&q=85"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-30"
-        />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(5,7,10,.97)_0%,rgba(5,7,10,.88)_42%,rgba(5,7,10,.62)_100%)]" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_82%_18%,rgba(233,189,88,.22),transparent_34%),linear-gradient(0deg,rgba(5,7,10,.55),transparent_55%)]" />
         <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#e9bd58]/20 blur-3xl" />
@@ -202,15 +232,15 @@ export default function MobilityExperience() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { name: "MARKA Go", detail: "Mobilidade urbana", image: "photo-1618843479313-40f8afb4b4d8", alt: "Automóvel moderno para mobilidade urbana" },
-            { name: "MARKA Executive", detail: "Conforto executivo", image: "photo-1563720223185-11003d516935", alt: "Automóvel de luxo para transporte executivo" },
-            { name: "MARKA Business", detail: "Espaço para grupos", image: "photo-1552519507-da3b142c6e3d", alt: "Automóvel premium de carroçaria elegante" },
-            { name: "MARKA Electric", detail: "Mobilidade eléctrica", image: "photo-1593941707882-a5bba14938c7", alt: "Veículo eléctrico moderno" },
+            { name: "MARKA Go", detail: "Mobilidade urbana", kind: "sedan" as const },
+            { name: "MARKA Executive", detail: "Conforto executivo", kind: "executive" as const },
+            { name: "MARKA Moto", detail: "Mototáxi ágil", kind: "motorcycle" as const },
+            { name: "MARKA Van", detail: "Grupos e bagagem", kind: "van" as const },
           ].map((vehicle) => (
             <article key={vehicle.name} className="group overflow-hidden rounded-2xl border border-white/10 bg-[#0a0c11] transition hover:-translate-y-1 hover:border-[#e9bd58]/50">
-              <div className="relative aspect-[16/10] overflow-hidden bg-white/5">
-                <img src={`https://images.unsplash.com/${vehicle.image}?auto=format&fit=crop&w=1000&q=85`} alt={vehicle.alt} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#07090d]/70 via-transparent to-transparent" />
+              <div className="relative flex aspect-[16/10] items-center overflow-hidden bg-[radial-gradient(ellipse_at_50%_85%,rgba(233,189,88,.13),transparent_55%),linear-gradient(145deg,#171a20,#080a0e)] p-3">
+                <div aria-hidden="true" className="absolute inset-x-8 bottom-7 h-px bg-gradient-to-r from-transparent via-[#e9bd58]/45 to-transparent" />
+                <VehicleArtwork kind={vehicle.kind} label={`Ilustração vetorial MARKA: ${vehicle.name}`} />
               </div>
               <div className="p-4">
                 <h3 className="text-sm font-semibold">{vehicle.name}</h3>
