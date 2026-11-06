@@ -6,8 +6,8 @@ import { useState } from "react";
 type VerificationState = "idle" | "loading" | "success" | "error";
 
 export default function VerifyEmailClient({ token }: { token: string }) {
-  const [state, setState] = useState<VerificationState>("idle");
-  const [message, setMessage] = useState("");
+  const [state, setState] = useState<VerificationState>(token ? "idle" : "error");
+  const [message, setMessage] = useState(token ? "" : "O link de verificação não contém um token válido. Solicite um novo link.");
 
   async function confirmEmail() {
     if (!token) {
