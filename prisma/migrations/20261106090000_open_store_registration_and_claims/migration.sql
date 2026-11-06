@@ -57,3 +57,7 @@ ALTER TABLE "StoreClaimRequest"
 ALTER TABLE "StoreClaimRequest"
   ADD CONSTRAINT "StoreClaimRequest_reviewedBy_fkey"
   FOREIGN KEY ("reviewedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Claimant contact details and ownership declarations are server-only data.
+ALTER TABLE "StoreClaimRequest" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "StoreClaimRequest" FROM anon, authenticated;
