@@ -99,6 +99,9 @@ export default function LoginForm() {
         ) ||
         normalizedErrorMessage.includes(
           "verify your email"
+        ) ||
+        normalizedErrorMessage.includes(
+          "verifica"
         );
 
       if (requiresEmailVerification) {
