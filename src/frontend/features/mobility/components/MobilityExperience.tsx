@@ -256,7 +256,7 @@ export default function MobilityExperience() {
           </div>
           <Link href="/app/mobility/parceiros" className="rounded-full border border-[#e9bd58]/40 px-4 py-2.5 text-xs font-semibold text-[#f2cd70] transition hover:bg-[#e9bd58]/10">Área de parceiros ↗</Link>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
           <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
             <div><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">MARKA Grupos</p><h3 className="mt-1 text-lg font-semibold text-white">Transporte de pessoas</h3></div>
             <p className="mt-2 text-xs leading-5 text-white/50">Contratação de viaturas de maior capacidade, com motorista parceiro, para grupos e deslocações organizadas.</p>
@@ -272,9 +272,22 @@ export default function MobilityExperience() {
             </div>
             <p className="mt-2 text-xs leading-5 text-white/50">Transporte de mercadorias e materiais com viatura e motorista de um parceiro independente.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {["Triciclo de carga","Pick-up","Carrinha de caixa","Camião basculante","Camião pesado","Cisterna de água","Areia","Brita e burgau"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
+              {["Triciclo de carga","Pick-up","Carrinha de caixa","Camião basculante","Camião pesado"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
             </div>
-            <Link href="/app/marketplace" className="mt-4 inline-flex text-xs font-semibold text-[#f2cd70] underline-offset-4 hover:underline">Explorar fornecedores no Marketplace ↗</Link>
+            <p className="mt-3 text-[10px] leading-4 text-white/40">Aqui contrata-se o transporte. A viatura é escolhida conforme o tipo, o peso e o volume da carga.</p>
+            <Link href="/app/marketplace" className="mt-4 inline-flex text-xs font-semibold text-[#f2cd70] underline-offset-4 hover:underline">Encontrar transportadores ↗</Link>
+          </article>
+          <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">MARKA Supply</p><h3 className="mt-1 text-lg font-semibold text-white">Comprar água e materiais</h3></div>
+              <span className="text-2xl" aria-hidden="true">◉</span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-white/50">O cliente compra o produto por quantidade. O fornecedor vende e organiza a entrega com cisterna, basculante ou outro veículo adequado.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {["Água por litro (L)","Água por metro cúbico (m³)","Areia","Brita","Burgau"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
+            </div>
+            <p className="mt-3 text-[10px] leading-4 text-white/40">1 m³ de água = 1.000 litros. A cisterna é o veículo de entrega, não o produto vendido.</p>
+            <Link href="/app/marketplace" className="mt-4 inline-flex text-xs font-semibold text-[#f2cd70] underline-offset-4 hover:underline">Comprar produtos no Marketplace ↗</Link>
           </article>
           <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
             <div className="flex items-center justify-between gap-3">
