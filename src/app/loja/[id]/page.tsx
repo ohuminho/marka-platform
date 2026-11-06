@@ -111,7 +111,7 @@ export default async function PublicStorePage({ params }: PageProps) {
               <p className="text-xs font-semibold uppercase tracking-[.24em] text-[#e4b963]">Loja no Marketplace MARKA</p>
               <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{store.name}</h1>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/55">
-                {store.verified && <span className="rounded-full border border-[#d9b36a]/40 bg-[#d9b36a]/10 px-3 py-1.5 text-[#f2d18e]">MARKA Verified</span>}
+                {store.verified ? <span className="rounded-full border border-[#d9b36a]/40 bg-[#d9b36a]/10 px-3 py-1.5 text-[#f2d18e]">MARKA Verified</span> : <span className="rounded-full border border-white/15 px-3 py-1.5 text-white/50">Loja não verificada</span>}
                 {store.location && <span>{store.location}</span>}
                 <span>{store.products.length} ofertas disponíveis</span>
                 <Link href={`/perfil/${store.owner.id}`} className="underline decoration-white/30 underline-offset-4 hover:text-white">Proprietário: {store.owner.name}</Link>
