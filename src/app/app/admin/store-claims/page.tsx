@@ -33,7 +33,7 @@ export default function AdminStoreClaimsPage() {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
 
   async function decide(claim: Claim, action: "APPROVE" | "REJECT") {
     const decisionNote = window.prompt(action === "APPROVE" ? "Nota interna da transferência (opcional):" : "Motivo da rejeição:")?.trim() || "";
