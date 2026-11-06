@@ -12,12 +12,8 @@ type RideResult = {
 };
 
 const services = [
-  { id: "TAXI", name: "MARKA Go", detail: "Automóvel para deslocações urbanas", seats: "Até 4 passageiros", badge: "Urbano" },
-  { id: "MOTO_TAXI", name: "MARKA Moto", detail: "Mototáxi para percursos rápidos", seats: "1 passageiro", badge: "Ágil" },
-  { id: "VAN", name: "MARKA Van", detail: "Viatura espaçosa para grupos e bagagem", seats: "Capacidade conforme viatura", badge: "Espaço extra" },
-  { id: "MINIBUS", name: "MARKA Minibus", detail: "Transporte colectivo de pequena capacidade", seats: "Capacidade conforme viatura", badge: "Colectivo" },
-  { id: "BUS", name: "MARKA Bus", detail: "Transporte colectivo de maior capacidade", seats: "Capacidade conforme viatura", badge: "Grupos" },
-  { id: "COACH", name: "MARKA Coach", detail: "Viagens de grupo e trajectos interurbanos", seats: "Capacidade conforme viatura", badge: "Longa distância" },
+  { id: "TAXI", name: "MARKA Go", detail: "Táxi para deslocações urbanas e interurbanas", seats: "Até 4 passageiros", badge: "Táxi" },
+  { id: "MOTO_TAXI", name: "MARKA Moto", detail: "Mototáxi para percursos rápidos", seats: "1 passageiro", badge: "Mototáxi" },
 ] as const;
 
 const statusLabels: Record<string, string> = {
@@ -170,7 +166,7 @@ export default function MobilityExperience() {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.28em] text-[#e9bd58]">Mobilidade inteligente</p>
             <h1 className="mt-4 max-w-lg text-3xl font-semibold leading-tight tracking-[-.04em] sm:text-4xl">A sua próxima viagem começa aqui.</h1>
-            <p className="mt-4 max-w-md text-sm leading-6 text-white/60">Escolha a partida, confirme o destino e envie um pedido real. A disponibilidade do motorista é confirmada pelo sistema operacional — não por estimativas fictícias.</p>
+            <p className="mt-4 max-w-md text-sm leading-6 text-white/60">Para deslocações individuais, escolha Táxi ou Mototáxi. Transporte de grupos, mercadorias, água e materiais tem uma área própria de contratação de fornecedores.</p>
             <div className="mt-6 flex flex-wrap gap-2 text-[10px] text-white/75">
               <span className="rounded-full border border-white/15 bg-black/25 px-3 py-2 backdrop-blur-sm">GPS do dispositivo</span>
               <span className="rounded-full border border-white/15 bg-black/25 px-3 py-2 backdrop-blur-sm">Rotas OpenStreetMap</span>
@@ -182,10 +178,10 @@ export default function MobilityExperience() {
                 id="mobility-passengers"
                 type="number"
                 min={1}
-                max={serviceType === "MOTO_TAXI" ? 1 : 100}
+                max={serviceType === "MOTO_TAXI" ? 1 : 4}
                 value={serviceType === "MOTO_TAXI" ? 1 : passengerCount}
                 disabled={serviceType === "MOTO_TAXI"}
-                onChange={(event) => setPassengerCount(Math.max(1, Math.min(100, Number(event.target.value) || 1)))}
+                onChange={(event) => setPassengerCount(Math.max(1, Math.min(4, Number(event.target.value) || 1)))}
                 className="w-full rounded-xl border border-white/15 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-[#e9bd58]"
               />
               <p className="mt-1 text-[11px] text-white/45">A atribuição considera a lotação registada e aprovada da viatura.</p>
@@ -226,18 +222,16 @@ export default function MobilityExperience() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[.24em] text-[#e9bd58]">A frota MARKA</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight">Conforto, presença e elegância em cada viagem.</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[.24em] text-[#e9bd58]">Mobilidade individual</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">Táxi e mototáxi.</h2>
             <div className="mt-4 h-px w-24 bg-gradient-to-r from-[#e9bd58] via-[#e9bd58]/50 to-transparent" />
           </div>
-          <p className="max-w-sm text-xs leading-5 text-white/45">Uma apresentação visual dos estilos de viatura MARKA. A disponibilidade depende dos veículos e motoristas activos na plataforma.</p>
+          <p className="max-w-sm text-xs leading-5 text-white/45">Ilustrações dos dois serviços de transporte individual. A disponibilidade depende dos motoristas e veículos parceiros activos.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { name: "MARKA Go", detail: "Mobilidade urbana", kind: "sedan" as const },
-            { name: "MARKA Executive", detail: "Conforto executivo", kind: "executive" as const },
-            { name: "MARKA Moto", detail: "Mototáxi ágil", kind: "motorcycle" as const },
-            { name: "MARKA Van", detail: "Grupos e bagagem", kind: "van" as const },
+            { name: "MARKA Táxi", detail: "Mobilidade individual", kind: "sedan" as const },
+            { name: "MARKA Mototáxi", detail: "Percursos rápidos", kind: "motorcycle" as const },
           ].map((vehicle) => (
             <article key={vehicle.name} className="group overflow-hidden rounded-2xl border border-white/10 bg-[#0a0c11] transition hover:-translate-y-1 hover:border-[#e9bd58]/50">
               <div className="relative flex aspect-[16/10] items-center overflow-hidden bg-[radial-gradient(ellipse_at_50%_85%,rgba(233,189,88,.13),transparent_55%),linear-gradient(145deg,#171a20,#080a0e)] p-3">
@@ -257,38 +251,48 @@ export default function MobilityExperience() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.24em] text-[#e9bd58]">MARKA Mobility · expansão de serviços</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Mais do que transporte de passageiros.</h2>
-            <p className="mt-2 max-w-2xl text-xs leading-6 text-white/50">O ecossistema inclui transporte de mercadorias e assistência rodoviária. Estes serviços têm fluxos próprios de cotação, pagamento e despacho — não são enviados como uma viagem de táxi.</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Transportes e serviços especializados.</h2>
+            <p className="mt-2 max-w-2xl text-xs leading-6 text-white/50">Van, Minibus, Bus e Coach são para grupos; cisternas, basculantes e outros camiões são para cargas e materiais. Cada contratação deve identificar o fornecedor, a capacidade, a rota e o preço — nunca criar uma viagem de táxi.</p>
           </div>
           <Link href="/app/mobility/parceiros" className="rounded-full border border-[#e9bd58]/40 px-4 py-2.5 text-xs font-semibold text-[#f2cd70] transition hover:bg-[#e9bd58]/10">Área de parceiros ↗</Link>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
+            <div><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">MARKA Grupos</p><h3 className="mt-1 text-lg font-semibold text-white">Transporte de pessoas</h3></div>
+            <p className="mt-2 text-xs leading-5 text-white/50">Contratação de viaturas de maior capacidade, com motorista parceiro, para grupos e deslocações organizadas.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {["Van / carrinha","Minibus","Bus","Coach"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
+            </div>
+            <Link href="/app/marketplace" className="mt-4 inline-flex text-xs font-semibold text-[#f2cd70] underline-offset-4 hover:underline">Explorar fornecedores no Marketplace ↗</Link>
+          </article>
           <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">MARKA Cargo</p><h3 className="mt-1 text-lg font-semibold text-white">Transporte de mercadorias</h3></div>
               <span className="text-2xl" aria-hidden="true">▰</span>
             </div>
-            <p className="mt-2 text-xs leading-5 text-white/50">Contratação de transporte completo com veículo e motorista do parceiro.</p>
+            <p className="mt-2 text-xs leading-5 text-white/50">Transporte de mercadorias e materiais com viatura e motorista de um parceiro independente.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {["Triciclo de carga","Pick-up aberta","Carrinha fechada / caixa","Camião ligeiro","Camião de plataforma","Camião basculante","Camião pesado","Cisterna de água"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
+              {["Triciclo de carga","Pick-up","Carrinha de caixa","Camião basculante","Camião pesado","Cisterna de água","Areia","Brita e burgau"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
             </div>
+            <Link href="/app/marketplace" className="mt-4 inline-flex text-xs font-semibold text-[#f2cd70] underline-offset-4 hover:underline">Explorar fornecedores no Marketplace ↗</Link>
           </article>
           <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-[9px] uppercase tracking-[.2em] text-[#e9bd58]">MARKA Assist</p><h3 className="mt-1 text-lg font-semibold text-white">Assistência e reboque</h3></div>
               <span className="text-2xl" aria-hidden="true">↗</span>
             </div>
-            <p className="mt-2 text-xs leading-5 text-white/50">Apoio ao veículo imobilizado, com prestador compatível e despacho condicionado à confirmação de pagamento no servidor.</p>
+            <p className="mt-2 text-xs leading-5 text-white/50">Reboque, recuperação e apoio no local prestados por empresas e profissionais parceiros.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {["Reboque / remoção","Recuperação após acidente","Desempanagem no local","Assistência de pneus e bateria"].map((item) => <div key={item} className="rounded-xl border border-white/[.08] bg-black/20 px-3 py-2.5 text-xs text-white/75">{item}</div>)}
             </div>
+            <Link href="/app/marketplace" className="mt-4 inline-flex text-xs font-semibold text-[#f2cd70] underline-offset-4 hover:underline">Explorar prestadores no Marketplace ↗</Link>
           </article>
         </div>
       </section>
 
       <form onSubmit={submitRide} className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="rounded-[1.7rem] border border-white/10 bg-[#0a0c11] p-4 sm:p-6">
-          <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">01 · Serviço</p><h2 className="mt-1 text-xl font-semibold">Escolha o tipo de viagem</h2><p className="mt-2 text-xs leading-5 text-white/45">O tipo seleccionado é enviado ao dispatch, que procura veículos compatíveis e motoristas elegíveis.</p></div>
+          <div className="mb-4"><p className="text-[10px] uppercase tracking-[.24em] text-[#e9bd58]">01 · Serviço</p><h2 className="mt-1 text-xl font-semibold">Escolha Táxi ou Mototáxi</h2><p className="mt-2 text-xs leading-5 text-white/45">Apenas estes dois serviços entram no motor de viagens e no dispatch de passageiros.</p></div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {services.map((service) => {
               const selected = serviceType === service.id;
