@@ -44,9 +44,15 @@ async function getProduct(id: string) {
     status: product.store.vendor.status,
   }]);
 
+  const attributes = product.attributes && typeof product.attributes === "object" && !Array.isArray(product.attributes)
+    ? product.attributes as Record<string, unknown>
+    : {};
+  const itemCondition = typeof attributes.itemCondition === "string" ? attributes.itemCondition : null;
+
   return {
     id: product.id,
     name: product.name,
+    itemCondition,
     description: product.description,
     image: product.image,
     price: Number(product.price),
@@ -117,7 +123,7 @@ export default async function PublicProductPage({ params }: PageProps) {
       price: product.price,
       priceCurrency: product.currency,
       availability: "https://schema.org/InStock",
-      itemCondition: "https://schema.org/NewCondition",
+      ...(product.itemCondition ? { itemCondition: `https://schema.org/${product.itemCondition === "USED" ? "UsedCondition" : product.itemCondition === "REFURBISHED" ? "RefurbishedCondition" : "NewCondition"}` } : {}),
       seller: { "@type": "Organization", name: product.store.name },
     },
   };
@@ -149,6 +155,7 @@ export default async function PublicProductPage({ params }: PageProps) {
           <section className="flex flex-col justify-center">
             {product.category && <p className="text-xs font-semibold uppercase tracking-[.24em] text-[#e4b963]">{product.category}</p>}
             <h1 className="mt-4 text-4xl font-black leading-tight tracking-tight sm:text-5xl">{product.name}</h1>
+            {product.itemCondition && <span className="mt-4 inline-flex w-fit rounded-full border border-[#d9b36a]/35 bg-[#d9b36a]/10 px-3 py-1.5 text-xs font-semibold text-[#f2d18e]">{product.itemCondition === "USED" ? "Usado" : product.itemCondition === "REFURBISHED" ? "Recondicionado" : "Novo"}</span>}
             <p className="mt-6 text-3xl font-semibold text-[#f2d18e]">{price}</p>
             <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-white/65">
               <span className="rounded-full border border-white/15 px-3 py-1.5">{product.store.name}</span>

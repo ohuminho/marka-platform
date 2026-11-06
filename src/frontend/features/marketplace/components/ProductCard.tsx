@@ -15,6 +15,8 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
   const [feedback, setFeedback] = useState<string | null>(null);
   const canPurchase = product.status === "ACTIVE" && product.stock > 0;
   const availabilityLabel = canPurchase ? "Disponível" : "Indisponível";
+  const itemCondition = typeof product.attributes?.itemCondition === "string" ? product.attributes.itemCondition : null;
+  const itemConditionLabel = itemCondition === "USED" ? "Usado" : itemCondition === "REFURBISHED" ? "Recondicionado" : itemCondition === "NEW" ? "Novo" : null;
   const stockLabel = product.stock < 1
     ? "Sem stock"
     : product.stock <= 3
@@ -62,11 +64,11 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
             <span className="marka-editorial text-2xl text-[var(--theme-text-muted)]">{t.product}</span>
           </div>
         )}
-        <div className="absolute inset-x-3 top-3 flex items-center justify-between">
-          <span className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-header)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-muted)] backdrop-blur-xl">
+        <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+          <span className="max-w-[70%] truncate rounded-full border border-[var(--theme-border)] bg-[var(--theme-header)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text-muted)] backdrop-blur-xl">
             {product.category?.name || "MARKA"}
           </span>
-
+          {itemConditionLabel && <span className="shrink-0 rounded-full border border-[var(--theme-border)] bg-[var(--theme-header)] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--theme-text)] backdrop-blur-xl">{itemConditionLabel}</span>}
         </div>
       </Link>
 

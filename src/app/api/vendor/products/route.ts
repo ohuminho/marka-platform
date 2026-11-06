@@ -36,7 +36,7 @@ const createProductSchema = z.object({
   categoryName: z.string().trim().max(80).optional().default(""),
   brand: z.string().trim().max(100).optional().default(""), model: z.string().trim().max(100).optional().default(""),
   year: z.coerce.number().int().min(1950).max(2035).optional().or(z.literal("")), mileage: z.coerce.number().int().min(0).max(10_000_000).optional().or(z.literal("")),
-  condition: z.string().trim().max(40).optional().default(""), fuel: z.string().trim().max(40).optional().default(""), transmission: z.string().trim().max(40).optional().default(""),
+  condition: z.string().trim().max(40).optional().default(""), itemCondition: z.enum(["NEW", "USED", "REFURBISHED"]).optional().or(z.literal("")), fuel: z.string().trim().max(40).optional().default(""), transmission: z.string().trim().max(40).optional().default(""),
   spaceBookingEnabled: z.boolean().optional().default(false),
   propertyType: z.string().trim().max(80).optional().default(""), transactionType: z.string().trim().max(40).optional().default(""),
   bedrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")), bathrooms: z.coerce.number().int().min(0).max(100).optional().or(z.literal("")),
@@ -163,14 +163,20 @@ export async function POST(request: Request) {
     }
     const details: string[] = [];
     const attributes: Record<string, string> = {};
+    const itemConditionLabels = { NEW: "Novo", USED: "Usado", REFURBISHED: "Recondicionado" } as const;
     const addDetail = (label: string, value: unknown) => {
       if (value !== undefined && value !== null && value !== "") details.push(`${label}: ${String(value)}`);
     };
+    if (input.itemCondition) {
+      attributes.itemCondition = input.itemCondition;
+      addDetail("Estado do artigo", itemConditionLabels[input.itemCondition]);
+    }
     if (categoryName === "automóveis" || categoryName === "motociclos") {
       addDetail("Marca", input.brand); addDetail("Modelo", input.model); addDetail("Ano", input.year);
-      addDetail("Quilometragem (km)", input.mileage); addDetail("Estado", input.condition);
+      addDetail("Quilometragem (km)", input.mileage);
+      if (!input.itemCondition) addDetail("Estado", input.condition);
       addDetail("Combustível", input.fuel); addDetail("Transmissão", input.transmission);
-      for (const [key, value] of Object.entries({ brand: input.brand, model: input.model, year: input.year, mileage: input.mileage, condition: input.condition, fuel: input.fuel, transmission: input.transmission })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
+      for (const [key, value] of Object.entries({ brand: input.brand, model: input.model, year: input.year, mileage: input.mileage, condition: input.itemCondition ? "" : input.condition, fuel: input.fuel, transmission: input.transmission })) if (value !== undefined && value !== null && value !== "") attributes[key] = String(value);
     } else if (categoryName === "imóveis e arrendamento") {
       addDetail("Tipo de imóvel", input.propertyType); addDetail("Finalidade", input.transactionType);
       addDetail("Quartos", input.bedrooms); addDetail("Casas de banho", input.bathrooms);
