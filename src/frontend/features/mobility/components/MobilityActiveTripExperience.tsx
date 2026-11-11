@@ -239,6 +239,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     finally { setActionLoading(false); }
   };
 
+  if (audience === "rider" && !authLoading && !loading && !error && !active) return null;
+
   return <section className="overflow-hidden rounded-[2rem] border border-[#d8b35a]/25 bg-[#080a0e] text-white shadow-[0_28px_90px_rgba(0,0,0,.28)]">
     <header className="relative border-b border-white/[.08] px-5 py-6 sm:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(216,179,90,.14),transparent_55%)]" />
