@@ -22,18 +22,20 @@ async function authorizeAdmin() {
   const session = await new SessionService().validate(token);
   if (!session) return { error: NextResponse.json({ message: "Sessão inválida." }, { status: 401 }) };
   const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, status: true, isFounder: true } });
-  if (!user || user.status !== "ACTIVE" || !session.organizationId) {
+  const requestHeaders = await headers();
+  const organizationId = requestHeaders.get("x-organization-id")?.trim();
+  if (!user || user.status !== "ACTIVE" || !organizationId) {
     return { error: NextResponse.json({ message: "É necessária uma sessão ativa com organização selecionada." }, { status: 403 }) };
   }
   const hasAdminAccess = user.isFounder || await authorizationService.hasPermission(
     user.id,
     "ADMIN_ACCESS",
-    session.organizationId,
+    organizationId,
   );
   if (!hasAdminAccess) {
     return { error: NextResponse.json({ message: "Apenas administradores autorizados desta organização podem rever motoristas." }, { status: 403 }) };
   }
-  return { user, session, organizationId: session.organizationId };
+  return { user, session, organizationId };
 }
 
 function isCurrentVerified(items: Array<{ documentType: string; status: string; documentExpiry: Date | null; reviewedBy: string | null }>, type: string, now: Date, driverUserId: string) {
