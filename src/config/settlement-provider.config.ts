@@ -1,5 +1,6 @@
 export interface SettlementProviderConfig {
   enabled: boolean;
+  idempotencyConfirmed: boolean;
   name: string;
   baseUrl: string;
   createPayoutPath: string;
@@ -58,6 +59,11 @@ export function getSettlementProviderConfig(): SettlementProviderConfig {
     false
   );
 
+  const idempotencyConfirmed = parseBoolean(
+    process.env.SETTLEMENT_PROVIDER_IDEMPOTENCY_CONFIRMED,
+    false
+  );
+
   const name = (
     process.env.SETTLEMENT_PROVIDER_NAME ??
     ""
@@ -94,6 +100,7 @@ export function getSettlementProviderConfig(): SettlementProviderConfig {
   if (!enabled) {
     return {
       enabled: false,
+      idempotencyConfirmed,
       name,
       baseUrl,
       createPayoutPath,
@@ -141,8 +148,15 @@ export function getSettlementProviderConfig(): SettlementProviderConfig {
     );
   }
 
+  if (!idempotencyConfirmed) {
+    throw new Error(
+      "Settlement provider idempotency must be explicitly confirmed before enabling payouts."
+    );
+  }
+
   return {
     enabled,
+    idempotencyConfirmed,
     name,
     baseUrl: baseUrl.replace(/\/+$/, ""),
     createPayoutPath,
