@@ -135,13 +135,13 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     <div className="absolute left-3 right-3 top-3 z-[500] flex flex-col gap-2 sm:left-4 sm:right-4 sm:top-4">
       <div className="flex items-center gap-2 rounded-2xl border border-white/[.13] bg-[#0B1017]/90 p-2 shadow-[0_14px_40px_-18px_rgba(0,0,0,.9)] backdrop-blur-xl">
         <button type="button" onClick={locateMe} disabled={busy} aria-label="Usar a minha localização GPS" className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#E9BD58]/30 bg-[#E9BD58]/[.09] px-3 text-[10px] font-bold text-[#F2CD70] transition hover:bg-[#E9BD58]/[.15] disabled:opacity-50">
-          <span className="text-base">⌖</span><span className="hidden xs:inline">{busy ? "A localizar…" : "GPS"}</span>
+          <span className="text-base">⌖</span><span className="hidden sm:inline">{busy ? "A localizar…" : "GPS"}</span>
         </button>
         <input value={destinationText} onChange={(e) => setDestinationText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void searchDestination(); }} placeholder="Para onde vamos?" aria-label="Pesquisar destino" className="h-11 min-w-0 flex-1 bg-transparent px-2 text-xs text-white outline-none placeholder:text-white/40"/>
         <button type="button" onClick={searchDestination} disabled={busy} aria-label="Pesquisar destino" className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#E9BD58] px-4 text-[10px] font-extrabold text-[#17130A] transition hover:brightness-105 disabled:opacity-50">{busy ? "…" : "Pesquisar"}</button>
       </div>
       <div className="flex items-center justify-between gap-3 px-1">
-        <span className="rounded-full border border-white/10 bg-[#0B1017]/75 px-3 py-1.5 text-[9px] font-semibold text-white/65 backdrop-blur-lg">LUANDA · ANGOLA</span>
+        <span className="rounded-full border border-white/10 bg-[#0B1017]/75 px-3 py-1.5 text-[9px] font-semibold text-white/65 backdrop-blur-lg">ANGOLA · MAPA AO VIVO</span>
         <span className="rounded-full border border-white/10 bg-[#0B1017]/75 px-3 py-1.5 text-[9px] text-white/45 backdrop-blur-lg">OpenStreetMap · CARTO</span>
       </div>
     </div>
