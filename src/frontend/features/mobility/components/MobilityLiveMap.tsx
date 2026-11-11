@@ -47,7 +47,8 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const routeRef = useRef<LeafletLayerGroup | null>(null);
-  const markersRef = useRef<LeafletMarker[]>([]);
+  const markersRef = useRef<{ origin: LeafletMarker | null; destination: LeafletMarker | null }>({ origin: null, destination: null });
+  const routeRequestRef = useRef(0);
   const [origin, setOrigin] = useState<Point | null>(null), [destination, setDestination] = useState<Point | null>(null);
   const [destinationText, setDestinationText] = useState(""), [routeSummary, setRouteSummary] = useState("");
   const [status, setStatus] = useState("Ative o GPS ou pesquise um destino para calcular a rota."), [busy, setBusy] = useState(false);
@@ -59,7 +60,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(map);
       mapRef.current = map; window.setTimeout(() => map.invalidateSize(), 100);
     }).catch((e) => setStatus(e instanceof Error ? e.message : "Erro ao iniciar o mapa."));
-    return () => { disposed = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; routeRef.current = null; markersRef.current = []; } };
+    return () => { disposed = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; routeRef.current = null; markersRef.current = { origin: null, destination: null }; } };
   }, []);
   function setPoint(point: Point, kind: "origin" | "destination") {
     const L = window.L, map = mapRef.current; if (!L || !map) return;
@@ -67,8 +68,15 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     const nextDestination = kind === "destination" ? point : destination;
     if (kind === "origin") setOrigin(point); else setDestination(point);
     onPointsChange?.({ origin: nextOrigin, destination: nextDestination });
-    markersRef.current.push(L.marker([point.lat, point.lon]).addTo(map).bindPopup(point.label));
-    map.setView([point.lat, point.lon], 15);
+    markersRef.current[kind]?.remove();
+    markersRef.current[kind] = L.marker([point.lat, point.lon]).addTo(map).bindPopup(point.label);
+    if (nextOrigin && nextDestination) {
+      void calculateRoute(nextOrigin, nextDestination);
+    } else {
+      if (routeRef.current) { routeRef.current.remove(); routeRef.current = null; }
+      setRouteSummary("");
+      map.setView([point.lat, point.lon], 15);
+    }
   }
   async function locateMe() {
     if (!navigator.geolocation) { setStatus("Este dispositivo não disponibiliza geolocalização."); return; }
@@ -80,7 +88,8 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
   }
   async function calculateRoute(from: Point | null, to: Point | null) {
     if (!from || !to) { setStatus("Defina a partida por GPS e pesquise o destino para calcular a rota."); return; }
-    setBusy(true); setStatus("A calcular o percurso pelas estradas…");
+    const requestId = ++routeRequestRef.current;
+    setBusy(true); setRouteSummary(""); setStatus("A calcular o percurso pelas estradas…");
     try {
       const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson&steps=false`);
       if (!response.ok) throw new Error("O serviço de rotas está temporariamente indisponível.");
@@ -91,6 +100,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
           duration: number;
         }>;
       };
+      if (requestId !== routeRequestRef.current) return;
       const route = payload.routes?.[0];
       if (!route?.geometry?.coordinates?.length) throw new Error("Não foi encontrada uma rota rodoviária entre estes pontos.");
       const leaflet = window.L;
@@ -102,8 +112,11 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       map.fitBounds(routeLayer.getBounds(), { padding: [24, 24] });
       setRouteSummary(`${(route.distance / 1000).toLocaleString("pt-AO", { maximumFractionDigits: 1 })} km · cerca de ${Math.max(1, Math.round(route.duration / 60))} min`);
       setStatus("Percurso rodoviário calculado com OSRM.");
-    } catch (e) { setStatus(e instanceof Error ? e.message : "Falha ao calcular o percurso."); }
-    finally { setBusy(false); }
+    } catch (e) {
+      if (requestId === routeRequestRef.current) setStatus(e instanceof Error ? e.message : "Falha ao calcular o percurso.");
+    } finally {
+      if (requestId === routeRequestRef.current) setBusy(false);
+    }
   }
   async function searchDestination() {
     const q = destinationText.trim(); if (!q) { setStatus("Introduza um endereço, bairro ou ponto de referência."); return; }
@@ -114,8 +127,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       const rows = await response.json(); if (!Array.isArray(rows) || !rows[0]) throw new Error("Destino não encontrado. Tente um bairro ou ponto de referência.");
       const row = rows[0], point = { lat: Number(row.lat), lon: Number(row.lon), label: String(row.display_name) };
       setPoint(point, "destination"); setDestinationText(String(row.display_name).split(",").slice(0, 3).join(","));
-      if (origin) await calculateRoute(origin, point);
-      else { setStatus("Destino encontrado. Ative o GPS para calcular a rota rodoviária."); setBusy(false); }
+      if (!origin) { setStatus("Destino encontrado. Ative o GPS para calcular a rota rodoviária."); setBusy(false); }
     } catch (e) { setStatus(e instanceof Error ? e.message : "Falha na pesquisa do destino."); setBusy(false); }
   }
   return <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#080d12]">
