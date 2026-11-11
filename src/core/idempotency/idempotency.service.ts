@@ -69,7 +69,7 @@ export class IdempotencyService {
       }
     }
 
-    let record;
+    let record: Awaited<ReturnType<typeof prisma.idempotencyRecord.create>>;
     try {
       record = await prisma.idempotencyRecord.create({
         data: {
