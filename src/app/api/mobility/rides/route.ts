@@ -198,7 +198,7 @@ export async function POST(
           safetyMode,
           passengerCount,
         },
-      }}, idempotencyKey);;
+      }, idempotencyKey);
 
     await mobilityLifecycleService.initialize({
       organizationId:
