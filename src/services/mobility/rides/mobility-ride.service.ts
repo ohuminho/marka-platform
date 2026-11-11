@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   MobilityAvailabilityStatus,
   MobilityRideStatus,
@@ -150,6 +152,144 @@ export class MobilityRideService {
         return ride;
       }
     );
+  }
+
+
+  async createIdempotent(
+    input: CreateMobilityRideInput,
+    idempotencyKey: string,
+  ) {
+    this.validateCreateInput(input);
+
+    const key = idempotencyKey.trim();
+    if (!key || key.length > 255) {
+      throw new MobilityDomainError(
+        "A valid internal request identity is required.",
+        "INVALID_IDEMPOTENCY_KEY",
+      );
+    }
+
+    const scope = `mobility:ride:create:${input.organizationId}:${input.riderId}`;
+    const requestHash = createHash("sha256")
+      .update(JSON.stringify(normalizeIdempotencyValue(input)))
+      .digest("hex");
+
+    const existingResult = async () => {
+      const record = await prisma.idempotencyRecord.findUnique({
+        where: { key },
+      });
+      if (!record) return null;
+      if (record.scope !== scope || record.requestHash !== requestHash) {
+        throw new MobilityDomainError(
+          "This request identity is already associated with different trip details.",
+          "IDEMPOTENCY_PAYLOAD_MISMATCH",
+        );
+      }
+      if (record.status !== "COMPLETED" || !record.resourceId) {
+        throw new MobilityDomainError(
+          "The original trip request is still being recovered. Retry the same request shortly.",
+          "IDEMPOTENCY_OPERATION_IN_PROGRESS",
+        );
+      }
+      const ride = await prisma.mobilityRide.findFirst({
+        where: {
+          id: record.resourceId,
+          organizationId: input.organizationId,
+          riderId: input.riderId,
+        },
+        include: {
+          stops: { orderBy: { sequence: "asc" } },
+        },
+      });
+      if (!ride) {
+        throw new MobilityDomainError(
+          "The previously registered trip could not be recovered.",
+          "IDEMPOTENCY_RESOURCE_MISSING",
+        );
+      }
+      return { ride, replayed: true as const };
+    };
+
+    const alreadyCreated = await existingResult();
+    if (alreadyCreated) return alreadyCreated;
+
+    const rider = await prisma.user.findUnique({
+      where: { id: input.riderId },
+      select: { id: true, status: true },
+    });
+    if (!rider || rider.status !== "ACTIVE") {
+      throw new MobilityDomainError(
+        "Rider account is not available.",
+        "RIDER_NOT_AVAILABLE",
+      );
+    }
+
+    const reference = await this.generateReference();
+    try {
+      const ride = await prisma.$transaction(async (tx) => {
+        await tx.idempotencyRecord.create({
+          data: {
+            key,
+            scope,
+            userId: input.riderId,
+            requestHash,
+            status: "IN_PROGRESS",
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          },
+        });
+
+        const created = await tx.mobilityRide.create({
+          data: {
+            organizationId: input.organizationId,
+            riderId: input.riderId,
+            status: MobilityRideStatus.REQUESTED,
+            reference,
+            serviceType: input.serviceType.trim(),
+            currency: input.currency ?? "AOA",
+            pickupLatitude: input.pickupLatitude,
+            pickupLongitude: input.pickupLongitude,
+            pickupAddress: input.pickupAddress,
+            dropoffLatitude: input.dropoffLatitude,
+            dropoffLongitude: input.dropoffLongitude,
+            dropoffAddress: input.dropoffAddress,
+            requestedAt: new Date(),
+            metadata: input.metadata,
+            stops: input.stops?.length
+              ? {
+                  create: input.stops.map((stop) => ({
+                    sequence: stop.sequence,
+                    type: stop.type,
+                    latitude: stop.latitude,
+                    longitude: stop.longitude,
+                    address: stop.address,
+                  })),
+                }
+              : undefined,
+          },
+          include: {
+            stops: { orderBy: { sequence: "asc" } },
+          },
+        });
+
+        await tx.idempotencyRecord.update({
+          where: { key },
+          data: {
+            status: "COMPLETED",
+            responseStatus: 201,
+            responseBody: { rideId: created.id },
+            resourceType: "MOBILITY_RIDE",
+            resourceId: created.id,
+          },
+        });
+        return created;
+      });
+
+      return { ride, replayed: false as const };
+    } catch (error) {
+      const recovered = await existingResult();
+      if (recovered) return recovered;
+      throw error;
+    }
   }
 
   async startSearch(
