@@ -18,14 +18,16 @@ type Leaflet = {
   circleMarker(position: [number, number], options: Record<string, unknown>): MarkerLayer;
   geoJSON(data: unknown, options?: { style?: { color: string; weight: number; opacity: number } }): MapLayer;
 };
-declare global { interface Window { L?: Leaflet } }
-
 const CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 
+function getLeaflet(): Leaflet | undefined {
+  return (window as Window & { L?: Leaflet }).L;
+}
+
 function loadLeaflet(): Promise<Leaflet> {
   return new Promise((resolve, reject) => {
-    if (window.L) return resolve(window.L);
+    if (getLeaflet()) return resolve(getLeaflet());
     if (!document.querySelector('link[data-marka-leaflet="true"]')) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
@@ -35,7 +37,7 @@ function loadLeaflet(): Promise<Leaflet> {
     }
     const existing = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
     if (existing) {
-      existing.addEventListener("load", () => window.L ? resolve(window.L) : reject(new Error("Motor do mapa indisponível.")), { once: true });
+      existing.addEventListener("load", () => getLeaflet() ? resolve(getLeaflet()) : reject(new Error("Motor do mapa indisponível.")), { once: true });
       existing.addEventListener("error", () => reject(new Error("Não foi possível carregar o mapa.")), { once: true });
       return;
     }
@@ -43,7 +45,7 @@ function loadLeaflet(): Promise<Leaflet> {
     script.src = JS_URL;
     script.async = true;
     script.dataset.markaLeaflet = "true";
-    script.onload = () => window.L ? resolve(window.L) : reject(new Error("Motor do mapa indisponível."));
+    script.onload = () => getLeaflet() ? resolve(getLeaflet()) : reject(new Error("Motor do mapa indisponível."));
     script.onerror = () => reject(new Error("Não foi possível carregar o mapa."));
     document.head.appendChild(script);
   });
@@ -80,9 +82,9 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
   }, []);
 
   useEffect(() => {
-    if (!ready || !mapRef.current || !window.L) return;
+    if (!ready || !mapRef.current || !getLeaflet()) return;
     const map = mapRef.current;
-    const L = window.L;
+    const L = getLeaflet();
     layersRef.current.forEach((layer) => layer.remove());
     layersRef.current = [];
 
