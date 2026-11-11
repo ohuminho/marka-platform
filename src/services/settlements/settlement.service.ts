@@ -114,19 +114,21 @@ export class SettlementService {
         requestBody,
       },
       async () => {
-        const settlement = await prisma.$transaction(
+        const creation = await prisma.$transaction(
           async (tx) => {
-            const [organization, vendor, instrument] = await Promise.all([
-              tx.organization.findUnique({
-                where: {
-                  id: input.organizationId,
-                },
-                select: {
-                  id: true,
-                  status: true,
-                },
-              }),
+            const organization = await tx.organization.findUnique({
+              where: { id: input.organizationId },
+              select: { id: true, status: true },
+            });
 
+            if (!organization || organization.status !== "ACTIVE") {
+              throw new Error("Organization is not active.");
+            }
+
+            await tx.$queryRaw`SELECT "id" FROM "Vendor" WHERE "id" = ${input.vendorId} AND "organizationId" = ${input.organizationId} FOR UPDATE`;
+            await tx.$queryRaw`SELECT "id" FROM "FinancialInstrument" WHERE "id" = ${input.financialInstrumentId} AND "organizationId" = ${input.organizationId} AND "vendorId" = ${input.vendorId} FOR UPDATE`;
+
+            const [vendor, instrument] = await Promise.all([
               tx.vendor.findFirst({
                 where: {
                   id: input.vendorId,
@@ -139,11 +141,8 @@ export class SettlementService {
                   verified: true,
                 },
               }),
-
               tx.financialInstrument.findUnique({
-                where: {
-                  id: input.financialInstrumentId,
-                },
+                where: { id: input.financialInstrumentId },
                 select: {
                   id: true,
                   organizationId: true,
@@ -157,70 +156,62 @@ export class SettlementService {
               }),
             ]);
 
-            if (!organization || organization.status !== "ACTIVE") {
-              throw new Error("Organization is not active.");
-            }
-
             if (!vendor) {
-              throw new Error(
-                "Vendor not found in the specified organization."
-              );
+              throw new Error("Vendor not found in the specified organization.");
             }
-
             if (vendor.status !== "ACTIVE" || !vendor.verified) {
-              throw new Error(
-                "Vendor must be active and verified before settlement."
-              );
+              throw new Error("Vendor must be active and verified before settlement.");
             }
-
             if (!instrument) {
               throw new Error("Financial instrument not found.");
             }
-
-            if (instrument.organizationId !== input.organizationId) {
-              throw new Error(
-                "Financial instrument does not belong to the settlement organization."
-              );
-            }
-
-            if (instrument.vendorId !== input.vendorId) {
-              throw new Error(
-                "Financial instrument does not belong to the settlement vendor."
-              );
-            }
-
-            if (instrument.ownerType !== "VENDOR") {
-              throw new Error(
-                "Settlement requires a vendor-owned financial instrument."
-              );
-            }
-
-            if (instrument.status !== "ACTIVE") {
-              throw new Error(
-                "Financial instrument must be active before settlement."
-              );
-            }
-
-            if (!instrument.verifiedAt) {
-              throw new Error(
-                "Financial instrument must be verified before settlement."
-              );
-            }
-
             if (
-              instrument.expiresAt &&
-              instrument.expiresAt.getTime() <= Date.now()
+              instrument.organizationId !== input.organizationId ||
+              instrument.vendorId !== input.vendorId ||
+              instrument.ownerType !== "VENDOR"
             ) {
+              throw new Error("Financial instrument does not belong to the settlement vendor and organization.");
+            }
+            if (instrument.status !== "ACTIVE" || !instrument.verifiedAt) {
+              throw new Error("Financial instrument must be active and verified before settlement.");
+            }
+            if (instrument.expiresAt && instrument.expiresAt.getTime() <= Date.now()) {
               throw new Error("Financial instrument has expired.");
             }
-
             if (instrument.currency !== currency) {
+              throw new Error("Settlement currency must match the financial instrument currency.");
+            }
+
+            const overlapping = await tx.settlement.findMany({
+              where: {
+                vendorId: input.vendorId,
+                status: { not: SettlementStatus.FAILED },
+                periodStart: { lt: input.periodEnd },
+                periodEnd: { gt: input.periodStart },
+              },
+              orderBy: { periodStart: "asc" },
+            });
+
+            if (overlapping.length > 0) {
+              const existing = overlapping[0];
+              const exactReplay =
+                overlapping.length === 1 &&
+                existing.periodStart.getTime() === input.periodStart.getTime() &&
+                existing.periodEnd.getTime() === input.periodEnd.getTime() &&
+                existing.financialInstrumentId === input.financialInstrumentId &&
+                existing.amountMinor === input.amountMinor &&
+                existing.currency === currency;
+
+              if (exactReplay) {
+                return { settlement: existing, created: false };
+              }
+
               throw new Error(
-                "Settlement currency must match the financial instrument currency."
+                "Settlement period overlaps an existing non-failed settlement. Reconcile the existing settlement before creating another payout for this period."
               );
             }
 
-            return tx.settlement.create({
+            const settlement = await tx.settlement.create({
               data: {
                 vendorId: input.vendorId,
                 financialInstrumentId: input.financialInstrumentId,
@@ -234,6 +225,8 @@ export class SettlementService {
                   : undefined,
               },
             });
+
+            return { settlement, created: true };
           },
           {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -242,27 +235,31 @@ export class SettlementService {
           }
         );
 
-        await this.financialAuditService.recordSettlement({
-          organizationId: input.organizationId,
-          actorUserId: input.actorUserId,
-          action: "SETTLEMENT_CREATED",
-          settlementId: settlement.id,
-          correlationId: input.correlationId,
-          requestId: input.requestId,
-          ipAddress: input.ipAddress,
-          userAgent: input.userAgent,
-          metadata: {
-            vendorId: input.vendorId,
-            financialInstrumentId: input.financialInstrumentId,
-            amountMinor: input.amountMinor.toString(),
-            currency,
-            periodStart: input.periodStart.toISOString(),
-            periodEnd: input.periodEnd.toISOString(),
-          },
-        });
+        const settlement = creation.settlement;
+
+        if (creation.created) {
+          await this.financialAuditService.recordSettlement({
+            organizationId: input.organizationId,
+            actorUserId: input.actorUserId,
+            action: "SETTLEMENT_CREATED",
+            settlementId: settlement.id,
+            correlationId: input.correlationId,
+            requestId: input.requestId,
+            ipAddress: input.ipAddress,
+            userAgent: input.userAgent,
+            metadata: {
+              vendorId: input.vendorId,
+              financialInstrumentId: input.financialInstrumentId,
+              amountMinor: input.amountMinor.toString(),
+              currency,
+              periodStart: input.periodStart.toISOString(),
+              periodEnd: input.periodEnd.toISOString(),
+            },
+          });
+        }
 
         return {
-          responseStatus: 201,
+          responseStatus: creation.created ? 201 : 200,
           responseBody: this.toResult(settlement),
           resourceType: "SETTLEMENT",
           resourceId: settlement.id,
