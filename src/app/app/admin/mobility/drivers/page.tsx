@@ -5,6 +5,7 @@ import Link from "next/link";
 import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
+import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 type Document = { id: string; documentType: string; status: string; documentExpiry: string | null; rejectionReason: string | null };
 type Vehicle = { id: string; status: string; type: string; registrationNumber: string | null; make: string | null; model: string | null; year: number | null; color: string | null; verifications: Document[] } | null;
@@ -38,6 +39,8 @@ function dateLabel(value: string | null) {
 }
 
 export default function AdminMobilityDriversPage() {
+  const { activeOrganization } = useAuth();
+  const organizationId = activeOrganization?.id;
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -45,9 +48,19 @@ export default function AdminMobilityDriversPage() {
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
+    if (!organizationId) {
+      setDrivers([]);
+      setError("Selecione uma organização para consultar as candidaturas.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const response = await fetch("/api/mobility/admin/drivers", { credentials: "include", cache: "no-store" });
+      const response = await fetch("/api/mobility/admin/drivers", {
+        credentials: "include",
+        cache: "no-store",
+        headers: { "X-Organization-Id": organizationId },
+      });
       const data = await response.json() as Payload;
       if (!response.ok) throw new Error(data.message || "Não foi possível carregar as candidaturas.");
       setDrivers(data.drivers ?? []);
@@ -55,7 +68,7 @@ export default function AdminMobilityDriversPage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível carregar as candidaturas.");
     } finally { setLoading(false); }
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
 
@@ -67,7 +80,7 @@ export default function AdminMobilityDriversPage() {
     try {
       const response = await fetch("/api/mobility/admin/drivers", {
         method: "PATCH", credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId ?? "" },
         body: JSON.stringify({ driverId: driver.id, status, reason }),
       });
       const data = await response.json().catch(() => ({}));
