@@ -532,6 +532,7 @@ export class SettlementService {
                 id: true,
                 status: true,
                 type: true,
+                direction: true,
                 amountMinor: true,
                 currency: true,
                 sourceAccountId: true,
