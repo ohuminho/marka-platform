@@ -251,15 +251,15 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
 
   if (audience === "rider" && !authLoading && !loading && !error && !active) return null;
 
-  return <section className="overflow-hidden rounded-[2rem] border border-[#d8b35a]/25 bg-[#080a0e] text-white shadow-[0_28px_90px_rgba(0,0,0,.28)]">
+  return <section className="overflow-hidden rounded-[28px] border border-white/[.09] bg-[#080B10] text-white shadow-[0_30px_100px_-52px_rgba(0,0,0,.9)]">
     <header className="relative border-b border-white/[.08] px-5 py-6 sm:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(216,179,90,.14),transparent_55%)]" />
       <div className="relative flex flex-wrap items-start justify-between gap-4">
-        <div><p className="text-[9px] font-semibold uppercase tracking-[.3em] text-[#e9bd58]">{audience === "driver" ? "Partner workspace" : "Passenger journey"}</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] sm:text-3xl">{audience === "driver" ? "A sua operação, em tempo real." : "A sua viagem, com confiança."}</h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-white/50">{audience === "driver" ? "Estado operacional e informação essencial, sem ruído visual." : "Acompanhe a viagem e os dados essenciais do parceiro num espaço claro e discreto."}</p>
+        <div><p className="text-[9px] font-semibold uppercase tracking-[.3em] text-[#e9bd58]">{audience === "driver" ? "Espaço do parceiro" : "Acompanhamento da viagem"}</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] sm:text-3xl">{audience === "driver" ? "A sua operação, sob controlo." : "A sua viagem, acompanhada."}</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/50">{audience === "driver" ? "Disponibilidade, percurso e ações operacionais num espaço claro e sem distrações." : "Percurso, motorista e informação essencial reunidos num só ecrã."}</p>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.035] px-3 py-2 text-[9px] uppercase tracking-[.18em] text-white/65"><span className="h-1.5 w-1.5 rounded-full bg-[#e9bd58]" /> Atualização automática</span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.035] px-3 py-2 text-[9px] uppercase tracking-[.18em] text-white/65"><span className="h-1.5 w-1.5 rounded-full bg-[#e9bd58]" /> Sincronização automática</span>
       </div>
     </header>
     <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[1fr_.72fr] lg:p-8">
