@@ -1,25 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import {
-  FormEvent,
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
 
-type MobilitySafetyMode =
-  | "STANDARD"
-  | "TRUSTED"
-  | "CHILD";
-
 interface MobilityOverview {
   generatedAt: string;
-
-  engines: Record<string, boolean>;
 
   metrics: {
     rides: {
@@ -80,34 +71,6 @@ interface MobilityOverview {
   }>;
 }
 
-interface RideResponse {
-  ride?: {
-    id: string;
-    reference?: string;
-    status: string;
-    serviceType: string;
-    currency: string;
-    rider?: {
-      name?: string | null;
-    };
-  };
-
-  orchestration?: {
-    orchestrationId?: string;
-    rideId?: string;
-    status?: string;
-    currentStep?: string;
-    version?: number;
-    attemptCount?: number;
-    recoveryRequired?: boolean;
-  };
-
-  financials?: unknown;
-
-  recoveryRequired?: boolean;
-
-  message?: string;
-}
 
 const LIFECYCLE_STEPS = [
   "REQUESTED",
@@ -262,29 +225,6 @@ export default function MobilityControlCenter() {
   const [error, setError] =
     useState<string | null>(null);
 
-  const [creating, setCreating] =
-    useState(false);
-
-  const [serviceType, setServiceType] =
-    useState("TAXI");
-
-  const [safetyMode, setSafetyMode] =
-    useState<MobilitySafetyMode>(
-      "STANDARD",
-    );
-
-  const [pickupAddress, setPickupAddress] =
-    useState("");
-
-  const [dropoffAddress, setDropoffAddress] =
-    useState("");
-
-  const [pickupPoint, setPickupPoint] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
-  const [dropoffPoint, setDropoffPoint] = useState<{ latitude: number; longitude: number; address: string } | null>(null);
-
-  const [activeRide, setActiveRide] =
-    useState<RideResponse | null>(null);
-
   const [selectedRideId, setSelectedRideId] =
     useState<string | null>(null);
 
@@ -353,90 +293,6 @@ export default function MobilityControlCenter() {
     window.clearInterval(interval);
   };
 }, [loadOverview]);
-
-  const createRide =
-    async (
-      event: FormEvent<HTMLFormElement>,
-    ) => {
-      event.preventDefault();
-
-      setError(null);
-
-      if (!organizationId) {
-        setError("Selecione uma organização ativa antes de criar uma viagem.");
-        return;
-      }
-
-      if (!pickupPoint || !dropoffPoint) {
-        setError("Use o mapa para obter a partida por GPS e pesquisar um destino antes de pedir a viagem.");
-        return;
-      }
-
-      setCreating(true);
-
-      try {
-        const idempotencyKey =
-          `frontend-mobility-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2)}`;
-
-        const response =
-          await fetch(
-            "/api/mobility/rides",
-            {
-              method: "POST",
-              credentials: "include",
-              headers: {
-                "Content-Type":
-                  "application/json",
-                "Idempotency-Key":
-                  idempotencyKey,
-                "X-Organization-Id": organizationId,
-              },
-              body: JSON.stringify({
-                serviceType,
-                currency: "AOA",
-
-                pickupLatitude: pickupPoint.latitude,
-                pickupLongitude: pickupPoint.longitude,
-
-                dropoffLatitude: dropoffPoint.latitude,
-                dropoffLongitude: dropoffPoint.longitude,
-
-                pickupAddress: pickupPoint.address,
-                dropoffAddress: dropoffPoint.address,
-
-                safetyMode,
-              }),
-            },
-          );
-
-        const data =
-          (await response.json()) as RideResponse;
-
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              "Unable to create Mobility ride.",
-          );
-        }
-
-        setActiveRide(data);
-        setSelectedRideId(
-          data.ride?.id ?? null,
-        );
-
-        await loadOverview();
-      } catch (requestError) {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Unable to create Mobility ride.",
-        );
-      } finally {
-        setCreating(false);
-      }
-    };
 
   const selectedRide =
     useMemo(
@@ -528,15 +384,13 @@ export default function MobilityControlCenter() {
                 sm:text-5xl
               "
             >
-              Every mobility engine.
+              Operação Mobility.
               <br />
-              One operational view.
+              Uma visão operacional.
             </h1>
 
             <p className="mt-5 max-w-2xl text-sm leading-7 text-[var(--theme-text)]/40">
-              O frontend está agora ligado ao ciclo operacional real da
-              Mobility: safety, pricing, matching, dispatch, lifecycle,
-              payment, settlement e financial recovery.
+              Acompanhe o estado das viagens, a orquestração, os eventos e os indicadores financeiros da organização ativa.
             </p>
           </div>
 
@@ -764,265 +618,26 @@ export default function MobilityControlCenter() {
           </div>
         </div>
 
-        <form
-          id="ride-request"
-          onSubmit={createRide}
-          className="
-            relative
-            isolate
-            overflow-hidden
-            rounded-[1.9rem]
-            border
-            border-[#e9bd58]/30
-            bg-[#08090c]
-            p-6
-            text-white
-            shadow-[0_24px_70px_rgba(0,0,0,.35)]
-            sm:p-8
-          "
-        >
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(233,189,88,.14),transparent_55%)]" />
-          <div className="mb-6 flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e9bd58]/35 bg-[#17140c] text-xl text-[#e9bd58]">⌖</span>
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#e9bd58]">
-                MARKA Mobility · Passageiros
-              </p>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">
-                Vamos à sua próxima viagem?
-              </h2>
-            </div>
-          </div>
-
-          <p className="mt-3 max-w-xl text-sm leading-6 text-white/60">
-            Escolha o serviço e indique os locais de partida e destino. A viagem
-            segue para o fluxo operacional da MARKA Mobility.
+        <div className="relative isolate overflow-hidden rounded-[1.9rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[var(--theme-text-faint)]">
+            Gestão operacional
           </p>
-
-          <div className="mt-6 space-y-4">
-            <div className="mb-5">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e9bd58]">Mapa e localização</p>
-              <MobilityLiveMap onPointsChange={({ origin, destination }) => {
-                setPickupPoint(origin ? { latitude: origin.lat, longitude: origin.lon, address: origin.label } : null);
-                setDropoffPoint(destination ? { latitude: destination.lat, longitude: destination.lon, address: destination.label } : null);
-                if (origin) setPickupAddress(origin.label);
-                if (destination) setDropoffAddress(destination.label);
-              }} />
-              <p className="mt-2 text-[10px] text-white/40">Defina a partida por GPS e pesquise o destino para enviar coordenadas reais.</p>
-            </div>
-            <label className="block">
-              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                Tipo de serviço
-              </span>
-
-              <select
-                value={serviceType}
-                onChange={(event) =>
-                  setServiceType(
-                    event.target.value,
-                  )
-                }
-                className="
-                  h-12
-                  w-full
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-white/[.045]
-                  px-4
-                  text-sm
-                  text-white
-                  outline-none
-                  transition
-                  focus:border-[#e9bd58]/70
-                  focus:ring-2
-                  focus:ring-[#e9bd58]/15
-                "
-              >
-                <option value="TAXI" className="bg-[#08090c] text-white">
-                  MARKA Go · Táxi
-                </option>
-
-                <option value="MOTO_TAXI" className="bg-[#08090c] text-white">
-                  MARKA Moto
-                </option>
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                Preferência de segurança
-              </span>
-
-              <select
-                value={safetyMode}
-                onChange={(event) =>
-                  setSafetyMode(
-                    event.target
-                      .value as MobilitySafetyMode,
-                  )
-                }
-                className="
-                  h-11
-                  w-full
-                  rounded-xl
-                  border
-                  border-[var(--theme-border)]
-                  bg-[var(--theme-background)]/30
-                  px-4
-                  text-xs
-                  text-[var(--theme-text)]
-                  outline-none
-                "
-              >
-                <option value="STANDARD" className="bg-[#08090c] text-white">
-                  Padrão
-                </option>
-
-                <option value="TRUSTED" className="bg-[#08090c] text-white">
-                  Contacto de confiança
-                </option>
-
-                <option value="CHILD" className="bg-[#08090c] text-white">
-                  Viagem para menor
-                </option>
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                Local de partida
-              </span>
-
-              <input
-                value={pickupAddress}
-                onChange={(event) =>
-                  setPickupAddress(
-                    event.target.value,
-                  )
-                }
-                placeholder="Onde vamos buscá-lo?"
-                className="
-                  h-12
-                  w-full
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-white/[.045]
-                  px-4
-                  text-sm
-                  text-white
-                  outline-none
-                  transition
-                  placeholder:text-white/30
-                  focus:border-[#e9bd58]/70
-                  focus:ring-2
-                  focus:ring-[#e9bd58]/15
-                "
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">
-                Destino
-              </span>
-
-              <input
-                value={dropoffAddress}
-                onChange={(event) =>
-                  setDropoffAddress(
-                    event.target.value,
-                  )
-                }
-                placeholder="Para onde pretende ir?"
-                className="
-                  h-11
-                  w-full
-                  rounded-xl
-                  border
-                  border-[var(--theme-border)]
-                  bg-[var(--theme-background)]/30
-                  px-4
-                  text-xs
-                  text-[var(--theme-text)]
-                  outline-none
-                  placeholder:text-[var(--theme-text-faint)]
-                "
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={creating}
-              className="
-                h-12
-                w-full
-                rounded-full
-                bg-gradient-to-r
-                from-[#f5d47c]
-                to-[#dca83d]
-                px-6
-                text-sm
-                font-bold
-                tracking-wide
-                text-[#17130a]
-                shadow-[0_4px_24px_rgba(233,189,88,.18)]
-                transition
-                hover:brightness-105
-                disabled:cursor-not-allowed
-                disabled:opacity-50
-              "
-            >
-              {creating
-                ? "A preparar a viagem..."
-                : "Pedir viagem　›"}
-            </button>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--theme-text)]">
+            Monitorização de viagens
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">
+            Este espaço apresenta a operação real da organização. Os pedidos de viagem são criados pelo passageiro; o painel administrativo não cria viagens em nome do administrador.
+          </p>
+          <div className="mt-6 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)]/30 p-4">
+            <p className="text-xs font-semibold text-[var(--theme-text)]">Despacho manual</p>
+            <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">
+              A atribuição manual e a intervenção administrativa numa corrida ainda não estão disponíveis nesta API. Não apresentamos controlos que possam alterar incorretamente o passageiro responsável pela viagem.
+            </p>
           </div>
-
-          {activeRide?.ride && (
-            <div
-              className="
-                mt-5
-                rounded-xl
-                border
-                border-[#e9bd58]/25
-                bg-white/[.035]
-                p-4
-              "
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] uppercase tracking-[0.18em] text-[#e9bd58]">
-                  {activeRide.ride.status === "NO_DRIVER_FOUND"
-                    ? "Sem motorista disponível"
-                    : activeRide.ride.status === "DRIVER_ASSIGNED"
-                      ? "Motorista encontrado"
-                      : "Viagem criada"}
-                </span>
-
-                <StatusPill
-                  value={
-                    activeRide.ride.status
-                  }
-                />
-              </div>
-
-              <p className="mt-3 text-sm text-white">
-                {activeRide.ride.reference ??
-                  activeRide.ride.id}
-              </p>
-              {activeRide.ride.status === "NO_DRIVER_FOUND" && (
-                <p className="mt-2 text-xs leading-5 text-white/65">
-                  Não encontrámos um motorista elegível neste momento. A viagem não foi atribuída; tente novamente daqui a pouco.
-                </p>
-              )}
-              {activeRide.ride.status === "DRIVER_ASSIGNED" && (
-                <p className="mt-2 text-xs leading-5 text-white/65">
-                  Encontrámos um motorista elegível. Aguarde a confirmação da aceitação.
-                </p>
-              )}
-            </div>
-          )}
-        </form>
+          <Link href="/app/admin/mobility/drivers" className="mt-5 inline-flex h-11 items-center rounded-full border border-[var(--theme-border)] px-5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)] transition hover:text-[var(--theme-text)]">
+            Rever motoristas e documentos <span className="ml-3">→</span>
+          </Link>
+        </div> </form>
       </section>
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
