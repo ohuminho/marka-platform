@@ -20,6 +20,7 @@ type LeafletNamespace = {
   map(element: HTMLElement): LeafletMap;
   tileLayer(url: string, options?: { maxZoom?: number; attribution?: string }): { addTo(map: LeafletMap): unknown };
   marker(position: [number, number]): LeafletMarker;
+  circleMarker(position: [number, number], options?: Record<string, unknown>): LeafletMarker;
   geoJSON(data: unknown, options?: { style?: { color: string; weight: number; opacity: number } }): LeafletLayerGroup;
 };
 declare global { interface Window { L?: LeafletNamespace } }
