@@ -324,25 +324,9 @@ export async function GET(
   try {
     const ride =
       await mobilityRideService.getActiveRideForRider(
-        authentication.session
-          .userId,
+        authentication.session.userId,
+        authentication.session.organizationId,
       );
-
-    if (
-      ride &&
-      ride.organizationId !==
-        authentication.session
-          .organizationId
-    ) {
-      return NextResponse.json(
-        {
-          ride: null,
-        },
-        {
-          status: 200,
-        },
-      );
-    }
 
     const orchestration =
       ride
