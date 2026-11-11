@@ -506,6 +506,10 @@ export class SettlementService {
               return current;
             }
 
+            if (!current.providerReference || current.providerReference !== input.providerReference.trim()) {
+              throw new Error("Settlement provider reference must be persisted and match the confirmed payout.");
+            }
+
             if (current.status !== SettlementStatus.PROCESSING) {
               throw new Error(
                 "Only a processing settlement can be completed."
@@ -551,6 +555,48 @@ export class SettlementService {
               );
             }
 
+            if (transaction.direction !== TransactionDirection.DEBIT) {
+              throw new Error("Settlement funding transaction has an invalid direction.");
+            }
+
+            if (!transaction.sourceAccountId || !transaction.destinationAccountId) {
+              throw new Error("Settlement funding transaction has incomplete account references.");
+            }
+
+            const [vendorPayableAccount, settlementAccount] = await Promise.all([
+              tx.account.findUnique({
+                where: { id: transaction.sourceAccountId },
+                select: { id: true, organizationId: true, vendorId: true, type: true, currency: true, status: true },
+              }),
+              tx.account.findUnique({
+                where: { id: transaction.destinationAccountId },
+                select: { id: true, organizationId: true, vendorId: true, userId: true, type: true, currency: true, status: true },
+              }),
+            ]);
+
+            if (
+              !vendorPayableAccount ||
+              vendorPayableAccount.organizationId !== input.organizationId ||
+              vendorPayableAccount.vendorId !== current.vendorId ||
+              vendorPayableAccount.type !== "VENDOR_PAYABLE" ||
+              vendorPayableAccount.currency !== current.currency ||
+              vendorPayableAccount.status !== "ACTIVE"
+            ) {
+              throw new Error("Settlement funding source is not the active payable account for this vendor.");
+            }
+
+            if (
+              !settlementAccount ||
+              settlementAccount.organizationId !== input.organizationId ||
+              settlementAccount.type !== "SETTLEMENT" ||
+              settlementAccount.vendorId !== null ||
+              settlementAccount.userId !== null ||
+              settlementAccount.currency !== current.currency ||
+              settlementAccount.status !== "ACTIVE"
+            ) {
+              throw new Error("Settlement funding destination is not the active organization settlement account.");
+            }
+
             if (transaction.amountMinor !== current.amountMinor) {
               throw new Error(
                 "Settlement amount does not match the funding transaction."
@@ -563,6 +609,44 @@ export class SettlementService {
               );
             }
 
+            const payoutLedgerTransaction = await transactionService.createExternalDebitWithinTransaction(
+              tx,
+              {
+                organizationId: input.organizationId,
+                idempotencyKey: `settlement-payout-debit:${current.id}`,
+                type: TransactionType.SETTLEMENT,
+                amountMinor: current.amountMinor,
+                currency: current.currency,
+                sourceAccountId: settlementAccount.id,
+                actorUserId: input.actorUserId,
+                actorType: TransactionActorType.SYSTEM,
+                reference: `SETTLEMENT-PAYOUT-${current.id}`,
+                referenceType: "EXTERNAL_SETTLEMENT_PAYOUT",
+                vendorId: current.vendorId,
+                context: "EXTERNAL_SETTLEMENT_PAYOUT_COMPLETED",
+                provider: input.providerReference.split(":")[0] || "CONFIGURED_PROVIDER",
+                providerPayoutId: input.providerReference,
+                metadata: {
+                  settlementId: current.id,
+                  fundingTransactionId: transaction.id,
+                  financialInstrumentId: current.financialInstrumentId,
+                },
+                correlationId: input.correlationId,
+                requestId: input.requestId,
+                ipAddress: input.ipAddress,
+                userAgent: input.userAgent,
+              }
+            );
+
+            const existingMetadata =
+              current.metadata && typeof current.metadata === "object" && !Array.isArray(current.metadata)
+                ? current.metadata as Record<string, unknown>
+                : {};
+            const existingPayout =
+              existingMetadata.payout && typeof existingMetadata.payout === "object" && !Array.isArray(existingMetadata.payout)
+                ? existingMetadata.payout as Record<string, unknown>
+                : {};
+
             const updated = await tx.settlement.update({
               where: {
                 id: current.id,
@@ -570,6 +654,15 @@ export class SettlementService {
               data: {
                 status: SettlementStatus.COMPLETED,
                 providerReference: input.providerReference.trim(),
+                metadata: {
+                  ...existingMetadata,
+                  payout: {
+                    ...existingPayout,
+                    ledgerTransactionId: payoutLedgerTransaction.id,
+                    ledgerStatus: "COMPLETED",
+                    ledgerRecordedAt: new Date().toISOString(),
+                  },
+                } as Prisma.InputJsonValue,
               },
             });
 
@@ -589,6 +682,7 @@ export class SettlementService {
                   settlementId: current.id,
                   providerReference: input.providerReference.trim(),
                   transactionId: current.transactionId,
+                  payoutLedgerTransactionId: payoutLedgerTransaction.id,
                   financialInstrumentId:
                     current.financialInstrumentId,
                   amountMinor: current.amountMinor.toString(),
