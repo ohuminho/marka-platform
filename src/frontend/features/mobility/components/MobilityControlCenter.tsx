@@ -109,121 +109,6 @@ interface RideResponse {
   message?: string;
 }
 
-const ENGINE_REGISTRY = [
-  {
-    key: "lifecycle",
-    name: "Lifecycle Orchestrator",
-    layer: "Orchestration",
-    description:
-      "Coordena o ciclo completo da viagem.",
-  },
-  {
-    key: "ride",
-    name: "Ride Engine",
-    layer: "Mobility",
-    description:
-      "Criação, transições e estado da viagem.",
-  },
-  {
-    key: "stateMachine",
-    name: "Ride State Machine",
-    layer: "Control",
-    description:
-      "Impede transições inválidas.",
-  },
-  {
-    key: "pricing",
-    name: "Pricing Engine",
-    layer: "Commercial",
-    description:
-      "Calcula e preserva o contexto de preço.",
-  },
-  {
-    key: "matching",
-    name: "Matching Engine",
-    layer: "Dispatch",
-    description:
-      "Procura candidatos compatíveis.",
-  },
-  {
-    key: "dispatch",
-    name: "Dispatch Engine",
-    layer: "Dispatch",
-    description:
-      "Distribui a viagem para o candidato elegível.",
-  },
-  {
-    key: "assignment",
-    name: "Driver / Vehicle Assignment",
-    layer: "Operations",
-    description:
-      "Valida e mantém a relação motorista-veículo.",
-  },
-  {
-    key: "safety",
-    name: "Safety Engine",
-    layer: "Safety",
-    description:
-      "Identidade, documentos, risco e elegibilidade.",
-  },
-  {
-    key: "payment",
-    name: "Payment Engine",
-    layer: "Financial",
-    description:
-      "Regista e finaliza o pagamento da viagem.",
-  },
-  {
-    key: "cashSettlement",
-    name: "Cash Obligation Engine",
-    layer: "Financial",
-    description:
-      "Transforma comissão em obrigação financeira no cash.",
-  },
-  {
-    key: "settlement",
-    name: "Settlement Engine",
-    layer: "Financial",
-    description:
-      "Fecha a liquidação da viagem.",
-  },
-  {
-    key: "financialOrchestrator",
-    name: "Financial Orchestrator",
-    layer: "Financial",
-    description:
-      "Coordena Payment + Settlement + Financial Core.",
-  },
-  {
-    key: "financialCoreBridge",
-    name: "Financial Core Bridge",
-    layer: "Financial Core",
-    description:
-      "Liga a Mobility ao ledger financeiro principal.",
-  },
-  {
-    key: "recovery",
-    name: "Financial Recovery",
-    layer: "Recovery",
-    description:
-      "Reconcilia e recupera etapas financeiras incompletas.",
-  },
-  {
-    key: "audit",
-    name: "Financial Audit",
-    layer: "Control",
-    description:
-      "Regista a trilha auditável das operações.",
-  },
-  {
-    key: "idempotency",
-    name: "Idempotency Engine",
-    layer: "Control",
-    description:
-      "Evita duplicação de operações críticas.",
-  },
-] as const;
-
 const LIFECYCLE_STEPS = [
   "REQUESTED",
   "SAFETY_READY",
@@ -656,26 +541,8 @@ export default function MobilityControlCenter() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span
-              className="
-                inline-flex
-                items-center
-                gap-2
-                rounded-full
-                border
-                border-[var(--theme-border)]
-                bg-[var(--theme-surface)]
-                px-4
-                py-2
-                text-[9px]
-                font-semibold
-                uppercase
-                tracking-[0.2em]
-                text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]
-              "
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--theme-surface-strong)] shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
-              Live
+            <span className="inline-flex items-center rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">
+              Actualização automática · 5 s
             </span>
 
             <button
@@ -783,99 +650,10 @@ export default function MobilityControlCenter() {
         </div>
       </section>
 
-      <section>
-        <div className="mb-5 flex items-end justify-between">
-          <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-[var(--theme-text-faint)]">
-              Engine registry
-            </p>
-
-            <h2 className="mt-2 text-xl font-medium text-[var(--theme-text)]/85">
-              Runtime architecture
-            </h2>
-          </div>
-
-          <span className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">
-            {ENGINE_REGISTRY.length} engines
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {ENGINE_REGISTRY.map(
-            (engine) => {
-              const connected =
-                overview?.engines[
-                  engine.key
-                ] ?? true;
-
-              return (
-                <div
-                  key={engine.key}
-                  className="
-                    rounded-2xl
-                    border
-                    border-[var(--theme-border)]
-                    bg-[var(--theme-surface)]
-                    p-5
-                    transition
-                    hover:border-[var(--theme-border)]
-                    hover:bg-[var(--theme-surface)]
-                  "
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
-                        {engine.layer}
-                      </p>
-
-                      <h3 className="mt-2 text-sm font-medium text-[color-mix(in_srgb,var(--theme-text)_75%,transparent)]">
-                        {engine.name}
-                      </h3>
-                    </div>
-
-                    <span
-                      className="
-                        flex
-                        h-7
-                        w-7
-                        shrink-0
-                        items-center
-                        justify-center
-                        rounded-full
-                        border
-                        border-[var(--theme-border)]
-                        bg-[var(--theme-surface)]
-                      "
-                    >
-                      <span
-                        className={`
-                          h-1.5
-                          w-1.5
-                          rounded-full
-                          ${
-                            connected
-                              ? "bg-[var(--theme-surface-strong)] shadow-[0_0_9px_rgba(255,255,255,0.8)]"
-                              : "bg-[var(--theme-surface-strong)]/20"
-                          }
-                        `}
-                      />
-                    </span>
-                  </div>
-
-                  <p className="mt-4 text-[11px] leading-5 text-[var(--theme-text-muted)]">
-                    {engine.description}
-                  </p>
-
-                  <p className="mt-4 text-[8px] font-semibold uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">
-                    {connected
-                      ? "Integrated"
-                      : "Unavailable"}
-                  </p>
-                </div>
-              );
-            },
-          )}
-        </div>
+      <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-4">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--theme-text-faint)]">Estado operacional</p>
+        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Os indicadores abaixo são consultados na API da organização ativa. As permissões de administração são novamente verificadas no servidor.</p>
+        {overview?.generatedAt && <p className="mt-2 text-[10px] text-[var(--theme-text-faint)]">Última atualização: {formatDate(overview.generatedAt)}</p>}
       </section>
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
