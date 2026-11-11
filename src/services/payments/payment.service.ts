@@ -288,11 +288,15 @@ export class PaymentService {
               },
               data: {
                 status:
-                  PaymentStatus.FAILED,
+                  PaymentStatus.PROCESSING,
                 metadata:
                   this.mergeJsonMetadata(
                     payment.metadata,
                     {
+                      providerIntentOutcome:
+                        "UNKNOWN",
+                      providerIntentRecoveryRequired:
+                        true,
                       providerError:
                         error instanceof Error
                           ? error.message
@@ -309,7 +313,7 @@ export class PaymentService {
               paymentId:
                 payment.id,
               action:
-                "PAYMENT_PROVIDER_INTENT_FAILED",
+                "PAYMENT_PROVIDER_INTENT_RECONCILIATION_REQUIRED",
               correlationId:
                 input.correlationId,
               requestId:
@@ -321,6 +325,10 @@ export class PaymentService {
               metadata: {
                 provider:
                   provider.name,
+                outcome:
+                  "UNKNOWN",
+                recoveryRequired:
+                  true,
                 error:
                   error instanceof Error
                     ? error.message
