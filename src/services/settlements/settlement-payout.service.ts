@@ -422,13 +422,21 @@ export class SettlementPayoutService {
 
           this.validateProviderResult(
             providerResult,
-            context.settlement
+            context.settlement,
+            context.financialInstrument.provider
           );
 
           await this.persistProviderResult(
             input,
             providerResult
           );
+
+          if (providerResult.status === "COMPLETED") {
+            this.validateCompletedPayoutFinancials(
+              providerResult,
+              context.settlement
+            );
+          }
 
           if (
             providerResult.status ===
