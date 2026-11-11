@@ -27,6 +27,9 @@ const schema = z.object({
   if (value.type === "TRUCK" && !value.vehicleSubtype) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["vehicleSubtype"], message: "Seleciona o tipo de veículo de carga." });
   }
+  if (value.type === "MOTORCYCLE" && value.capacity !== 1) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["capacity"], message: "O moto-táxi está limitado a um passageiro." });
+  }
   if (value.ownershipType === "THIRD_PARTY_AUTHORIZED" && value.ownerName.trim().length < 2) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["ownerName"], message: "Indica o nome do proprietário do veículo." });
   }
