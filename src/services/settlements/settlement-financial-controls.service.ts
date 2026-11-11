@@ -17,6 +17,7 @@ export type FinancialControlType =
   | "SETTLEMENT_PROCESSING_TOO_LONG"
   | "SETTLEMENT_FAILED"
   | "SETTLEMENT_COMPLETED_WITHOUT_PROVIDER_REFERENCE"
+  | "SETTLEMENT_COMPLETED_WITHOUT_PAYOUT_LEDGER_TRANSACTION"
   | "RECONCILIATION_MISMATCH"
   | "RECONCILIATION_MISMATCH_TOO_LONG"
   | "RECONCILIATION_UNRESOLVED";
@@ -71,6 +72,7 @@ interface SettlementControlRecord {
   currency: string;
   status: SettlementStatus;
   providerReference: string | null;
+  metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
 
@@ -113,6 +115,7 @@ export class SettlementFinancialControlsService {
           currency: true,
           status: true,
           providerReference: true,
+          metadata: true,
           createdAt: true,
           updatedAt: true,
           reconciliation: {
@@ -131,6 +134,30 @@ export class SettlementFinancialControlsService {
           updatedAt: "asc",
         },
       });
+
+    const payoutLedgerIds = settlements
+      .map((settlement) => this.getPayoutLedgerTransactionId(settlement.metadata))
+      .filter((id): id is string => Boolean(id));
+
+    const payoutLedgerTransactions = payoutLedgerIds.length
+      ? await prisma.transaction.findMany({
+          where: { id: { in: payoutLedgerIds } },
+          select: {
+            id: true,
+            status: true,
+            type: true,
+            direction: true,
+            amountMinor: true,
+            currency: true,
+            sourceAccountId: true,
+            destinationAccountId: true,
+          },
+        })
+      : [];
+
+    const payoutLedgerById = new Map(
+      payoutLedgerTransactions.map((transaction) => [transaction.id, transaction])
+    );
 
     const now = new Date();
 
@@ -223,11 +250,12 @@ export class SettlementFinancialControlsService {
         );
       }
 
+      const payoutIsCompleted =
+        settlement.status === SettlementStatus.COMPLETED ||
+        settlement.status === SettlementStatus.RECONCILED;
+
       if (
-        (settlement.status ===
-          SettlementStatus.COMPLETED ||
-          settlement.status ===
-            SettlementStatus.RECONCILED) &&
+        payoutIsCompleted &&
         !settlement.providerReference
       ) {
         findings.push(
@@ -243,6 +271,36 @@ export class SettlementFinancialControlsService {
               "Settlement is completed but has no external provider reference.",
           })
         );
+      }
+
+      if (payoutIsCompleted) {
+        const payoutLedgerId = this.getPayoutLedgerTransactionId(settlement.metadata);
+        const payoutLedger = payoutLedgerId
+          ? payoutLedgerById.get(payoutLedgerId)
+          : undefined;
+
+        if (
+          !payoutLedger ||
+          payoutLedger.status !== "COMPLETED" ||
+          payoutLedger.type !== "SETTLEMENT" ||
+          payoutLedger.direction !== "DEBIT" ||
+          payoutLedger.amountMinor !== settlement.amountMinor ||
+          payoutLedger.currency !== settlement.currency ||
+          !payoutLedger.sourceAccountId ||
+          payoutLedger.destinationAccountId !== null
+        ) {
+          findings.push(
+            this.createFinding({
+              type: "SETTLEMENT_COMPLETED_WITHOUT_PAYOUT_LEDGER_TRANSACTION",
+              severity: "CRITICAL",
+              settlement,
+              ageMinutes: settlementAgeMinutes,
+              message: payoutLedgerId
+                ? "Completed settlement does not have a matching completed external-debit ledger transaction."
+                : "Completed settlement has no external-debit ledger transaction recorded.",
+            })
+          );
+        }
       }
 
       if (
@@ -357,6 +415,22 @@ export class SettlementFinancialControlsService {
       totals,
       findings,
     };
+  }
+
+  private getPayoutLedgerTransactionId(metadata: unknown): string | null {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return null;
+    }
+
+    const payout = (metadata as Record<string, unknown>).payout;
+    if (!payout || typeof payout !== "object" || Array.isArray(payout)) {
+      return null;
+    }
+
+    const transactionId = (payout as Record<string, unknown>).ledgerTransactionId;
+    return typeof transactionId === "string" && transactionId.trim()
+      ? transactionId.trim()
+      : null;
   }
 
   private accumulateSettlementTotals(
