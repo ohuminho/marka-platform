@@ -5,6 +5,7 @@ import {
 } from "@/app/api/mobility/_lib/auth";
 
 import { prisma } from "@/database/client/prisma";
+import { authorizationService } from "@/core/authorization/authorization.service";
 
 export async function GET(
   request: Request,
@@ -20,6 +21,22 @@ export async function GET(
 
   const organizationId =
     authentication.session.organizationId;
+
+  const hasAdminAccess = await authorizationService.hasPermission(
+    authentication.session.userId,
+    "ADMIN_ACCESS",
+    organizationId,
+  );
+
+  if (!hasAdminAccess) {
+    return NextResponse.json(
+      {
+        message: "Administrative access is required to view Mobility operations.",
+        code: "MOBILITY_ADMIN_ACCESS_REQUIRED",
+      },
+      { status: 403 },
+    );
+  }
 
   try {
     const [
