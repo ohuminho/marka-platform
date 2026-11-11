@@ -213,7 +213,9 @@ export default function MobilityExperience() {
       try {
         const pendingRaw = window.sessionStorage.getItem(storageKey);
         const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
-        if (pending?.key === idempotencyKey) window.sessionStorage.removeItem(storageKey);
+        if (pending?.key === idempotencyKey && !data.orchestration?.recoveryRequired) {
+          window.sessionStorage.removeItem(storageKey);
+        }
       } catch {
         // Session storage is an optional retry aid; the server remains authoritative.
       }
