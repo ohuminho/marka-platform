@@ -147,90 +147,127 @@ export default function MobilityExperience() {
   const currentStatus = statusLabels[currentStep] ?? (currentStep ? currentStep.replaceAll("_", " ").toLowerCase() : "Pedido em processamento");
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-white/[.09] bg-[#080A0E] text-white shadow-[0_30px_100px_-55px_rgba(0,0,0,.9)]">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/[.08] px-5 py-4 sm:px-7">
+    <section className="relative isolate overflow-hidden rounded-[30px] border border-white/[.09] bg-[#080B10] text-white shadow-[0_36px_110px_-48px_rgba(0,0,0,.95)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(ellipse_at_top,rgba(233,189,88,.13),transparent_68%)]" />
+      <header className="relative flex flex-wrap items-center justify-between gap-4 border-b border-white/[.07] px-5 py-4 sm:px-7">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#D9AA4B]/25 bg-[#D9AA4B]/[.07] text-[#E9BD58]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E9BD58]/25 bg-[#E9BD58]/[.08] text-[#F2CD70] shadow-[0_0_32px_-16px_rgba(233,189,88,.8)]">
             <svg viewBox="0 0 32 32" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M4 21 8 17 12 7h9l5 10 3 3v5H3v-2c0-1 0-2 1-2Z" stroke="currentColor" strokeWidth="1.6"/><circle cx="9" cy="25" r="2.5" fill="#080A0E" stroke="currentColor"/><circle cx="23" cy="25" r="2.5" fill="#080A0E" stroke="currentColor"/></svg>
           </div>
-          <div><p className="text-[10px] font-bold tracking-[.24em] text-white">MARKA <span className="text-[#E9BD58]">MOBILITY</span></p><p className="mt-0.5 text-[10px] text-white/40">A cidade, ao seu ritmo.</p></div>
+          <div>
+            <p className="text-[10px] font-bold tracking-[.25em] text-white">MARKA <span className="text-[#E9BD58]">MOBILITY</span></p>
+            <p className="mt-1 text-[11px] text-white/45">Movimento inteligente. Chegadas tranquilas.</p>
+          </div>
         </div>
-        <Link href="/app/driver" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 px-4 text-xs font-semibold text-white/75 transition hover:border-[#E9BD58]/50 hover:text-[#F2CD70]">
-          Área de motorista <span aria-hidden="true">↗</span>
+        <Link href="/app/driver" className="group inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[.12] bg-white/[.035] px-4 text-[11px] font-semibold text-white/70 transition hover:border-[#E9BD58]/45 hover:bg-[#E9BD58]/[.06] hover:text-[#F2CD70]">
+          Conduzir com a MARKA <span className="transition-transform group-hover:translate-x-0.5">↗</span>
         </Link>
       </header>
 
-      <div className="grid lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,.8fr)]">
-        <div className="min-w-0 border-b border-white/[.08] lg:border-b-0 lg:border-r">
+      <div className="relative grid lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,.8fr)]">
+        <div className="min-w-0 border-b border-white/[.07] lg:border-b-0 lg:border-r lg:border-white/[.07]">
           <div className="flex items-end justify-between gap-3 px-5 pb-4 pt-6 sm:px-7">
-            <div><p className="text-[10px] font-semibold uppercase tracking-[.22em] text-[#E9BD58]">Mobilidade urbana</p><h1 className="mt-2 text-2xl font-semibold tracking-[-.04em] sm:text-3xl">Para onde vamos?</h1><p className="mt-1 text-xs text-white/45">Escolha a partida e o destino. O resto é simples.</p></div>
-            <span className="hidden rounded-full border border-white/10 px-3 py-1.5 text-[9px] text-white/45 sm:inline-flex">ANGOLA</span>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[.25em] text-[#E9BD58]">A sua próxima viagem começa aqui</p>
+              <h1 className="mt-2 text-[clamp(1.8rem,4vw,2.7rem)] font-semibold leading-[1.04] tracking-[-.055em]">A cidade está<br className="hidden sm:block"/> mais perto.</h1>
+              <p className="mt-2 max-w-md text-xs leading-5 text-white/45">Defina o ponto de partida, escolha o destino e acompanhe cada etapa com clareza.</p>
+            </div>
+            <div className="hidden shrink-0 items-center gap-2 rounded-full border border-emerald-300/15 bg-emerald-300/[.045] px-3 py-2 sm:inline-flex">
+              <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-30"/><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300"/></span>
+              <span className="text-[9px] font-semibold tracking-wide text-emerald-100/75">MAPA INTERATIVO</span>
+            </div>
           </div>
-          <div className="px-3 pb-5 sm:px-5 sm:pb-7">
+          <div className="px-3 pb-4 sm:px-5 sm:pb-6">
             <MobilityLiveMap onPointsChange={onPointsChange} />
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="min-w-0 rounded-xl border border-white/[.08] bg-white/[.025] px-3 py-3">
-                <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#80C8A0]" /><p className="text-[9px] font-semibold uppercase tracking-[.16em] text-white/40">Partida</p></div>
-                <p className="mt-2 line-clamp-2 break-words text-xs leading-5 text-white/85">{origin?.label ?? "A aguardar localização"}</p>
+              <div className="min-w-0 rounded-2xl border border-white/[.08] bg-white/[.025] px-3.5 py-3">
+                <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#80C8A0] shadow-[0_0_12px_rgba(128,200,160,.5)]"/><p className="text-[9px] font-bold uppercase tracking-[.16em] text-white/40">Ponto de partida</p></div>
+                <p className="mt-2 line-clamp-2 break-words text-[11px] leading-5 text-white/85">{origin?.label ?? "A sua localização, via GPS"}</p>
               </div>
-              <div className="min-w-0 rounded-xl border border-white/[.08] bg-white/[.025] px-3 py-3">
-                <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#E9BD58]" /><p className="text-[9px] font-semibold uppercase tracking-[.16em] text-white/40">Destino</p></div>
-                <p className="mt-2 line-clamp-2 break-words text-xs leading-5 text-white/85">{destination?.label ?? "A escolher no mapa"}</p>
+              <div className="min-w-0 rounded-2xl border border-white/[.08] bg-white/[.025] px-3.5 py-3">
+                <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[#E9BD58] shadow-[0_0_12px_rgba(233,189,88,.5)]"/><p className="text-[9px] font-bold uppercase tracking-[.16em] text-white/40">Destino</p></div>
+                <p className="mt-2 line-clamp-2 break-words text-[11px] leading-5 text-white/85">{destination?.label ?? "Onde pretende chegar?"}</p>
               </div>
             </div>
-            <p className="mt-3 px-1 text-[10px] leading-4 text-white/30">A localização só é obtida após autorização explícita. O mapa e as rotas usam serviços públicos OpenStreetMap.</p>
+            <p className="mt-3 px-1 text-[9px] leading-4 text-white/30">A localização é solicitada apenas com a sua autorização. Cartografia e cálculo de percurso através de serviços OpenStreetMap.</p>
           </div>
         </div>
 
-        <form onSubmit={submitRide} className="flex min-w-0 flex-col p-5 sm:p-7">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[.22em] text-[#E9BD58]">O seu serviço</p>
-            <h2 className="mt-2 text-xl font-semibold tracking-tight">Escolha como viajar.</h2>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {services.map((service) => {
-                const selected = serviceType === service.id;
-                return (
-                  <button key={service.id} type="button" aria-pressed={selected} onClick={() => { setServiceType(service.id); if (service.id === "MOTO_TAXI") setPassengerCount(1); }} className={`group min-w-0 rounded-2xl border p-3 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#E9BD58] ${selected ? "border-[#E9BD58]/70 bg-[#E9BD58]/[.09] shadow-[inset_0_0_0_1px_rgba(233,189,88,.12)]" : "border-white/10 bg-white/[.025] hover:border-white/25"}`}>
-                    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${selected ? "bg-[#E9BD58]/10 text-[#F2CD70]" : "bg-white/[.04] text-white/55"}`}><ServiceIcon kind={service.icon} /></div>
-                    <p className="text-sm font-semibold">{service.name}</p>
-                    <p className={`mt-1 text-[10px] font-medium ${selected ? "text-[#F2CD70]" : "text-white/45"}`}>{service.subtitle}</p>
-                    <p className="mt-3 text-[10px] leading-4 text-white/40">{service.capacity}</p>
-                    <span className={`mt-3 inline-flex h-4 w-4 items-center justify-center rounded-full border ${selected ? "border-[#E9BD58] bg-[#E9BD58] text-[#111]" : "border-white/25"}`}>{selected && <span className="text-[10px] font-bold">✓</span>}</span>
-                  </button>
-                );
-              })}
+        <form onSubmit={submitRide} className="flex min-w-0 flex-col p-5 sm:p-7 lg:sticky lg:top-4 lg:self-start">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[.24em] text-[#E9BD58]">Reserva imediata</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-[-.035em]">Como quer viajar?</h2>
             </div>
-            <p className="mt-3 text-xs leading-5 text-white/45">{selectedService.description}</p>
+            <span className="rounded-xl border border-white/[.08] bg-white/[.035] px-3 py-2 text-[9px] font-semibold text-white/45">AO · AOA</span>
           </div>
 
-          <div className="mt-6 space-y-4 border-t border-white/[.08] pt-5">
+          <div className="mt-5 space-y-2">
+            {services.map((service) => {
+              const selected = serviceType === service.id;
+              return (
+                <button key={service.id} type="button" aria-pressed={selected} onClick={() => { setServiceType(service.id); if (service.id === "MOTO_TAXI") setPassengerCount(1); }} className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border p-3.5 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#E9BD58] ${selected ? "border-[#E9BD58]/65 bg-[linear-gradient(110deg,rgba(233,189,88,.12),rgba(233,189,88,.025))] shadow-[inset_0_0_0_1px_rgba(233,189,88,.08)]" : "border-white/[.09] bg-white/[.02] hover:border-white/20 hover:bg-white/[.04]"}`}>
+                  <div className={`flex h-14 w-[4.25rem] shrink-0 items-center justify-center rounded-xl transition ${selected ? "bg-[#E9BD58]/[.11] text-[#F2CD70]" : "bg-white/[.045] text-white/55"}`}><ServiceIcon kind={service.icon}/></div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2"><p className="text-sm font-semibold tracking-tight">{service.name}</p>{service.id === "TAXI" && <span className="rounded-full bg-white/[.07] px-2 py-0.5 text-[8px] font-semibold text-white/45">CONFORTO</span>}</div>
+                    <p className={`mt-1 text-[10px] font-medium ${selected ? "text-[#F2CD70]" : "text-white/45"}`}>{service.subtitle}</p>
+                    <p className="mt-1 text-[10px] text-white/35">{service.capacity}</p>
+                  </div>
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${selected ? "border-[#E9BD58] bg-[#E9BD58] text-[#111]" : "border-white/20 text-transparent"}`}><span className="text-[10px] font-black">✓</span></span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-[10px] leading-4 text-white/40">{selectedService.description}</p>
+
+          <div className="mt-5 space-y-4 border-t border-white/[.08] pt-5">
             {serviceType === "TAXI" && (
-              <label className="block"><span className="text-xs font-semibold text-white/75">Passageiros</span><select value={passengerCount} onChange={(event) => setPassengerCount(Math.max(1, Math.min(4, Number(event.target.value) || 1)))} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#11151B] px-3 text-sm text-white outline-none focus:border-[#E9BD58]">{[1, 2, 3, 4].map((count) => <option key={count} value={count}>{count} {count === 1 ? "passageiro" : "passageiros"}</option>)}</select></label>
+              <label className="block">
+                <span className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/55">Número de passageiros</span>
+                <select value={passengerCount} onChange={(event) => setPassengerCount(Math.max(1, Math.min(4, Number(event.target.value) || 1)))} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#11151B] px-3.5 text-sm text-white outline-none transition focus:border-[#E9BD58]/65">
+                  {[1,2,3,4].map((count) => <option key={count} value={count}>{count} {count === 1 ? "passageiro" : "passageiros"}</option>)}
+                </select>
+              </label>
             )}
-            <label className="block"><span className="text-xs font-semibold text-white/75">Proteção da viagem</span><select value={safetyMode} onChange={(event) => setSafetyMode(event.target.value as typeof safetyMode)} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#11151B] px-3 text-sm text-white outline-none focus:border-[#E9BD58]"><option value="STANDARD">Padrão</option><option value="TRUSTED">Contacto de confiança</option><option value="CHILD">Menor / proteção reforçada</option></select><span className="mt-1.5 block text-[10px] leading-4 text-white/35">Aplicam-se as regras de elegibilidade e segurança da MARKA.</span></label>
+            <label className="block">
+              <span className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/55">Perfil de proteção</span>
+              <select value={safetyMode} onChange={(event) => setSafetyMode(event.target.value as typeof safetyMode)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#11151B] px-3.5 text-sm text-white outline-none transition focus:border-[#E9BD58]/65">
+                <option value="STANDARD">Proteção padrão</option><option value="TRUSTED">Contacto de confiança</option><option value="CHILD">Menor · proteção reforçada</option>
+              </select>
+            </label>
           </div>
 
-          <div className="mt-6 rounded-xl border border-white/[.08] bg-white/[.025] p-3">
-            <div className="flex items-center justify-between gap-3"><span className="text-[10px] uppercase tracking-[.15em] text-white/40">Percurso</span><span className={`rounded-full px-2.5 py-1 text-[9px] font-semibold ${pointsReady ? "bg-emerald-400/10 text-emerald-300" : "bg-white/[.05] text-white/40"}`}>{pointsReady ? "Definido" : "Incompleto"}</span></div>
-            <p className="mt-2 text-xs text-white/70">{origin && destination ? "Partida e destino prontos para validação." : "Defina os dois pontos no mapa para continuar."}</p>
+          <div className="mt-5 rounded-2xl border border-white/[.08] bg-white/[.025] p-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[9px] font-bold uppercase tracking-[.17em] text-white/40">Resumo do percurso</span>
+              <span className={`rounded-full px-2.5 py-1 text-[8px] font-bold uppercase tracking-wide ${pointsReady ? "bg-emerald-300/10 text-emerald-200" : "bg-white/[.06] text-white/40"}`}>{pointsReady ? "Pronto" : "Por definir"}</span>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex flex-col items-center gap-1"><span className="h-2.5 w-2.5 rounded-full border-2 border-[#80C8A0]"/><span className="h-5 w-px bg-white/15"/><span className="h-2.5 w-2.5 rounded-full border-2 border-[#E9BD58]"/></div>
+              <div className="min-w-0 flex-1 space-y-3">
+                <p className="truncate text-[11px] text-white/75">{origin?.label ?? "Local de partida"}</p>
+                <p className="truncate text-[11px] text-white/75">{destination?.label ?? "Destino"}</p>
+              </div>
+            </div>
           </div>
 
-          {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/25 bg-rose-400/[.06] p-3 text-xs leading-5 text-rose-100">{error}</div>}
-          <div className="mt-auto pt-5">
-            <button type="submit" disabled={!pointsReady || creating} className="flex min-h-13 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#F5D47C] to-[#DCA83D] px-4 py-3 text-sm font-bold text-[#17130A] shadow-[0_10px_30px_-15px_rgba(233,189,88,.55)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-35">
-              {creating ? "A confirmar pedido…" : "Confirmar viagem"} <span aria-hidden="true">→</span>
+          {error && <div role="alert" className="mt-4 rounded-xl border border-rose-400/25 bg-rose-400/[.06] p-3 text-[11px] leading-5 text-rose-100">{error}</div>}
+          <div className="mt-5">
+            <button type="submit" disabled={!pointsReady || creating} className="group flex min-h-[54px] w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#F5D47C] via-[#E9BD58] to-[#DCA83D] px-4 py-3 text-sm font-bold text-[#17130A] shadow-[0_14px_36px_-16px_rgba(233,189,88,.6)] transition duration-200 hover:-translate-y-0.5 hover:brightness-105 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-35">
+              {creating ? "A confirmar a sua viagem…" : "Encontrar uma viagem"} <span className="text-base transition-transform group-hover:translate-x-1">→</span>
             </button>
-            <p className="mt-3 text-center text-[10px] leading-4 text-white/35">Sem cobrança nesta etapa. A atribuição depende de um motorista e veículo elegíveis.</p>
+            <p className="mt-3 text-center text-[9px] leading-4 text-white/35">Sem cobrança nesta etapa. A disponibilidade depende de motoristas e veículos elegíveis.</p>
           </div>
 
           {rideResult?.ride && (
-            <div role="status" aria-live="polite" className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-400/[.05] p-4">
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /><p className="text-xs font-semibold text-emerald-200">Pedido registado</p></div>
-              <p className="mt-3 text-[9px] uppercase tracking-[.18em] text-white/40">Referência</p><p className="mt-1 break-all text-sm font-semibold">{requestReference}</p>
-              <p className="mt-3 text-xs text-white/70">Estado: {currentStatus}</p>
-              {rideResult.orchestration?.recoveryRequired && <p className="mt-2 text-[10px] leading-4 text-amber-200">O sistema está a recuperar uma etapa operacional. Consulte o estado antes de criar outro pedido.</p>}
+            <div role="status" aria-live="polite" className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-300/[.055] p-4">
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-300"/><p className="text-xs font-semibold text-emerald-100">Pedido recebido</p></div>
+              <p className="mt-3 text-[9px] font-bold uppercase tracking-[.18em] text-white/40">Referência da viagem</p><p className="mt-1 break-all text-sm font-semibold">{requestReference}</p>
+              <p className="mt-3 text-xs text-white/75">{currentStatus}</p>
+              {rideResult.orchestration?.recoveryRequired && <p className="mt-2 text-[10px] leading-4 text-amber-200">Estamos a recuperar uma etapa operacional. Não crie um segundo pedido.</p>}
             </div>
           )}
+          <div className="mt-6 flex items-center justify-center gap-2 border-t border-white/[.07] pt-4 text-[9px] text-white/30"><span>⌁</span> Uma experiência de mobilidade pensada à sua medida.</div>
         </form>
       </div>
     </section>
