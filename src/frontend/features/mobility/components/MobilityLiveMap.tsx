@@ -57,7 +57,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     loadLeaflet().then((L) => {
       if (disposed || !hostRef.current || mapRef.current) return;
       const map = L.map(hostRef.current).setView([-8.8383, 13.2344], 12);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(map);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 20, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>' }).addTo(map);
       mapRef.current = map; window.setTimeout(() => map.invalidateSize(), 100);
     }).catch((e) => setStatus(e instanceof Error ? e.message : "Erro ao iniciar o mapa."));
     return () => { disposed = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; routeRef.current = null; markersRef.current = { origin: null, destination: null }; } };
@@ -130,13 +130,28 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       if (!origin) { setStatus("Destino encontrado. Ative o GPS para calcular a rota rodoviária."); setBusy(false); }
     } catch (e) { setStatus(e instanceof Error ? e.message : "Falha na pesquisa do destino."); setBusy(false); }
   }
-  return <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#080d12]">
-    <div className="flex flex-wrap gap-2 border-b border-white/10 p-3">
-      <button type="button" onClick={locateMe} disabled={busy} className="rounded-full border border-[#e9bd58]/60 px-3 py-2 text-xs font-semibold text-[#f2cd70] disabled:opacity-50">{busy ? "A processar…" : "⌖ Usar GPS"}</button>
-      <input value={destinationText} onChange={(e) => setDestinationText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void searchDestination(); }} placeholder="Destino, bairro ou referência" aria-label="Pesquisar destino" className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/[.04] px-4 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#e9bd58]/70" />
-      <button type="button" onClick={searchDestination} disabled={busy} className="rounded-full bg-[#e9bd58] px-4 py-2 text-xs font-bold text-[#17130a] disabled:opacity-50">Pesquisar</button>
+  return <section className="relative isolate overflow-hidden rounded-[26px] border border-white/[.09] bg-[#0B1017] shadow-[0_24px_80px_-42px_rgba(0,0,0,.95)]">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-[400] h-24 bg-gradient-to-b from-[#070B10]/80 to-transparent"/>
+    <div className="absolute left-3 right-3 top-3 z-[500] flex flex-col gap-2 sm:left-4 sm:right-4 sm:top-4">
+      <div className="flex items-center gap-2 rounded-2xl border border-white/[.13] bg-[#0B1017]/90 p-2 shadow-[0_14px_40px_-18px_rgba(0,0,0,.9)] backdrop-blur-xl">
+        <button type="button" onClick={locateMe} disabled={busy} aria-label="Usar a minha localização GPS" className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#E9BD58]/30 bg-[#E9BD58]/[.09] px-3 text-[10px] font-bold text-[#F2CD70] transition hover:bg-[#E9BD58]/[.15] disabled:opacity-50">
+          <span className="text-base">⌖</span><span className="hidden xs:inline">{busy ? "A localizar…" : "GPS"}</span>
+        </button>
+        <input value={destinationText} onChange={(e) => setDestinationText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void searchDestination(); }} placeholder="Para onde vamos?" aria-label="Pesquisar destino" className="h-11 min-w-0 flex-1 bg-transparent px-2 text-xs text-white outline-none placeholder:text-white/40"/>
+        <button type="button" onClick={searchDestination} disabled={busy} aria-label="Pesquisar destino" className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#E9BD58] px-4 text-[10px] font-extrabold text-[#17130A] transition hover:brightness-105 disabled:opacity-50">{busy ? "…" : "Pesquisar"}</button>
+      </div>
+      <div className="flex items-center justify-between gap-3 px-1">
+        <span className="rounded-full border border-white/10 bg-[#0B1017]/75 px-3 py-1.5 text-[9px] font-semibold text-white/65 backdrop-blur-lg">LUANDA · ANGOLA</span>
+        <span className="rounded-full border border-white/10 bg-[#0B1017]/75 px-3 py-1.5 text-[9px] text-white/45 backdrop-blur-lg">OpenStreetMap · CARTO</span>
+      </div>
     </div>
-    <div ref={hostRef} role="application" aria-label="Mapa interativo OpenStreetMap" className="h-64 w-full bg-[#101820] sm:h-80" />
-    <div className="space-y-1 p-3 text-xs text-white/65"><p aria-live="polite">{status}</p>{routeSummary && <p className="font-semibold text-[#f2cd70]">Percurso: {routeSummary}</p>}<p className="text-[10px] text-white/35">OpenStreetMap · Nominatim · OSRM. Serviços públicos gratuitos sujeitos a limites de utilização.</p></div>
+    <div ref={hostRef} role="application" aria-label="Mapa interativo OpenStreetMap" className="h-[430px] w-full bg-[#101820] sm:h-[540px] lg:h-[min(68vh,680px)]"/>
+    <div className="absolute bottom-3 left-3 right-3 z-[500] flex items-center justify-between gap-3 rounded-2xl border border-white/[.12] bg-[#0B1017]/90 px-3.5 py-3 shadow-[0_14px_40px_-18px_rgba(0,0,0,.9)] backdrop-blur-xl sm:bottom-4 sm:left-4 sm:right-4">
+      <div className="min-w-0">
+        <p className="text-[9px] font-bold uppercase tracking-[.15em] text-white/40">{routeSummary ? "Percurso estimado" : "Estado do mapa"}</p>
+        <p aria-live="polite" className="mt-1 truncate text-[10px] font-medium text-white/80">{routeSummary || status}</p>
+      </div>
+      {routeSummary && <span className="shrink-0 rounded-xl bg-[#E9BD58]/[.1] px-3 py-2 text-[10px] font-bold text-[#F2CD70]">{routeSummary.split(" · ")[0]}</span>}
+    </div>
   </section>;
 }
