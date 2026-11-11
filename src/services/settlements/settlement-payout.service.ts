@@ -213,7 +213,8 @@ export class SettlementPayoutService {
 
           this.validateProviderResult(
             providerResult,
-            context.settlement
+            context.settlement,
+            context.financialInstrument.provider
           );
 
           await this.persistProviderResult(
@@ -1088,12 +1089,17 @@ export class SettlementPayoutService {
     result:
       | SettlementProviderCreatePayoutResult
       | SettlementProviderGetPayoutStatusResult,
-    settlement: SettlementContext["settlement"]
+    settlement: SettlementContext["settlement"],
+    expectedProvider: string
   ): void {
     if (!result.provider.trim()) {
       throw new Error(
         "Settlement provider returned an empty provider name."
       );
+    }
+
+    if (result.provider.trim().toUpperCase() !== expectedProvider.trim().toUpperCase()) {
+      throw new Error("Settlement provider identity does not match the vendor financial instrument.");
     }
 
     if (
