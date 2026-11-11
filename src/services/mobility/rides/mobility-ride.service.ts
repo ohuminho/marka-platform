@@ -718,12 +718,14 @@ export class MobilityRideService {
   }
 
   async getActiveRideForRider(
-    riderId: string
+    riderId: string,
+    organizationId: string
   ) {
     return prisma.mobilityRide.findFirst(
       {
         where: {
           riderId,
+          organizationId,
           status: {
             in: [
               MobilityRideStatus.REQUESTED,
