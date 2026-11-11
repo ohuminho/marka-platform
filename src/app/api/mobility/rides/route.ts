@@ -130,8 +130,8 @@ export async function POST(
       );
     }
 
-    const ride =
-      await mobilityRideService.create({
+    const { ride } =
+      await mobilityRideService.createIdempotent({
         organizationId:
           authentication.session
             .organizationId,
@@ -198,7 +198,7 @@ export async function POST(
           safetyMode,
           passengerCount,
         },
-      });
+      }}, idempotencyKey);;
 
     await mobilityLifecycleService.initialize({
       organizationId:
