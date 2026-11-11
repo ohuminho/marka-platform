@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
+import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
 
 type MapPoint = { lat: number; lon: number; label: string };
@@ -86,6 +87,8 @@ function VehicleArtwork({ kind, label }: { kind: VehicleKind; label: string }) {
 }
 
 export default function MobilityExperience() {
+  const { activeOrganization } = useAuth();
+  const organizationId = activeOrganization?.id;
   const [origin, setOrigin] = useState<MapPoint | null>(null);
   const [destination, setDestination] = useState<MapPoint | null>(null);
   const [serviceType, setServiceType] = useState<string>("TAXI");
@@ -112,6 +115,10 @@ export default function MobilityExperience() {
   async function submitRide(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (!organizationId) {
+      setError("Selecione uma organização ativa para solicitar uma viagem.");
+      return;
+    }
     if (!origin || !destination) {
       setError("Defina a partida pelo GPS e pesquise um destino no mapa antes de pedir a viagem.");
       return;
@@ -128,7 +135,7 @@ export default function MobilityExperience() {
         method: "POST",
         credentials: "include",
         cache: "no-store",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "X-Organization-Id": organizationId },
         body: JSON.stringify({
           serviceType,
           passengerCount,
