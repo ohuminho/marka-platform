@@ -42,9 +42,9 @@ export interface MobilityDispatchAssignment {
 
   vehicleId: string;
 
-  distanceMeters: number;
+  distanceMeters?: number;
 
-  score: number;
+  score?: number;
 }
 
 export interface MobilityDispatchResult {
@@ -118,6 +118,26 @@ export class MobilityDispatchService {
       await this.requireDispatchableRide(
         input.rideId
       );
+
+    // A previous attempt may have committed the driver/vehicle claim but
+    // failed before orchestration recorded its final event. Reuse that claim
+    // instead of searching again or attempting a second assignment.
+    if (
+      ride.status === MobilityRideStatus.DRIVER_ASSIGNED &&
+      ride.driverId &&
+      ride.vehicleId
+    ) {
+      return {
+        rideId: ride.id,
+        status: ride.status,
+        candidates: [],
+        assignment: {
+          rideId: ride.id,
+          driverId: ride.driverId,
+          vehicleId: ride.vehicleId,
+        },
+      };
+    }
 
     const candidates =
       await mobilityMatchingService.findCandidates({
