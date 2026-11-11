@@ -221,6 +221,13 @@ export class SettlementPayoutService {
             providerResult
           );
 
+          if (providerResult.status === "COMPLETED") {
+            this.validateCompletedPayoutFinancials(
+              providerResult,
+              context.settlement
+            );
+          }
+
           if (
             providerResult.status ===
             "COMPLETED"
@@ -432,6 +439,8 @@ export class SettlementPayoutService {
                   input.organizationId,
                 settlementId:
                   input.settlementId,
+                provider:
+                  providerResult.provider,
                 providerReference:
                   providerResult.providerPayoutId,
                 actorUserId:
@@ -1120,27 +1129,36 @@ export class SettlementPayoutService {
       );
     }
 
-    if (result.status === "COMPLETED") {
-      if (
-        result.amountMinor === undefined ||
-        result.currency === undefined
-      ) {
-        throw new Error(
-          "Completed settlement payout must confirm its amount and currency."
-        );
-      }
+  }
 
-      if (result.amountMinor !== settlement.amountMinor) {
-        throw new Error(
-          "Completed settlement payout amount does not match the requested settlement."
-        );
-      }
+  private validateCompletedPayoutFinancials(
+    result:
+      | SettlementProviderCreatePayoutResult
+      | SettlementProviderGetPayoutStatusResult,
+    settlement: SettlementContext["settlement"]
+  ): void {
+    if (
+      result.amountMinor === undefined ||
+      result.currency === undefined
+    ) {
+      throw new Error(
+        "Completed settlement payout is recorded but requires amount and currency confirmation before ledger completion."
+      );
+    }
 
-      if (result.currency.trim().toUpperCase() !== settlement.currency.trim().toUpperCase()) {
-        throw new Error(
-          "Completed settlement payout currency does not match the requested settlement."
-        );
-      }
+    if (result.amountMinor !== settlement.amountMinor) {
+      throw new Error(
+        "Completed settlement payout amount does not match the requested settlement."
+      );
+    }
+
+    if (
+      result.currency.trim().toUpperCase() !==
+      settlement.currency.trim().toUpperCase()
+    ) {
+      throw new Error(
+        "Completed settlement payout currency does not match the requested settlement."
+      );
     }
   }
 
