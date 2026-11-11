@@ -15,6 +15,10 @@ type RideResult = {
 const services = [
   { id: "TAXI", name: "MARKA Go", subtitle: "Táxi", description: "Conforto para deslocações urbanas e interurbanas.", capacity: "Até 4 passageiros", icon: "car" },
   { id: "MOTO_TAXI", name: "MARKA Moto", subtitle: "Mototáxi", description: "Uma opção ágil para percursos individuais.", capacity: "1 passageiro", icon: "bike" },
+  { id: "VAN", name: "MARKA Van", subtitle: "Carrinha", description: "Transporte para grupos e deslocações com maior espaço.", capacity: "Capacidade conforme a viatura", icon: "van" },
+  { id: "MINIBUS", name: "MARKA Mini", subtitle: "Minibus", description: "Transporte coletivo em percursos urbanos e interurbanos.", capacity: "Capacidade conforme a viatura", icon: "bus" },
+  { id: "BUS", name: "MARKA Bus", subtitle: "Autocarro", description: "Transporte de grupos em maior escala.", capacity: "Capacidade conforme a viatura", icon: "bus" },
+  { id: "COACH", name: "MARKA Coach", subtitle: "Coach", description: "Viagens de grupo e percursos de longa distância.", capacity: "Capacidade conforme a viatura", icon: "bus" },
 ] as const;
 
 const statusLabels: Record<string, string> = {
@@ -29,7 +33,18 @@ const statusLabels: Record<string, string> = {
   TRIP_IN_PROGRESS: "Em viagem",
 };
 
-function ServiceIcon({ kind }: { kind: "car" | "bike" }) {
+function ServiceIcon({ kind }: { kind: "car" | "bike" | "van" | "bus" }) {
+  if (kind === "van" || kind === "bus") {
+    return (
+      <svg viewBox="0 0 48 32" aria-hidden="true" className="h-9 w-12" fill="none">
+        <path d={kind === "bus" ? "M5 8c0-2 2-4 4-4h30c2 0 4 2 4 4v15H5V8Z" : "M7 9c0-2 2-4 4-4h19l10 8v10H7V9Z"} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
+        <path d={kind === "bus" ? "M9 8h30v9H9z" : "M12 8h16v8H12z"} stroke="currentColor" strokeOpacity=".55" strokeWidth="1.4"/>
+        <path d="M5 19h38v5H5z" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="13" cy="25" r="3.5" fill="#090B10" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="35" cy="25" r="3.5" fill="#090B10" stroke="currentColor" strokeWidth="1.5"/>
+      </svg>
+    );
+  }
   return kind === "car" ? (
     <svg viewBox="0 0 48 32" aria-hidden="true" className="h-9 w-12" fill="none">
       <path d="m5 21 3-2 5-10c1-2 3-3 5-3h13c3 0 5 1 7 4l5 9 2 2v5H3v-3c0-1 1-2 2-2Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
@@ -228,6 +243,13 @@ export default function MobilityExperience() {
                 <select value={passengerCount} onChange={(event) => setPassengerCount(Math.max(1, Math.min(4, Number(event.target.value) || 1)))} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#11151B] px-3.5 text-sm text-white outline-none transition focus:border-[#E9BD58]/65">
                   {[1,2,3,4].map((count) => <option key={count} value={count}>{count} {count === 1 ? "passageiro" : "passageiros"}</option>)}
                 </select>
+              </label>
+            )}
+            {["VAN", "MINIBUS", "BUS", "COACH"].includes(serviceType) && (
+              <label className="block">
+                <span className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/55">Número de passageiros</span>
+                <input type="number" min={1} max={100} value={passengerCount} onChange={(event) => setPassengerCount(Math.max(1, Math.min(100, Number(event.target.value) || 1)))} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#11151B] px-3.5 text-sm text-white outline-none transition focus:border-[#E9BD58]/65" />
+                <span className="mt-1 block text-[10px] text-white/35">A elegibilidade depende da capacidade confirmada da viatura.</span>
               </label>
             )}
             <label className="block">
