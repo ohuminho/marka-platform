@@ -27,7 +27,8 @@ function getLeaflet(): Leaflet | undefined {
 
 function loadLeaflet(): Promise<Leaflet> {
   return new Promise((resolve, reject) => {
-    if (getLeaflet()) return resolve(getLeaflet());
+    const loadedLeaflet = getLeaflet();
+    if (loadedLeaflet) return resolve(loadedLeaflet);
     if (!document.querySelector('link[data-marka-leaflet="true"]')) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
@@ -37,7 +38,11 @@ function loadLeaflet(): Promise<Leaflet> {
     }
     const existing = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
     if (existing) {
-      existing.addEventListener("load", () => getLeaflet() ? resolve(getLeaflet()) : reject(new Error("Motor do mapa indisponível.")), { once: true });
+      existing.addEventListener("load", () => {
+        const leaflet = getLeaflet();
+        if (leaflet) resolve(leaflet);
+        else reject(new Error("Motor do mapa indisponível."));
+      }, { once: true });
       existing.addEventListener("error", () => reject(new Error("Não foi possível carregar o mapa.")), { once: true });
       return;
     }
@@ -45,7 +50,11 @@ function loadLeaflet(): Promise<Leaflet> {
     script.src = JS_URL;
     script.async = true;
     script.dataset.markaLeaflet = "true";
-    script.onload = () => getLeaflet() ? resolve(getLeaflet()) : reject(new Error("Motor do mapa indisponível."));
+    script.onload = () => {
+      const leaflet = getLeaflet();
+      if (leaflet) resolve(leaflet);
+      else reject(new Error("Motor do mapa indisponível."));
+    };
     script.onerror = () => reject(new Error("Não foi possível carregar o mapa."));
     document.head.appendChild(script);
   });
@@ -82,9 +91,9 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
   }, []);
 
   useEffect(() => {
-    if (!ready || !mapRef.current || !getLeaflet()) return;
-    const map = mapRef.current;
     const L = getLeaflet();
+    if (!ready || !mapRef.current || !L) return;
+    const map = mapRef.current;
     layersRef.current.forEach((layer) => layer.remove());
     layersRef.current = [];
 
