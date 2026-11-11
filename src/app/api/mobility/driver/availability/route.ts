@@ -83,31 +83,54 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const activeRide = await prisma.mobilityRide.findFirst({
-      where: { organizationId: auth.session.organizationId, driverId: driver.id, status: { in: ACTIVE_RIDE_STATUSES } },
-      select: { id: true, status: true },
+    // Serialize availability changes with dispatch claims. Dispatch locks the
+    // same MobilityDriver row before assigning a ride, so a stale online/offline
+    // request cannot overwrite BUSY or ON_TRIP after an assignment commits.
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT "id"
+        FROM "MobilityDriver"
+        WHERE "id" = ${driver.id}
+        FOR UPDATE
+      `;
+
+      const activeRide = await tx.mobilityRide.findFirst({
+        where: {
+          organizationId: auth.session.organizationId,
+          driverId: driver.id,
+          status: { in: ACTIVE_RIDE_STATUSES },
+        },
+        select: { id: true, status: true },
+      });
+
+      if (activeRide) {
+        return { conflict: true as const };
+      }
+
+      const now = new Date();
+      const availability = await tx.mobilityDriverAvailability.upsert({
+        where: { driverId: driver.id },
+        create: {
+          driverId: driver.id,
+          status: requested === "AVAILABLE" ? MobilityAvailabilityStatus.AVAILABLE : MobilityAvailabilityStatus.OFFLINE,
+          lastOnlineAt: requested === "AVAILABLE" ? now : null,
+          lastOfflineAt: requested === "OFFLINE" ? now : null,
+        },
+        update: {
+          status: requested === "AVAILABLE" ? MobilityAvailabilityStatus.AVAILABLE : MobilityAvailabilityStatus.OFFLINE,
+          lastOnlineAt: requested === "AVAILABLE" ? now : undefined,
+          lastOfflineAt: requested === "OFFLINE" ? now : undefined,
+        },
+      });
+
+      return { conflict: false as const, availability };
     });
-    if (activeRide) {
+
+    if (result.conflict) {
       return NextResponse.json({ message: "Conclua ou regularize a viagem atribuída antes de alterar a disponibilidade.", code: "DRIVER_HAS_ACTIVE_RIDE" }, { status: 409 });
     }
 
-    const now = new Date();
-    const availability = await prisma.mobilityDriverAvailability.upsert({
-      where: { driverId: driver.id },
-      create: {
-        driverId: driver.id,
-        status: requested === "AVAILABLE" ? MobilityAvailabilityStatus.AVAILABLE : MobilityAvailabilityStatus.OFFLINE,
-        lastOnlineAt: requested === "AVAILABLE" ? now : null,
-        lastOfflineAt: requested === "OFFLINE" ? now : null,
-      },
-      update: {
-        status: requested === "AVAILABLE" ? MobilityAvailabilityStatus.AVAILABLE : MobilityAvailabilityStatus.OFFLINE,
-        lastOnlineAt: requested === "AVAILABLE" ? now : undefined,
-        lastOfflineAt: requested === "OFFLINE" ? now : undefined,
-      },
-    });
-
-    return NextResponse.json({ status: availability.status, availability });
+    return NextResponse.json({ status: result.availability.status, availability: result.availability });
   } catch (error) {
     console.error("[MARKA_DRIVER_AVAILABILITY_PATCH_ERROR]", error);
     return NextResponse.json({ message: "Não foi possível atualizar a disponibilidade.", code: "DRIVER_AVAILABILITY_UPDATE_FAILED" }, { status: 500 });
