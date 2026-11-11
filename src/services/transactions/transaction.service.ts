@@ -71,6 +71,41 @@ export interface CreateExternalCreditInput {
   requestId?: string;
 }
 
+export interface CreateExternalDebitInput {
+  organizationId: string;
+  idempotencyKey: string;
+  type: TransactionType;
+  amountMinor: bigint;
+  currency: string;
+  sourceAccountId: string;
+  actorUserId?: string;
+  actorType?: TransactionActorType;
+  reference?: string;
+  referenceType?: string;
+  vendorId?: string;
+  context?: string;
+  provider?: string;
+  providerPayoutId?: string;
+  metadata?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  correlationId?: string;
+  requestId?: string;
+}
+
+export interface ExternalDebitTransactionResult {
+  id: string;
+  reference: string;
+  status: TransactionStatus;
+  type: TransactionType;
+  direction: TransactionDirection;
+  amountMinor: string;
+  currency: string;
+  sourceAccountId: string;
+  destinationAccountId: null;
+  completedAt: Date | null;
+}
+
 export interface TransactionResult {
   id: string;
   reference: string;
@@ -1198,6 +1233,213 @@ export class TransactionService {
     return completed;
   }
 
+  async createExternalDebitWithinTransaction(
+    database: FinancialTransactionClient,
+    input: CreateExternalDebitInput
+  ): Promise<ExternalDebitTransactionResult> {
+    this.validateExternalDebitInput(input);
+
+    const existing = await database.transaction.findUnique({
+      where: { idempotencyKey: input.idempotencyKey },
+    });
+
+    if (existing) {
+      if (
+        existing.status !== TransactionStatus.COMPLETED ||
+        existing.type !== input.type ||
+        existing.direction !== TransactionDirection.DEBIT ||
+        existing.amountMinor !== input.amountMinor ||
+        existing.currency !== input.currency ||
+        existing.sourceAccountId !== input.sourceAccountId ||
+        existing.destinationAccountId !== null
+      ) {
+        throw new Error("External debit idempotency key is already bound to a different or incomplete transaction.");
+      }
+
+      return {
+        id: existing.id,
+        reference: existing.reference,
+        status: existing.status,
+        type: existing.type,
+        direction: existing.direction,
+        amountMinor: existing.amountMinor.toString(),
+        currency: existing.currency,
+        sourceAccountId: input.sourceAccountId,
+        destinationAccountId: null,
+        completedAt: existing.completedAt,
+      };
+    }
+
+    const [organization, sourceAccount] = await Promise.all([
+      database.organization.findUnique({
+        where: { id: input.organizationId },
+        select: { id: true, status: true },
+      }),
+      database.account.findUnique({
+        where: { id: input.sourceAccountId },
+        select: {
+          id: true,
+          organizationId: true,
+          currency: true,
+          status: true,
+          balanceMinor: true,
+          version: true,
+          type: true,
+          vendorId: true,
+        },
+      }),
+    ]);
+
+    if (!organization || organization.status !== "ACTIVE") {
+      throw new Error("Organization is not active.");
+    }
+    if (!sourceAccount) {
+      throw new Error("External debit source account not found.");
+    }
+    if (sourceAccount.organizationId !== input.organizationId) {
+      throw new Error("External debit source account belongs to another organization.");
+    }
+    if (sourceAccount.status !== "ACTIVE") {
+      throw new Error("External debit source account is not active.");
+    }
+    if (sourceAccount.currency !== input.currency) {
+      throw new Error("External debit currency does not match the source account.");
+    }
+    if (sourceAccount.balanceMinor < input.amountMinor) {
+      throw new Error("Insufficient source account balance for external debit.");
+    }
+
+    const ledger = await database.ledger.upsert({
+      where: { code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}` },
+      update: {},
+      create: {
+        organizationId: input.organizationId,
+        code: `${DEFAULT_LEDGER_CODE}-${input.organizationId}`,
+        name: "MARKA Operating Ledger",
+        currency: input.currency,
+        status: "ACTIVE",
+      },
+    });
+
+    if (ledger.status !== "ACTIVE" || ledger.currency !== input.currency) {
+      throw new Error("Operating ledger is not available.");
+    }
+
+    const reference = input.reference?.trim() ||
+      `EXT-DEBIT-${crypto.randomUUID().replace(/-/g, "").toUpperCase()}`;
+    const createdAt = new Date();
+
+    const transaction = await database.transaction.create({
+      data: {
+        idempotencyKey: input.idempotencyKey,
+        type: input.type,
+        direction: TransactionDirection.DEBIT,
+        status: TransactionStatus.PROCESSING,
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+        actorUserId: input.actorUserId,
+        actorType: input.actorType ?? TransactionActorType.SYSTEM,
+        sourceAccountId: sourceAccount.id,
+        destinationAccountId: null,
+        reference,
+        referenceType: input.referenceType ?? "EXTERNAL_DEBIT",
+        vendorId: input.vendorId,
+        context: input.context ?? "EXTERNAL_FUNDS_DISBURSEMENT",
+        metadata: this.toJsonValue({
+          source: "MARKA_INTERNAL_ACCOUNT",
+          destination: "EXTERNAL_BENEFICIARY",
+          provider: input.provider ?? null,
+          providerPayoutId: input.providerPayoutId ?? null,
+          ...(input.metadata ?? {}),
+        }),
+        processingStartedAt: createdAt,
+      },
+    });
+
+    const sourceUpdate = await database.account.updateMany({
+      where: {
+        id: sourceAccount.id,
+        version: sourceAccount.version,
+        status: "ACTIVE",
+        balanceMinor: { gte: input.amountMinor },
+      },
+      data: {
+        balanceMinor: { decrement: input.amountMinor },
+        version: { increment: 1 },
+      },
+    });
+
+    if (sourceUpdate.count !== 1) {
+      throw new Error("Source account changed during external debit. Please retry.");
+    }
+
+    await database.ledgerEntry.create({
+      data: {
+        ledgerId: ledger.id,
+        transactionId: transaction.id,
+        accountId: sourceAccount.id,
+        direction: "DEBIT",
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+        sequence: 1,
+        metadata: this.toJsonValue({
+          role: "EXTERNAL_DESTINATION",
+          provider: input.provider ?? null,
+          providerPayoutId: input.providerPayoutId ?? null,
+          vendorId: input.vendorId ?? null,
+        }),
+      },
+    });
+
+    const completed = await database.transaction.update({
+      where: { id: transaction.id },
+      data: {
+        status: TransactionStatus.COMPLETED,
+        completedAt: new Date(),
+      },
+    });
+
+    await database.auditLog.create({
+      data: {
+        organizationId: input.organizationId,
+        actorUserId: input.actorUserId,
+        actorType: input.actorUserId ? "USER" : "SYSTEM",
+        action: "EXTERNAL_FINANCIAL_DEBIT_COMPLETED",
+        entityType: "TRANSACTION",
+        entityId: completed.id,
+        correlationId: input.correlationId,
+        requestId: input.requestId,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        metadata: this.toJsonValue({
+          transactionId: completed.id,
+          reference: completed.reference,
+          type: completed.type,
+          direction: completed.direction,
+          amountMinor: input.amountMinor.toString(),
+          currency: input.currency,
+          sourceAccountId: sourceAccount.id,
+          provider: input.provider ?? null,
+          providerPayoutId: input.providerPayoutId ?? null,
+          vendorId: input.vendorId ?? null,
+        }),
+      },
+    });
+
+    return {
+      id: completed.id,
+      reference: completed.reference,
+      status: completed.status,
+      type: completed.type,
+      direction: completed.direction,
+      amountMinor: completed.amountMinor.toString(),
+      currency: completed.currency,
+      sourceAccountId: sourceAccount.id,
+      destinationAccountId: null,
+      completedAt: completed.completedAt,
+    };
+  }
+
   async getById(
     organizationId: string,
     transactionId: string
@@ -1316,6 +1558,21 @@ export class TransactionService {
         "Destination account is required."
       );
     }
+  }
+
+  private validateExternalDebitInput(
+    input: CreateExternalDebitInput
+  ): void {
+    if (!input.organizationId.trim()) throw new Error("Organization is required.");
+    if (!input.idempotencyKey.trim()) throw new Error("Idempotency key is required.");
+    if (input.amountMinor <= BigInt(0)) throw new Error("External debit amount must be greater than zero.");
+    if (!/^[A-Z]{3}$/.test(input.currency)) throw new Error("Currency must be a valid ISO 4217 code.");
+    if (!input.sourceAccountId.trim()) throw new Error("Source account is required.");
+    if (input.type !== TransactionType.SETTLEMENT) {
+      throw new Error("External debit currently supports settlement transactions only.");
+    }
+    if (input.provider && input.provider.trim().length > 100) throw new Error("Settlement provider name is too long.");
+    if (input.providerPayoutId && input.providerPayoutId.trim().length > 255) throw new Error("Provider payout id is too long.");
   }
 
   private validateExternalCreditInput(
