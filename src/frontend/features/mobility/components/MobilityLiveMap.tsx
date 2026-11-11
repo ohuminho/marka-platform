@@ -89,6 +89,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
   async function calculateRoute(from: Point | null, to: Point | null) {
     if (!from || !to) { setStatus("Defina a partida por GPS e pesquise o destino para calcular a rota."); return; }
     const requestId = ++routeRequestRef.current;
+    if (routeRef.current) { routeRef.current.remove(); routeRef.current = null; }
     setBusy(true); setRouteSummary(""); setStatus("A calcular o percurso pelas estradas…");
     try {
       const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson&steps=false`);
