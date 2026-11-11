@@ -131,6 +131,15 @@ export class PaymentService {
           const payment =
             await prisma.$transaction(
               async (database) => {
+                // Serialize payment-intent creation per order, including
+                // requests that arrive with different idempotency keys.
+                await database.$queryRaw<Array<{ id: string }>>`
+                  SELECT "id"
+                  FROM "Order"
+                  WHERE "id" = ${input.orderId}
+                  FOR UPDATE
+                `;
+
                 const order =
                   await database.order.findFirst({
                     where: {
