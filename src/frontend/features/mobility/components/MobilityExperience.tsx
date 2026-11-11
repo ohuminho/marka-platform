@@ -53,35 +53,75 @@ type VehicleKind = "sedan" | "executive" | "motorcycle" | "van";
 function VehicleArtwork({ kind, label }: { kind: VehicleKind; label: string }) {
   const isBike = kind === "motorcycle";
   const isVan = kind === "van";
+  const showTaxiSign = kind === "sedan";
   return (
     <svg viewBox="0 0 640 300" role="img" aria-label={label} className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id={`body-${kind}`} x1="120" y1="80" x2="500" y2="250" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#F5D98F" />
-          <stop offset=".48" stopColor="#B88935" />
-          <stop offset="1" stopColor="#51402A" />
+        <linearGradient id={`body-${kind}`} x1="108" y1="82" x2="520" y2="252" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#F7E6B6" />
+          <stop offset=".3" stopColor="#D7B36B" />
+          <stop offset=".72" stopColor="#9B702E" />
+          <stop offset="1" stopColor="#40301B" />
         </linearGradient>
-        <linearGradient id={`glass-${kind}`} x1="240" y1="90" x2="380" y2="180" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#D8E1E8" stopOpacity=".78" />
-          <stop offset="1" stopColor="#52616D" stopOpacity=".42" />
+        <linearGradient id={`glass-${kind}`} x1="260" y1="80" x2="390" y2="182" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#D9E8F2" stopOpacity=".88" />
+          <stop offset="1" stopColor="#33485B" stopOpacity=".72" />
         </linearGradient>
+        <linearGradient id={`metal-${kind}`} x1="100" y1="210" x2="540" y2="240" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFF2CC" stopOpacity=".9" />
+          <stop offset=".45" stopColor="#D8B46D" stopOpacity=".35" />
+          <stop offset="1" stopColor="#FFF0C7" stopOpacity=".7" />
+        </linearGradient>
+        <filter id={`shadow-${kind}`} x="25" y="30" width="590" height="270" colorInterpolationFilters="sRGB" filterUnits="userSpaceOnUse">
+          <feGaussianBlur stdDeviation="12" />
+        </filter>
       </defs>
-      <ellipse cx="320" cy="246" rx="238" ry="22" fill="#000" opacity=".42" />
-      {!isBike && <g>
-      <path d="M70 224C90 208 112 201 151 195L205 130C222 109 245 99 275 96L395 96C426 97 451 111 471 139L511 188L554 199C572 204 584 217 586 235L585 247H55L56 237C58 231 63 227 70 224Z" fill={`url(#body-${kind})`} stroke="#F5D98F" strokeOpacity=".8" strokeWidth="3"/>
-      <path d="M222 137C238 116 255 109 279 108H392C414 109 433 120 449 143L478 183H184L222 137Z" fill={`url(#glass-${kind})`} stroke="#F5D98F" strokeOpacity=".55" strokeWidth="3"/>
-      <path d="M326 110V183M190 187H482" stroke="#F5D98F" strokeOpacity=".5" strokeWidth="3"/>
-      <path d="M82 215L148 204L176 211M510 202L554 211" stroke="#FFF0C8" strokeOpacity=".75" strokeWidth="5" strokeLinecap="round"/>
-      <path d="M70 231H120M530 231H577" stroke="#F6D98A" strokeWidth="5" strokeLinecap="round"/>
-      <circle cx="177" cy="237" r="39" fill="#080A0D" stroke="#A9A9A9" strokeWidth="5"/>
-      <circle cx="177" cy="237" r="19" fill="#A78B58" stroke="#E9D5A5" strokeWidth="4"/>
-      <circle cx="477" cy="237" r="39" fill="#080A0D" stroke="#A9A9A9" strokeWidth="5"/>
-      <circle cx="477" cy="237" r="19" fill="#A78B58" stroke="#E9D5A5" strokeWidth="4"/>
-      <path d="M108 180H150M493 181H530" stroke="#FFF1CC" strokeWidth="4" strokeLinecap="round"/>
-      </g>}
-      {isBike && <g transform="translate(0 2)"><path d="M170 210L240 165L330 165L390 210L460 210" stroke="#E9BD58" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"/><path d="M240 165L280 115L355 115L390 165" stroke="#D9DDE0" strokeWidth="10" strokeLinecap="round"/><path d="M280 115L300 90H355" stroke="#E9BD58" strokeWidth="8" strokeLinecap="round"/><circle cx="170" cy="210" r="36" fill="#090B0E" stroke="#D6D6D6" strokeWidth="7"/><circle cx="460" cy="210" r="36" fill="#090B0E" stroke="#D6D6D6" strokeWidth="7"/></g>}
-      {isVan && <path d="M354 112V188M385 112V188" stroke="#5D6670" strokeWidth="4" />}
-      {kind === "executive" && <path d="M218 193H450" stroke="#FFF0C8" strokeOpacity=".35" strokeWidth="2" />}
+      <ellipse cx="320" cy="258" rx="230" ry="17" fill="#000" opacity=".48" filter={`url(#shadow-${kind})`} />
+      {isBike ? (
+        <g>
+          <path d="M156 224L226 177L325 177L388 224L474 224" stroke="#D9AA4B" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M226 177L262 119L349 119L388 177L325 177L294 224" stroke="#E5E8EB" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M262 119L280 91H348L365 119" stroke="#D9AA4B" strokeWidth="8" strokeLinecap="round"/>
+          <path d="M281 92L300 68H350" stroke="#E5E8EB" strokeWidth="7" strokeLinecap="round"/>
+          <path d="M300 68L322 68L336 92" stroke="#D9AA4B" strokeWidth="7" strokeLinecap="round"/>
+          <path d="M206 177L180 149M180 149L158 149" stroke="#E9BD58" strokeWidth="7" strokeLinecap="round"/>
+          <path d="M365 119L402 103L421 103" stroke="#E9BD58" strokeWidth="7" strokeLinecap="round"/>
+          <path d="M392 177L426 177" stroke="#E9BD58" strokeWidth="6" strokeLinecap="round"/>
+          <circle cx="156" cy="224" r="39" fill="#080B10" stroke="#D7DCE2" strokeWidth="7"/>
+          <circle cx="156" cy="224" r="15" fill="#A7AEB5" stroke="#E9BD58" strokeWidth="5"/>
+          <circle cx="474" cy="224" r="39" fill="#080B10" stroke="#D7DCE2" strokeWidth="7"/>
+          <circle cx="474" cy="224" r="15" fill="#A7AEB5" stroke="#E9BD58" strokeWidth="5"/>
+          <path d="M294 224L321 224L337 177" stroke="#BFC7CF" strokeWidth="7" strokeLinecap="round"/>
+          <path d="M274 151H344" stroke="#F7E6B6" strokeOpacity=".55" strokeWidth="3"/>
+        </g>
+      ) : (
+        <g>
+          <path d="M67 211L92 194L144 183L207 116C222 100 242 91 269 89L394 89C425 90 449 103 470 130L511 181L558 194C575 199 587 211 589 229L588 244H53L54 229C55 221 59 215 67 211Z" fill={`url(#body-${kind})`} stroke="#F4D99A" strokeWidth="3"/>
+          <path d="M224 123C238 105 252 99 274 98H391C414 99 431 109 447 131L477 174H179L224 123Z" fill={`url(#glass-${kind})`} stroke="#F7E6B6" strokeOpacity=".75" strokeWidth="3"/>
+          <path d="M326 100V174M189 178H483" stroke="#F7E6B6" strokeOpacity=".45" strokeWidth="3"/>
+          <path d="M247 103L216 174M403 101L434 174" stroke="#F7E6B6" strokeOpacity=".28" strokeWidth="2"/>
+          <path d="M79 211L148 197L176 204M505 197L558 209" stroke="#FFF1CB" strokeOpacity=".8" strokeWidth="5" strokeLinecap="round"/>
+          <path d="M65 225H123M523 225H578" stroke="#EBD08A" strokeWidth="5" strokeLinecap="round"/>
+          <path d="M171 194H483" stroke={`url(#metal-${kind})`} strokeWidth="3" strokeLinecap="round"/>
+          <path d="M276 185V221M408 185V221" stroke="#49371F" strokeOpacity=".45" strokeWidth="2"/>
+          <path d="M294 193H325M345 193H376" stroke="#FFF0C8" strokeOpacity=".7" strokeWidth="3" strokeLinecap="round"/>
+          <circle cx="177" cy="236" r="38" fill="#080B10" stroke="#C8CDD2" strokeWidth="6"/>
+          <circle cx="177" cy="236" r="20" fill="#9CA5AE" stroke="#E9D7AE" strokeWidth="4"/>
+          <circle cx="177" cy="236" r="7" fill="#252B31"/>
+          <circle cx="476" cy="236" r="38" fill="#080B10" stroke="#C8CDD2" strokeWidth="6"/>
+          <circle cx="476" cy="236" r="20" fill="#9CA5AE" stroke="#E9D7AE" strokeWidth="4"/>
+          <circle cx="476" cy="236" r="7" fill="#252B31"/>
+          <path d="M92 202L129 195L149 199L142 211H89Z" fill="#FFF3D1" fillOpacity=".9"/>
+          <path d="M520 196L557 207L566 218H525L512 205Z" fill="#E87B52" fillOpacity=".9"/>
+          {showTaxiSign && <g>
+            <path d="M298 83H368L363 64H304L298 83Z" fill="#11151B" stroke="#F2D58F" strokeWidth="2"/>
+            <path d="M307 68H359" stroke="#E9BD58" strokeWidth="3" strokeLinecap="round"/>
+            <text x="333" y="80" textAnchor="middle" fill="#F8E7B9" fontSize="11" fontWeight="700" letterSpacing="2">TAXI</text>
+          </g>}
+          {isVan && <path d="M350 100V174M383 100V174" stroke="#49371F" strokeOpacity=".55" strokeWidth="3"/>}
+        </g>
+      )}
+      <path d="M72 270H568" stroke="#E9BD58" strokeOpacity=".28" strokeWidth="2" strokeLinecap="round"/>
     </svg>
   );
 }
