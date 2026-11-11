@@ -69,18 +69,60 @@ export class IdempotencyService {
       }
     }
 
-    const record = await prisma.idempotencyRecord.create({
-      data: {
-        key: input.key.trim(),
-        scope: input.scope,
-        userId: input.userId,
-        requestHash,
-        status: "IN_PROGRESS",
-        expiresAt:
-          input.expiresAt ??
-          new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
-    });
+    let record;
+    try {
+      record = await prisma.idempotencyRecord.create({
+        data: {
+          key: input.key.trim(),
+          scope: input.scope,
+          userId: input.userId,
+          requestHash,
+          status: "IN_PROGRESS",
+          expiresAt:
+            input.expiresAt ??
+            new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+    } catch (error) {
+      // Concurrent requests can both observe an empty key before one wins
+      // the unique insert. Resolve the winner instead of leaking P2002.
+      const isUniqueConflict =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002";
+
+      if (!isUniqueConflict) throw error;
+
+      const winner = await prisma.idempotencyRecord.findUnique({
+        where: { key: input.key.trim() },
+      });
+
+      if (!winner) throw error;
+
+      if (
+        winner.scope !== input.scope ||
+        winner.requestHash !== requestHash
+      ) {
+        throw new Error(
+          "Idempotency key was already used with a different request."
+        );
+      }
+
+      if (winner.status === "COMPLETED") {
+        return {
+          replayed: true,
+          responseStatus: winner.responseStatus ?? undefined,
+          responseBody: winner.responseBody as T | undefined,
+          resourceType: winner.resourceType ?? undefined,
+          resourceId: winner.resourceId ?? undefined,
+        };
+      }
+
+      throw new Error(
+        "An operation with this idempotency key is already in progress."
+      );
+    }
 
     try {
       const result = await operation();
