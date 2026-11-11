@@ -141,7 +141,10 @@ export class SettlementFinancialControlsService {
 
     const payoutLedgerTransactions = payoutLedgerIds.length
       ? await prisma.transaction.findMany({
-          where: { id: { in: payoutLedgerIds } },
+          where: {
+            id: { in: payoutLedgerIds },
+            sourceAccount: { organizationId },
+          },
           select: {
             id: true,
             status: true,
