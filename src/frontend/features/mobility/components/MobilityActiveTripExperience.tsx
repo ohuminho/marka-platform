@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MobilityTripAdSlot from "@/frontend/features/mobility/components/MobilityTripAdSlot";
+import MobilityTripMap from "@/frontend/features/mobility/components/MobilityTripMap";
 import type { MobilityAdContext } from "@/monetization/ads/ad.types";
 
 type Audience = "rider" | "driver";
@@ -110,6 +111,15 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
 
   const ride = payload?.ride ?? null;
   const inProgress = ride?.status === "TRIP_IN_PROGRESS";
+  const pickupLatitude = num(ride?.pickupLatitude);
+  const pickupLongitude = num(ride?.pickupLongitude);
+  const dropoffLatitude = num(ride?.dropoffLatitude);
+  const dropoffLongitude = num(ride?.dropoffLongitude);
+  const driverLatitude = num(ride?.driver?.location?.latitude ?? ride?.driver?.location?.lat);
+  const driverLongitude = num(ride?.driver?.location?.longitude ?? ride?.driver?.location?.lng);
+  const pickupPoint = pickupLatitude !== null && pickupLongitude !== null ? { lat: pickupLatitude, lng: pickupLongitude } : null;
+  const dropoffPoint = dropoffLatitude !== null && dropoffLongitude !== null ? { lat: dropoffLatitude, lng: dropoffLongitude } : null;
+  const driverPoint = driverLatitude !== null && driverLongitude !== null ? { lat: driverLatitude, lng: driverLongitude } : null;
   const startedAt = ride?.startedAt ? new Date(ride.startedAt).getTime() : null;
   const destinationDistance = useMemo(() => {
     if (!ride) return null;
@@ -258,6 +268,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
         : error ? <div role="status" className="rounded-2xl border border-rose-300/20 bg-rose-300/[.05] p-5"><p className="text-sm text-rose-100">Não foi possível atualizar a viagem.</p><button onClick={() => { setLoading(true); void refresh(); }} className="mt-3 rounded-full border border-white/15 px-4 py-2 text-xs text-white/75">Tentar novamente</button></div>
         : !ride || !ACTIVE.includes(ride.status) ? <div className="rounded-2xl border border-white/10 bg-white/[.025] p-6 sm:p-8"><div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e9bd58]/25 bg-[#e9bd58]/[.07] text-xl text-[#e9bd58]">{audience === "driver" ? "↗" : "⌖"}</div><h3 className="mt-4 text-lg font-semibold">{audience === "driver" ? "Sem viagem atribuída neste momento" : "Ainda não tem uma viagem ativa"}</h3><p className="mt-2 max-w-md text-sm leading-6 text-white/45">{audience === "driver" ? "Quando uma viagem for atribuída à sua conta, os detalhes aparecem aqui automaticamente." : "O estado da viagem aparecerá aqui assim que um pedido estiver ativo."}</p><button onClick={() => { setLoading(true); void refresh(); }} className="mt-5 rounded-full border border-[#e9bd58]/35 px-4 py-2.5 text-xs font-semibold text-[#f0d58e]">Atualizar estado</button></div>
         : <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[.055] to-transparent p-5 sm:p-6">
+          <MobilityTripMap pickup={pickupPoint} dropoff={dropoffPoint} driver={driverPoint}/>
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[9px] uppercase tracking-[.22em] text-white/35">Referência da viagem</p><p className="mt-1 text-lg font-semibold tracking-wide">{ride.reference || ride.id.slice(0, 8).toUpperCase()}</p></div><span className="rounded-full border border-[#e9bd58]/30 bg-[#e9bd58]/[.08] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[.12em] text-[#f0d58e]">{STATUS[ride.status] || ride.status.replaceAll("_", " ")}</span></div>
           <div className="mt-6 space-y-0"><div className="flex gap-3 pb-5"><div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-sky-300/60 text-[8px] text-sky-200">●</div><div className="min-w-0"><p className="text-[9px] uppercase tracking-[.18em] text-white/35">Recolha</p><p className="mt-1 break-words text-sm text-white/90">{ride.pickupAddress || "Ponto de recolha registado"}</p></div></div><div className="ml-[9px] h-5 border-l border-dashed border-white/20" /><div className="flex gap-3 pt-3"><div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#e9bd58]/70 text-[8px] text-[#e9bd58]">◆</div><div className="min-w-0"><p className="text-[9px] uppercase tracking-[.18em] text-white/35">Destino</p><p className="mt-1 break-words text-sm text-white/90">{ride.dropoffAddress || "Destino registado no pedido"}</p></div></div></div>
           <div className="mt-6 grid gap-3 border-t border-white/[.08] pt-5 sm:grid-cols-2">
