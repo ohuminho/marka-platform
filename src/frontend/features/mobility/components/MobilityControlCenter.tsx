@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
+import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import {
   FormEvent,
   useCallback,
@@ -363,6 +364,8 @@ function MetricCard({
 }
 
 export default function MobilityControlCenter() {
+  const { activeOrganization } = useAuth();
+  const organizationId = activeOrganization?.id;
   const [overview, setOverview] =
     useState<MobilityOverview | null>(
       null,
@@ -402,12 +405,20 @@ export default function MobilityControlCenter() {
 
   const loadOverview =
     useCallback(async () => {
+      if (!organizationId) {
+        setOverview(null);
+        setError("Selecione uma organização ativa para consultar a operação Mobility.");
+        setLoading(false);
+        return;
+      }
       try {
         const response =
           await fetch(
             "/api/mobility/overview",
             {
               cache: "no-store",
+              credentials: "include",
+              headers: { "X-Organization-Id": organizationId },
             },
           );
 
@@ -441,7 +452,7 @@ export default function MobilityControlCenter() {
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [organizationId]);
 
   useEffect(() => {
   const initialLoadTimer = window.setTimeout(() => {
@@ -466,6 +477,11 @@ export default function MobilityControlCenter() {
 
       setError(null);
 
+      if (!organizationId) {
+        setError("Selecione uma organização ativa antes de criar uma viagem.");
+        return;
+      }
+
       if (!pickupPoint || !dropoffPoint) {
         setError("Use o mapa para obter a partida por GPS e pesquisar um destino antes de pedir a viagem.");
         return;
@@ -484,11 +500,13 @@ export default function MobilityControlCenter() {
             "/api/mobility/rides",
             {
               method: "POST",
+              credentials: "include",
               headers: {
                 "Content-Type":
                   "application/json",
                 "Idempotency-Key":
                   idempotencyKey,
+                "X-Organization-Id": organizationId,
               },
               body: JSON.stringify({
                 serviceType,
