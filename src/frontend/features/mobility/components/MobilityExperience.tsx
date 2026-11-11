@@ -169,31 +169,54 @@ export default function MobilityExperience() {
     }
 
     setCreating(true);
-    const idempotencyKey = `marka-ride-${crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+    const requestPayload = {
+      serviceType,
+      passengerCount,
+      currency: "AOA",
+      pickupLatitude: origin.lat,
+      pickupLongitude: origin.lon,
+      pickupAddress: origin.label,
+      dropoffLatitude: destination.lat,
+      dropoffLongitude: destination.lon,
+      dropoffAddress: destination.label,
+      safetyMode,
+      metadata: { requestSource: "MARKA_MOBILITY_RIDER_WEB" },
+    };
+    const requestFingerprint = JSON.stringify(requestPayload);
+    const storageKey = `marka:mobility:pending-ride:${organizationId}`;
+    let idempotencyKey = "";
+    try {
+      const pendingRaw = window.sessionStorage.getItem(storageKey);
+      const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string; fingerprint?: string } : null;
+      idempotencyKey = pending?.fingerprint === requestFingerprint && typeof pending.key === "string"
+        ? pending.key
+        : `marka-ride-${crypto.randomUUID()}`;
+      window.sessionStorage.setItem(storageKey, JSON.stringify({
+        key: idempotencyKey,
+        fingerprint: requestFingerprint,
+      }));
+    } catch {
+      idempotencyKey = `marka-ride-${crypto.randomUUID()}`;
+    }
     try {
       const response = await fetch("/api/mobility/rides", {
         method: "POST",
         credentials: "include",
         cache: "no-store",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey, "X-Organization-Id": organizationId },
-        body: JSON.stringify({
-          serviceType,
-          passengerCount,
-          currency: "AOA",
-          pickupLatitude: origin.lat,
-          pickupLongitude: origin.lon,
-          pickupAddress: origin.label,
-          dropoffLatitude: destination.lat,
-          dropoffLongitude: destination.lon,
-          dropoffAddress: destination.label,
-          safetyMode,
-          metadata: { requestSource: "MARKA_MOBILITY_RIDER_WEB" },
-        }),
+        body: JSON.stringify(requestPayload),
       });
       const data = (await response.json()) as RideResult;
       if (!response.ok) throw new Error(data.message || "Não foi possível registar o pedido. Verifique a ligação e tente novamente.");
       setRideResult(data);
       setRequestReference(data.ride?.reference ?? data.ride?.id ?? "Pedido registado");
+      try {
+        const pendingRaw = window.sessionStorage.getItem(storageKey);
+        const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
+        if (pending?.key === idempotencyKey) window.sessionStorage.removeItem(storageKey);
+      } catch {
+        // Session storage is an optional retry aid; the server remains authoritative.
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "O pedido não foi concluído. Tente novamente.");
     } finally {
