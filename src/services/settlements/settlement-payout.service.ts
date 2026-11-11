@@ -231,6 +231,8 @@ export class SettlementPayoutService {
                   input.organizationId,
                 settlementId:
                   input.settlementId,
+                provider:
+                  providerResult.provider,
                 providerReference:
                   providerResult.providerPayoutId,
                 actorUserId:
@@ -1116,6 +1118,29 @@ export class SettlementPayoutService {
       throw new Error(
         "Settlement amount must be greater than zero."
       );
+    }
+
+    if (result.status === "COMPLETED") {
+      if (
+        result.amountMinor === undefined ||
+        result.currency === undefined
+      ) {
+        throw new Error(
+          "Completed settlement payout must confirm its amount and currency."
+        );
+      }
+
+      if (result.amountMinor !== settlement.amountMinor) {
+        throw new Error(
+          "Completed settlement payout amount does not match the requested settlement."
+        );
+      }
+
+      if (result.currency.trim().toUpperCase() !== settlement.currency.trim().toUpperCase()) {
+        throw new Error(
+          "Completed settlement payout currency does not match the requested settlement."
+        );
+      }
     }
   }
 
