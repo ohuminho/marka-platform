@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { authorizationService } from "@/core/authorization/authorization.service";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,19 @@ async function authorizeAdmin() {
   if (!token) return { error: NextResponse.json({ message: "Autenticação necessária." }, { status: 401 }) };
   const session = await new SessionService().validate(token);
   if (!session) return { error: NextResponse.json({ message: "Sessão inválida." }, { status: 401 }) };
-  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, role: true, status: true, isFounder: true } });
-  if (!user || user.status !== "ACTIVE" || !(user.isFounder || ["ADMIN", "SUPER_ADMIN"].includes(user.role))) {
-    return { error: NextResponse.json({ message: "Apenas administradores autorizados podem rever motoristas." }, { status: 403 }) };
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, status: true, isFounder: true } });
+  if (!user || user.status !== "ACTIVE" || !session.organizationId) {
+    return { error: NextResponse.json({ message: "É necessária uma sessão ativa com organização selecionada." }, { status: 403 }) };
   }
-  return { user, session };
+  const hasAdminAccess = user.isFounder || await authorizationService.hasPermission(
+    user.id,
+    "ADMIN_ACCESS",
+    session.organizationId,
+  );
+  if (!hasAdminAccess) {
+    return { error: NextResponse.json({ message: "Apenas administradores autorizados desta organização podem rever motoristas." }, { status: 403 }) };
+  }
+  return { user, session, organizationId: session.organizationId };
 }
 
 function isCurrentVerified(items: Array<{ documentType: string; status: string; documentExpiry: Date | null; reviewedBy: string | null }>, type: string, now: Date, driverUserId: string) {
@@ -40,6 +49,7 @@ export async function GET() {
   const auth = await authorizeAdmin();
   if ("error" in auth) return auth.error;
   const drivers = await prisma.mobilityDriver.findMany({
+    where: { organizationId: auth.organizationId },
     include: {
       user: { select: { id: true, name: true, email: true } },
       organization: { select: { id: true, name: true, slug: true } },
@@ -74,8 +84,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ message: "É obrigatório indicar o motivo da suspensão ou bloqueio." }, { status: 422 });
   }
 
-  const driver = await prisma.mobilityDriver.findUnique({
-    where: { id: driverId },
+  const driver = await prisma.mobilityDriver.findFirst({
+    where: { id: driverId, organizationId: auth.organizationId },
     include: {
       verifications: { select: { documentType: true, status: true, documentExpiry: true, reviewedBy: true } },
       vehicles: { where: { activeUntil: null, isPrimary: true }, include: { vehicle: { include: { verifications: { select: { documentType: true, status: true, documentExpiry: true, reviewedBy: true } } } } } },
