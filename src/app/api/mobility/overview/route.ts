@@ -221,24 +221,7 @@ export async function GET(
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
 
-      engines: {
-        lifecycle: true,
-        ride: true,
-        stateMachine: true,
-        pricing: true,
-        matching: true,
-        dispatch: true,
-        assignment: true,
-        safety: true,
-        payment: true,
-        cashSettlement: true,
-        settlement: true,
-        financialOrchestrator: true,
-        financialCoreBridge: true,
-        recovery: true,
-        audit: true,
-        idempotency: true,
-      },
+
 
       metrics: {
         rides: {
