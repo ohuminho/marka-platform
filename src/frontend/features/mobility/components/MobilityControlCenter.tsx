@@ -309,8 +309,6 @@ export default function MobilityControlCenter() {
     );
 
   const currentStep =
-    activeRide?.orchestration
-      ?.currentStep ??
     selectedRide?.currentStep ??
     null;
 
