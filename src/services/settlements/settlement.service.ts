@@ -51,6 +51,7 @@ export interface ProcessSettlementInput {
 export interface CompleteSettlementInput {
   organizationId: string;
   settlementId: string;
+  provider: string;
   providerReference: string;
 
   actorUserId?: string;
@@ -476,6 +477,7 @@ export class SettlementService {
     const requestBody = {
       organizationId: input.organizationId,
       settlementId: input.settlementId,
+      provider: input.provider.trim().toUpperCase(),
       providerReference: input.providerReference.trim(),
     };
 
@@ -624,7 +626,7 @@ export class SettlementService {
                 referenceType: "EXTERNAL_SETTLEMENT_PAYOUT",
                 vendorId: current.vendorId,
                 context: "EXTERNAL_SETTLEMENT_PAYOUT_COMPLETED",
-                provider: input.providerReference.split(":")[0] || "CONFIGURED_PROVIDER",
+                provider: input.provider.trim().toUpperCase(),
                 providerPayoutId: input.providerReference,
                 metadata: {
                   settlementId: current.id,
@@ -945,6 +947,14 @@ export class SettlementService {
 
     if (!input.settlementId.trim()) {
       throw new Error("Settlement ID is required.");
+    }
+
+    if (!input.provider.trim()) {
+      throw new Error("Settlement provider is required.");
+    }
+
+    if (input.provider.trim().length > 100) {
+      throw new Error("Settlement provider name is too long.");
     }
 
     if (!input.providerReference.trim()) {
