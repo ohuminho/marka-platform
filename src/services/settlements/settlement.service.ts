@@ -7,7 +7,6 @@ import {
   TransactionType,
 } from "@prisma/client";
 
-import { FinancialAuditService } from "@/core/audit/financial-audit.service";
 import { IdempotencyService } from "@/core/idempotency/idempotency.service";
 import { prisma } from "@/database/client/prisma";
 import {
@@ -88,7 +87,6 @@ export interface SettlementListOptions {
 
 export class SettlementService {
   private readonly idempotencyService = new IdempotencyService();
-  private readonly financialAuditService = new FinancialAuditService();
 
   async create(input: CreateSettlementInput): Promise<SettlementResult> {
     this.validateCreateInput(input);
@@ -226,6 +224,29 @@ export class SettlementService {
               },
             });
 
+            await tx.auditLog.create({
+              data: {
+                organizationId: input.organizationId,
+                actorUserId: input.actorUserId,
+                actorType: input.actorUserId ? "USER" : "SYSTEM",
+                action: "SETTLEMENT_CREATED",
+                entityType: "SETTLEMENT",
+                entityId: settlement.id,
+                correlationId: input.correlationId,
+                requestId: input.requestId,
+                ipAddress: input.ipAddress,
+                userAgent: input.userAgent,
+                metadata: {
+                  vendorId: input.vendorId,
+                  financialInstrumentId: input.financialInstrumentId,
+                  amountMinor: input.amountMinor.toString(),
+                  currency,
+                  periodStart: input.periodStart.toISOString(),
+                  periodEnd: input.periodEnd.toISOString(),
+                } as Prisma.InputJsonValue,
+              },
+            });
+
             return { settlement, created: true };
           },
           {
@@ -236,27 +257,6 @@ export class SettlementService {
         );
 
         const settlement = creation.settlement;
-
-        if (creation.created) {
-          await this.financialAuditService.recordSettlement({
-            organizationId: input.organizationId,
-            actorUserId: input.actorUserId,
-            action: "SETTLEMENT_CREATED",
-            settlementId: settlement.id,
-            correlationId: input.correlationId,
-            requestId: input.requestId,
-            ipAddress: input.ipAddress,
-            userAgent: input.userAgent,
-            metadata: {
-              vendorId: input.vendorId,
-              financialInstrumentId: input.financialInstrumentId,
-              amountMinor: input.amountMinor.toString(),
-              currency,
-              periodStart: input.periodStart.toISOString(),
-              periodEnd: input.periodEnd.toISOString(),
-            },
-          });
-        }
 
         return {
           responseStatus: creation.created ? 201 : 200,
