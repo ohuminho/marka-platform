@@ -193,7 +193,8 @@ export default function MobilityExperience() {
           </div>
         </div>
 
-        <form onSubmit={submitRide} className="flex min-w-0 flex-col p-5 sm:p-7 lg:sticky lg:top-4 lg:self-start">
+        <form onSubmit={submitRide} className="relative z-10 -mt-7 flex min-w-0 flex-col rounded-t-[28px] border-t border-white/[.09] bg-[#080B10] p-5 shadow-[0_-22px_70px_-42px_rgba(0,0,0,.9)] sm:p-7 lg:sticky lg:top-4 lg:mt-0 lg:self-start lg:rounded-none lg:border-t-0 lg:bg-transparent lg:shadow-none">
+          <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/15 lg:hidden"/>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-[.24em] text-[#E9BD58]">Reserva imediata</p>
