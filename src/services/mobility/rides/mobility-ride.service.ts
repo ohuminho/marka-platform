@@ -1227,3 +1227,14 @@ export class MobilityRideService {
 
 export const mobilityRideService =
   new MobilityRideService();
+
+
+function normalizeIdempotencyValue(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(normalizeIdempotencyValue);
+  const source = value as Record<string, unknown>;
+  return Object.keys(source).sort().reduce<Record<string, unknown>>((result, key) => {
+    result[key] = normalizeIdempotencyValue(source[key]);
+    return result;
+  }, {});
+}
