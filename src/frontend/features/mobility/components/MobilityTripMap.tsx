@@ -11,21 +11,14 @@ type MapInstance = {
   remove(): void;
 };
 type MarkerLayer = MapLayer & { bindPopup(content: string): MarkerLayer };
-type Leaflet = {
-  map(element: HTMLElement): MapInstance;
-  tileLayer(url: string, options?: { maxZoom?: number; attribution?: string }): MapLayer;
-  marker(position: [number, number]): MarkerLayer;
-  circleMarker(position: [number, number], options: Record<string, unknown>): MarkerLayer;
-  geoJSON(data: unknown, options?: { style?: { color: string; weight: number; opacity: number } }): MapLayer;
-};
 const CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 
-function getLeaflet(): Leaflet | undefined {
-  return (window as Window & { L?: Leaflet }).L;
+function getLeaflet(): NonNullable<Window["L"]> | undefined {
+  return (window as Window).L;
 }
 
-function loadLeaflet(): Promise<Leaflet> {
+function loadLeaflet(): Promise<NonNullable<Window["L"]>> {
   return new Promise((resolve, reject) => {
     const loadedLeaflet = getLeaflet();
     if (loadedLeaflet) return resolve(loadedLeaflet);
