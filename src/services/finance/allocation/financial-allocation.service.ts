@@ -107,6 +107,8 @@ interface ExistingCommission {
   transaction: {
     id: string;
     status: TransactionStatus;
+    type: TransactionType;
+    direction: TransactionDirection;
     amountMinor: bigint;
     currency: string;
   } | null;
@@ -468,6 +470,8 @@ export class FinancialAllocationService {
             select: {
               id: true,
               status: true,
+              type: true,
+              direction: true,
               amountMinor: true,
               currency: true,
             },
@@ -1324,6 +1328,24 @@ export class FinancialAllocationService {
       }
 
       if (
+        commission.amountMinor > BigInt(0) &&
+        !commission.transactionId
+      ) {
+        throw new Error(
+          "Existing non-zero commission has no accounting transaction."
+        );
+      }
+
+      if (
+        commission.amountMinor === BigInt(0) &&
+        commission.transactionId
+      ) {
+        throw new Error(
+          "Zero-value commission must not reference an accounting transaction."
+        );
+      }
+
+      if (
         commission.transactionId
       ) {
         if (
@@ -1333,6 +1355,17 @@ export class FinancialAllocationService {
         ) {
           throw new Error(
             "Existing commission transaction is not completed."
+          );
+        }
+
+        if (
+          commission.transaction.type !==
+            TransactionType.COMMISSION ||
+          commission.transaction.direction !==
+            TransactionDirection.DEBIT
+        ) {
+          throw new Error(
+            "Existing commission transaction has an invalid type or direction."
           );
         }
 
@@ -1372,7 +1405,9 @@ export class FinancialAllocationService {
         await this.findExistingVendorTransactionId(
           database,
           payment.id,
-          vendorAllocation.vendorId
+          vendorAllocation.vendorId,
+          vendorAllocation.grossAmountMinor - commission.amountMinor,
+          payment.currency
         );
 
       if (!vendorTransactionId) {
@@ -1438,7 +1473,9 @@ export class FinancialAllocationService {
   private async findExistingVendorTransactionId(
     database: FinancialTransactionClient,
     paymentId: string,
-    vendorId: string
+    vendorId: string,
+    expectedAmountMinor: bigint,
+    expectedCurrency: string
   ): Promise<string | null> {
     const transaction =
       await database.transaction.findUnique({
@@ -1484,6 +1521,22 @@ export class FinancialAllocationService {
     ) {
       throw new Error(
         "Existing vendor allocation transaction has an invalid direction."
+      );
+    }
+
+    if (
+      transaction.amountMinor !== expectedAmountMinor
+    ) {
+      throw new Error(
+        "Existing vendor allocation transaction amount does not match the vendor payable allocation."
+      );
+    }
+
+    if (
+      transaction.currency !== expectedCurrency
+    ) {
+      throw new Error(
+        "Existing vendor allocation transaction currency does not match the payment."
       );
     }
 
