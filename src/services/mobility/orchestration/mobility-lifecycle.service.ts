@@ -215,7 +215,7 @@ export class MobilityLifecycleService {
         ride.metadata,
       );
 
-    await prisma.$executeRaw`
+    const inserted = await prisma.$executeRaw`
       INSERT INTO "MobilityRideOrchestration" (
         "id",
         "organizationId",
@@ -244,7 +244,17 @@ export class MobilityLifecycleService {
         ${now},
         ${now}
       )
+      ON CONFLICT ("rideId") DO NOTHING
     `;
+
+    if (inserted === 0) {
+      const concurrent = await this.getByRide(
+        input.organizationId,
+        input.rideId,
+      );
+      if (concurrent) return this.result(concurrent, "REQUEST");
+      throw new Error("Mobility ride orchestration could not be initialized.");
+    }
 
     await this.recordEvent({
       orchestrationId,
