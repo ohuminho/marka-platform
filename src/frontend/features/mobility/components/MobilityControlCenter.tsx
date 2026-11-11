@@ -635,7 +635,7 @@ export default function MobilityControlCenter() {
           <Link href="/app/admin/mobility/drivers" className="mt-5 inline-flex h-11 items-center rounded-full border border-[var(--theme-border)] px-5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)] transition hover:text-[var(--theme-text)]">
             Rever motoristas e documentos <span className="ml-3">→</span>
           </Link>
-        </div> </form>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
