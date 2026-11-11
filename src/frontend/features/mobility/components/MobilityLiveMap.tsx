@@ -107,7 +107,6 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       const leaflet = window.L;
       const map = mapRef.current;
       if (!leaflet || !map) throw new Error("O mapa ainda não está pronto. Tente novamente.");
-      if (routeRef.current) routeRef.current.remove();
       const routeLayer = leaflet.geoJSON(route.geometry, { style: { color: "#e9bd58", weight: 5, opacity: .95 } }).addTo(map);
       routeRef.current = routeLayer;
       map.fitBounds(routeLayer.getBounds(), { padding: [24, 24] });
