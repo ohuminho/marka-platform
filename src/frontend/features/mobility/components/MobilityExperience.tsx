@@ -208,8 +208,8 @@ export default function MobilityExperience() {
     <section className="space-y-5 text-white">
       <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#08090c] px-4 py-3 sm:px-5">
         <BrandMark compact />
-        <Link href="/app/mobility/parceiros" className="rounded-full border border-[#e9bd58]/50 px-4 py-2.5 text-xs font-semibold text-[#f2cd70] transition hover:bg-[#e9bd58]/10">
-          Área de parceiros <span aria-hidden="true">↗</span>
+        <Link href="/app/driver" className="rounded-full border border-[#e9bd58]/50 px-4 py-2.5 text-xs font-semibold text-[#f2cd70] transition hover:bg-[#e9bd58]/10">
+          Sou motorista <span aria-hidden="true">↗</span>
         </Link>
       </header>
 
@@ -310,7 +310,7 @@ export default function MobilityExperience() {
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Transportes e serviços especializados.</h2>
             <p className="mt-2 max-w-2xl text-xs leading-6 text-white/50">Van, Minibus, Bus e Coach são para grupos; cisternas, basculantes e outros camiões são para cargas e materiais. Cada contratação deve identificar o fornecedor, a capacidade, a rota e o preço — nunca criar uma viagem de táxi.</p>
           </div>
-          <Link href="/app/mobility/parceiros" className="rounded-full border border-[#e9bd58]/40 px-4 py-2.5 text-xs font-semibold text-[#f2cd70] transition hover:bg-[#e9bd58]/10">Área de parceiros ↗</Link>
+          <Link href="/app/driver" className="rounded-full border border-[#e9bd58]/40 px-4 py-2.5 text-xs font-semibold text-[#f2cd70] transition hover:bg-[#e9bd58]/10">Área de parceiros ↗</Link>
         </div>
         <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
           <article className="rounded-2xl border border-white/10 bg-white/[.025] p-5">
@@ -400,7 +400,7 @@ export default function MobilityExperience() {
               {rideResult.orchestration?.recoveryRequired && <p className="mt-2 text-[10px] leading-4 text-amber-200">O pedido foi criado, mas o sistema assinalou uma recuperação operacional. Consulte o estado antes de tentar criar outro pedido.</p>}
             </div>
           )}
-          <Link href="/app/mobility/parceiros" className="mt-4 flex min-h-11 items-center justify-center rounded-full border border-white/10 text-xs font-semibold text-white/65 transition hover:border-[#e9bd58]/50 hover:text-[#f2cd70]">Sou motorista parceiro</Link>
+          <Link href="/app/driver" className="mt-4 flex min-h-11 items-center justify-center rounded-full border border-white/10 text-xs font-semibold text-white/65 transition hover:border-[#e9bd58]/50 hover:text-[#f2cd70]">Aceder ao espaço do motorista</Link>
         </aside>
       </form>
 
