@@ -58,53 +58,87 @@ export class FulfillmentAdapter
       );
     }
 
-    const request =
-      await prisma.$transaction(
-        async (database) => {
-          const created =
-            await database.fulfillmentRequest.create({
-              data: {
-                id: crypto.randomUUID(),
-                organizationId:
-                  input.organizationId,
-                orderId:
-                  input.orderId,
-                pickupType:
-                  input.pickup.type,
-                pickupId:
-                  input.pickup.id,
-                destinationType:
-                  input.destination.type,
-                destinationId:
-                  input.destination.id,
-                status: "REQUESTED",
-                assignedAgentId:
-                  input.assignedAgentId,
-                exceptionCode:
-                  input.exceptionCode,
-                metadata: {
-                  ...(input.metadata ??
-                    {}),
-                  correlationId:
-                    correlationId ??
-                    null,
+    let request;
+
+    try {
+      request =
+        await prisma.$transaction(
+          async (database) => {
+            const created =
+              await database.fulfillmentRequest.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  organizationId:
+                    input.organizationId,
+                  orderId:
+                    input.orderId,
+                  pickupType:
+                    input.pickup.type,
+                  pickupId:
+                    input.pickup.id,
+                  destinationType:
+                    input.destination.type,
+                  destinationId:
+                    input.destination.id,
+                  status: "REQUESTED",
+                  assignedAgentId:
+                    input.assignedAgentId,
+                  exceptionCode:
+                    input.exceptionCode,
+                  metadata: {
+                    ...(input.metadata ??
+                      {}),
+                    correlationId:
+                      correlationId ??
+                      null,
+                  },
                 },
+              });
+
+            await database.order.updateMany({
+              where: {
+                id: input.orderId,
+                status: "CONFIRMED",
+              },
+              data: {
+                status: "PROCESSING",
               },
             });
 
-          await database.order.updateMany({
-            where: {
-              id: input.orderId,
-              status: "CONFIRMED",
-            },
-            data: {
-              status: "PROCESSING",
-            },
-          });
+            return created;
+          },
+        );
+    } catch (error) {
+      const isUniqueConflict =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "P2002";
 
-          return created;
-        },
-      );
+      if (!isUniqueConflict) {
+        throw error;
+      }
+
+      // Concurrent payment confirmations can race to create fulfillment
+      // for the same order. Reuse the unique winner instead of failing
+      // an already captured payment's finalization.
+      const existingRequest =
+        await prisma.fulfillmentRequest.findUnique({
+          where: {
+            orderId: input.orderId,
+          },
+        });
+
+      if (
+        !existingRequest ||
+        existingRequest.organizationId !==
+          input.organizationId
+      ) {
+        throw error;
+      }
+
+      request = existingRequest;
+    }
 
     const fulfilled =
       await this.ensureDeliveryDispatch(
