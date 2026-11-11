@@ -91,19 +91,22 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
     layersRef.current = [];
 
     if (pickup) {
-      layersRef.current.push(L.circleMarker([pickup.lat, pickup.lng], {
+      const marker = L.circleMarker([pickup.lat, pickup.lng], {
         radius: 8, color: "#07110D", weight: 3, fillColor: "#83D4A7", fillOpacity: 1,
-      }).addTo(map).bindPopup("Ponto de recolha"));
+      }).addTo(map) as MarkerLayer;
+      layersRef.current.push(marker.bindPopup("Ponto de recolha"));
     }
     if (dropoff) {
-      layersRef.current.push(L.circleMarker([dropoff.lat, dropoff.lng], {
+      const marker = L.circleMarker([dropoff.lat, dropoff.lng], {
         radius: 8, color: "#171208", weight: 3, fillColor: "#E9BD58", fillOpacity: 1,
-      }).addTo(map).bindPopup("Destino"));
+      }).addTo(map) as MarkerLayer;
+      layersRef.current.push(marker.bindPopup("Destino"));
     }
     if (driver) {
-      layersRef.current.push(L.circleMarker([driver.lat, driver.lng], {
+      const marker = L.circleMarker([driver.lat, driver.lng], {
         radius: 9, color: "#07111D", weight: 3, fillColor: "#78B8FF", fillOpacity: 1,
-      }).addTo(map).bindPopup("Localização comunicada pelo motorista"));
+      }).addTo(map) as MarkerLayer;
+      layersRef.current.push(marker.bindPopup("Localização comunicada pelo motorista"));
     }
 
     let cancelled = false;
