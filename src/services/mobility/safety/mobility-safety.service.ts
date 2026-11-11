@@ -644,7 +644,7 @@ export class MobilitySafetyService {
       input.childRide ??
       false;
 
-    await prisma.$executeRaw`
+    const inserted = await prisma.$executeRaw`
       INSERT INTO "MobilityTripSafety" (
         "id",
         "rideId",
@@ -673,7 +673,17 @@ export class MobilitySafetyService {
         NOW(),
         NOW()
       )
+      ON CONFLICT ("rideId") DO NOTHING
     `;
+
+    if (inserted === 0) {
+      const concurrentRecord = await this.getTripSafety(input.rideId);
+      if (concurrentRecord) return concurrentRecord;
+      throw new MobilityDomainError(
+        "Trip safety record could not be recovered after a concurrent request.",
+        "TRIP_SAFETY_LOAD_FAILED",
+      );
+    }
 
     await this.recordSafetyEvent({
       organizationId:
