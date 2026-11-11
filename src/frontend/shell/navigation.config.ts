@@ -187,8 +187,8 @@ export const NavigationConfig = {
         },
         {
           title: "Mobility",
-          route: "/app/mobility",
-          description: "Mobility operational control",
+          route: "/app/mobility/admin",
+          description: "Passenger dispatch, drivers and operational control",
           permissions: ["ADMIN_ACCESS"],
         },
         {
