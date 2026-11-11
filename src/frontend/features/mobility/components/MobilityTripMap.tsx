@@ -7,6 +7,7 @@ type MapLayer = { addTo(map: MapInstance): MapLayer; remove(): void; getBounds?(
 type MapInstance = {
   setView(center: [number, number], zoom: number): MapInstance;
   fitBounds(bounds: unknown, options?: { padding: [number, number] }): void;
+  invalidateSize(): void;
   remove(): void;
 };
 type MarkerLayer = MapLayer & { bindPopup(content: string): MarkerLayer };
