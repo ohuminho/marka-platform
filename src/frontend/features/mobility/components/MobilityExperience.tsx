@@ -31,9 +31,18 @@ const statusLabels: Record<string, string> = {
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`flex items-center gap-2 ${compact ? "" : "flex-col items-start"}`}>
-      <span className="font-black leading-none tracking-[-.12em] text-[#e9bd58]" style={{ fontSize: compact ? 28 : 54 }}>M</span>
-      <span className={`font-semibold tracking-[.28em] text-white ${compact ? "text-xs" : "text-2xl"}`}>MARKA</span>
-      {!compact && <span className="text-[9px] tracking-[.42em] text-[#e9bd58]">MOBILITY · ANGOLA</span>}
+      <svg viewBox="0 0 48 40" role="img" aria-label="MARKA Mobility" className={compact ? "h-8 w-10" : "h-14 w-16"} fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 27L9 22L14 10C15 7 18 5 21 5H33C36 5 39 7 40 10L44 22L47 25V32H2V30C2 29 3 28 5 27Z" fill="#11151B" stroke="#E9BD58" strokeWidth="1.8"/>
+        <path d="M16 11C17 9 19 8 21 8H32C34 8 36 9 37 12L40 20H12L16 11Z" fill="#9DB2C2" fillOpacity=".28" stroke="#F5D98F" strokeOpacity=".65"/>
+        <path d="M25 8V20" stroke="#F5D98F" strokeOpacity=".5"/>
+        <path d="M4 25H11M39 25H46" stroke="#F5D98F" strokeWidth="2" strokeLinecap="round"/>
+        <circle cx="12" cy="31" r="4" fill="#080A0E" stroke="#D7DCE2" strokeWidth="1.5"/>
+        <circle cx="38" cy="31" r="4" fill="#080A0E" stroke="#D7DCE2" strokeWidth="1.5"/>
+      </svg>
+      <div className={compact ? "flex flex-col gap-0.5" : "flex flex-col gap-1"}>
+        <span className={`font-semibold tracking-[.22em] text-white ${compact ? "text-xs" : "text-2xl"}`}>MARKA</span>
+        {!compact && <span className="text-[9px] tracking-[.35em] text-[#e9bd58]">MOBILITY · ANGOLA</span>}
+      </div>
     </div>
   );
 }
