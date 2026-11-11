@@ -252,7 +252,7 @@ export const NavigationConfig = {
       items: [
         { title: "Driver Workspace", route: "/app/driver", description: "Driver operational workspace" },
         { title: "AI Assistant", route: "/app/assistant", description: "Get intelligent assistance" },
-        { title: "Mobility", route: "/app/mobility", description: "Trips, dispatch and settlement" },
+        
         { title: "Support", route: "/app/support", description: "Open and track support requests inside MARKA" },
         { title: "Account", route: "/app/account", description: "Identity, session and access context" },
         { title: "Compliance", route: "/app/compliance", description: "KYC, KYD and verification status" },
@@ -290,8 +290,8 @@ export const NavigationConfig = {
         },
         {
           title: "Mobility",
-          route: "/app/mobility",
-          description: "Global Mobility control",
+          route: "/app/mobility/admin",
+          description: "Global Mobility operations control",
           permissions: ["ADMIN_ACCESS"],
         },
         {
