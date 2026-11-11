@@ -688,48 +688,107 @@ export class PaymentService {
             PaymentStatus.COMPLETED
           ) {
             const updated =
-              await prisma.payment.update({
-                where: {
-                  id:
-                    payment.id,
+              await prisma.$transaction(
+                async (database) => {
+                  await database.$queryRaw<
+                    Array<{ id: string }>
+                  >`
+                    SELECT "id"
+                    FROM "Payment"
+                    WHERE "id" = ${payment.id}
+                    FOR UPDATE
+                  `;
+
+                  const currentPayment =
+                    await database.payment.findUnique({
+                      where: {
+                        id: payment.id,
+                      },
+                    });
+
+                  if (!currentPayment) {
+                    throw new Error(
+                      "Payment not found during provider status update."
+                    );
+                  }
+
+                  // A delayed non-success response must never downgrade
+                  // a payment that another confirmation already completed
+                  // or moved into a terminal state.
+                  if (
+                    currentPayment.status ===
+                      PaymentStatus.COMPLETED ||
+                    currentPayment.status ===
+                      PaymentStatus.REFUNDED ||
+                    currentPayment.status ===
+                      PaymentStatus.CANCELLED ||
+                    currentPayment.status ===
+                      PaymentStatus.FAILED
+                  ) {
+                    return currentPayment;
+                  }
+
+                  return database.payment.update({
+                    where: {
+                      id: currentPayment.id,
+                    },
+                    data: {
+                      provider: provider.name,
+                      providerPaymentId:
+                        providerResult.providerPaymentId,
+                      status: nextStatus,
+                      metadata: nextMetadata,
+                    },
+                  });
                 },
-                data: {
+                {
+                  isolationLevel:
+                    Prisma.TransactionIsolationLevel.Serializable,
+                  maxWait: 5000,
+                  timeout: 10000,
+                }
+              );
+
+            if (
+              updated.status ===
+              PaymentStatus.COMPLETED
+            ) {
+              await this.finalizeOrderAfterPayment({
+                orderId: updated.orderId,
+                userId: input.userId,
+                paymentId: updated.id,
+                organizationId,
+                correlationId: input.correlationId,
+              });
+            } else if (
+              updated.status === nextStatus
+            ) {
+              await this.financialAuditService.recordPayment({
+                organizationId,
+                actorUserId:
+                  input.userId,
+                paymentId:
+                  payment.id,
+                action:
+                  `PAYMENT_PROVIDER_${nextStatus}`,
+                correlationId:
+                  input.correlationId,
+                requestId:
+                  input.requestId,
+                ipAddress:
+                  input.ipAddress,
+                userAgent:
+                  input.userAgent,
+                metadata: {
                   provider:
                     provider.name,
                   providerPaymentId:
                     providerResult.providerPaymentId,
-                  status:
-                    nextStatus,
-                  metadata:
-                    nextMetadata,
+                  paymentStatus:
+                    updated.status,
                 },
               });
-
-            await this.financialAuditService.recordPayment({
-              organizationId,
-              actorUserId:
-                input.userId,
-              paymentId:
-                payment.id,
-              action:
-                `PAYMENT_PROVIDER_${nextStatus}`,
-              correlationId:
-                input.correlationId,
-              requestId:
-                input.requestId,
-              ipAddress:
-                input.ipAddress,
-              userAgent:
-                input.userAgent,
-              metadata: {
-                provider:
-                  provider.name,
-                providerPaymentId:
-                  providerResult.providerPaymentId,
-                paymentStatus:
-                  nextStatus,
-              },
-            });
+            }
 
             return {
               responseStatus: 200,
