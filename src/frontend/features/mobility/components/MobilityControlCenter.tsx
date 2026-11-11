@@ -660,7 +660,7 @@ export default function MobilityControlCenter() {
             </div>
 
             <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">
-              Live
+              Atualização automática
             </span>
           </div>
 
@@ -907,34 +907,10 @@ export default function MobilityControlCenter() {
           </div>
         </div>
 
-        {selectedRideId && (
-          <Link
-            href={`/app/mobility/${selectedRideId}`}
-            className="
-              mt-5
-              inline-flex
-              h-11
-              items-center
-              rounded-full
-              border
-              border-[var(--theme-border)]
-              bg-[var(--theme-surface)]
-              px-5
-              text-[9px]
-              font-semibold
-              uppercase
-              tracking-[0.18em]
-              text-[var(--theme-text-muted)]
-              transition
-              hover:border-[var(--theme-border)]
-              hover:text-[var(--theme-text)]
-            "
-          >
-            Open selected ride
-            <span className="ml-3">
-              →
-            </span>
-          </Link>
+        {selectedRide && (
+          <p className="mt-5 rounded-xl border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text-muted)]">
+            Corrida selecionada: <span className="font-semibold text-[var(--theme-text)]">{selectedRide.reference}</span> · {formatStep(selectedRide.status)}
+          </p>
         )}
       </section>
     </div>
