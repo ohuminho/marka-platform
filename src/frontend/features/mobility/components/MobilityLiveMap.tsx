@@ -77,13 +77,16 @@ function loadLeaflet(): Promise<LeafletNamespace> {
   leafletPromise = (async () => {
     await loadStylesheet();
 
-    const existing = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
-    if (existing?.dataset.failed === "true") existing.remove();
+    let existing = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
+    if (existing?.dataset.failed === "true" || existing?.dataset.loaded === "true") {
+      existing.remove();
+      existing = null;
+    }
 
     if (existing && !window.L) {
       await new Promise<void>((resolve, reject) => {
-        existing.addEventListener("load", () => resolve(), { once: true });
-        existing.addEventListener("error", () => reject(new Error("Não foi possível carregar o mapa.")), { once: true });
+        existing?.addEventListener("load", () => resolve(), { once: true });
+        existing?.addEventListener("error", () => reject(new Error("Não foi possível carregar o mapa.")), { once: true });
       });
       if (window.L) return window.L;
       throw new Error("Motor do mapa indisponível.");
@@ -96,7 +99,10 @@ function loadLeaflet(): Promise<LeafletNamespace> {
           script.src = src;
           script.async = true;
           script.dataset.markaLeaflet = "true";
-          script.onload = () => resolve();
+          script.onload = () => {
+            script.dataset.loaded = "true";
+            resolve();
+          };
           script.onerror = () => {
             script.dataset.failed = "true";
             script.remove();
