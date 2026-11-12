@@ -49,6 +49,7 @@ export async function GET() {
   const auth = await authorizeAdmin();
   if ("error" in auth) return auth.error;
 
+  const now = new Date();
   const requests = await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.organizationId,
@@ -78,7 +79,8 @@ export async function GET() {
       ...item,
       quantity: item.quantity === null ? null : Number(item.quantity),
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
-      quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,\n      quoteExpired: item.quoteExpiresAt ? item.quoteExpiresAt <= new Date() : false,
+      quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
+      quoteExpired: item.quoteExpiresAt ? item.quoteExpiresAt <= now : false,
       createdAt: item.createdAt.toISOString(),
     })),
   }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
@@ -100,6 +102,14 @@ export async function PATCH(request: Request) {
   const { requestId, amount, validityHours } = parsed.data;
   const now = new Date();
   const expiresAt = new Date(now.getTime() + validityHours * 60 * 60 * 1000);
+  const freightMeta = await prisma.freightRequest.findFirst({
+    where: { id: requestId, organizationId: auth.organizationId },
+    select: { currency: true },
+  });
+  if (!freightMeta) {
+    return NextResponse.json({ message: "Pedido não encontrado." }, { status: 404 });
+  }
+
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0, 64) ?? null;
   const userAgent = requestHeaders.get("user-agent")?.slice(0, 500) ?? null;
@@ -134,7 +144,12 @@ export async function PATCH(request: Request) {
           entityId: requestId,
           ipAddress,
           userAgent,
-          metadata: { amount, currency: freightMeta.currency, validityHours, expiresAt: expiresAt.toISOString() },
+          metadata: {
+            amount,
+            currency: freightMeta.currency,
+            validityHours,
+            expiresAt: expiresAt.toISOString(),
+          },
         },
       });
 
@@ -152,7 +167,7 @@ export async function PATCH(request: Request) {
       success: true,
       requestId,
       amount,
-      currency: "AOA",
+      currency: freightMeta.currency,
       quoteExpiresAt: expiresAt.toISOString(),
     });
   } catch (error) {
