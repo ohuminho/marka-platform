@@ -3,6 +3,7 @@ import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 import MobilitySupportCenter from "@/frontend/features/mobility/components/MobilitySupportCenter";
+import MobilityFreightJobs from "@/frontend/features/mobility/components/MobilityFreightJobs";
 
 const onboardingSteps = [
   {
@@ -141,6 +142,8 @@ export default function MobilityPartnersPage() {
               ))}
             </div>
           </section>
+
+          <MobilityFreightJobs />
 
           <MobilitySupportCenter />
 
