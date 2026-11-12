@@ -61,6 +61,7 @@ export interface MobilityDispatchResult {
 
 const SERVICE_VEHICLE_TYPES: Record<string, string[]> = {
   TAXI: ["CAR"],
+  EXECUTIVE: ["CAR"],
   MOTO_TAXI: ["MOTORCYCLE"],
   VAN: ["VAN"],
   MINIBUS: ["MINIBUS"],
