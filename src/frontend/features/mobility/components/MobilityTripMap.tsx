@@ -68,14 +68,19 @@ function loadLeaflet(): Promise<NonNullable<Window["L"]>> {
         if (existing?.dataset.failed === "true") existing.remove();
         const active = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
         if (active) {
-          if (active.dataset.loaded === "true" && getLeaflet()) return getLeaflet()!;
-          await new Promise<void>((resolve, reject) => {
-            active.addEventListener("load", () => resolve(), { once: true });
-            active.addEventListener("error", () => reject(new Error("Motor do mapa indisponível.")), { once: true });
-          });
-          const afterLoad = getLeaflet();
-          if (afterLoad) return afterLoad;
-          active.remove();
+          const alreadyLoaded = getLeaflet();
+          if (alreadyLoaded) return alreadyLoaded;
+          if (active.dataset.loaded === "true") {
+            active.remove();
+          } else {
+            await new Promise<void>((resolve, reject) => {
+              active.addEventListener("load", () => resolve(), { once: true });
+              active.addEventListener("error", () => reject(new Error("Motor do mapa indisponível.")), { once: true });
+            });
+            const afterLoad = getLeaflet();
+            if (afterLoad) return afterLoad;
+            active.remove();
+          }
         }
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement("script");
