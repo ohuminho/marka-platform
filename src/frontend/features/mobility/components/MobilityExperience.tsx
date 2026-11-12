@@ -14,6 +14,7 @@ type RideResult = {
 
 const services = [
   { id: "TAXI", name: "MARKA Go", subtitle: "Táxi", description: "Conforto para deslocações urbanas e interurbanas.", capacity: "Até 4 passageiros", icon: "car" },
+  { id: "EXECUTIVE", name: "MARKA Executive", subtitle: "Executivo", description: "Serviço premium para deslocações com maior exigência de conforto.", capacity: "Até 4 passageiros · viatura de classe executiva", icon: "car" },
   { id: "MOTO_TAXI", name: "MARKA Moto", subtitle: "Mototáxi", description: "Uma opção ágil para percursos individuais.", capacity: "1 passageiro", icon: "bike" },
   { id: "VAN", name: "MARKA Van", subtitle: "Carrinha", description: "Transporte para grupos e deslocações com maior espaço.", capacity: "Capacidade conforme a viatura", icon: "van" },
   { id: "MINIBUS", name: "MARKA Mini", subtitle: "Minibus", description: "Transporte coletivo em percursos urbanos e interurbanos.", capacity: "Capacidade conforme a viatura", icon: "bus" },
