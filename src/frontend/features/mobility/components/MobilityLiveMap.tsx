@@ -18,7 +18,7 @@ type LeafletLayerGroup = LeafletLayer & {
 };
 type LeafletNamespace = {
   map(element: HTMLElement): LeafletMap;
-  tileLayer(url: string, options?: { maxZoom?: number; attribution?: string }): { addTo(map: LeafletMap): unknown };
+  tileLayer(url: string, options?: { maxZoom?: number; attribution?: string }): { addTo(map: LeafletMap): { on(event: "tileerror", callback: () => void): void; remove(): void } };
   marker(position: [number, number]): LeafletMarker;
   circleMarker(position: [number, number], options?: Record<string, unknown>): LeafletMarker;
   geoJSON(data: unknown, options?: { style?: { color: string; weight: number; opacity: number } }): LeafletLayerGroup;
@@ -138,7 +138,15 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     loadLeaflet().then((L) => {
       if (disposed || !hostRef.current || mapRef.current) return;
       const map = L.map(hostRef.current).setView([-8.8383, 13.2344], 12);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 20, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>' }).addTo(map);
+      const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
+      const baseTiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 20, attribution }).addTo(map);
+      let tileFallbackActivated = false;
+      baseTiles.on("tileerror", () => {
+        if (tileFallbackActivated || !mapRef.current) return;
+        tileFallbackActivated = true;
+        baseTiles.remove();
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+      });
       mapRef.current = map; window.setTimeout(() => map.invalidateSize(), 100);
     }).catch((e) => setStatus(e instanceof Error ? e.message : "Erro ao iniciar o mapa."));
     return () => { disposed = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; routeRef.current = null; markersRef.current = { origin: null, destination: null }; } };
