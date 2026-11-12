@@ -238,7 +238,7 @@ export default function MobilityExperience() {
           <p className="mt-3 text-[10px] leading-4 text-white/40">{selectedService.description}</p>
 
           <div className="mt-5 space-y-4 border-t border-white/[.08] pt-5">
-            {serviceType === "TAXI" && (
+            {["TAXI", "EXECUTIVE"].includes(serviceType) && (
               <label className="block">
                 <span className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/55">Número de passageiros</span>
                 <select value={passengerCount} onChange={(event) => setPassengerCount(Math.max(1, Math.min(4, Number(event.target.value) || 1)))} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#11151B] px-3.5 text-sm text-white outline-none transition focus:border-[#E9BD58]/65">
