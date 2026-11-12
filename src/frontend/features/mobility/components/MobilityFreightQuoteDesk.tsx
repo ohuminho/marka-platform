@@ -14,8 +14,8 @@ interface FreightQuoteRequest {
   quantityUnit: string | null;
   currency: string;
   quotedAmount: number | null;
-  quoteExpiresAt: string | null;\n  quoteExpired: boolean;
-  createdAt: string;
+  quoteExpiresAt: string | null;
+  quoteExpired: boolean;
   requester: { name: string | null };
 }
 
@@ -125,8 +125,8 @@ export default function MobilityFreightQuoteDesk() {
         ) : requests.length === 0 ? (
           <p className="py-8 text-center text-xs text-[var(--theme-text-faint)]">Não existem pedidos pendentes de cotação ou pagamento.</p>
         ) : requests.map((item) => {
-          const quoteActive = item.status === "QUOTED" && item.quoteExpiresAt && new Date(item.quoteExpiresAt).getTime() > Date.now();
-          const canQuote = item.status === "REQUESTED" || (item.status === "QUOTED" && !quoteActive);
+          const quoteActive = item.status === "QUOTED" && !item.quoteExpired;
+          const canQuote = item.status === "REQUESTED" || (item.status === "QUOTED" && item.quoteExpired);
           return (
             <article key={item.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)]/20 p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -137,8 +137,14 @@ export default function MobilityFreightQuoteDesk() {
                 <span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-muted)]">{label(item.status)}</span>
               </div>
               <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
-                <div><p className="text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">Recolha</p><p className="mt-1 text-[var(--theme-text-muted)]">{item.originAddress || "Não aplicável"}</p></div>
-                <div><p className="text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">Destino</p><p className="mt-1 text-[var(--theme-text-muted)]">{item.destinationAddress || "Não indicado"}</p></div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">Recolha</p>
+                  <p className="mt-1 text-[var(--theme-text-muted)]">{item.originAddress || "Não aplicável"}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">Destino</p>
+                  <p className="mt-1 text-[var(--theme-text-muted)]">{item.destinationAddress || "Não indicado"}</p>
+                </div>
               </div>
               {item.quantity !== null && <p className="mt-3 text-[10px] text-[var(--theme-text-faint)]">Quantidade: {item.quantity.toLocaleString("pt-PT")} {item.quantityUnit || ""}</p>}
               {item.quotedAmount !== null && <p className="mt-3 text-sm font-semibold text-[var(--theme-text)]">{money(item.quotedAmount, item.currency)} <span className="text-[10px] font-normal text-[var(--theme-text-faint)]">· cotação actual</span></p>}
@@ -147,9 +153,21 @@ export default function MobilityFreightQuoteDesk() {
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[var(--theme-border)] px-3 py-2">
                     <span className="shrink-0 text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">Valor ({item.currency})</span>
-                    <input aria-label={`Valor da cotação ${item.reference}`} type="number" min="1" step="1" inputMode="decimal" value={amounts[item.id] ?? ""} onChange={(event) => setAmounts((current) => ({ ...current, [item.id]: event.target.value }))} className="w-full min-w-0 bg-transparent text-sm text-[var(--theme-text)] outline-none" placeholder="Introduzir valor" />
+                    <input
+                      aria-label={`Valor da cotação ${item.reference}`}
+                      type="number"
+                      min="1"
+                      step="1"
+                      inputMode="decimal"
+                      value={amounts[item.id] ?? ""}
+                      onChange={(event) => setAmounts((current) => ({ ...current, [item.id]: event.target.value }))}
+                      className="w-full min-w-0 bg-transparent text-sm text-[var(--theme-text)] outline-none"
+                      placeholder="Introduzir valor"
+                    />
                   </label>
-                  <button type="button" disabled={savingId === item.id} onClick={() => void issueQuote(item.id)} className="h-11 rounded-full bg-[var(--theme-text)] px-5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--theme-background)] disabled:opacity-50">{savingId === item.id ? "A guardar…" : "Emitir cotação"}</button>
+                  <button type="button" disabled={savingId === item.id} onClick={() => void issueQuote(item.id)} className="h-11 rounded-full bg-[var(--theme-text)] px-5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--theme-background)] disabled:opacity-50">
+                    {savingId === item.id ? "A guardar…" : "Emitir cotação"}
+                  </button>
                 </div>
               )}
               {item.status === "AWAITING_PAYMENT" && <p className="mt-4 text-[10px] text-[var(--theme-text-muted)]">Cotação aceite/aguarda pagamento. O despacho permanece bloqueado até confirmação server-side do pagamento.</p>}
