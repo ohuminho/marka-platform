@@ -163,6 +163,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       }
       window.setTimeout(() => map.invalidateSize(), 100);
     }).catch((e) => {
+      if (disposed) return;
       const message = e instanceof Error ? e.message : "Erro ao iniciar o mapa.";
       setMapError(message);
       setStatus(message);
