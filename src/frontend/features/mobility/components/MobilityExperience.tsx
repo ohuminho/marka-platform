@@ -234,11 +234,11 @@ export default function MobilityExperience() {
             <span className="rounded-xl border border-white/[.08] bg-white/[.035] px-3 py-2 text-[9px] font-semibold text-white/45">AO · AOA</span>
           </div>
 
-          <div className="mt-5 space-y-2">
+          <div role="group" aria-label="Categorias de transporte" className="mt-5 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
             {services.map((service) => {
               const selected = serviceType === service.id;
               return (
-                <button key={service.id} type="button" aria-pressed={selected} onClick={() => { setServiceType(service.id); if (service.id === "MOTO_TAXI") setPassengerCount(1); }} className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border p-3.5 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#E9BD58] ${selected ? "border-[#E9BD58]/65 bg-[linear-gradient(110deg,rgba(233,189,88,.12),rgba(233,189,88,.025))] shadow-[inset_0_0_0_1px_rgba(233,189,88,.08)]" : "border-white/[.09] bg-white/[.02] hover:border-white/20 hover:bg-white/[.04]"}`}>
+                <button key={service.id} type="button" aria-pressed={selected} onClick={() => { setServiceType(service.id); if (service.id === "MOTO_TAXI") setPassengerCount(1); }} className={`group relative flex min-w-[190px] shrink-0 snap-start items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#E9BD58] lg:min-w-0 lg:w-full lg:p-3.5 ${selected ? "border-[#E9BD58]/65 bg-[linear-gradient(110deg,rgba(233,189,88,.12),rgba(233,189,88,.025))] shadow-[inset_0_0_0_1px_rgba(233,189,88,.08)]" : "border-white/[.09] bg-white/[.02] hover:border-white/20 hover:bg-white/[.04]"}`}>
                   <div className={`flex h-14 w-[4.25rem] shrink-0 items-center justify-center rounded-xl transition ${selected ? "bg-[#E9BD58]/[.11] text-[#F2CD70]" : "bg-white/[.045] text-white/55"}`}><ServiceIcon kind={service.icon}/></div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2"><p className="text-sm font-semibold tracking-tight">{service.name}</p>{service.id === "TAXI" && <span className="rounded-full bg-white/[.07] px-2 py-0.5 text-[8px] font-semibold text-white/45">CONFORTO</span>}</div>
@@ -250,6 +250,7 @@ export default function MobilityExperience() {
               );
             })}
           </div>
+          <p className="mt-1 text-[9px] text-white/35 lg:hidden">Deslize para consultar todas as categorias.</p>
           <p className="mt-3 text-[10px] leading-4 text-white/40">{selectedService.description}</p>
 
           <div className="mt-5 space-y-4 border-t border-white/[.08] pt-5">
