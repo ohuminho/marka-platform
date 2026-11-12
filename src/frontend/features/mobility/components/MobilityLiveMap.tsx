@@ -193,8 +193,17 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     setBusy(true); setStatus("A obter a localização GPS do dispositivo…");
     navigator.geolocation.getCurrentPosition((pos) => {
       const p = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: "A minha localização GPS" };
-      if (setPoint(p, "origin")) setStatus("GPS obtido. Pesquise o destino para calcular o percurso.");
-      else setStatus("GPS obtido, mas o mapa não está disponível. Recarregue a página e tente novamente.");
+      const applied = setPoint(p, "origin");
+      if (!applied) {
+        setStatus("GPS obtido, mas o mapa não está disponível. Recarregue a página e tente novamente.");
+        setBusy(false);
+        return;
+      }
+      if (destination) {
+        setStatus("GPS obtido. A calcular o percurso pelas estradas…");
+        return;
+      }
+      setStatus("GPS obtido. Pesquise o destino para calcular o percurso.");
       setBusy(false);
     }, (e) => { setStatus(e.code === e.PERMISSION_DENIED ? "Permissão de localização recusada. Autorize o GPS no navegador." : "Não foi possível obter a localização. Verifique o GPS e tente novamente."); setBusy(false); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
   }
