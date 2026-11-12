@@ -316,7 +316,7 @@ export default function DriverOnboardingPanel() {
         <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">Etapa 04 · Veículo</p><h3 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">Registar a viatura que será utilizada</h3><p className="mt-1 text-sm text-[var(--theme-text-muted)]">Regista o táxi ou motociclo que vais conduzir. O veículo pode ser teu ou de terceiro, desde que tenhas autorização legítima para o utilizar. Se pertencer a terceiro, identifica o titular e envia a respetiva autorização no documento de propriedade/uso.</p></div>
         <form onSubmit={saveVehicle} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2 flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
-            <MarkaVehicleIllustration kind={vehicleForm.type === "CAR" ? vehicleForm.vehicleSubtype : vehicleForm.type === "TRUCK" ? vehicleForm.vehicleSubtype : vehicleForm.type} className="h-20 w-full max-w-[15rem]" />
+            <MarkaVehicleIllustration kind={vehicleForm.type === "CAR" ? vehicleForm.vehicleSubtype : vehicleForm.type === "TRUCK" ? vehicleForm.vehicleSubtype : vehicleForm.type} className="h-28 w-full max-w-[20rem]" />
             <div className="min-w-0 flex-1">
               <p className="text-[9px] font-semibold uppercase tracking-[.2em] text-[#B8860B]">MARKA Vehicle Design</p>
               <p className="mt-1 text-sm font-semibold text-[var(--theme-text)]">{vehicleForm.vehicleSubtype.replaceAll("_", " ") || vehicleForm.type.replaceAll("_", " ")}</p>
