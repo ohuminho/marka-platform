@@ -111,6 +111,7 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
 
   useEffect(() => {
     let disposed = false;
+    let resizeObserver: ResizeObserver | null = null;
     void loadLeaflet().then((L) => {
       if (disposed || !hostRef.current || mapRef.current) return;
       const map = L.map(hostRef.current).setView([-8.8383, 13.2344], 12);
@@ -129,12 +130,17 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
       });
       mapRef.current = map;
       setReady(true);
+      if (hostRef.current && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => map.invalidateSize());
+        resizeObserver.observe(hostRef.current);
+      }
       window.setTimeout(() => map.invalidateSize?.(), 120);
     }).catch((error) => {
       if (!disposed) setMapError(error instanceof Error ? error.message : "Não foi possível carregar o mapa.");
     });
     return () => {
       disposed = true;
+      resizeObserver?.disconnect();
       mapRef.current?.remove();
       mapRef.current = null;
       layersRef.current = [];
