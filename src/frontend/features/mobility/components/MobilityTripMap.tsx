@@ -106,7 +106,8 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const layersRef = useRef<MapLayer[]>([]);
-  const [ready, setReady] = useState(false);
+  const driverLayerRef = useRef<MarkerLayer | null>(null);
+  const [ready, setReady = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -141,6 +142,8 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
     return () => {
       disposed = true;
       resizeObserver?.disconnect();
+      driverLayerRef.current?.remove();
+      driverLayerRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
       layersRef.current = [];
@@ -166,16 +169,9 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
       }).addTo(map) as MarkerLayer;
       layersRef.current.push(marker.bindPopup("Destino"));
     }
-    if (driver) {
-      const marker = L.circleMarker([driver.lat, driver.lng], {
-        radius: 9, color: "#07111D", weight: 3, fillColor: "#78B8FF", fillOpacity: 1,
-      }).addTo(map) as MarkerLayer;
-      layersRef.current.push(marker.bindPopup("Localização comunicada pelo motorista"));
-    }
-
     let cancelled = false;
     const fitKnownPoints = () => {
-      const coords = [pickup, dropoff, driver].filter((point): point is Coordinate => Boolean(point));
+      const coords = [pickup, dropoff].filter((point): point is Coordinate => Boolean(point));
       if (coords.length === 1) map.setView([coords[0].lat, coords[0].lng], 15);
       else if (coords.length > 1) {
         const bounds = L.geoJSON({
@@ -206,6 +202,27 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
     } else fitKnownPoints();
 
     return () => { cancelled = true; };
+  }, [ready, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
+
+  useEffect(() => {
+    const L = getLeaflet();
+    const map = mapRef.current;
+    if (!ready || !map || !L) return;
+
+    driverLayerRef.current?.remove();
+    driverLayerRef.current = null;
+    if (!driver) return;
+
+    const marker = L.circleMarker([driver.lat, driver.lng], {
+      radius: 9, color: "#07111D", weight: 3, fillColor: "#78B8FF", fillOpacity: 1,
+    }).addTo(map) as MarkerLayer;
+    driverLayerRef.current = marker.bindPopup("Localização comunicada pelo motorista");
+
+    if (!pickup && !dropoff) map.setView([driver.lat, driver.lng], 15);
+    return () => {
+      driverLayerRef.current?.remove();
+      driverLayerRef.current = null;
+    };
   }, [ready, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng, driver?.lat, driver?.lng]);
 
   return (
