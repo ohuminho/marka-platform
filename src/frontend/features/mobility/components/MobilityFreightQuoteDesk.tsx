@@ -14,7 +14,7 @@ interface FreightQuoteRequest {
   quantityUnit: string | null;
   currency: string;
   quotedAmount: number | null;
-  quoteExpiresAt: string | null;
+  quoteExpiresAt: string | null;\n  quoteExpired: boolean;
   createdAt: string;
   requester: { name: string | null };
 }
