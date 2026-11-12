@@ -10,9 +10,9 @@ type MarkaVehicleIllustrationProps = {
 function Wheel({ cx, cy, r = 29, goldId }: { cx: number; cy: number; r?: number; goldId: string }) {
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r} fill="#050505" stroke={`url(#${goldId})`} strokeWidth="2" />
-      <circle cx={cx} cy={cy} r={r * 0.69} fill="none" stroke={`url(#${goldId})`} strokeWidth="1.5" opacity=".9" />
-      <circle cx={cx} cy={cy} r={r * 0.43} fill="#171717" stroke={`url(#${goldId})`} strokeWidth="5" strokeDasharray="3 4" />
+      <circle cx={cx} cy={cy} r={r} fill="#101722" stroke={`url(#${goldId})`} strokeWidth="3" />
+      <circle cx={cx} cy={cy} r={r * 0.69} fill="none" stroke={`url(#${goldId})`} strokeWidth="2.2" opacity="1" />
+      <circle cx={cx} cy={cy} r={r * 0.43} fill="#171717" stroke={`url(#${goldId})`} strokeWidth="6" strokeDasharray="3 3" />
       <circle cx={cx} cy={cy} r="4.5" fill={`url(#${goldId})`} />
     </g>
   );
@@ -20,7 +20,7 @@ function Wheel({ cx, cy, r = 29, goldId }: { cx: number; cy: number; r?: number;
 
 export default function MarkaVehicleIllustration({
   kind,
-  className = "h-16 w-full max-w-[15rem]",
+  className = "h-24 w-full max-w-[22rem]",
 }: MarkaVehicleIllustrationProps) {
   const instanceId = useId().replace(/:/g, "");
   const bodyId = `${instanceId}-vehicle-body`;
@@ -46,13 +46,13 @@ export default function MarkaVehicleIllustration({
     <svg viewBox="0 0 520 220" role="img" aria-label={`Ilustração de viatura: ${kind.replaceAll("_", " ").toLowerCase()}`} className={className} fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id={bodyId} x1="0" y1="0" x2="520" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#000000" /><stop offset=".5" stopColor="#202020" /><stop offset="1" stopColor="#000000" />
+          <stop offset="0" stopColor="#080D14" /><stop offset=".5" stopColor="#29313B" /><stop offset="1" stopColor="#080D14" />
         </linearGradient>
         <linearGradient id={goldId} x1="0" y1="0" x2="520" y2="0" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#FFF2B2" /><stop offset=".5" stopColor="#FFD700" /><stop offset="1" stopColor="#B8860B" />
         </linearGradient>
         <linearGradient id={glassId} x1="0" y1="78" x2="0" y2="142" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#FFF8D6" /><stop offset="1" stopColor="#242424" />
+          <stop offset="0" stopColor="#D9F2FF" /><stop offset=".45" stopColor="#75BDEB" /><stop offset="1" stopColor="#245078" />
         </linearGradient>
         <filter id={glowId} x="-20%" y="-80%" width="140%" height="260%"><feGaussianBlur stdDeviation="4" /></filter>
       </defs>
