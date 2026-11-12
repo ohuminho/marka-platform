@@ -1953,6 +1953,9 @@ model FreightRequest {
   quoteExpiresAt DateTime?
   paymentReference String?
   paidAt         DateTime?
+  assignedProviderId String?
+  assignedVehicleId  String?
+  assignedAt         DateTime?
 
   idempotencyKey String
   requestHash    String
