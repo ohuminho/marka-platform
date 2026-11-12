@@ -445,6 +445,14 @@ enum FreightProviderAvailability {
   PAUSED
 }
 
+enum FreightProviderVehicleStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  RETIRED
+}
+
 enum FreightVehicleKind {
   CARGO_TRICYCLE
   PICKUP
@@ -1899,7 +1907,7 @@ model FreightProviderVehicle {
   id             String             @id @default(uuid())
   providerId     String
   kind           FreightVehicleKind
-  status         MobilityVehicleStatus @default(PENDING)
+  status         FreightProviderVehicleStatus @default(PENDING)
   registrationNumber String?
   make           String?
   model          String?
