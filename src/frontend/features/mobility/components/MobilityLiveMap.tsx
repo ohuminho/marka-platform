@@ -33,16 +33,26 @@ const JS_URLS = [
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
   "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
 ];
+let stylesheetPromise: Promise<void> | null = null;
+let leafletPromise: Promise<LeafletNamespace> | null = null;
+
 function loadStylesheet(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector('link[data-marka-leaflet="true"][data-loaded="true"]')) return resolve();
+  if (document.querySelector('link[data-marka-leaflet="true"][data-loaded="true"]')) {
+    return Promise.resolve();
+  }
+  if (stylesheetPromise) return stylesheetPromise;
+
+  stylesheetPromise = new Promise<void>((resolve, reject) => {
     let index = 0;
     const attempt = () => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = CSS_URLS[index];
       link.dataset.markaLeaflet = "true";
-      link.onload = () => { link.dataset.loaded = "true"; resolve(); };
+      link.onload = () => {
+        link.dataset.loaded = "true";
+        resolve();
+      };
       link.onerror = () => {
         link.remove();
         index += 1;
@@ -52,39 +62,61 @@ function loadStylesheet(): Promise<void> {
       document.head.appendChild(link);
     };
     attempt();
+  }).catch((error: unknown) => {
+    stylesheetPromise = null;
+    throw error;
   });
+
+  return stylesheetPromise;
 }
+
 function loadLeaflet(): Promise<LeafletNamespace> {
-  return new Promise((resolve, reject) => {
-    if (window.L) return resolve(window.L);
-    void loadStylesheet().catch(() => undefined);
+  if (window.L) return Promise.resolve(window.L);
+  if (leafletPromise) return leafletPromise;
+
+  leafletPromise = (async () => {
+    await loadStylesheet();
+
     const existing = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
-    if (existing) {
-      if (existing.dataset.failed === "true") existing.remove();
-      else {
-        existing.addEventListener("load", () => window.L ? resolve(window.L) : reject(new Error("Motor do mapa indisponível.")), { once: true });
+    if (existing?.dataset.failed === "true") existing.remove();
+
+    if (existing && !window.L) {
+      await new Promise<void>((resolve, reject) => {
+        existing.addEventListener("load", () => resolve(), { once: true });
         existing.addEventListener("error", () => reject(new Error("Não foi possível carregar o mapa.")), { once: true });
-        return;
+      });
+      if (window.L) return window.L;
+      throw new Error("Motor do mapa indisponível.");
+    }
+
+    for (const src of JS_URLS) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.dataset.markaLeaflet = "true";
+          script.onload = () => resolve();
+          script.onerror = () => {
+            script.dataset.failed = "true";
+            script.remove();
+            reject(new Error("Falha ao carregar o CDN do mapa."));
+          };
+          document.head.appendChild(script);
+        });
+        if (window.L) return window.L;
+      } catch {
+        // Tenta o próximo CDN antes de declarar o mapa indisponível.
       }
     }
-    let index = 0;
-    const attempt = () => {
-      const script = document.createElement("script");
-      script.src = JS_URLS[index];
-      script.async = true;
-      script.dataset.markaLeaflet = "true";
-      script.onload = () => window.L ? resolve(window.L) : reject(new Error("Motor do mapa indisponível."));
-      script.onerror = () => {
-        script.dataset.failed = "true";
-        script.remove();
-        index += 1;
-        if (index < JS_URLS.length) attempt();
-        else reject(new Error("Não foi possível carregar o motor do mapa. Verifique a ligação e tente novamente."));
-      };
-      document.head.appendChild(script);
-    };
-    attempt();
+
+    throw new Error("Não foi possível carregar o motor do mapa. Verifique a ligação e tente novamente.");
+  })().catch((error: unknown) => {
+    leafletPromise = null;
+    throw error;
   });
+
+  return leafletPromise;
 }
 export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (points: { origin: Point | null; destination: Point | null }) => void } = {}) {
   const hostRef = useRef<HTMLDivElement>(null);
