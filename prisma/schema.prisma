@@ -424,6 +424,28 @@ enum DispatchStatus {
   EXPIRED
 }
 
+enum FreightRequestType {
+  CARGO_SHIPMENT
+  WATER_DELIVERY
+  ROADSIDE_ASSISTANCE
+}
+
+enum FreightRequestStatus {
+  REQUESTED
+  QUOTED
+  AWAITING_PAYMENT
+  PAID
+  SEARCHING_PROVIDER
+  ASSIGNED
+  PROVIDER_EN_ROUTE
+  PROVIDER_ARRIVED
+  PICKED_UP
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+  EXCEPTION
+}
+
 enum DeliveryAgentStatus {
   PENDING
   ACTIVE
@@ -732,6 +754,7 @@ model Organization {
   fulfillmentRequests FulfillmentRequest[]
   dispatchRequests    DispatchRequest[]
   deliveryAgents      DeliveryAgent[]
+  freightRequests     FreightRequest[]
 
   @@index([tenantId])
   @@index([status])
@@ -785,6 +808,7 @@ model User {
   mobilityRides  MobilityRide[]  @relation("MobilityRideRider")
   deliveryAgent  DeliveryAgent? @relation("DeliveryAgentUser")
   supportTickets SupportTicket[] @relation("SupportTicketRequester")
+  freightRequests FreightRequest[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   notifications   Notification[]
 
@@ -1798,6 +1822,46 @@ model DispatchCandidate {
 
   @@index([dispatchRequestId])
   @@index([agentId])
+}
+
+model FreightRequest {
+  id             String              @id @default(uuid())
+  reference      String              @unique
+  organizationId String
+  requesterId    String
+  requestType    FreightRequestType
+  status         FreightRequestStatus @default(REQUESTED)
+
+  originLatitude  Decimal? @db.Decimal(10, 7)
+  originLongitude Decimal? @db.Decimal(10, 7)
+  originAddress   String?
+
+  destinationLatitude  Decimal? @db.Decimal(10, 7)
+  destinationLongitude Decimal? @db.Decimal(10, 7)
+  destinationAddress   String?
+
+  quantity       Decimal? @db.Decimal(20, 4)
+  quantityUnit   String?
+  currency       String   @default("AOA") @db.Char(3)
+  quotedAmount   Decimal? @db.Decimal(20, 4)
+  quoteExpiresAt DateTime?
+  paymentReference String?
+  paidAt         DateTime?
+
+  idempotencyKey String
+  requestHash    String
+  details        Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requester    User         @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, requesterId, idempotencyKey], map: "FreightRequest_org_requester_idempotency_key")
+  @@index([organizationId, status, createdAt])
+  @@index([requesterId, createdAt])
+  @@index([requestType, status])
 }
 
 model MobilityRideOrchestration {
