@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string };
+type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string; capacity?: number | string | null; capacityUnit?: string | null; waterType?: string | null };
 type FreightProvider = { status: string; availability: string; vehicles: FreightVehicle[] };
 type FreightJob = {
   id: string; reference: string; requestType: "CARGO_SHIPMENT" | "WATER_DELIVERY" | "ROADSIDE_ASSISTANCE";
@@ -35,8 +35,21 @@ export default function MobilityFreightJobs() {
     if (!jobsResponse.ok) throw new Error(jobsData.message ?? "Não foi possível carregar os pedidos disponíveis.");
     setProvider(providerData.provider ?? null);
     setJobs(jobsData.requests ?? []);
-    const firstActiveVehicle = (providerData.provider?.vehicles ?? []).find((vehicle: FreightVehicle) => vehicle.status === "ACTIVE");
-    if (firstActiveVehicle) setVehicleIds((current) => Object.fromEntries((jobsData.requests ?? []).map((job: FreightJob) => [job.id, current[job.id] ?? firstActiveVehicle.id])));
+    const activeVehicles: FreightVehicle[] = (providerData.provider?.vehicles ?? []).filter((vehicle: FreightVehicle) => vehicle.status === "ACTIVE");
+    setVehicleIds((current) => Object.fromEntries((jobsData.requests ?? []).map((job: FreightJob) => {
+      const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
+      const compatible = activeVehicles.find((vehicle) => {
+        const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
+        if (!kinds.includes(vehicle.kind)) return false;
+        if (job.requestType !== "WATER_DELIVERY") return true;
+        if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
+        if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
+        const capacityLitres = Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1);
+        const requestedLitres = job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
+        return capacityLitres >= requestedLitres;
+      });
+      return [job.id, current[job.id] ?? compatible?.id ?? ""];
+    })));
     setNotice(jobsData.message ?? null);
   }, []);
 
@@ -73,7 +86,16 @@ export default function MobilityFreightJobs() {
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           {jobs.map((job) => {
             const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
-            const vehicles = (provider?.vehicles ?? []).filter((vehicle) => vehicle.status === "ACTIVE");
+            const vehicles = (provider?.vehicles ?? []).filter((vehicle) => {
+              if (vehicle.status !== "ACTIVE") return false;
+              const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
+              if (!kinds.includes(vehicle.kind)) return false;
+              if (job.requestType !== "WATER_DELIVERY") return true;
+              const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
+              if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
+              if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
+              return Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1) >= job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
+            });
             return <article key={job.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
               <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-semibold uppercase tracking-[.16em] text-[#b89a5b]">{typeLabels[job.requestType]}</p><h3 className="mt-1 text-sm font-semibold text-[var(--theme-text)]">{job.reference}</h3></div><span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[9px] font-semibold text-emerald-700">Pagamento confirmado</span></div>
               <div className="mt-4 space-y-2 text-xs text-[var(--theme-text-muted)]"><p><strong className="text-[var(--theme-text)]">Recolha:</strong> {job.origin?.address ?? "Não indicada"}</p><p><strong className="text-[var(--theme-text)]">Destino:</strong> {job.destination?.address ?? "Não indicado"}</p>{job.quantity !== null && <p><strong className="text-[var(--theme-text)]">Volume/carga:</strong> {job.quantity} {job.quantityUnit}</p>}{typeof details.vehicleDescription === "string" && <p><strong className="text-[var(--theme-text)]">Veículo:</strong> {details.vehicleDescription}</p>}{typeof details.assistanceType === "string" && <p><strong className="text-[var(--theme-text)]">Assistência:</strong> {details.assistanceType.replaceAll("_", " ")}</p>}{typeof details.waterType === "string" && <p><strong className="text-[var(--theme-text)]">Água:</strong> {details.waterType === "POTABLE_WATER" ? "Potável" : "Não potável"}</p>}</div>
