@@ -136,9 +136,12 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
   const routeRequestRef = useRef(0);
   const [origin, setOrigin] = useState<Point | null>(null), [destination, setDestination] = useState<Point | null>(null);
   const [destinationText, setDestinationText] = useState(""), [routeSummary, setRouteSummary] = useState("");
-  const [status, setStatus] = useState("Ative o GPS ou pesquise um destino para calcular a rota."), [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("A carregar o mapa…"), [busy, setBusy] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   useEffect(() => {
     let disposed = false;
+    let resizeObserver: ResizeObserver | null = null;
     loadLeaflet().then((L) => {
       if (disposed || !hostRef.current || mapRef.current) return;
       const map = L.map(hostRef.current).setView([-8.8383, 13.2344], 12);
@@ -151,12 +154,23 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
         baseTiles.remove();
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
       });
-      mapRef.current = map; window.setTimeout(() => map.invalidateSize(), 100);
-    }).catch((e) => setStatus(e instanceof Error ? e.message : "Erro ao iniciar o mapa."));
-    return () => { disposed = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; routeRef.current = null; markersRef.current = { origin: null, destination: null }; } };
+      mapRef.current = map;
+      setMapReady(true);
+      setStatus("Mapa pronto. Ative o GPS ou pesquise um destino.");
+      if (hostRef.current && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => map.invalidateSize());
+        resizeObserver.observe(hostRef.current);
+      }
+      window.setTimeout(() => map.invalidateSize(), 100);
+    }).catch((e) => {
+      const message = e instanceof Error ? e.message : "Erro ao iniciar o mapa.";
+      setMapError(message);
+      setStatus(message);
+    });
+    return () => { disposed = true; resizeObserver?.disconnect(); if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; routeRef.current = null; markersRef.current = { origin: null, destination: null }; } };
   }, []);
-  function setPoint(point: Point, kind: "origin" | "destination") {
-    const L = window.L, map = mapRef.current; if (!L || !map) return;
+  function setPoint(point: Point, kind: "origin" | "destination"): boolean {
+    const L = window.L, map = mapRef.current; if (!L || !map) return false;
     const nextOrigin = kind === "origin" ? point : origin;
     const nextDestination = kind === "destination" ? point : destination;
     if (kind === "origin") setOrigin(point); else setDestination(point);
@@ -170,13 +184,17 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       setRouteSummary("");
       map.setView([point.lat, point.lon], 15);
     }
+    return true;
   }
   async function locateMe() {
+    if (!mapReady || !mapRef.current || !window.L) { setStatus("O mapa ainda não está pronto. Aguarde alguns segundos e tente novamente."); return; }
     if (!navigator.geolocation) { setStatus("Este dispositivo não disponibiliza geolocalização."); return; }
     setBusy(true); setStatus("A obter a localização GPS do dispositivo…");
     navigator.geolocation.getCurrentPosition((pos) => {
       const p = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: "A minha localização GPS" };
-      setPoint(p, "origin"); setStatus("GPS obtido. Pesquise o destino para calcular o percurso."); setBusy(false);
+      if (setPoint(p, "origin")) setStatus("GPS obtido. Pesquise o destino para calcular o percurso.");
+      else setStatus("GPS obtido, mas o mapa não está disponível. Recarregue a página e tente novamente.");
+      setBusy(false);
     }, (e) => { setStatus(e.code === e.PERMISSION_DENIED ? "Permissão de localização recusada. Autorize o GPS no navegador." : "Não foi possível obter a localização. Verifique o GPS e tente novamente."); setBusy(false); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
   }
   async function calculateRoute(from: Point | null, to: Point | null) {
@@ -212,6 +230,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     }
   }
   async function searchDestination() {
+    if (!mapReady || !mapRef.current || !window.L) { setStatus("O mapa ainda não está pronto. Aguarde alguns segundos e tente novamente."); return; }
     const q = destinationText.trim(); if (!q) { setStatus("Introduza um endereço, bairro ou ponto de referência."); return; }
     setBusy(true); setStatus("A pesquisar destino no OpenStreetMap…");
     try {
@@ -219,7 +238,8 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       if (!response.ok) throw new Error("Pesquisa de endereços temporariamente indisponível.");
       const rows = await response.json(); if (!Array.isArray(rows) || !rows[0]) throw new Error("Destino não encontrado. Tente um bairro ou ponto de referência.");
       const row = rows[0], point = { lat: Number(row.lat), lon: Number(row.lon), label: String(row.display_name) };
-      setPoint(point, "destination"); setDestinationText(String(row.display_name).split(",").slice(0, 3).join(","));
+      if (!setPoint(point, "destination")) throw new Error("O mapa deixou de estar disponível. Recarregue a página e tente novamente.");
+      setDestinationText(String(row.display_name).split(",").slice(0, 3).join(","));
       if (!origin) { setStatus("Destino encontrado. Ative o GPS para calcular a rota rodoviária."); setBusy(false); }
     } catch (e) { setStatus(e instanceof Error ? e.message : "Falha na pesquisa do destino."); setBusy(false); }
   }
@@ -227,11 +247,11 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-[400] h-24 bg-gradient-to-b from-[#070B10]/80 to-transparent"/>
     <div className="absolute left-3 right-3 top-3 z-[500] flex flex-col gap-2 sm:left-4 sm:right-4 sm:top-4">
       <div className="flex items-center gap-2 rounded-2xl border border-white/[.13] bg-[#0B1017]/90 p-2 shadow-[0_14px_40px_-18px_rgba(0,0,0,.9)] backdrop-blur-xl">
-        <button type="button" onClick={locateMe} disabled={busy} aria-label="Usar a minha localização GPS" className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#E9BD58]/30 bg-[#E9BD58]/[.09] px-3 text-[10px] font-bold text-[#F2CD70] transition hover:bg-[#E9BD58]/[.15] disabled:opacity-50">
+        <button type="button" onClick={locateMe} disabled={busy || !mapReady} aria-label="Usar a minha localização GPS" className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#E9BD58]/30 bg-[#E9BD58]/[.09] px-3 text-[10px] font-bold text-[#F2CD70] transition hover:bg-[#E9BD58]/[.15] disabled:opacity-50">
           <span className="text-base">⌖</span><span className="hidden sm:inline">{busy ? "A localizar…" : "GPS"}</span>
         </button>
-        <input value={destinationText} onChange={(e) => setDestinationText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void searchDestination(); }} placeholder="Para onde vamos?" aria-label="Pesquisar destino" className="h-11 min-w-0 flex-1 bg-transparent px-2 text-xs text-white outline-none placeholder:text-white/40"/>
-        <button type="button" onClick={searchDestination} disabled={busy} aria-label="Pesquisar destino" className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#E9BD58] px-4 text-[10px] font-extrabold text-[#17130A] transition hover:brightness-105 disabled:opacity-50">{busy ? "…" : "Pesquisar"}</button>
+        <input value={destinationText} disabled={!mapReady} onChange={(e) => setDestinationText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void searchDestination(); }} placeholder="Para onde vamos?" aria-label="Pesquisar destino" className="h-11 min-w-0 flex-1 bg-transparent px-2 text-xs text-white outline-none placeholder:text-white/40"/>
+        <button type="button" onClick={searchDestination} disabled={busy || !mapReady} aria-label="Pesquisar destino" className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-[#E9BD58] px-4 text-[10px] font-extrabold text-[#17130A] transition hover:brightness-105 disabled:opacity-50">{busy ? "…" : "Pesquisar"}</button>
       </div>
       <div className="flex items-center justify-between gap-3 px-1">
         <span className="rounded-full border border-white/10 bg-[#0B1017]/75 px-3 py-1.5 text-[9px] font-semibold text-white/65 backdrop-blur-lg">ANGOLA · MAPA AO VIVO</span>
@@ -239,6 +259,7 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
       </div>
     </div>
     <div ref={hostRef} role="application" aria-label="Mapa interativo OpenStreetMap" className="h-[430px] w-full bg-[#101820] sm:h-[540px] lg:h-[min(68vh,680px)]"/>
+    {mapError && <div role="alert" className="absolute left-3 right-3 top-1/2 z-[600] -translate-y-1/2 rounded-2xl border border-rose-300/25 bg-[#0B1017]/95 p-4 text-center text-xs leading-5 text-rose-100 shadow-xl">{mapError} Recarregue a página para tentar novamente.</div>}
     <div className="absolute bottom-3 left-3 right-3 z-[500] flex items-center justify-between gap-3 rounded-2xl border border-white/[.12] bg-[#0B1017]/90 px-3.5 py-3 shadow-[0_14px_40px_-18px_rgba(0,0,0,.9)] backdrop-blur-xl sm:bottom-4 sm:left-4 sm:right-4">
       <div className="min-w-0">
         <p className="text-[9px] font-bold uppercase tracking-[.15em] text-white/40">{routeSummary ? "Percurso estimado" : "Estado do mapa"}</p>
