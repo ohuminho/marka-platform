@@ -10,9 +10,9 @@ type MarkaVehicleIllustrationProps = {
 function Wheel({ cx, cy, r = 29, goldId }: { cx: number; cy: number; r?: number; goldId: string }) {
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r} fill="#101722" stroke={`url(#${goldId})`} strokeWidth="3" />
+      <circle cx={cx} cy={cy} r={r} fill="#111111" stroke={`url(#${goldId})`} strokeWidth="3" />
       <circle cx={cx} cy={cy} r={r * 0.69} fill="none" stroke={`url(#${goldId})`} strokeWidth="2.2" opacity="1" />
-      <circle cx={cx} cy={cy} r={r * 0.43} fill="#171717" stroke={`url(#${goldId})`} strokeWidth="6" strokeDasharray="3 3" />
+      <circle cx={cx} cy={cy} r={r * 0.43} fill="#0B0B0B" stroke={`url(#${goldId})`} strokeWidth="6" strokeDasharray="3 3" />
       <circle cx={cx} cy={cy} r="4.5" fill={`url(#${goldId})`} />
     </g>
   );
@@ -46,19 +46,18 @@ export default function MarkaVehicleIllustration({
     <svg viewBox="0 0 520 220" role="img" aria-label={`Ilustração de viatura: ${kind.replaceAll("_", " ").toLowerCase()}`} className={className} fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id={bodyId} x1="0" y1="0" x2="520" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#080D14" /><stop offset=".5" stopColor="#29313B" /><stop offset="1" stopColor="#080D14" />
+          <stop offset="0" stopColor="#08090A" /><stop offset=".5" stopColor="#34302A" /><stop offset="1" stopColor="#090909" />
         </linearGradient>
         <linearGradient id={goldId} x1="0" y1="0" x2="520" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#FFF2B2" /><stop offset=".5" stopColor="#FFD700" /><stop offset="1" stopColor="#B8860B" />
+          <stop offset="0" stopColor="#E8D8B0" /><stop offset=".5" stopColor="#B99A62" /><stop offset="1" stopColor="#756044" />
         </linearGradient>
         <linearGradient id={glassId} x1="0" y1="78" x2="0" y2="142" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#D9F2FF" /><stop offset=".45" stopColor="#75BDEB" /><stop offset="1" stopColor="#245078" />
+          <stop offset="0" stopColor="#B7B0A3" /><stop offset=".45" stopColor="#55514A" /><stop offset="1" stopColor="#191A1B" />
         </linearGradient>
         <filter id={glowId} x="-20%" y="-80%" width="140%" height="260%"><feGaussianBlur stdDeviation="4" /></filter>
       </defs>
 
       <ellipse cx="260" cy="190" rx="226" ry="9" fill="#000" opacity=".48" filter={`url(#${glowId})`} />
-      <path d="M48 184H472" stroke={`url(#${goldId})`} strokeWidth="3" strokeLinecap="round" opacity=".65" filter={`url(#${glowId})`} />
 
       {isMotorcycle ? (
         <g stroke={`url(#${goldId})`} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -151,10 +150,10 @@ export default function MarkaVehicleIllustration({
           {!isSuv && <path d="M242 88V122" strokeWidth="4" />}
           <path d="M30 148H490M30 153H350" strokeWidth="2" strokeLinecap="round" opacity=".7" />
           <rect x="280" y="132" width="48" height="5" rx="2.5" fill={`url(#${goldId})`} stroke="none" />
-          <path d="M488 145H494V158H486Z" fill="#FFF2B2" stroke="none" />
+          <path d="M488 145H494V158H486Z" fill="#E8D8B0" stroke="none" />
           {isPhantom && <path d="M478 122Q478 118 482 112Q486 118 486 122L482 126Z" fill={`url(#${goldId})`} stroke="none" />}
           <Wheel cx={125} cy={168} r={32} goldId={goldId} /><Wheel cx={400} cy={168} r={32} goldId={goldId} />
-          <path d="M380 120 460 128 430 135 370 130Z" fill="#FFD700" opacity=".2" stroke="none" />
+          <path d="M380 120 460 128 430 135 370 130Z" fill="#B99A62" opacity=".12" stroke="none" />
         </g>
       )}
       <path d="M42 185H478" stroke={`url(#${goldId})`} strokeWidth="1.5" opacity=".55" />
