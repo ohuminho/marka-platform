@@ -50,7 +50,17 @@ export async function GET(request: Request) {
     return ["M3", "LITRE"].includes(vehicle.capacityUnit) && ["M3", "LITRE"].includes(item.quantityUnit) && capacityLitres >= requestedLitres;
   }));
 
-  return NextResponse.json({ requests: matched.map((item) => ({
+  const assignedRequests = await prisma.freightRequest.findMany({
+    where: {
+      organizationId: auth.session.organizationId,
+      assignedProviderId: provider.id,
+      status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"] },
+    },
+    orderBy: { assignedAt: "asc" },
+    take: 50,
+  });
+
+  const serialize = (item: (typeof requests)[number]) => ({
     id: item.id,
     reference: item.reference,
     requestType: item.requestType,
@@ -62,5 +72,11 @@ export async function GET(request: Request) {
     currency: item.currency,
     details: item.details,
     paidAt: item.paidAt,
-  })) });
+    assignedAt: item.assignedAt,
+  });
+
+  return NextResponse.json({
+    requests: matched.map(serialize),
+    assignedRequests: assignedRequests.map(serialize),
+  });
 }
