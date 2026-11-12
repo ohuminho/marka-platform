@@ -162,6 +162,16 @@ export class MobilityMatchingService {
       const vehicle =
         primaryAssignment.vehicle;
 
+      // Executive is a service class, not a separate vehicle type. Until
+      // dedicated executive verification is introduced, only vehicles
+      // explicitly registered as LUXURY_SEDAN may receive these requests.
+      if (input.serviceType.trim().toUpperCase() === "EXECUTIVE") {
+        const vehicleMetadata = vehicle.metadata && typeof vehicle.metadata === "object" && !Array.isArray(vehicle.metadata)
+          ? vehicle.metadata as Record<string, unknown>
+          : {};
+        if (vehicleMetadata.vehicleSubtype !== "LUXURY_SEDAN") continue;
+      }
+
       const distanceMeters =
         this.calculateDistanceMeters(
           input.pickupLatitude,
