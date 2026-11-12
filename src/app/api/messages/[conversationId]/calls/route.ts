@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
@@ -77,6 +77,15 @@ export async function POST(request: Request, context: Context) {
       });
     });
     if (!call) return NextResponse.json({ message: "Já existe uma chamada activa nesta conversa." }, { status: 409 });
+    after(async () => {
+      await sendUserWebPush(call.calleeId, {
+        title: "Chamada recebida",
+        body: `${actor.name} está a ligar-te.`,
+        url: "/app/messages",
+        tag: `marka-call-incoming-${call.id}`,
+        kind: "INCOMING_CALL",
+      });
+    });
     return NextResponse.json({ call }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[MARKA_CALL_CREATE]", error);
