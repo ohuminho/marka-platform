@@ -114,10 +114,19 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
     void loadLeaflet().then((L) => {
       if (disposed || !hostRef.current || mapRef.current) return;
       const map = L.map(hostRef.current).setView([-8.8383, 13.2344], 12);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        maxZoom: 20,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+      const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
+      const baseTiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 20, attribution,
       }).addTo(map);
+      let tileFallbackActivated = false;
+      baseTiles.on("tileerror", () => {
+        if (tileFallbackActivated || !mapRef.current) return;
+        tileFallbackActivated = true;
+        baseTiles.remove();
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
+      });
       mapRef.current = map;
       setReady(true);
       window.setTimeout(() => map.invalidateSize?.(), 120);
