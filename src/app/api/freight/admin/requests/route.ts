@@ -78,7 +78,7 @@ export async function GET() {
       ...item,
       quantity: item.quantity === null ? null : Number(item.quantity),
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
-      quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
+      quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,\n      quoteExpired: item.quoteExpiresAt ? item.quoteExpiresAt <= new Date() : false,
       createdAt: item.createdAt.toISOString(),
     })),
   }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
