@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
+import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
 
 type Verification = { id?: string; documentType: string; status: string; documentExpiry?: string | null; rejectionReason?: string | null; metadata?: unknown };
 type DriverProfile = {
@@ -314,6 +315,14 @@ export default function DriverOnboardingPanel() {
       <section className="space-y-4 rounded-2xl border border-[var(--theme-border)] p-4 sm:p-5">
         <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">Etapa 04 · Veículo</p><h3 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">Registar a viatura que será utilizada</h3><p className="mt-1 text-sm text-[var(--theme-text-muted)]">Regista o táxi ou motociclo que vais conduzir. O veículo pode ser teu ou de terceiro, desde que tenhas autorização legítima para o utilizar. Se pertencer a terceiro, identifica o titular e envia a respetiva autorização no documento de propriedade/uso.</p></div>
         <form onSubmit={saveVehicle} className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2 flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
+            <MarkaVehicleIllustration kind={vehicleForm.type === "CAR" ? vehicleForm.vehicleSubtype : vehicleForm.type === "TRUCK" ? vehicleForm.vehicleSubtype : vehicleForm.type} className="h-20 w-full max-w-[15rem]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-semibold uppercase tracking-[.2em] text-[#B8860B]">MARKA Vehicle Design</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--theme-text)]">{vehicleForm.vehicleSubtype.replaceAll("_", " ") || vehicleForm.type.replaceAll("_", " ")}</p>
+              <p className="mt-1 text-xs leading-5 text-[var(--theme-text-muted)]">Pré-visualização ilustrativa da categoria seleccionada. A viatura real é validada pelos documentos e pela equipa MARKA.</p>
+            </div>
+          </div>
           <label className={labelClass}>Categoria<select value={vehicleForm.type} onChange={(event) => setVehicleForm((v) => ({ ...v, type: event.target.value, capacity: event.target.value === "MOTORCYCLE" ? "1" : v.capacity === "1" ? "4" : v.capacity, vehicleSubtype: event.target.value === "CAR" ? "SEDAN" : event.target.value === "TRUCK" ? "PICKUP" : "" }))} className={inputClass}><option value="CAR">Automóvel / táxi ligeiro</option><option value="MOTORCYCLE">Motociclo / moto-táxi</option><option value="VAN">Carrinha / van</option><option value="MINIBUS">Minibus</option><option value="BUS">Autocarro</option><option value="COACH">Autocarro de turismo / coach</option><option value="TRUCK">Veículo de carga / camião</option><option value="OTHER">Outro veículo especializado</option></select></label>
           {vehicleForm.type === "CAR" && <label className={labelClass}>Tipo de automóvel<select value={vehicleForm.vehicleSubtype} onChange={(event) => setVehicleForm((v) => ({ ...v, vehicleSubtype: event.target.value }))} className={inputClass}><option value="SEDAN">Sedan / berlina</option><option value="SUV">SUV / jipe</option><option value="HATCHBACK">Citadino / hatchback</option><option value="PICKUP">Pick-up</option><option value="LUXURY_SEDAN">Sedan executivo / luxo</option></select></label>}
           {vehicleForm.type === "TRUCK" && <label className={labelClass}>Tipo de veículo de carga<select value={vehicleForm.vehicleSubtype} onChange={(event) => setVehicleForm((v) => ({ ...v, vehicleSubtype: event.target.value }))} className={inputClass}><option value="CARGO_TRICYCLE">Triciclo de carga</option><option value="PICKUP">Pick-up aberta</option><option value="CLOSED_VAN">Carrinha fechada / caixa</option><option value="LIGHT_TRUCK">Camião ligeiro</option><option value="FLATBED_TRUCK">Camião de plataforma</option><option value="DUMP_TRUCK">Camião basculante</option><option value="HEAVY_TRUCK">Camião pesado</option><option value="WATER_TANKER">Cisterna de água</option></select></label>}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
+import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
 
 type MapPoint = { lat: number; lon: number; label: string };
 type RideResult = {
@@ -13,11 +14,11 @@ type RideResult = {
 };
 
 const services = [
-  { id: "TAXI", name: "MARKA Go", subtitle: "Táxi", description: "Conforto para deslocações urbanas e interurbanas.", capacity: "Até 4 passageiros", icon: "car" },
-  { id: "EXECUTIVE", name: "MARKA Executive", subtitle: "Executivo", description: "Serviço premium para deslocações com maior exigência de conforto.", capacity: "Até 4 passageiros · viatura de classe executiva", icon: "executive" },
-  { id: "MOTO_TAXI", name: "MARKA Moto", subtitle: "Mototáxi", description: "Uma opção ágil para percursos individuais.", capacity: "1 passageiro", icon: "bike" },
+  { id: "TAXI", name: "MARKA Go", subtitle: "Táxi", description: "Conforto para deslocações urbanas e interurbanas.", capacity: "Até 4 passageiros", icon: "sedan" },
+  { id: "EXECUTIVE", name: "MARKA Executive", subtitle: "Executivo", description: "Serviço premium para deslocações com maior exigência de conforto.", capacity: "Até 4 passageiros · viatura de classe executiva", icon: "phantom" },
+  { id: "MOTO_TAXI", name: "MARKA Moto", subtitle: "Mototáxi", description: "Uma opção ágil para percursos individuais.", capacity: "1 passageiro", icon: "motorcycle" },
   { id: "VAN", name: "MARKA Van", subtitle: "Carrinha", description: "Transporte para grupos e deslocações com maior espaço.", capacity: "Capacidade conforme a viatura", icon: "van" },
-  { id: "MINIBUS", name: "MARKA Mini", subtitle: "Minibus", description: "Transporte coletivo em percursos urbanos e interurbanos.", capacity: "Capacidade conforme a viatura", icon: "bus" },
+  { id: "MINIBUS", name: "MARKA Mini", subtitle: "Minibus", description: "Transporte coletivo em percursos urbanos e interurbanos.", capacity: "Capacidade conforme a viatura", icon: "minibus" },
   { id: "BUS", name: "MARKA Bus", subtitle: "Autocarro", description: "Transporte de grupos em maior escala.", capacity: "Capacidade conforme a viatura", icon: "bus" },
   { id: "COACH", name: "MARKA Coach", subtitle: "Coach", description: "Viagens de grupo e percursos de longa distância.", capacity: "Capacidade conforme a viatura", icon: "coach" },
 ] as const;
@@ -33,50 +34,6 @@ const statusLabels: Record<string, string> = {
   TRIP_STARTED: "Viagem iniciada",
   TRIP_IN_PROGRESS: "Em viagem",
 };
-
-function ServiceIcon({ kind }: { kind: "car" | "executive" | "bike" | "van" | "bus" | "coach" }) {
-  const common = "h-10 w-12 sm:h-11 sm:w-[3.25rem]";
-  const stroke = { stroke: "currentColor", strokeWidth: 1.55, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  if (kind === "bike") return (
-    <svg viewBox="0 0 64 44" aria-hidden="true" className={common} fill="none" {...stroke}>
-      <circle cx="13" cy="32" r="8.5"/><circle cx="51" cy="32" r="8.5"/>
-      <path d="m13 32 12-17h12l14 17H31L25 15m12 0 5-8h8m-27 8-5-6h-6"/>
-      <path d="M27 12h12" strokeWidth="2.4"/>
-      <path d="M34 20h8" opacity=".5"/>
-    </svg>
-  );
-  if (kind === "van" || kind === "bus" || kind === "coach") {
-    const isBus = kind === "bus";
-    const isCoach = kind === "coach";
-    return (
-      <svg viewBox="0 0 64 44" aria-hidden="true" className={common} fill="none" {...stroke}>
-        <path d={isBus || isCoach ? "M7 13c0-3 2-5 5-5h40c3 0 5 2 5 5v20H7V13Z" : "M8 17c0-3 2-5 5-5h27l15 12v9H8V17Z"}/>
-        {isBus || isCoach ? <path d="M12 13h40v11H12zM12 27h40" opacity=".72"/> : <path d="M14 16h23v10H14zM40 16l10 9" opacity=".72"/>}
-        {isCoach && <path d="M13 28h38M17 17h5m6 0h5m8 0h5" opacity=".45"/>}
-        <path d="M5 32h54" />
-        <circle cx="17" cy="34" r="4.5" fill="#090B10"/><circle cx="47" cy="34" r="4.5" fill="#090B10"/>
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 64 44" aria-hidden="true" className={common} fill="none" {...stroke}>
-      {kind === "executive" ? (
-        <>
-          <path d="m5 29 4-3 7-13c1-2 3-3 6-3h20c4 0 7 2 9 5l7 11 3 3v6H5v-6Z"/>
-          <path d="m18 14-5 11h38l-6-10c-1-2-3-3-6-3H23c-2 0-4 1-5 2Z" opacity=".65"/>
-          <path d="M23 9h18M28 5h8" opacity=".55"/>
-        </>
-      ) : (
-        <>
-          <path d="m5 29 4-3 6-13c1-2 3-3 6-3h20c4 0 7 2 9 5l7 11 3 3v6H5v-6Z"/>
-          <path d="m17 14-4 11h38l-6-10c-1-2-3-3-6-3H22c-2 0-4 1-5 2Z" opacity=".65"/>
-        </>
-      )}
-      <path d="M8 28h48" opacity=".35"/>
-      <circle cx="17" cy="35" r="5" fill="#090B10"/><circle cx="48" cy="35" r="5" fill="#090B10"/>
-    </svg>
-  );
-}
 
 export default function MobilityExperience() {
   const { activeOrganization } = useAuth();
@@ -239,7 +196,7 @@ export default function MobilityExperience() {
               const selected = serviceType === service.id;
               return (
                 <button key={service.id} type="button" aria-pressed={selected} onClick={() => { setServiceType(service.id); if (service.id === "MOTO_TAXI") setPassengerCount(1); }} className={`group relative flex min-w-[190px] shrink-0 snap-start items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#E9BD58] lg:min-w-0 lg:w-full lg:p-3.5 ${selected ? "border-[#E9BD58]/65 bg-[linear-gradient(110deg,rgba(233,189,88,.12),rgba(233,189,88,.025))] shadow-[inset_0_0_0_1px_rgba(233,189,88,.08)]" : "border-white/[.09] bg-white/[.02] hover:border-white/20 hover:bg-white/[.04]"}`}>
-                  <div className={`flex h-14 w-[4.25rem] shrink-0 items-center justify-center rounded-xl transition ${selected ? "bg-[#E9BD58]/[.11] text-[#F2CD70]" : "bg-white/[.045] text-white/55"}`}><ServiceIcon kind={service.icon}/></div>
+                  <div className={`flex h-14 w-[4.25rem] shrink-0 items-center justify-center rounded-xl transition ${selected ? "bg-[#E9BD58]/[.11] text-[#F2CD70]" : "bg-white/[.045] text-white/55"}`}><MarkaVehicleIllustration kind={service.icon} className="h-10 w-[4.4rem] sm:h-11 sm:w-[4.8rem]"/></div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2"><p className="text-sm font-semibold tracking-tight">{service.name}</p>{service.id === "TAXI" && <span className="rounded-full bg-white/[.07] px-2 py-0.5 text-[8px] font-semibold text-white/45">CONFORTO</span>}</div>
                     <p className={`mt-1 text-[10px] font-medium ${selected ? "text-[#F2CD70]" : "text-white/45"}`}>{service.subtitle}</p>
