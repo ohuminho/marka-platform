@@ -20,12 +20,9 @@ export async function GET(request: Request) {
 
   if (!provider) return NextResponse.json({ message: "Prestador não encontrado.", code: "FREIGHT_PROVIDER_NOT_FOUND" }, { status: 404 });
   if (provider.status !== "VERIFIED") return NextResponse.json({ requests: [], message: "A conta aguarda verificação." });
-  if (provider.availability !== "AVAILABLE") return NextResponse.json({ requests: [], message: "Fique disponível para receber pedidos." });
-  if (provider.vehicles.length === 0) return NextResponse.json({ requests: [], message: "Não existem viaturas activas na conta." });
 
   const requestTypes = provider.serviceTypes;
   const eligibleTypes = requestTypes.filter((type) => provider.vehicles.some((vehicle) => compatibleKinds[type].includes(vehicle.kind as never)));
-  if (eligibleTypes.length === 0) return NextResponse.json({ requests: [] });
 
   const requests = await prisma.freightRequest.findMany({
     where: {
