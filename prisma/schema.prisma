@@ -430,6 +430,47 @@ enum FreightRequestType {
   ROADSIDE_ASSISTANCE
 }
 
+enum FreightProviderStatus {
+  PENDING
+  IN_REVIEW
+  VERIFIED
+  SUSPENDED
+  BLOCKED
+}
+
+enum FreightProviderAvailability {
+  OFFLINE
+  AVAILABLE
+  BUSY
+  PAUSED
+}
+
+enum FreightVehicleKind {
+  CARGO_TRICYCLE
+  PICKUP
+  CARGO_VAN
+  LIGHT_TRUCK
+  FLATBED_TRUCK
+  TIPPER_TRUCK
+  HEAVY_TRUCK
+  WATER_TANKER
+  TOW_TRUCK
+  SERVICE_VEHICLE
+  SPECIALIZED
+}
+
+enum FreightCapacityUnit {
+  KG
+  TON
+  M3
+  LITRE
+}
+
+enum FreightWaterType {
+  POTABLE_WATER
+  NON_POTABLE_WATER
+}
+
 enum FreightRequestStatus {
   REQUESTED
   QUOTED
@@ -755,6 +796,7 @@ model Organization {
   dispatchRequests    DispatchRequest[]
   deliveryAgents      DeliveryAgent[]
   freightRequests     FreightRequest[]
+  freightProviders    FreightProvider[]
 
   @@index([tenantId])
   @@index([status])
@@ -809,6 +851,7 @@ model User {
   deliveryAgent  DeliveryAgent? @relation("DeliveryAgentUser")
   supportTickets SupportTicket[] @relation("SupportTicketRequester")
   freightRequests FreightRequest[]
+  freightProviders FreightProvider[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   notifications   Notification[]
 
@@ -1822,6 +1865,61 @@ model DispatchCandidate {
 
   @@index([dispatchRequestId])
   @@index([agentId])
+}
+
+model FreightProvider {
+  id             String                     @id @default(uuid())
+  organizationId String
+  userId         String
+  status         FreightProviderStatus      @default(PENDING)
+  availability   FreightProviderAvailability @default(OFFLINE)
+  displayName    String
+  legalName      String?
+  phone          String?
+  taxNumber      String?
+  serviceTypes   FreightRequestType[]
+  coverageAreas  String[]                    @default([])
+  ratingAverage  Decimal?                    @db.Decimal(3, 2)
+  ratingCount    Int                         @default(0)
+  metadata       Json?
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicles     FreightProviderVehicle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, status, availability])
+  @@index([userId])
+}
+
+model FreightProviderVehicle {
+  id             String             @id @default(uuid())
+  providerId     String
+  kind           FreightVehicleKind
+  status         MobilityVehicleStatus @default(PENDING)
+  registrationNumber String?
+  make           String?
+  model          String?
+  year           Int?
+  color          String?
+  capacity       Decimal?           @db.Decimal(20, 4)
+  capacityUnit   FreightCapacityUnit?
+  waterType      FreightWaterType?
+  cargoBody      String?
+  serviceAreas   String[]           @default([])
+  metadata       Json?
+
+  provider FreightProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId, status])
+  @@index([kind, status])
+  @@index([registrationNumber])
 }
 
 model FreightRequest {
