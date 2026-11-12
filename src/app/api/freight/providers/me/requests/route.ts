@@ -20,14 +20,11 @@ export async function GET(request: Request) {
 
   if (!provider) return NextResponse.json({ message: "Prestador não encontrado.", code: "FREIGHT_PROVIDER_NOT_FOUND" }, { status: 404 });
   if (provider.status !== "VERIFIED") return NextResponse.json({ requests: [], message: "A conta aguarda verificação." });
-  if (provider.availability !== "AVAILABLE") return NextResponse.json({ requests: [], message: "Fique disponível para receber pedidos." });
-  if (provider.vehicles.length === 0) return NextResponse.json({ requests: [], message: "Não existem viaturas activas na conta." });
 
   const requestTypes = provider.serviceTypes;
   const eligibleTypes = requestTypes.filter((type) => provider.vehicles.some((vehicle) => compatibleKinds[type].includes(vehicle.kind as never)));
-  if (eligibleTypes.length === 0) return NextResponse.json({ requests: [] });
 
-  const requests = await prisma.freightRequest.findMany({
+  const requests = provider.availability === "AVAILABLE" && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.session.organizationId,
       requestType: { in: eligibleTypes },
@@ -37,7 +34,7 @@ export async function GET(request: Request) {
     },
     orderBy: { paidAt: "asc" },
     take: 50,
-  });
+  }) : [];
 
   const matched = requests.filter((item) => provider.vehicles.some((vehicle) => {
     if (!compatibleKinds[item.requestType].includes(vehicle.kind as never)) return false;
@@ -50,7 +47,17 @@ export async function GET(request: Request) {
     return ["M3", "LITRE"].includes(vehicle.capacityUnit) && ["M3", "LITRE"].includes(item.quantityUnit) && capacityLitres >= requestedLitres;
   }));
 
-  return NextResponse.json({ requests: matched.map((item) => ({
+  const assignedRequests = await prisma.freightRequest.findMany({
+    where: {
+      organizationId: auth.session.organizationId,
+      assignedProviderId: provider.id,
+      status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"] },
+    },
+    orderBy: { assignedAt: "asc" },
+    take: 50,
+  });
+
+  const serialize = (item: (typeof requests)[number]) => ({
     id: item.id,
     reference: item.reference,
     requestType: item.requestType,
@@ -62,5 +69,11 @@ export async function GET(request: Request) {
     currency: item.currency,
     details: item.details,
     paidAt: item.paidAt,
-  })) });
+    assignedAt: item.assignedAt,
+  });
+
+  return NextResponse.json({
+    requests: matched.map(serialize),
+    assignedRequests: assignedRequests.map(serialize),
+  });
 }

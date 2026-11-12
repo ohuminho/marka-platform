@@ -17,6 +17,7 @@ const typeLabels: Record<FreightJob["requestType"], string> = {
 export default function MobilityFreightJobs() {
   const [provider, setProvider] = useState<FreightProvider | null>(null);
   const [jobs, setJobs] = useState<FreightJob[]>([]);
+  const [assignedJobs, setAssignedJobs] = useState<FreightJob[]>([]);
   const [vehicleIds, setVehicleIds] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function MobilityFreightJobs() {
     if (!jobsResponse.ok) throw new Error(jobsData.message ?? "Não foi possível carregar os pedidos disponíveis.");
     setProvider(providerData.provider ?? null);
     setJobs(jobsData.requests ?? []);
+    setAssignedJobs(jobsData.assignedRequests ?? []);
     const activeVehicles: FreightVehicle[] = (providerData.provider?.vehicles ?? []).filter((vehicle: FreightVehicle) => vehicle.status === "ACTIVE");
     setVehicleIds((current) => Object.fromEntries((jobsData.requests ?? []).map((job: FreightJob) => {
       const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
@@ -54,8 +56,49 @@ export default function MobilityFreightJobs() {
   }, []);
 
   useEffect(() => {
-    refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao carregar pedidos.")).finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      refresh()
+        .catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao carregar pedidos."))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
+
+  function nextAction(job: FreightJob): { status: string; label: string } | null {
+    if (job.status === "ASSIGNED") return { status: "PROVIDER_EN_ROUTE", label: "Iniciar deslocação" };
+    if (job.status === "PROVIDER_EN_ROUTE") return { status: "PROVIDER_ARRIVED", label: "Cheguei ao local" };
+    if (job.status === "PROVIDER_ARRIVED") {
+      return job.requestType === "ROADSIDE_ASSISTANCE"
+        ? { status: "COMPLETED", label: "Concluir assistência" }
+        : { status: "PICKED_UP", label: "Confirmar recolha" };
+    }
+    if (job.status === "PICKED_UP") return { status: "IN_TRANSIT", label: "Iniciar transporte" };
+    if (job.status === "IN_TRANSIT") return { status: "COMPLETED", label: "Concluir serviço" };
+    return null;
+  }
+
+  async function updateJobStatus(job: FreightJob) {
+    const action = nextAction(job);
+    if (!action) return;
+    setBusyId(job.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/freight/providers/me/requests/${job.id}/status`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: action.status }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "Não foi possível actualizar o serviço.");
+      setNotice(`Pedido ${job.reference}: estado actualizado.`);
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao actualizar o serviço.");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function accept(job: FreightJob) {
     const vehicleId = vehicleIds[job.id];
@@ -82,6 +125,27 @@ export default function MobilityFreightJobs() {
       {provider && <p className="mt-4 text-[11px] text-[var(--theme-text-muted)]">Estado do prestador: <strong>{provider.status}</strong> · Disponibilidade: <strong>{provider.availability}</strong></p>}
       {notice && <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
       {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-700">{error}</p>}
+      {assignedJobs.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-[var(--theme-text)]">Serviços em curso</h3>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {assignedJobs.map((job) => {
+              const action = nextAction(job);
+              return <article key={job.id} className="rounded-2xl border border-[#d8c18c]/30 bg-[var(--theme-background)] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div><p className="text-[9px] font-semibold uppercase tracking-[.16em] text-[#b89a5b]">{typeLabels[job.requestType]}</p><h4 className="mt-1 text-sm font-semibold text-[var(--theme-text)]">{job.reference}</h4></div>
+                  <span className="rounded-full bg-[#d8c18c]/15 px-2.5 py-1 text-[9px] font-semibold text-[var(--theme-text)]">{job.status.replaceAll("_", " ")}</span>
+                </div>
+                <div className="mt-3 space-y-1 text-xs text-[var(--theme-text-muted)]">
+                  <p><strong className="text-[var(--theme-text)]">Recolha:</strong> {job.origin?.address ?? "Não indicada"}</p>
+                  <p><strong className="text-[var(--theme-text)]">Destino:</strong> {job.destination?.address ?? "Não indicado"}</p>
+                </div>
+                {action ? <button type="button" disabled={busyId === job.id} onClick={() => updateJobStatus(job)} className="mt-4 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === job.id ? "A actualizar…" : action.label}</button> : <p className="mt-4 text-xs text-amber-700">Serviço em excepção. Contacte o suporte para resolução.</p>}
+              </article>;
+            })}
+          </div>
+        </div>
+      )}
       {loading ? <p className="mt-6 text-sm text-[var(--theme-text-muted)]">A carregar pedidos…</p> : jobs.length === 0 ? <p className="mt-6 rounded-2xl border border-dashed border-[var(--theme-border)] p-6 text-center text-sm text-[var(--theme-text-muted)]">Não existem pedidos pagos compatíveis disponíveis neste momento.</p> : (
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           {jobs.map((job) => {
