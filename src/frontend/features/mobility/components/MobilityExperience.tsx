@@ -14,12 +14,12 @@ type RideResult = {
 
 const services = [
   { id: "TAXI", name: "MARKA Go", subtitle: "Táxi", description: "Conforto para deslocações urbanas e interurbanas.", capacity: "Até 4 passageiros", icon: "car" },
-  { id: "EXECUTIVE", name: "MARKA Executive", subtitle: "Executivo", description: "Serviço premium para deslocações com maior exigência de conforto.", capacity: "Até 4 passageiros · viatura de classe executiva", icon: "car" },
+  { id: "EXECUTIVE", name: "MARKA Executive", subtitle: "Executivo", description: "Serviço premium para deslocações com maior exigência de conforto.", capacity: "Até 4 passageiros · viatura de classe executiva", icon: "executive" },
   { id: "MOTO_TAXI", name: "MARKA Moto", subtitle: "Mototáxi", description: "Uma opção ágil para percursos individuais.", capacity: "1 passageiro", icon: "bike" },
   { id: "VAN", name: "MARKA Van", subtitle: "Carrinha", description: "Transporte para grupos e deslocações com maior espaço.", capacity: "Capacidade conforme a viatura", icon: "van" },
   { id: "MINIBUS", name: "MARKA Mini", subtitle: "Minibus", description: "Transporte coletivo em percursos urbanos e interurbanos.", capacity: "Capacidade conforme a viatura", icon: "bus" },
   { id: "BUS", name: "MARKA Bus", subtitle: "Autocarro", description: "Transporte de grupos em maior escala.", capacity: "Capacidade conforme a viatura", icon: "bus" },
-  { id: "COACH", name: "MARKA Coach", subtitle: "Coach", description: "Viagens de grupo e percursos de longa distância.", capacity: "Capacidade conforme a viatura", icon: "bus" },
+  { id: "COACH", name: "MARKA Coach", subtitle: "Coach", description: "Viagens de grupo e percursos de longa distância.", capacity: "Capacidade conforme a viatura", icon: "coach" },
 ] as const;
 
 const statusLabels: Record<string, string> = {
@@ -34,31 +34,46 @@ const statusLabels: Record<string, string> = {
   TRIP_IN_PROGRESS: "Em viagem",
 };
 
-function ServiceIcon({ kind }: { kind: "car" | "bike" | "van" | "bus" }) {
-  if (kind === "van" || kind === "bus") {
+function ServiceIcon({ kind }: { kind: "car" | "executive" | "bike" | "van" | "bus" | "coach" }) {
+  const common = "h-10 w-12 sm:h-11 sm:w-[3.25rem]";
+  const stroke = { stroke: "currentColor", strokeWidth: 1.55, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (kind === "bike") return (
+    <svg viewBox="0 0 64 44" aria-hidden="true" className={common} fill="none" {...stroke}>
+      <circle cx="13" cy="32" r="8.5"/><circle cx="51" cy="32" r="8.5"/>
+      <path d="m13 32 12-17h12l14 17H31L25 15m12 0 5-8h8m-27 8-5-6h-6"/>
+      <path d="M27 12h12" strokeWidth="2.4"/>
+      <path d="M34 20h8" opacity=".5"/>
+    </svg>
+  );
+  if (kind === "van" || kind === "bus" || kind === "coach") {
+    const isBus = kind === "bus";
+    const isCoach = kind === "coach";
     return (
-      <svg viewBox="0 0 48 32" aria-hidden="true" className="h-9 w-12" fill="none">
-        <path d={kind === "bus" ? "M5 8c0-2 2-4 4-4h30c2 0 4 2 4 4v15H5V8Z" : "M7 9c0-2 2-4 4-4h19l10 8v10H7V9Z"} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
-        <path d={kind === "bus" ? "M9 8h30v9H9z" : "M12 8h16v8H12z"} stroke="currentColor" strokeOpacity=".55" strokeWidth="1.4"/>
-        <path d="M5 19h38v5H5z" stroke="currentColor" strokeWidth="1.5"/>
-        <circle cx="13" cy="25" r="3.5" fill="#090B10" stroke="currentColor" strokeWidth="1.5"/>
-        <circle cx="35" cy="25" r="3.5" fill="#090B10" stroke="currentColor" strokeWidth="1.5"/>
+      <svg viewBox="0 0 64 44" aria-hidden="true" className={common} fill="none" {...stroke}>
+        <path d={isBus || isCoach ? "M7 13c0-3 2-5 5-5h40c3 0 5 2 5 5v20H7V13Z" : "M8 17c0-3 2-5 5-5h27l15 12v9H8V17Z"}/>
+        {isBus || isCoach ? <path d="M12 13h40v11H12zM12 27h40" opacity=".72"/> : <path d="M14 16h23v10H14zM40 16l10 9" opacity=".72"/>}
+        {isCoach && <path d="M13 28h38M17 17h5m6 0h5m8 0h5" opacity=".45"/>}
+        <path d="M5 32h54" />
+        <circle cx="17" cy="34" r="4.5" fill="#090B10"/><circle cx="47" cy="34" r="4.5" fill="#090B10"/>
       </svg>
     );
   }
-  return kind === "car" ? (
-    <svg viewBox="0 0 48 32" aria-hidden="true" className="h-9 w-12" fill="none">
-      <path d="m5 21 3-2 5-10c1-2 3-3 5-3h13c3 0 5 1 7 4l5 9 2 2v5H3v-3c0-1 1-2 2-2Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
-      <path d="m14 10-3 8h27l-4-8c-1-2-3-3-5-3H19c-2 0-4 1-5 3Z" stroke="currentColor" strokeOpacity=".55" strokeWidth="1.4"/>
-      <circle cx="12" cy="25" r="3.5" fill="#090B10" stroke="currentColor" strokeWidth="1.5"/>
-      <circle cx="37" cy="25" r="3.5" fill="#090B10" stroke="currentColor" strokeWidth="1.5"/>
-    </svg>
-  ) : (
-    <svg viewBox="0 0 48 32" aria-hidden="true" className="h-9 w-12" fill="none">
-      <circle cx="9" cy="24" r="5" stroke="currentColor" strokeWidth="1.7"/>
-      <circle cx="39" cy="24" r="5" stroke="currentColor" strokeWidth="1.7"/>
-      <path d="m9 24 9-11h10l11 11H27l-9-11m10 0 4-6h6m-20 6-3-5H9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M19 10h9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+  return (
+    <svg viewBox="0 0 64 44" aria-hidden="true" className={common} fill="none" {...stroke}>
+      {kind === "executive" ? (
+        <>
+          <path d="m5 29 4-3 7-13c1-2 3-3 6-3h20c4 0 7 2 9 5l7 11 3 3v6H5v-6Z"/>
+          <path d="m18 14-5 11h38l-6-10c-1-2-3-3-6-3H23c-2 0-4 1-5 2Z" opacity=".65"/>
+          <path d="M23 9h18M28 5h8" opacity=".55"/>
+        </>
+      ) : (
+        <>
+          <path d="m5 29 4-3 6-13c1-2 3-3 6-3h20c4 0 7 2 9 5l7 11 3 3v6H5v-6Z"/>
+          <path d="m17 14-4 11h38l-6-10c-1-2-3-3-6-3H22c-2 0-4 1-5 2Z" opacity=".65"/>
+        </>
+      )}
+      <path d="M8 28h48" opacity=".35"/>
+      <circle cx="17" cy="35" r="5" fill="#090B10"/><circle cx="48" cy="35" r="5" fill="#090B10"/>
     </svg>
   );
 }
