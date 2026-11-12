@@ -67,6 +67,18 @@ const requestSchema = z.object({
   }
 });
 
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableSerialize).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right));
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${stableSerialize(entry)}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
 function publicRequest(record: {
   id: string;
   reference: string;
@@ -169,7 +181,7 @@ export async function POST(request: Request) {
 
   const input = parsed.data;
   const requestHash = createHash("sha256")
-    .update(JSON.stringify(input))
+    .update(stableSerialize(input))
     .digest("hex");
 
   try {
