@@ -4,7 +4,6 @@ import { z } from "zod";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
-import type { Prisma } from "@prisma/client";
 
 const vehicleSchema = z.object({
   kind: z.enum([
@@ -76,6 +75,7 @@ export async function POST(request: Request) {
   }
 
   const input = parsed.data;
+  const vehiclesProvided = typeof body === "object" && body !== null && Object.prototype.hasOwnProperty.call(body, "vehicles");
   try {
     const provider = await prisma.$transaction(async (tx) => {
       const saved = await tx.freightProvider.upsert({
@@ -108,7 +108,13 @@ export async function POST(request: Request) {
         },
       });
 
-      if (input.vehicles.length) {
+      if (vehiclesProvided) {
+        await tx.freightProviderVehicle.deleteMany({
+          where: { providerId: saved.id, status: "PENDING" },
+        });
+      }
+
+      if (vehiclesProvided && input.vehicles.length) {
         await tx.freightProviderVehicle.createMany({
           data: input.vehicles.map((vehicle) => ({
             id: randomUUID(),
