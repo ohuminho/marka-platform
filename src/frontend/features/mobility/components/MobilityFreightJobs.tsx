@@ -54,7 +54,12 @@ export default function MobilityFreightJobs() {
   }, []);
 
   useEffect(() => {
-    refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao carregar pedidos.")).finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      refresh()
+        .catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao carregar pedidos."))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   async function accept(job: FreightJob) {
