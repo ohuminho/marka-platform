@@ -37,22 +37,31 @@ let stylesheetPromise: Promise<void> | null = null;
 let leafletPromise: Promise<LeafletNamespace> | null = null;
 
 function loadStylesheet(): Promise<void> {
-  if (document.querySelector('link[data-marka-leaflet="true"][data-loaded="true"]')) {
-    return Promise.resolve();
-  }
+  const loaded = document.querySelector<HTMLLinkElement>('link[data-marka-leaflet="true"][data-loaded="true"]');
+  if (loaded) return Promise.resolve();
   if (stylesheetPromise) return stylesheetPromise;
 
   stylesheetPromise = new Promise<void>((resolve, reject) => {
     let index = 0;
     const attempt = () => {
+      const existing = document.querySelector<HTMLLinkElement>('link[data-marka-leaflet="true"]');
+      if (existing) {
+        if (existing.dataset.loaded === "true") { resolve(); return; }
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => {
+          existing.remove();
+          index += 1;
+          if (index < CSS_URLS.length) attempt();
+          else reject(new Error("Não foi possível carregar os estilos do mapa."));
+        }, { once: true });
+        if (existing.dataset.loaded === "true") resolve();
+        return;
+      }
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = CSS_URLS[index];
       link.dataset.markaLeaflet = "true";
-      link.onload = () => {
-        link.dataset.loaded = "true";
-        resolve();
-      };
+      link.onload = () => { link.dataset.loaded = "true"; resolve(); };
       link.onerror = () => {
         link.remove();
         index += 1;
@@ -66,7 +75,6 @@ function loadStylesheet(): Promise<void> {
     stylesheetPromise = null;
     throw error;
   });
-
   return stylesheetPromise;
 }
 
@@ -76,33 +84,30 @@ function loadLeaflet(): Promise<LeafletNamespace> {
 
   leafletPromise = (async () => {
     await loadStylesheet();
-
-    let existing = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
-    if (existing?.dataset.failed === "true" || existing?.dataset.loaded === "true") {
-      existing.remove();
-      existing = null;
-    }
-
-    if (existing && !window.L) {
-      await new Promise<void>((resolve, reject) => {
-        existing?.addEventListener("load", () => resolve(), { once: true });
-        existing?.addEventListener("error", () => reject(new Error("Não foi possível carregar o mapa.")), { once: true });
-      });
-      if (window.L) return window.L;
-      throw new Error("Motor do mapa indisponível.");
-    }
-
     for (const src of JS_URLS) {
       try {
+        const existing = document.querySelector<HTMLScriptElement>('script[data-marka-leaflet="true"]');
+        if (existing) {
+          if (window.L) return window.L;
+          if (existing.dataset.loaded === "true" || existing.dataset.failed === "true") {
+            existing.remove();
+          } else {
+            await new Promise<void>((resolve, reject) => {
+              existing.addEventListener("load", () => resolve(), { once: true });
+              existing.addEventListener("error", () => reject(new Error("Não foi possível carregar o mapa.")), { once: true });
+              if (existing.dataset.loaded === "true") resolve();
+            });
+            if (window.L) return window.L;
+            existing.remove();
+          }
+        }
+
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement("script");
           script.src = src;
           script.async = true;
           script.dataset.markaLeaflet = "true";
-          script.onload = () => {
-            script.dataset.loaded = "true";
-            resolve();
-          };
+          script.onload = () => { script.dataset.loaded = "true"; resolve(); };
           script.onerror = () => {
             script.dataset.failed = "true";
             script.remove();
@@ -112,18 +117,17 @@ function loadLeaflet(): Promise<LeafletNamespace> {
         });
         if (window.L) return window.L;
       } catch {
-        // Tenta o próximo CDN antes de declarar o mapa indisponível.
+        // Tenta o CDN alternativo antes de declarar o mapa indisponível.
       }
     }
-
     throw new Error("Não foi possível carregar o motor do mapa. Verifique a ligação e tente novamente.");
   })().catch((error: unknown) => {
     leafletPromise = null;
     throw error;
   });
-
   return leafletPromise;
 }
+
 export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (points: { origin: Point | null; destination: Point | null }) => void } = {}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
