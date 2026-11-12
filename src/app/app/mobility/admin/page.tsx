@@ -2,6 +2,7 @@ import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
 import MobilityControlCenter from "@/frontend/features/mobility/components/MobilityControlCenter";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
+import MobilityFreightQuoteDesk from "@/frontend/features/mobility/components/MobilityFreightQuoteDesk";
 
 export default function MobilityAdminPage() {
   return (
@@ -15,6 +16,7 @@ export default function MobilityAdminPage() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Monitorização de corridas, despacho, segurança, pagamentos e recuperação operacional. O acesso e as ações são validados pelas permissões do servidor.</p>
           </header>
           <MobilityControlCenter />
+          <MobilityFreightQuoteDesk />
         </main>
       </AppShell>
     </DynamicBackground>
