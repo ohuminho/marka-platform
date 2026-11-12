@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const requestTypes = provider.serviceTypes;
   const eligibleTypes = requestTypes.filter((type) => provider.vehicles.some((vehicle) => compatibleKinds[type].includes(vehicle.kind as never)));
 
-  const requests = await prisma.freightRequest.findMany({
+  const requests = provider.availability === "AVAILABLE" && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.session.organizationId,
       requestType: { in: eligibleTypes },
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     },
     orderBy: { paidAt: "asc" },
     take: 50,
-  });
+  }) : [];
 
   const matched = requests.filter((item) => provider.vehicles.some((vehicle) => {
     if (!compatibleKinds[item.requestType].includes(vehicle.kind as never)) return false;
