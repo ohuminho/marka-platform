@@ -171,6 +171,8 @@ export default function MobilityLiveMap({ onPointsChange }: { onPointsChange?: (
     return () => { disposed = true; resizeObserver?.disconnect(); if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; routeRef.current = null; markersRef.current = { origin: null, destination: null }; } };
   }, []);
   function setPoint(point: Point, kind: "origin" | "destination"): boolean {
+    // Invalidate any in-flight OSRM request so an older route cannot overwrite the latest points.
+    routeRequestRef.current += 1;
     const L = window.L, map = mapRef.current; if (!L || !map) return false;
     const nextOrigin = kind === "origin" ? point : origin;
     const nextDestination = kind === "destination" ? point : destination;
