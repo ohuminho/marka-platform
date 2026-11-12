@@ -13,15 +13,14 @@ const bodySchema = z.object({
     "COMPLETED",
     "EXCEPTION",
   ]),
-  note: z.string().trim().max(1000).optional(),
 });
 
 const nextStatuses: Record<string, string[]> = {
-  ASSIGNED: ["PROVIDER_EN_ROUTE"],
-  PROVIDER_EN_ROUTE: ["PROVIDER_ARRIVED"],
-  PROVIDER_ARRIVED: ["PICKED_UP", "COMPLETED"],
-  PICKED_UP: ["IN_TRANSIT"],
-  IN_TRANSIT: ["COMPLETED"],
+  ASSIGNED: ["PROVIDER_EN_ROUTE", "EXCEPTION"],
+  PROVIDER_EN_ROUTE: ["PROVIDER_ARRIVED", "EXCEPTION"],
+  PROVIDER_ARRIVED: ["PICKED_UP", "COMPLETED", "EXCEPTION"],
+  PICKED_UP: ["IN_TRANSIT", "EXCEPTION"],
+  IN_TRANSIT: ["COMPLETED", "EXCEPTION"],
   EXCEPTION: ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED"],
 };
 
@@ -88,12 +87,6 @@ export async function PATCH(
         },
         data: {
           status: requestedNext,
-          ...(parsed.data.note ? {
-            details: {
-              statusNote: parsed.data.note,
-              statusNoteUpdatedAt: new Date().toISOString(),
-            },
-          } : {}),
         },
       });
       if (changed.count !== 1) throw new Error("FREIGHT_STATUS_CONFLICT");
