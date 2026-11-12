@@ -134,7 +134,7 @@ export async function PATCH(request: Request) {
           entityId: requestId,
           ipAddress,
           userAgent,
-          metadata: { amount, currency: "AOA", validityHours, expiresAt: expiresAt.toISOString() },
+          metadata: { amount, currency: freightMeta.currency, validityHours, expiresAt: expiresAt.toISOString() },
         },
       });
 
