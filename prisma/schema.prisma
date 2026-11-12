@@ -424,6 +424,77 @@ enum DispatchStatus {
   EXPIRED
 }
 
+enum FreightRequestType {
+  CARGO_SHIPMENT
+  WATER_DELIVERY
+  ROADSIDE_ASSISTANCE
+}
+
+enum FreightProviderStatus {
+  PENDING
+  IN_REVIEW
+  VERIFIED
+  SUSPENDED
+  BLOCKED
+}
+
+enum FreightProviderAvailability {
+  OFFLINE
+  AVAILABLE
+  BUSY
+  PAUSED
+}
+
+enum FreightProviderVehicleStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+  RETIRED
+}
+
+enum FreightVehicleKind {
+  CARGO_TRICYCLE
+  PICKUP
+  CARGO_VAN
+  LIGHT_TRUCK
+  FLATBED_TRUCK
+  TIPPER_TRUCK
+  HEAVY_TRUCK
+  WATER_TANKER
+  TOW_TRUCK
+  SERVICE_VEHICLE
+  SPECIALIZED
+}
+
+enum FreightCapacityUnit {
+  KG
+  TON
+  M3
+  LITRE
+}
+
+enum FreightWaterType {
+  POTABLE_WATER
+  NON_POTABLE_WATER
+}
+
+enum FreightRequestStatus {
+  REQUESTED
+  QUOTED
+  AWAITING_PAYMENT
+  PAID
+  SEARCHING_PROVIDER
+  ASSIGNED
+  PROVIDER_EN_ROUTE
+  PROVIDER_ARRIVED
+  PICKED_UP
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+  EXCEPTION
+}
+
 enum DeliveryAgentStatus {
   PENDING
   ACTIVE
@@ -732,6 +803,8 @@ model Organization {
   fulfillmentRequests FulfillmentRequest[]
   dispatchRequests    DispatchRequest[]
   deliveryAgents      DeliveryAgent[]
+  freightRequests     FreightRequest[]
+  freightProviders    FreightProvider[]
 
   @@index([tenantId])
   @@index([status])
@@ -759,6 +832,8 @@ model User {
   roles                   UserRole[]
 
   vendors              Vendor[]              @relation("VendorOwner")
+  storeClaimsSubmitted StoreClaimRequest[] @relation("StoreClaimClaimant")
+  storeClaimsReviewed  StoreClaimRequest[] @relation("StoreClaimReviewer")
   wallet               Wallet?
   accounts             Account[]             @relation("UserAccountOwner")
   financialInstruments FinancialInstrument[] @relation("UserFinancialInstruments")
@@ -783,15 +858,17 @@ model User {
   mobilityRides  MobilityRide[]  @relation("MobilityRideRider")
   deliveryAgent  DeliveryAgent? @relation("DeliveryAgentUser")
   supportTickets SupportTicket[] @relation("SupportTicketRequester")
+  freightRequests FreightRequest[]
+  freightProviders FreightProvider[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   notifications   Notification[]
-  pushSubscriptions PushSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([createdAt])
+  pushSubscriptions PushSubscription[]
 }
 
 model Profile {
@@ -967,12 +1044,40 @@ model Store {
   vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   products Product[]
+  claimRequests StoreClaimRequest[]
   conversations MarketplaceConversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
+}
+
+model StoreClaimRequest {
+  id             String   @id @default(uuid())
+  storeId        String
+  claimantUserId String
+  claimantName   String
+  claimantPhone  String
+  claimantEmail  String?
+  businessType   String   @default("INDIVIDUAL")
+  reason         String   @db.Text
+  evidenceUrl    String?
+  status         String   @default("PENDING")
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  decisionNote   String?  @db.Text
+
+  store     Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  claimant  User  @relation("StoreClaimClaimant", fields: [claimantUserId], references: [id], onDelete: Cascade)
+  reviewer  User? @relation("StoreClaimReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, claimantUserId])
+  @@index([status, createdAt])
+  @@index([claimantUserId, createdAt])
 }
 
 model Category {
@@ -1771,6 +1876,104 @@ model DispatchCandidate {
   @@index([agentId])
 }
 
+model FreightProvider {
+  id             String                     @id @default(uuid())
+  organizationId String
+  userId         String
+  status         FreightProviderStatus      @default(PENDING)
+  availability   FreightProviderAvailability @default(OFFLINE)
+  displayName    String
+  legalName      String?
+  phone          String?
+  taxNumber      String?
+  serviceTypes   FreightRequestType[]
+  coverageAreas  String[]                    @default([])
+  ratingAverage  Decimal?                    @db.Decimal(3, 2)
+  ratingCount    Int                         @default(0)
+  metadata       Json?
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicles     FreightProviderVehicle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, status, availability])
+  @@index([userId])
+}
+
+model FreightProviderVehicle {
+  id             String             @id @default(uuid())
+  providerId     String
+  kind           FreightVehicleKind
+  status         FreightProviderVehicleStatus @default(PENDING)
+  registrationNumber String?
+  make           String?
+  model          String?
+  year           Int?
+  color          String?
+  capacity       Decimal?           @db.Decimal(20, 4)
+  capacityUnit   FreightCapacityUnit?
+  waterType      FreightWaterType?
+  cargoBody      String?
+  serviceAreas   String[]           @default([])
+  metadata       Json?
+
+  provider FreightProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId, status])
+  @@index([kind, status])
+  @@index([registrationNumber])
+}
+
+model FreightRequest {
+  id             String              @id @default(uuid())
+  reference      String              @unique
+  organizationId String
+  requesterId    String
+  requestType    FreightRequestType
+  status         FreightRequestStatus @default(REQUESTED)
+
+  originLatitude  Decimal? @db.Decimal(10, 7)
+  originLongitude Decimal? @db.Decimal(10, 7)
+  originAddress   String?
+
+  destinationLatitude  Decimal? @db.Decimal(10, 7)
+  destinationLongitude Decimal? @db.Decimal(10, 7)
+  destinationAddress   String?
+
+  quantity       Decimal? @db.Decimal(20, 4)
+  quantityUnit   String?
+  currency       String   @default("AOA") @db.Char(3)
+  quotedAmount   Decimal? @db.Decimal(20, 4)
+  quoteExpiresAt DateTime?
+  paymentReference String?
+  paidAt         DateTime?
+  assignedProviderId String?
+  assignedVehicleId  String?
+  assignedAt         DateTime?
+
+  idempotencyKey String
+  requestHash    String
+  details        Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requester    User         @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, requesterId, idempotencyKey], map: "FreightRequest_org_requester_idempotency_key")
+  @@index([organizationId, status, createdAt])
+  @@index([requesterId, createdAt])
+  @@index([requestType, status])
+}
+
 model MobilityRideOrchestration {
   id             String                     @id
   organizationId String
@@ -2046,24 +2249,6 @@ model SupportMessage {
   @@index([authorId, createdAt])
 }
 
-model PushSubscription {
-  id             String   @id @default(uuid())
-  userId         String
-  endpoint       String   @unique @db.Text
-  p256dh         String
-  auth           String
-  expirationTime DateTime?
-  userAgent      String?  @db.Text
-  revokedAt      DateTime?
-  lastUsedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, revokedAt, updatedAt])
-}
-
 model Notification {
   id        String   @id @default(uuid())
   userId    String
@@ -2297,4 +2482,23 @@ model SpaceBookingEvent {
 
   @@index([bookingId, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+
+model PushSubscription {
+  id             String   @id @default(uuid())
+  userId         String
+  endpoint       String   @unique @db.Text
+  p256dh         String
+  auth           String
+  expirationTime DateTime?
+  userAgent      String?  @db.Text
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, updatedAt])
 }
