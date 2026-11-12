@@ -107,7 +107,7 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
   const mapRef = useRef<MapInstance | null>(null);
   const layersRef = useRef<MapLayer[]>([]);
   const driverLayerRef = useRef<MarkerLayer | null>(null);
-  const [ready, setReady = useState(false);
+  const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
