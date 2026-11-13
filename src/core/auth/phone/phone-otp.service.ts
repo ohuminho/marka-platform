@@ -44,8 +44,8 @@ export class PhoneOtpService {
       if (Number(phoneCount[0]?.count ?? 0) >= PhoneOtpPolicy.maxSendsPerPhonePerHour) throw new Error("OTP_PHONE_RATE_LIMIT");
       if (ipHash) {
         const ipCount = await tx.$queryRaw<Array<{ count: bigint }>>`
-          SELECT COUNT(*)::bigint AS count FROM "PhoneOtpChallenge"
-          WHERE "requestIpHash" = ${ipHash} AND "createdAt" >= ${new Date(now.getTime() - 60 * 60 * 1000)}
+          SELECT COUNT(*)::bigint AS count FROM "SmsDeliveryLedger"
+          WHERE "requestIpHash" = ${ipHash} AND "requestedAt" >= ${new Date(now.getTime() - 60 * 60 * 1000)}
         `;
         if (Number(ipCount[0]?.count ?? 0) >= PhoneOtpPolicy.maxSendsPerIpPerHour) throw new Error("OTP_IP_RATE_LIMIT");
       }
@@ -84,8 +84,8 @@ export class PhoneOtpService {
       if (Number(spent[0]?.total ?? 0) + PhoneOtpPolicy.estimatedSmsUnitCostAoa > PhoneOtpPolicy.monthlyBudgetAoa) throw new Error("OTP_MONTHLY_BUDGET_EXCEEDED");
 
       await tx.$executeRaw`
-        INSERT INTO "SmsDeliveryLedger" ("id","challengeId","provider","destinationHash","countryCode","status","currency","unitCost","requestedAt","createdAt","updatedAt")
-        VALUES (${randomUUID()},${challengeId},'mimo-verify',${phoneHash},'AO', 'REQUESTED','AOA',${PhoneOtpPolicy.estimatedSmsUnitCostAoa},${now},${now},${now})
+        INSERT INTO "SmsDeliveryLedger" ("id","challengeId","provider","destinationHash","countryCode","requestIpHash","status","currency","unitCost","requestedAt","createdAt","updatedAt")
+        VALUES (${randomUUID()},${challengeId},'mimo-verify',${phoneHash},'AO',${ipHash}, 'REQUESTED','AOA',${PhoneOtpPolicy.estimatedSmsUnitCostAoa},${now},${now},${now})
       `;
       return { challengeId };
     });
@@ -118,8 +118,8 @@ export class PhoneOtpService {
   }
 
   async verify(input: { challengeId: string; code: string }): Promise<{ verified: true; phoneE164: string; purpose: PhoneOtpPurpose }> {
-    if (!/^\\d{6}$/.test(input.code)) throw new Error("OTP_INVALID");
-    return prisma.$transaction(async (tx) => {
+    if (!/^\d{6}$/.test(input.code)) throw new Error("OTP_INVALID");
+    const outcome = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<ChallengeRow[]>`
         SELECT * FROM "PhoneOtpChallenge" WHERE "id" = ${input.challengeId} FOR UPDATE
       `;
@@ -134,11 +134,13 @@ export class PhoneOtpService {
             "consumedAt" = CASE WHEN ${nextAttempts} >= "maxAttempts" THEN ${now} ELSE NULL END,
             "updatedAt" = ${now} WHERE "id" = ${challenge.id}
         `;
-        throw new Error(nextAttempts >= challenge.maxAttempts ? "OTP_ATTEMPTS_EXCEEDED" : "OTP_INVALID");
+        return { failure: nextAttempts >= challenge.maxAttempts ? "OTP_ATTEMPTS_EXCEEDED" : "OTP_INVALID" as const };
       }
       if (challenge.deliveryState !== "ACCEPTED") throw new Error("OTP_NOT_DELIVERED");
       await tx.$executeRaw`UPDATE "PhoneOtpChallenge" SET "consumedAt" = ${now}, "updatedAt" = ${now} WHERE "id" = ${challenge.id}`;
       return { verified: true as const, phoneE164: challenge.phoneE164, purpose: challenge.purpose };
     });
+    if ("failure" in outcome) throw new Error(outcome.failure);
+    return outcome;
   }
 }
