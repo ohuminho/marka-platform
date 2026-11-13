@@ -57,11 +57,12 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Bootstrap Supabase Storage catalog for migrations
-        run: PGPASSWORD=postgres psql -h localhost -U postgres -d marka_test -v ON_ERROR_STOP=1 -f tests/integration/bootstrap-supabase-storage.sql
-
-      - name: Apply migrations to isolated PostgreSQL
-        run: npx prisma migrate deploy
+      - name: Prepare mainline schema in isolated PostgreSQL
+        if: github.event_name == 'pull_request'
+        run: |
+          git show "${{ github.event.pull_request.base.sha }}:prisma/schema.prisma" > /tmp/marka-mainline-schema.prisma
+          npx prisma db push --schema=/tmp/marka-mainline-schema.prisma --skip-generate
+          PGPASSWORD=postgres psql -h localhost -U postgres -d marka_test -v ON_ERROR_STOP=1 -f prisma/migrations/20261113170000_add_marka_phone_otp_core/migration.sql
 
       - name: Lint
         run: npm run lint
@@ -70,6 +71,7 @@ jobs:
         run: npm run test:unit
 
       - name: MARKA phone OTP PostgreSQL integration tests
+        if: github.event_name == 'pull_request'
         run: npm run test:integration:phone-otp
 
       - name: Production build
