@@ -6,6 +6,7 @@ import {
 import { prisma } from "@/database/client/prisma";
 import {
   PhoneOtpDeliveryProvider,
+  PhoneOtpDeliveryResult,
   PhoneOtpPurpose,
 } from "@/core/auth/phone/phone-otp.contracts";
 import { PhoneOtpPolicy } from "@/core/auth/phone/phone-otp.policy";
@@ -112,7 +113,7 @@ export class PhoneOtpService {
       },
     });
 
-    let delivery;
+    let delivery: PhoneOtpDeliveryResult;
     try {
       delivery = await this.provider.send({
         recipientE164: phoneE164,
