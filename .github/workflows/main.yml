@@ -60,6 +60,7 @@ jobs:
       - name: Prepare mainline schema in isolated PostgreSQL
         if: github.event_name == 'pull_request'
         run: |
+          git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
           git show "${{ github.event.pull_request.base.sha }}:prisma/schema.prisma" > /tmp/marka-mainline-schema.prisma
           npx prisma db push --schema=/tmp/marka-mainline-schema.prisma --skip-generate
           PGPASSWORD=postgres psql -h localhost -U postgres -d marka_test -v ON_ERROR_STOP=1 -f prisma/migrations/20261113170000_add_marka_phone_otp_core/migration.sql
