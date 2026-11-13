@@ -152,6 +152,15 @@ export class PhoneOtpService {
     });
 
     if (delivery.status === "REJECTED") {
+      // The provider explicitly rejected this send, so this code must not
+      // remain verifiable even if the challenge row is otherwise unexpired.
+      await prisma.phoneOtpChallenge.updateMany({
+        where: {
+          id: challengeId,
+          consumedAt: null,
+        },
+        data: { consumedAt: new Date() },
+      });
       throw new Error("SMS provider rejected the delivery request.");
     }
 
