@@ -16,13 +16,6 @@ enum PhoneOtpPurpose {
   SENSITIVE_ACTION
 }
 
-enum PhoneOtpDeliveryState {
-  PENDING
-  ACCEPTED
-  REJECTED
-  UNKNOWN
-}
-
 enum PhoneOtpLedgerStatus {
   REQUESTED
   ACCEPTED
