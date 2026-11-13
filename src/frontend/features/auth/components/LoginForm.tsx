@@ -104,7 +104,7 @@ export default function LoginForm() {
           "verifica"
         );
 
-      if (requiresEmailVerification) {
+      if (requiresEmailVerification && email.includes("@")) {
         setShowResend(true);
       }
     } finally {
@@ -256,8 +256,8 @@ export default function LoginForm() {
         )}
 
         <input
-          type="email"
-          placeholder="E-mail"
+          type="text"
+          placeholder="E-mail ou telemóvel (+244...)"
           value={email}
           onChange={(event) =>
             setEmail(event.target.value)
