@@ -11,7 +11,7 @@ import {
 process.env.PHONE_OTP_PEPPER = "unit-test-pepper-value-at-least-32-characters";
 
 const code = generatePhoneOtp();
-assert.match(code, /^\\d{6}$/);
+assert.match(code, /^\d{6}$/);
 
 const challengeId = "phone-otp-unit-test";
 const hash = hashPhoneOtp(challengeId, code);
