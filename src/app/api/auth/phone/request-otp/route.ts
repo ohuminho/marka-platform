@@ -11,14 +11,6 @@ const requestSchema = z.object({
   phone: z.string().trim().min(8).max(20),
 });
 
-function getClientIp(request: Request): string | undefined {
-  return (
-    request.headers.get("x-real-ip")?.trim() ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    undefined
-  );
-}
-
 export async function POST(request: Request) {
   try {
     const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
