@@ -9,7 +9,7 @@ import type { PhoneOtpPurpose } from "./phone-otp.contracts";
 type ChallengeRow = {
   id: string; phoneE164: string; purpose: PhoneOtpPurpose; codeHash: string;
   expiresAt: Date; attemptCount: number; maxAttempts: number; resendCount: number;
-  lastSentAt: Date; consumedAt: Date | null;
+  lastSentAt: Date; consumedAt: Date | null; deliveryState: "PENDING" | "ACCEPTED" | "REJECTED" | "UNKNOWN";
 };
 const provider = new MimoVerifySmsProvider();
 
