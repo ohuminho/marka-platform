@@ -2,7 +2,13 @@ import type { PhoneOtpDeliveryProvider, PhoneOtpDeliveryRequest, PhoneOtpDeliver
 interface MimoResponse { status?: string; id?: string; message_id?: string; request_id?: string; }
 export class MimoVerifySmsProvider implements PhoneOtpDeliveryProvider {
   readonly name = "mimo-verify";
+  assertReady(): void {
+    if (!process.env.MIMO_VERIFY_API_KEY || !process.env.MIMO_VERIFY_AUTH_HEADER_NAME || !process.env.MIMO_VERIFY_AUTH_HEADER_VALUE) {
+      throw new Error("MIMO Verify is disabled until credentials and its exact authentication contract are configured.");
+    }
+  }
   async send(request: PhoneOtpDeliveryRequest): Promise<PhoneOtpDeliveryResult> {
+    this.assertReady();
     const apiKey = process.env.MIMO_VERIFY_API_KEY;
     const headerName = process.env.MIMO_VERIFY_AUTH_HEADER_NAME;
     const headerValue = process.env.MIMO_VERIFY_AUTH_HEADER_VALUE;
