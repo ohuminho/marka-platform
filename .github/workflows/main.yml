@@ -57,6 +57,9 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      - name: Bootstrap Supabase Storage catalog for migrations
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/integration/bootstrap-supabase-storage.sql
+
       - name: Apply migrations to isolated PostgreSQL
         run: npx prisma migrate deploy
 
