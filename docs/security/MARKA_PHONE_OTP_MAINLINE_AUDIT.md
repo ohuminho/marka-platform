@@ -105,4 +105,13 @@ No production migration, production SMS request, provider credential, Supabase s
 - A rejected SMS delivery now consumes the associated challenge.
 - Unit tests are included in the production build command.
 
-The HTTP boundary is scaffolding, not an enabled user-facing phone verification feature. Phone change cannot complete until the MIMO adapter is implemented against a confirmed provider contract. The latest Vercel deployment for the current head was still queued at the time of this update; no passing build is claimed.
+The HTTP boundary is scaffolding, not an enabled user-facing phone verification feature. Phone change cannot complete until the MIMO adapter is implemented against a confirmed provider contract.
+
+### Concurrent rate-limit reservation hardening (2026-11-13)
+
+- The original count-then-create sequence allowed concurrent requests to read the same send counts and all pass the hourly caps/cooldown.
+- The service now acquires transaction-scoped PostgreSQL advisory locks for the normalized phone and hashed IP before checking limits and inserting the challenge.
+- Lock keys are deterministic and sorted before acquisition, avoiding inconsistent lock order/deadlocks when requests share either scope.
+- The challenge reservation commits before the external provider call; no database transaction is held open while waiting on SMS transport.
+- Unit coverage verifies deterministic, stable lock-key generation and distinct IP scopes.
+- This is code-level hardening, not proof of PostgreSQL concurrency behavior: isolated PostgreSQL integration tests remain a release gate. The current Preview/CI checks for this exact head are pending and no passing build is claimed.
