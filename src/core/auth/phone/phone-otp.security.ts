@@ -21,7 +21,7 @@ export function generatePhoneOtp(): string {
 }
 
 export function hashPhoneOtp(challengeId: string, code: string): string {
-  if (!/^\\d{6}$/.test(code)) {
+  if (!/^\d{6}$/.test(code)) {
     throw new Error("OTP must contain exactly six digits.");
   }
 
@@ -37,7 +37,7 @@ export function verifyPhoneOtp(
   code: string,
   expectedHash: string
 ): boolean {
-  if (!/^\\d{6}$/.test(code) || !/^[a-f0-9]{64}$/i.test(expectedHash)) {
+  if (!/^\d{6}$/.test(code) || !/^[a-f0-9]{64}$/i.test(expectedHash)) {
     return false;
   }
 
