@@ -8,6 +8,29 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum PhoneOtpPurpose {
+  SIGN_UP
+  PHONE_CHANGE
+  PASSWORD_RECOVERY
+  SENSITIVE_ACTION
+}
+
+enum PhoneOtpDeliveryState {
+  PENDING
+  ACCEPTED
+  REJECTED
+  UNKNOWN
+}
+
+enum PhoneOtpLedgerStatus {
+  REQUESTED
+  ACCEPTED
+  DELIVERED
+  FAILED
+  REJECTED
+  UNKNOWN
+}
+
 enum UserStatus {
   ACTIVE
   PENDING_VERIFICATION
@@ -816,6 +839,7 @@ model User {
   name            String
   email           String     @unique
   emailNormalized String     @unique
+  phoneE164       String?    @unique
   password        String     @map("password_hash")
   role            String     @default("CUSTOMER")
   isFounder       Boolean    @default(false)
@@ -828,6 +852,8 @@ model User {
   profile                 Profile?
   sessions                Session[]
   emailVerificationTokens EmailVerificationToken[]
+  phoneOtpChallenges       PhoneOtpChallenge[]
+  smsDeliveryLedger        SmsDeliveryLedger[]
   memberships             OrganizationMembership[]
   roles                   UserRole[]
 
@@ -868,6 +894,68 @@ model User {
 
   @@index([status])
   @@index([createdAt])
+}
+
+model PhoneOtpChallenge {
+  id                String                @id @default(uuid())
+  userId            String?
+  phoneE164         String
+  purpose           PhoneOtpPurpose
+  codeHash          String
+  expiresAt         DateTime
+  attemptCount      Int                   @default(0)
+  maxAttempts       Int                   @default(5)
+  resendCount       Int                   @default(0)
+  lastSentAt        DateTime              @default(now())
+  consumedAt        DateTime?
+  deliveryState     PhoneOtpDeliveryState @default(PENDING)
+  provider          String?
+  providerMessageId String?
+  requestIpHash     String?
+
+  user          User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  smsDeliveries SmsDeliveryLedger[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phoneE164, purpose, createdAt])
+  @@index([expiresAt])
+  @@index([userId])
+  @@index([deliveryState])
+}
+
+model SmsDeliveryLedger {
+  id                String              @id @default(uuid())
+  challengeId       String?
+  userId            String?
+  provider          String
+  destinationHash   String
+  countryCode       String?
+  requestIpHash     String?
+  status            PhoneOtpLedgerStatus @default(REQUESTED)
+  providerMessageId String?
+  currency          String              @default("AOA") @db.Char(3)
+  unitCost          Decimal?            @db.Decimal(12, 2)
+  requestedAt       DateTime            @default(now())
+  acceptedAt        DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  errorCode         String?
+  metadata          Json?
+
+  challenge PhoneOtpChallenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+  user      User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, requestedAt])
+  @@index([provider, providerMessageId])
+  @@index([destinationHash, requestedAt])
+  @@index([requestIpHash, requestedAt])
+  @@index([userId])
+  @@index([challengeId])
 }
 
 model Profile {
