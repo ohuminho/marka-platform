@@ -144,6 +144,37 @@ async function main(): Promise<void> {
       "challenge must be locked after the maximum number of attempts",
     );
 
+    const concurrentRequestPhone = "+244923000005";
+    const concurrentRequests = await Promise.allSettled([
+      service.request({
+        phone: concurrentRequestPhone,
+        purpose: "PHONE_CHANGE",
+        userId: user.id,
+        ipAddress: "192.0.2.14",
+      }),
+      service.request({
+        phone: concurrentRequestPhone,
+        purpose: "PHONE_CHANGE",
+        userId: user.id,
+        ipAddress: "192.0.2.14",
+      }),
+    ]);
+
+    assert.equal(
+      concurrentRequests.filter((entry) => entry.status === "fulfilled").length,
+      1,
+      "advisory locks must allow only one simultaneous request through the cooldown",
+    );
+    assert.equal(
+      concurrentRequests.filter(
+        (entry) =>
+          entry.status === "rejected" &&
+          entry.reason instanceof PhoneOtpRateLimitError,
+      ).length,
+      1,
+      "the concurrent request must be rate-limited after the first reservation commits",
+    );
+
     const concurrentPhone = "+244923000004";
     const concurrent = await service.request({
       phone: concurrentPhone,
