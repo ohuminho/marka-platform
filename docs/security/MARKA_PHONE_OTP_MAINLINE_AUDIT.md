@@ -95,3 +95,14 @@ Still not implemented:
 - Integration tests against an isolated PostgreSQL database and end-to-end regression suite.
 
 No production migration, production SMS request, provider credential, Supabase setting or deployment promotion has been performed. Vercel preview build/checks must pass after the latest commit before the PR can leave draft status.
+
+## Latest implementation increment
+
+- Corrected escaped validation expressions for E.164, email identifiers and six-digit OTPs.
+- Kept registration email-only while allowing the login field to accept email or international phone; this avoids presenting an unsupported phone-first registration flow.
+- Added authenticated phone-change request/verification HTTP boundaries. Verification is account-session-bound and uses the existing one-time challenge service.
+- SMS request endpoint deliberately returns `PHONE_OTP_DELIVERY_UNAVAILABLE` and does not create a challenge or attempt delivery. No MIMO protocol has been guessed or activated.
+- A rejected SMS delivery now consumes the associated challenge.
+- Unit tests are included in the production build command.
+
+The HTTP boundary is scaffolding, not an enabled user-facing phone verification feature. Phone change cannot complete until the MIMO adapter is implemented against a confirmed provider contract. The latest Vercel deployment for the current head was still queued at the time of this update; no passing build is claimed.
