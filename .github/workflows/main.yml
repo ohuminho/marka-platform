@@ -19,8 +19,27 @@ jobs:
   quality:
     name: Quality Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
-    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: marka_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d marka_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/marka_test?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/marka_test?schema=public
+      RUN_PHONE_OTP_INTEGRATION: "1"
 
     steps:
       - name: Checkout
@@ -38,11 +57,23 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      - name: Prepare mainline schema in isolated PostgreSQL
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
+          git show "${{ github.event.pull_request.base.sha }}:prisma/schema.prisma" > /tmp/marka-mainline-schema.prisma
+          npx prisma db push --schema=/tmp/marka-mainline-schema.prisma --skip-generate
+          PGPASSWORD=postgres psql -h localhost -U postgres -d marka_test -v ON_ERROR_STOP=1 -f prisma/migrations/20261113170000_add_marka_phone_otp_core/migration.sql
+
       - name: Lint
         run: npm run lint
 
       - name: Unit tests
         run: npm run test:unit
+
+      - name: MARKA phone OTP PostgreSQL integration tests
+        if: github.event_name == 'pull_request'
+        run: npm run test:integration:phone-otp
 
       - name: Production build
         run: npm run build
