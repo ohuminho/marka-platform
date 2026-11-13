@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
-import { prisma } from "@/database/client/prisma";
 import { normalizePhoneE164 } from "@/core/auth/phone/phone-number";
+import { prisma } from "@/database/client/prisma";
 
 const requestSchema = z.object({
   phone: z.string().trim().min(8).max(20),
@@ -42,19 +42,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "This phone number is already linked to your account." }, { status: 409 });
     }
 
-    // The MARKA OTP engine is ready, but SMS transport remains deliberately
-    // disabled until MIMO's authentication and response contract is verified.
-    if (!process.env.MIMO_VERIFY_API_KEY || !process.env.MIMO_VERIFY_AUTH_HEADER_NAME || !process.env.MIMO_VERIFY_AUTH_HEADER_VALUE) {
-      return NextResponse.json(
-        { message: "Phone verification is temporarily unavailable. Email sign-in remains available.", code: "PHONE_OTP_DELIVERY_UNAVAILABLE" },
-        { status: 503 },
-      );
-    }
-
-    // Do not guess MIMO's authentication protocol. Configuration alone does
-    // not activate delivery; a verified adapter must be installed first.
+    // Keep this boundary closed until the MIMO adapter has a verified
+    // authentication and response contract. Environment variables alone
+    // must never activate an unimplemented delivery path.
     return NextResponse.json(
-      { message: "Phone verification is not yet enabled.", code: "PHONE_OTP_DELIVERY_UNAVAILABLE" },
+      {
+        message: "Phone verification is not yet enabled. Email sign-in remains available.",
+        code: "PHONE_OTP_DELIVERY_UNAVAILABLE",
+      },
       { status: 503 },
     );
   } catch (error) {
