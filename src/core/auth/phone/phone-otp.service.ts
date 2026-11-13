@@ -10,6 +10,7 @@ import {
   PhoneOtpPurpose,
 } from "@/core/auth/phone/phone-otp.contracts";
 import { PhoneOtpPolicy } from "@/core/auth/phone/phone-otp.policy";
+import { getPhoneOtpRateLimitLockKeys } from "@/core/auth/phone/phone-otp.locks";
 import {
   generatePhoneOtp,
   hashPhoneOtp,
@@ -59,58 +60,77 @@ export class PhoneOtpService {
     const phoneE164 = normalizePhoneE164(input.phone);
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const ipAddressHash = input.ipAddress ? sha256(input.ipAddress) : undefined;
 
-    const [recentPhoneSends, recentIpSends, latestChallenge] = await Promise.all([
-      prisma.phoneOtpChallenge.count({
-        where: { phoneE164, createdAt: { gte: oneHourAgo } },
-      }),
-      input.ipAddress
-        ? prisma.phoneOtpChallenge.count({
-            where: {
-              requestIpHash: sha256(input.ipAddress),
-              createdAt: { gte: oneHourAgo },
-            },
-          })
-        : Promise.resolve(0),
-      prisma.phoneOtpChallenge.findFirst({
-        where: { phoneE164, purpose: input.purpose },
-        orderBy: { createdAt: "desc" },
-        select: { createdAt: true },
-      }),
-    ]);
+    // Serialize the complete check-and-reserve operation. A count followed by
+    // an insert outside a lock lets parallel requests all pass the same cap.
+    // PostgreSQL transaction-scoped advisory locks make the reservation
+    // atomic across application instances without holding a transaction open
+    // during the external SMS request.
+    const { challengeId, code, expiresAt } = await prisma.$transaction(async (tx) => {
+      const lockKeys = getPhoneOtpRateLimitLockKeys(phoneE164, ipAddressHash);
+      for (const lockKey of lockKeys) {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+      }
 
-    if (recentPhoneSends >= PhoneOtpPolicy.maxSendsPerPhonePerHour) {
-      throw new PhoneOtpRateLimitError();
-    }
-    if (input.ipAddress && recentIpSends >= PhoneOtpPolicy.maxSendsPerIpPerHour) {
-      throw new PhoneOtpRateLimitError();
-    }
-    if (
-      latestChallenge &&
-      now.getTime() - latestChallenge.createdAt.getTime() <
-        PhoneOtpPolicy.resendCooldownSeconds * 1000
-    ) {
-      throw new PhoneOtpRateLimitError();
-    }
+      const [recentPhoneSends, recentIpSends, latestChallenge] = await Promise.all([
+        tx.phoneOtpChallenge.count({
+          where: { phoneE164, createdAt: { gte: oneHourAgo } },
+        }),
+        ipAddressHash
+          ? tx.phoneOtpChallenge.count({
+              where: {
+                requestIpHash: ipAddressHash,
+                createdAt: { gte: oneHourAgo },
+              },
+            })
+          : Promise.resolve(0),
+        tx.phoneOtpChallenge.findFirst({
+          where: { phoneE164, purpose: input.purpose },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        }),
+      ]);
 
-    const challengeId = randomUUID();
-    const code = generatePhoneOtp();
-    const expiresAt = new Date(
-      now.getTime() + PhoneOtpPolicy.codeTtlSeconds * 1000,
-    );
+      if (recentPhoneSends >= PhoneOtpPolicy.maxSendsPerPhonePerHour) {
+        throw new PhoneOtpRateLimitError();
+      }
+      if (ipAddressHash && recentIpSends >= PhoneOtpPolicy.maxSendsPerIpPerHour) {
+        throw new PhoneOtpRateLimitError();
+      }
+      if (
+        latestChallenge &&
+        now.getTime() - latestChallenge.createdAt.getTime() <
+          PhoneOtpPolicy.resendCooldownSeconds * 1000
+      ) {
+        throw new PhoneOtpRateLimitError();
+      }
 
-    await prisma.phoneOtpChallenge.create({
-      data: {
-        id: challengeId,
-        userId: input.userId,
-        phoneE164,
-        purpose: input.purpose,
-        codeHash: hashPhoneOtp(challengeId, code),
-        expiresAt,
-        maxAttempts: PhoneOtpPolicy.maxAttemptsPerChallenge,
-        requestIpHash: input.ipAddress ? sha256(input.ipAddress) : undefined,
-        lastSentAt: now,
-      },
+      const reservedChallengeId = randomUUID();
+      const generatedCode = generatePhoneOtp();
+      const challengeExpiresAt = new Date(
+        now.getTime() + PhoneOtpPolicy.codeTtlSeconds * 1000,
+      );
+
+      await tx.phoneOtpChallenge.create({
+        data: {
+          id: reservedChallengeId,
+          userId: input.userId,
+          phoneE164,
+          purpose: input.purpose,
+          codeHash: hashPhoneOtp(reservedChallengeId, generatedCode),
+          expiresAt: challengeExpiresAt,
+          maxAttempts: PhoneOtpPolicy.maxAttemptsPerChallenge,
+          requestIpHash: ipAddressHash,
+          lastSentAt: now,
+        },
+      });
+
+      return {
+        challengeId: reservedChallengeId,
+        code: generatedCode,
+        expiresAt: challengeExpiresAt,
+      };
     });
 
     let delivery: PhoneOtpDeliveryResult;
@@ -246,4 +266,3 @@ export class PhoneOtpService {
     return { userId: challenge.userId };
   }
 }
-
