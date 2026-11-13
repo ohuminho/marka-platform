@@ -19,8 +19,27 @@ jobs:
   quality:
     name: Quality Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
-    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: marka_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d marka_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/marka_test?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/marka_test?schema=public
+      RUN_PHONE_OTP_INTEGRATION: "1"
 
     steps:
       - name: Checkout
@@ -38,11 +57,17 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      - name: Apply migrations to isolated PostgreSQL
+        run: npx prisma migrate deploy
+
       - name: Lint
         run: npm run lint
 
       - name: Unit tests
         run: npm run test:unit
+
+      - name: MARKA phone OTP PostgreSQL integration tests
+        run: npm run test:integration:phone-otp
 
       - name: Production build
         run: npm run build
