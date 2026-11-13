@@ -35,7 +35,6 @@ export class PhoneOtpService {
     const expiresAt = new Date(now.getTime() + PhoneOtpPolicy.codeTtlSeconds * 1000);
 
     const created = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(8675309)`;
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${"MARKA_OTP_MONTHLY_BUDGET"}))`;
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${phoneHash}))`;
       if (ipHash) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${ipHash}))`;
