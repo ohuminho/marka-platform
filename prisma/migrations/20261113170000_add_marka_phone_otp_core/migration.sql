@@ -8,13 +8,6 @@ CREATE TYPE "PhoneOtpPurpose" AS ENUM (
   'SENSITIVE_ACTION'
 );
 
-CREATE TYPE "PhoneOtpDeliveryState" AS ENUM (
-  'PENDING',
-  'ACCEPTED',
-  'REJECTED',
-  'UNKNOWN'
-);
-
 CREATE TYPE "PhoneOtpLedgerStatus" AS ENUM (
   'REQUESTED',
   'ACCEPTED',
