@@ -27,7 +27,7 @@ export function resolveLoginIdentifier(
   const email = value.toLowerCase();
   if (
     email.length > 320 ||
-    !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   ) {
     return null;
   }
