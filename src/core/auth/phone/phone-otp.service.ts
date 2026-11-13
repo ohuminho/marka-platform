@@ -64,7 +64,7 @@ export class PhoneOtpService {
         challengeId = challenge.id;
         await tx.$executeRaw`
           UPDATE "PhoneOtpChallenge" SET "codeHash" = ${hashPhoneOtp(challengeId, code)},
-            "resendCount" = "resendCount" + 1, "lastSentAt" = ${now},
+            "resendCount" = "resendCount" + 1, "lastSentAt" = ${now}, "expiresAt" = ${expiresAt},
             "deliveryState" = 'PENDING', "providerMessageId" = NULL, "updatedAt" = ${now}
           WHERE "id" = ${challengeId}
         `;
@@ -94,10 +94,10 @@ export class PhoneOtpService {
       const result = await provider.send({ recipientE164: phone, code, expiresInSeconds: PhoneOtpPolicy.codeTtlSeconds, idempotencyKey: created.challengeId });
       const deliveredAt = new Date();
       await prisma.$executeRaw`
-        UPDATE "PhoneOtpChallenge" SET "deliveryState" = ${result.status}, "providerMessageId" = ${result.providerMessageId ?? null}, "updatedAt" = ${deliveredAt} WHERE "id" = ${created.challengeId}
+        UPDATE "PhoneOtpChallenge" SET "deliveryState" = CAST(${result.status} AS "PhoneOtpDeliveryState"), "providerMessageId" = ${result.providerMessageId ?? null}, "updatedAt" = ${deliveredAt} WHERE "id" = ${created.challengeId}
       `;
       await prisma.$executeRaw`
-        UPDATE "SmsDeliveryLedger" SET "status" = ${result.status}, "providerMessageId" = ${result.providerMessageId ?? null},
+        UPDATE "SmsDeliveryLedger" SET "status" = CAST(${result.status} AS "PhoneOtpLedgerStatus"), "providerMessageId" = ${result.providerMessageId ?? null},
           "acceptedAt" = CASE WHEN ${result.status} = 'ACCEPTED' THEN ${deliveredAt} ELSE NULL END,
           "failedAt" = CASE WHEN ${result.status} = 'REJECTED' THEN ${deliveredAt} ELSE NULL END,
           "updatedAt" = ${deliveredAt} WHERE "challengeId" = ${created.challengeId} AND "status" = 'REQUESTED'
