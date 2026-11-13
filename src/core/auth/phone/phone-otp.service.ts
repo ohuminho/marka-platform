@@ -25,6 +25,7 @@ function validPurpose(value: string): value is PhoneOtpPurpose {
 export class PhoneOtpService {
   async request(input: { phone: string; purpose: string; ipAddress?: string }): Promise<{ challengeId: string; expiresAt: Date }> {
     const phone = normalizePhoneE164(input.phone);
+    provider.assertReady();
     if (!validPurpose(input.purpose)) throw new Error("Unsupported OTP purpose.");
     const purpose = input.purpose;
     const ipHash = input.ipAddress ? digest("ip:" + input.ipAddress) : null;
@@ -34,6 +35,7 @@ export class PhoneOtpService {
     const expiresAt = new Date(now.getTime() + PhoneOtpPolicy.codeTtlSeconds * 1000);
 
     const created = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(8675309)`;
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${phoneHash}))`;
       if (ipHash) await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${ipHash}))`;
 
@@ -64,7 +66,7 @@ export class PhoneOtpService {
         challengeId = challenge.id;
         await tx.$executeRaw`
           UPDATE "PhoneOtpChallenge" SET "codeHash" = ${hashPhoneOtp(challengeId, code)},
-            "resendCount" = "resendCount" + 1, "lastSentAt" = ${now}, "expiresAt" = ${expiresAt},
+            "resendCount" = "resendCount" + 1, "attemptCount" = 0, "lastSentAt" = ${now}, "expiresAt" = ${expiresAt},
             "deliveryState" = 'PENDING', "providerMessageId" = NULL, "updatedAt" = ${now}
           WHERE "id" = ${challengeId}
         `;
