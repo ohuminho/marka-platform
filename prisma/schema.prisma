@@ -8,6 +8,30 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+
+enum PhoneOtpPurpose {
+  SIGN_UP
+  PHONE_CHANGE
+  PASSWORD_RECOVERY
+  SENSITIVE_ACTION
+}
+
+enum PhoneOtpDeliveryState {
+  PENDING
+  ACCEPTED
+  REJECTED
+  UNKNOWN
+}
+
+enum PhoneOtpLedgerStatus {
+  REQUESTED
+  ACCEPTED
+  DELIVERED
+  FAILED
+  REJECTED
+  UNKNOWN
+}
+
 enum UserStatus {
   ACTIVE
   PENDING_VERIFICATION
@@ -823,11 +847,13 @@ model User {
 
   emailVerifiedAt DateTime?
   phoneVerifiedAt DateTime?
+  phoneE164       String?    @unique
   lastLoginAt     DateTime?
 
   profile                 Profile?
   sessions                Session[]
   emailVerificationTokens EmailVerificationToken[]
+  phoneOtpChallenges PhoneOtpChallenge[]
   memberships             OrganizationMembership[]
   roles                   UserRole[]
 
@@ -868,6 +894,57 @@ model User {
 
   @@index([status])
   @@index([createdAt])
+}
+
+
+model PhoneOtpChallenge {
+  id             String          @id @default(uuid())
+  userId         String?
+  phoneE164      String
+  purpose        PhoneOtpPurpose
+  codeHash       String
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  attempts       Int             @default(0)
+  maxAttempts    Int             @default(5)
+  lastSentAt     DateTime        @default(now())
+  requestIpHash  String?
+  idempotencyKey String?         @unique
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries SmsDeliveryLedger[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phoneE164, purpose, createdAt])
+  @@index([userId, purpose, createdAt])
+  @@index([expiresAt, consumedAt])
+}
+
+model SmsDeliveryLedger {
+  id                String                 @id @default(uuid())
+  challengeId       String?
+  provider          String
+  status            PhoneOtpLedgerStatus   @default(REQUESTED)
+  providerMessageId String?
+  destinationHash   String
+  costMinor         BigInt?
+  currency          String                 @default("AOA") @db.Char(3)
+  acceptedAt        DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  errorCode         String?
+  metadata          Json?
+
+  challenge PhoneOtpChallenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([provider, createdAt])
+  @@index([destinationHash, createdAt])
 }
 
 model Profile {
