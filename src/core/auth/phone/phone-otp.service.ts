@@ -112,34 +112,14 @@ export class PhoneOtpService {
       },
     });
 
+    let delivery;
     try {
-      const delivery = await this.provider.send({
+      delivery = await this.provider.send({
         recipientE164: phoneE164,
         code,
         expiresInSeconds: PhoneOtpPolicy.codeTtlSeconds,
         idempotencyKey: challengeId,
       });
-
-      await prisma.smsDeliveryLedger.create({
-        data: {
-          challengeId,
-          provider: delivery.provider,
-          status:
-            delivery.status === "ACCEPTED"
-              ? "ACCEPTED"
-              : delivery.status === "REJECTED"
-                ? "REJECTED"
-                : "UNKNOWN",
-          providerMessageId: delivery.providerMessageId,
-          destinationHash: sha256(phoneE164),
-          acceptedAt: delivery.status === "ACCEPTED" ? new Date() : undefined,
-          errorCode: delivery.providerStatus,
-        },
-      });
-
-      if (delivery.status === "REJECTED") {
-        throw new Error("SMS provider rejected the delivery request.");
-      }
     } catch (error) {
       await prisma.smsDeliveryLedger.create({
         data: {
@@ -150,8 +130,28 @@ export class PhoneOtpService {
           errorCode: "PROVIDER_RESULT_UNKNOWN",
         },
       }).catch(() => undefined);
-
       throw error;
+    }
+
+    await prisma.smsDeliveryLedger.create({
+      data: {
+        challengeId,
+        provider: delivery.provider,
+        status:
+          delivery.status === "ACCEPTED"
+            ? "ACCEPTED"
+            : delivery.status === "REJECTED"
+              ? "REJECTED"
+              : "UNKNOWN",
+        providerMessageId: delivery.providerMessageId,
+        destinationHash: sha256(phoneE164),
+        acceptedAt: delivery.status === "ACCEPTED" ? new Date() : undefined,
+        errorCode: delivery.providerStatus,
+      },
+    });
+
+    if (delivery.status === "REJECTED") {
+      throw new Error("SMS provider rejected the delivery request.");
     }
 
     return { challengeId, expiresAt };
@@ -199,31 +199,38 @@ export class PhoneOtpService {
       throw new PhoneOtpInvalidError();
     }
 
-    const consumed = await prisma.phoneOtpChallenge.updateMany({
-      where: {
-        id: challenge.id,
-        consumedAt: null,
-        expiresAt: { gt: new Date() },
-        attempts: { lt: challenge.maxAttempts },
-        codeHash: challenge.codeHash,
-      },
-      data: { consumedAt: new Date() },
-    });
-
-    if (consumed.count !== 1) {
-      throw new PhoneOtpInvalidError();
-    }
-
-    if (challenge.userId) {
+    try {
       await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: challenge.userId! },
-          data: {
-            phoneE164,
-            phoneVerifiedAt: new Date(),
+        const consumed = await tx.phoneOtpChallenge.updateMany({
+          where: {
+            id: challenge.id,
+            consumedAt: null,
+            expiresAt: { gt: new Date() },
+            attempts: { lt: challenge.maxAttempts },
+            codeHash: challenge.codeHash,
           },
+          data: { consumedAt: new Date() },
         });
+
+        if (consumed.count !== 1) {
+          throw new PhoneOtpInvalidError();
+        }
+
+        if (challenge.userId) {
+          await tx.user.update({
+            where: { id: challenge.userId },
+            data: {
+              phoneE164,
+              phoneVerifiedAt: new Date(),
+            },
+          });
+        }
       });
+    } catch (error) {
+      if (error instanceof PhoneOtpInvalidError) throw error;
+      // Includes a unique-phone conflict. The transaction rolls back, so
+      // the challenge remains unconsumed and no partial identity is written.
+      throw new PhoneOtpInvalidError();
     }
 
     return { userId: challenge.userId };
