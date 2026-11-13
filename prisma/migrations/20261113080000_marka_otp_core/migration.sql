@@ -16,7 +16,7 @@ CONSTRAINT "PhoneOtpChallenge_userId_fkey" FOREIGN KEY ("userId") REFERENCES "Us
 );
 CREATE TABLE "SmsDeliveryLedger" (
 "id" TEXT NOT NULL, "challengeId" TEXT, "userId" TEXT, "provider" TEXT NOT NULL, "destinationHash" TEXT NOT NULL,
-"countryCode" TEXT, "status" "PhoneOtpLedgerStatus" NOT NULL DEFAULT 'REQUESTED', "providerMessageId" TEXT,
+"countryCode" TEXT, "requestIpHash" TEXT, "status" "PhoneOtpLedgerStatus" NOT NULL DEFAULT 'REQUESTED', "providerMessageId" TEXT,
 "currency" CHAR(3) NOT NULL DEFAULT 'AOA', "unitCost" DECIMAL(12,2), "requestedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 "acceptedAt" TIMESTAMP(3), "deliveredAt" TIMESTAMP(3), "failedAt" TIMESTAMP(3), "errorCode" TEXT, "metadata" JSONB,
 "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL,
