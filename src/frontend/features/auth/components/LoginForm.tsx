@@ -257,13 +257,13 @@ export default function LoginForm() {
 
         <input
           type="text"
-          placeholder="E-mail ou telemóvel (+244...)"
+          placeholder={isRegistering ? "E-mail" : "E-mail ou telemóvel (+244...)"}
           value={email}
           onChange={(event) =>
             setEmail(event.target.value)
           }
           required
-          autoComplete="email"
+          autoComplete={isRegistering ? "email" : "username"}
           className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
         />
 
