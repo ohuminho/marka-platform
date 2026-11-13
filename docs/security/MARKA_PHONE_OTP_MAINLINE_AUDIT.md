@@ -75,6 +75,21 @@ Do not copy the old LoginForm/auth client changes without reconciling the curren
 - Feature-flagged staging before any production migration.
 - Production SMS requires a separate explicit activation approval.
 
-## Current status
+## Current status (updated during implementation)
 
-This branch contains this audit only. No production code, database schema, secrets, provider credentials, Supabase settings or production deployments have been changed.
+The mainline branch now contains the first implementation increment:
+- Additive Prisma schema for nullable unique `User.phoneE164`, OTP challenges and SMS delivery ledger.
+- Matching additive PostgreSQL migration file (not applied to any database).
+- E.164 normalization, email/phone identifier parser, CSPRNG/HMAC primitives and policy defaults.
+- Provider-independent SMS transport contract.
+- Persistence service with phone/IP hourly send caps, cooldown, challenge expiry, attempt limits, exact account-context matching and transactional one-time consumption.
+- Unit tests for the pure crypto, normalization and identifier functions.
+
+Still not implemented:
+- HTTP request/verify/resend endpoints and frontend wiring.
+- Phone login, phone-first signup, phone recovery and phone-change workflows.
+- Concrete MIMO adapter activation; provider auth/response/idempotency contract remains unconfirmed.
+- Monthly spend enforcement based on a verified tariff and reliable cost source.
+- Integration tests against an isolated PostgreSQL database and end-to-end regression suite.
+
+No production migration, production SMS request, provider credential, Supabase setting or deployment promotion has been performed. Vercel preview build/checks must pass after the latest commit before the PR can leave draft status.
