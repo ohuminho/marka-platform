@@ -27,6 +27,8 @@ class CapturingProvider implements PhoneOtpDeliveryProvider {
 }
 
 async function main(): Promise<void> {
+  process.env.PHONE_OTP_PEPPER ??= "integration-only-pepper-not-a-production-secret-0001";
+
   if (!process.env.DATABASE_URL || !process.env.RUN_PHONE_OTP_INTEGRATION) {
     throw new Error(
       "This test requires an isolated PostgreSQL DATABASE_URL and RUN_PHONE_OTP_INTEGRATION=1.",
