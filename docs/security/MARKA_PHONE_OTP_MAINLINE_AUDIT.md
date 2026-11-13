@@ -83,11 +83,13 @@ The mainline branch now contains the first implementation increment:
 - E.164 normalization, email/phone identifier parser, CSPRNG/HMAC primitives and policy defaults.
 - Provider-independent SMS transport contract.
 - Persistence service with phone/IP hourly send caps, cooldown, challenge expiry, attempt limits, exact account-context matching and transactional one-time consumption.
+- Login API now accepts `identifier` while preserving the legacy `email` request field; verified phone identities are looked up by E.164 and still require the existing password.
+- Login form accepts an email address or international phone number.
 - Unit tests for the pure crypto, normalization and identifier functions.
 
 Still not implemented:
-- HTTP request/verify/resend endpoints and frontend wiring.
-- Phone login, phone-first signup, phone recovery and phone-change workflows.
+- HTTP request/verify/resend endpoints and frontend wiring for OTP enrolment.
+- Phone-first signup, phone recovery and phone-change workflows.
 - Concrete MIMO adapter activation; provider auth/response/idempotency contract remains unconfirmed.
 - Monthly spend enforcement based on a verified tariff and reliable cost source.
 - Integration tests against an isolated PostgreSQL database and end-to-end regression suite.
