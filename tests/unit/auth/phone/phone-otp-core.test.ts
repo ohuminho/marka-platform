@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { normalizePhoneE164 } from "../../../../src/core/auth/phone/phone-number";
 import { resolveLoginIdentifier } from "../../../../src/core/auth/phone/login-identifier";
+import { getPhoneOtpRateLimitLockKeys } from "../../../../src/core/auth/phone/phone-otp.locks";
 import {
   generatePhoneOtp,
   hashPhoneOtp,
@@ -42,5 +43,23 @@ assert.deepEqual(resolveLoginIdentifier("+244 923 456 789"), {
 assert.equal(resolveLoginIdentifier("+244 123"), null);
 assert.equal(resolveLoginIdentifier("not-an-email"), null);
 assert.equal(resolveLoginIdentifier(null), null);
+
+const phoneLockOnly = getPhoneOtpRateLimitLockKeys("+244923456789");
+assert.deepEqual(phoneLockOnly, ["marka:phone-otp:phone:+244923456789"]);
+
+const scopedLocks = getPhoneOtpRateLimitLockKeys(
+  "+244923456789",
+  "a".repeat(64),
+);
+assert.equal(scopedLocks.length, 2);
+assert.deepEqual(scopedLocks, [...scopedLocks].sort());
+assert.deepEqual(
+  getPhoneOtpRateLimitLockKeys("+244923456789", "a".repeat(64)),
+  scopedLocks,
+);
+assert.notDeepEqual(
+  getPhoneOtpRateLimitLockKeys("+244923456789", "b".repeat(64)),
+  scopedLocks,
+);
 
 console.log("MARKA phone OTP core unit tests passed.");
