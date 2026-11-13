@@ -70,7 +70,7 @@ export class PhoneOtpService {
     const { challengeId, code, expiresAt } = await prisma.$transaction(async (tx) => {
       const lockKeys = getPhoneOtpRateLimitLockKeys(phoneE164, ipAddressHash);
       for (const lockKey of lockKeys) {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))::text`;
       }
 
       const [recentPhoneSends, recentIpSends, latestChallenge] = await Promise.all([
