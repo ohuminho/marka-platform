@@ -169,7 +169,7 @@ export class PhoneOtpService {
         id: input.challengeId,
         phoneE164,
         purpose: input.purpose,
-        ...(input.userId ? { userId: input.userId } : {}),
+        userId: input.userId ?? null,
         consumedAt: null,
         expiresAt: { gt: new Date() },
         attempts: { lt: PhoneOtpPolicy.maxAttemptsPerChallenge },
