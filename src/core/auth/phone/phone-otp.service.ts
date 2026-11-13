@@ -160,7 +160,7 @@ export class PhoneOtpService {
 
   async verify(input: VerifyPhoneOtpInput): Promise<{ userId: string | null }> {
     const phoneE164 = normalizePhoneE164(input.phone);
-    if (!/^\\d{6}$/.test(input.code)) {
+    if (!/^\d{6}$/.test(input.code)) {
       throw new PhoneOtpInvalidError();
     }
 
