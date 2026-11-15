@@ -25,50 +25,7 @@ type Product = {
   status: string;
   category?: { id: string; name: string } | null;
 };
-const categories = [
-  "Eletrónica", "Moda e acessórios", "Casa e jardim", "Alimentação e mercearia",
-  "Beleza e cuidados", "Desporto e lazer", "Livros e media", "Automóveis",
-  "Motociclos", "Imóveis e arrendamento",
-  "Indústria e produção", "Agricultura e agropecuária", "Materiais de construção e ferragens",
-  "Iluminação e material elétrico", "Portas, janelas e carpintaria", "Calçado", "Mobiliário e decoração",
-  "Equipamentos e máquinas", "Embalagens e consumíveis", "Água e bebidas", "Produtos por atacado",
-  "Serviços — Eventos e festas", "Serviços — Música e entretenimento", "Serviços — Catering e cozinha",
-  "Serviços — Decoração, som e iluminação", "Serviços — Fotografia e vídeo", "Serviços — Casa e manutenção",
-  "Serviços — Beleza e bem-estar", "Serviços — Limpeza e apoio", "Serviços — Educação e formação",
-  "Serviços — Tecnologia e profissionais", "Serviços — Outros",
-  "Lojas de bairro", "Outros",
-  "Energia solar e soluções energéticas", "Carreira e currículos",
-  "Materiais de construção — Areia",
-  "Materiais de construção — Burgau e burgalho",
-  "Materiais de construção — Brita e agregados",
-  "Materiais de construção — Cimento, cal e argamassas",
-  "Materiais de construção — Blocos e pavês",
-  "Materiais de construção — Tijolos",
-  "Materiais de construção — Telhas e coberturas",
-  "Materiais de construção — Chapas de zinco e perfis",
-  "Materiais de construção — Ferro, aço e varões",
-  "Materiais de construção — Tintas e impermeabilização",
-  "Materiais de construção — Tubos e canalização",
-  "Materiais de construção — Cerâmica e sanitários",
-  "Materiais de construção — Vidros e caixilharia",
-  "Metalurgia e transformação de metais",
-  "Metalurgia — Serralharia e estruturas metálicas",
-  "Metalurgia — Alumínio e inox",
-  "Metalurgia — Chapas, perfis e tubos metálicos",
-  "Serviços — Construção civil e empreitadas",
-  "Serviços — Pedreiros e alvenaria",
-  "Serviços — Telhados e coberturas",
-  "Serviços — Pintura e acabamentos",
-  "Eletrónica — Telemóveis e acessórios",
-  "Eletrónica — Computadores e informática",
-  "Eletrónica — Televisores, áudio e vídeo",
-  "Eletrónica — Eletrodomésticos",
-  "Eletrónica — Componentes e acessórios",
-  "Equipamentos — Máquinas de construção",
-  "Equipamentos — Ferramentas profissionais",
-  "Indústria — Matérias-primas e consumíveis",
-  "Indústria — Peças e manutenção industrial",
-];
+
 
 const productTypesByCategory: Record<string, string[]> = {
   "Eletrónica": ["Telemóveis", "Computadores", "Tablets", "Televisores", "Áudio", "Acessórios informáticos", "Impressoras", "Câmaras", "Componentes eletrónicos", "Outros"],
@@ -153,6 +110,7 @@ const serviceTypesByCategory: Record<string, string[]> = {
 const productUnits = ["Unidade", "Conjunto", "Caixa", "Saco", "Pacote", "Quilograma (kg)", "Tonelada (t)", "Litro (L)", "Metro cúbico (m³)", "Metro (m)", "Metro quadrado (m²)", "Rolo", "Palete", "Bidão de 20 L", "Garrafão de 20 L", "Tanque de 1.000 L", "Cisterna", "Outro"];
 
 export default function VendorProductsPage() {
+  const [categories, setCategories] = useState<string[]>(["Outros"]);
   const [vendor, setVendor] = useState<SellerStore | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,6 +148,27 @@ export default function VendorProductsPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/marketplace/categories", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar as categorias.");
+        return await response.json() as { categories?: { id: string; name: string }[] };
+      })
+      .then((data) => {
+        if (!cancelled) {
+          const names = Array.isArray(data.categories)
+            ? data.categories.map((category) => category.name).filter((name) => typeof name === "string" && name.trim().length > 0)
+            : [];
+          setCategories(names.length ? names : ["Outros"]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCategories(["Outros"]);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
