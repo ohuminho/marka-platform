@@ -76,3 +76,40 @@ export async function POST(request: Request) {
     { headers: { "Cache-Control": "private, no-store, max-age=0" } },
   );
 }
+
+export async function DELETE(request: Request) {
+  const auth = await authenticateMobilityRequest(request);
+  if (!auth.ok) return auth.response;
+
+  const provider = await prisma.freightProvider.findUnique({
+    where: {
+      organizationId_userId: {
+        organizationId: auth.session.organizationId,
+        userId: auth.session.userId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!provider) {
+    return NextResponse.json(
+      { message: "Prestador não encontrado.", code: "FREIGHT_PROVIDER_NOT_FOUND" },
+      { status: 404 },
+    );
+  }
+
+  await prisma.freightProvider.update({
+    where: { id: provider.id },
+    data: {
+      currentLatitude: null,
+      currentLongitude: null,
+      locationUpdatedAt: null,
+      locationAccuracyM: null,
+    },
+  });
+
+  return NextResponse.json(
+    { ok: true },
+    { headers: { "Cache-Control": "private, no-store, max-age=0" } },
+  );
+}
