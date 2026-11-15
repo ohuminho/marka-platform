@@ -146,5 +146,6 @@ export async function GET(request: Request) {
   return NextResponse.json({
     requests: eligibleRequests.map(serialize),
     assignedRequests: assignedRequests.map(serialize),
+    message: locationReady ? undefined : "Active a partilha de GPS com boa precisão para receber pedidos próximos.",
   });
 }
