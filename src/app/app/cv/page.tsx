@@ -192,7 +192,7 @@ export default function MarkaCvPage() {
               <div className="absolute bottom-5 left-0 right-0 text-center text-[8px] uppercase tracking-[0.2em] text-[#999]">Criado com MARKA CV</div>
             </div>
           </div>
-          <p className="text-[11px] leading-5 text-[var(--theme-text-faint)]">Os dados do currículo ficam privados na sua conta. Reveja sempre a informação antes de enviar uma candidatura. A MARKA não inventa experiência ou qualificações.</p>
+          <p className="text-[11px] leading-5 text-[var(--theme-text-faint)]">O conteúdo é processado apenas nesta sessão do navegador e não é guardado nos servidores da MARKA. Depois de exportar, guarde o PDF no seu dispositivo. Ao criar outro currículo ou fechar/atualizar a página, o conteúdo em edição será perdido. Reveja sempre os dados antes de enviar uma candidatura.</p>
         </aside>
       </div>
     </main>
