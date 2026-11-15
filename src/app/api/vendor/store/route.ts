@@ -56,6 +56,7 @@ export async function PATCH(request: Request) {
           logo: input.logo || null,
           banner: input.banner || null,
           location: input.location || null,
+          isIndividualListing: false,
         },
       });
       await tx.vendor.update({
@@ -75,7 +76,7 @@ export async function PATCH(request: Request) {
         location: updated.location,
         status: updated.status,
       },
-      message: "Perfil público da loja atualizado.",
+      message: "Perfil público da loja atualizado. O perfil individual passou a funcionar como loja.",
     });
   } catch (error) {
     console.error("[VENDOR_STORE_PROFILE_PATCH]", error);
