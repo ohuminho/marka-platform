@@ -141,6 +141,12 @@ export async function POST(request: Request) {
 
     const input = parsed.data;
     const categoryName = input.categoryName.toLocaleLowerCase();
+    if (["seguros e proteção", "eventos e bilhética"].includes(categoryName)) {
+      return NextResponse.json({
+        message: "Esta categoria exige um fluxo próprio de autorização e validação antes de aceitar anúncios.",
+        code: "CATEGORY_REQUIRES_SPECIALIZED_ONBOARDING",
+      }, { status: 403 });
+    }
     const isServiceCategory = categoryName.startsWith("serviços");
     const isPropertyCategory = categoryName === "imóveis e arrendamento";
     if (isServiceCategory && !input.serviceType.trim()) {
