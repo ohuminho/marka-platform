@@ -7,7 +7,6 @@ import {
   canAcceptFreightAlongsideActiveAssignments,
 } from "@/freight-engine/freight-provider-availability";
 import {
-  FREIGHT_PROVIDER_LOCATION_MAX_AGE_MS,
   isFreightProviderLocationFresh,
   isWithinFreightPickupRadius,
 } from "@/freight-engine/freight-proximity";
