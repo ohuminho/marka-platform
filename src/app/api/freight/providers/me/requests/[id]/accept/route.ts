@@ -30,7 +30,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const freight = await prisma.freightRequest.findFirst({ where: { id, organizationId: auth.session.organizationId } });
   if (!freight) return NextResponse.json({ message: "Pedido não encontrado.", code: "FREIGHT_REQUEST_NOT_FOUND" }, { status: 404 });
-  if (!provider.serviceTypes.includes(freight.requestType) || !compatibleKinds[freight.requestType].includes(vehicle.kind as never)) {
+  const freightDetails = freight.details && typeof freight.details === "object" ? freight.details as Record<string, unknown> : {};
+  const requestedVehicleKind = typeof freightDetails.vehiclePreference === "string" ? freightDetails.vehiclePreference : null;
+  if (!provider.serviceTypes.includes(freight.requestType) || !compatibleKinds[freight.requestType].includes(vehicle.kind as never) || (requestedVehicleKind && requestedVehicleKind !== "ANY" && vehicle.kind !== requestedVehicleKind)) {
     return NextResponse.json({ message: "A viatura não é compatível com este serviço.", code: "INCOMPATIBLE_FREIGHT_VEHICLE" }, { status: 409 });
   }
   if (!freight.paidAt || !["PAID", "SEARCHING_PROVIDER"].includes(freight.status)) {

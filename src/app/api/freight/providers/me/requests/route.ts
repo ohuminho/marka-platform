@@ -38,6 +38,8 @@ export async function GET(request: Request) {
 
   const matched = requests.filter((item) => provider.vehicles.some((vehicle) => {
     if (!compatibleKinds[item.requestType].includes(vehicle.kind as never)) return false;
+    const requestDetails = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
+    if (typeof requestDetails.vehiclePreference === "string" && requestDetails.vehiclePreference !== "ANY" && vehicle.kind !== requestDetails.vehiclePreference) return false;
     if (item.requestType !== "WATER_DELIVERY") return true;
     const details = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
     if (vehicle.waterType !== details.waterType) return false;
