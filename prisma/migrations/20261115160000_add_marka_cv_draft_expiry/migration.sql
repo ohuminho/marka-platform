@@ -16,3 +16,6 @@ ALTER TABLE "MarkaCvDraft"
 ADD CONSTRAINT "MarkaCvDraft_userId_fkey"
 FOREIGN KEY ("userId") REFERENCES "User"("id")
 ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Protect temporary CV drafts from direct API access.
+ALTER TABLE "MarkaCvDraft" ENABLE ROW LEVEL SECURITY;
