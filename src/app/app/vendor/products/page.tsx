@@ -25,19 +25,7 @@ type Product = {
   status: string;
   category?: { id: string; name: string } | null;
 };
-const categories = [
-  "Eletrónica", "Moda e acessórios", "Casa e jardim", "Alimentação e mercearia",
-  "Beleza e cuidados", "Desporto e lazer", "Livros e media", "Automóveis",
-  "Motociclos", "Imóveis e arrendamento",
-  "Indústria e produção", "Agricultura e agropecuária", "Materiais de construção e ferragens",
-  "Iluminação e material elétrico", "Portas, janelas e carpintaria", "Calçado", "Mobiliário e decoração",
-  "Equipamentos e máquinas", "Embalagens e consumíveis", "Água e bebidas", "Produtos por atacado",
-  "Serviços — Eventos e festas", "Serviços — Música e entretenimento", "Serviços — Catering e cozinha",
-  "Serviços — Decoração, som e iluminação", "Serviços — Fotografia e vídeo", "Serviços — Casa e manutenção",
-  "Serviços — Beleza e bem-estar", "Serviços — Limpeza e apoio", "Serviços — Educação e formação",
-  "Serviços — Tecnologia e profissionais", "Serviços — Outros",
-  "Lojas de bairro", "Outros",
-];
+
 
 const productTypesByCategory: Record<string, string[]> = {
   "Eletrónica": ["Telemóveis", "Computadores", "Tablets", "Televisores", "Áudio", "Acessórios informáticos", "Impressoras", "Câmaras", "Componentes eletrónicos", "Outros"],
@@ -73,6 +61,34 @@ const productTypesByCategory: Record<string, string[]> = {
   "Equipamentos e máquinas": ["Máquinas industriais", "Equipamentos agrícolas", "Bombas de água", "Motores", "Compressores", "Geradores", "Ferramentas elétricas", "Equipamentos de oficina", "Peças e acessórios", "Outros"],
   "Indústria e produção": ["Produtos fabricados", "Matéria-prima", "Peças industriais", "Produtos metalúrgicos", "Produtos químicos autorizados", "Cerâmica", "Plásticos", "Produtos transformados", "Outros"],
   "Produtos por atacado": ["Alimentação", "Bebidas", "Higiene e limpeza", "Material escolar", "Material elétrico", "Construção", "Vestuário", "Calçado", "Embalagens", "Outros"],
+  "Energia solar e soluções energéticas": ["Painéis solares", "Inversores", "Baterias", "Controladores", "Kits solares", "Sistemas de bombagem solar", "Instalação solar", "Outros"],
+  "Carreira e currículos": ["Modelo de currículo", "Criação de currículo", "Revisão de currículo", "Carta de apresentação", "Serviços de carreira", "Outros"],
+  "Materiais de construção — Areia": ["Areia fina", "Areia grossa", "Areia lavada", "Areia de construção", "Outros tipos de areia"],
+  "Materiais de construção — Burgau e burgalho": ["Burgau", "Burgalho", "Saibro", "Agregado para aterro", "Outros agregados"],
+  "Materiais de construção — Brita e agregados": ["Brita 0", "Brita 1", "Brita 2", "Brita graduada", "Pedra rachão", "Tout-venant", "Outros agregados"],
+  "Materiais de construção — Cimento, cal e argamassas": ["Cimento", "Cal", "Argamassa", "Betão pronto", "Aditivos", "Gesso", "Outros"],
+  "Materiais de construção — Blocos e pavês": ["Blocos de cimento", "Blocos de vedação", "Blocos estruturais", "Pavês", "Lancis", "Elementos pré-fabricados", "Outros"],
+  "Materiais de construção — Tijolos": ["Tijolo cerâmico", "Tijolo maciço", "Tijolo furado", "Tijolo refratário", "Outros"],
+  "Materiais de construção — Telhas e coberturas": ["Telhas cerâmicas", "Telhas de fibrocimento", "Telhas metálicas", "Painéis sandwich", "Cumeeiras", "Acessórios de cobertura", "Outros"],
+  "Materiais de construção — Chapas de zinco e perfis": ["Chapa de zinco", "Chapa galvanizada", "Chapa trapezoidal", "Chapa lisa", "Perfis metálicos", "Rufos e cumeeiras", "Outros"],
+  "Materiais de construção — Ferro, aço e varões": ["Varão de aço", "Ferro de construção", "Malha electrossoldada", "Vigas e perfis", "Arame", "Outros"],
+  "Materiais de construção — Tintas e impermeabilização": ["Tintas", "Primários", "Vernizes", "Impermeabilizantes", "Membranas", "Colas e selantes", "Outros"],
+  "Materiais de construção — Tubos e canalização": ["Tubos PVC", "Tubos PPR", "Tubos PEAD", "Conexões", "Válvulas", "Bombas", "Acessórios", "Outros"],
+  "Materiais de construção — Cerâmica e sanitários": ["Pavimentos", "Revestimentos", "Azulejos", "Sanitas", "Lavatórios", "Bases de duche", "Torneiras", "Outros"],
+  "Materiais de construção — Vidros e caixilharia": ["Vidro simples", "Vidro temperado", "Vidro laminado", "Janelas", "Caixilharia de alumínio", "Acessórios", "Outros"],
+  "Metalurgia e transformação de metais": ["Produtos metalúrgicos", "Chapas metálicas", "Perfis", "Tubos metálicos", "Peças fabricadas", "Outros"],
+  "Metalurgia — Serralharia e estruturas metálicas": ["Portões", "Grades", "Estruturas metálicas", "Coberturas metálicas", "Guardas", "Trabalhos por medida", "Outros"],
+  "Metalurgia — Alumínio e inox": ["Perfis de alumínio", "Chapas de alumínio", "Perfis inox", "Chapas inox", "Portas e janelas", "Peças por medida", "Outros"],
+  "Metalurgia — Chapas, perfis e tubos metálicos": ["Chapa preta", "Chapa galvanizada", "Chapa inox", "Chapa de alumínio", "Perfis U/I/L", "Tubos quadrados", "Tubos redondos", "Outros"],
+  "Eletrónica — Telemóveis e acessórios": ["Telemóveis", "Smartphones", "Capas", "Películas", "Carregadores", "Cabos", "Auriculares", "Outros"],
+  "Eletrónica — Computadores e informática": ["Computadores portáteis", "Computadores de secretária", "Monitores", "Impressoras", "Teclados e ratos", "Redes", "Armazenamento", "Outros"],
+  "Eletrónica — Televisores, áudio e vídeo": ["Televisores", "Colunas", "Amplificadores", "Microfones", "Projetores", "Câmaras", "Acessórios", "Outros"],
+  "Eletrónica — Eletrodomésticos": ["Frigoríficos", "Arcas congeladoras", "Fogões", "Máquinas de lavar", "Micro-ondas", "Ar condicionado", "Pequenos eletrodomésticos", "Outros"],
+  "Eletrónica — Componentes e acessórios": ["Cabos", "Conectores", "Fontes de alimentação", "Circuitos", "Sensores", "Baterias", "Componentes", "Outros"],
+  "Equipamentos — Máquinas de construção": ["Betoneiras", "Compactadores", "Geradores", "Andaimes", "Gruas", "Máquinas de corte", "Peças", "Outros"],
+  "Equipamentos — Ferramentas profissionais": ["Ferramentas manuais", "Ferramentas elétricas", "Máquinas de soldar", "Compressores", "Equipamento de proteção", "Medição", "Outros"],
+  "Indústria — Matérias-primas e consumíveis": ["Matérias-primas", "Consumíveis industriais", "Lubrificantes", "Adesivos", "Embalagens industriais", "Outros"],
+  "Indústria — Peças e manutenção industrial": ["Peças de reposição", "Rolamentos", "Correias", "Motores", "Bombas", "Manutenção preventiva", "Reparação industrial", "Outros"],
 };
 const serviceTypesByCategory: Record<string, string[]> = {
   "Serviços — Eventos e festas": ["Organização de eventos", "DJ", "Mestre de cerimónias", "Músico ou banda", "Animação", "Aluguer de espaço", "Outros"],
@@ -86,10 +102,15 @@ const serviceTypesByCategory: Record<string, string[]> = {
   "Serviços — Educação e formação": ["Explicações", "Formação profissional", "Aulas de música", "Idiomas", "Outros"],
   "Serviços — Tecnologia e profissionais": ["Assistência informática", "Redes", "Desenvolvimento de software", "Design", "Consultoria", "Contabilidade", "Tradução", "Outros"],
   "Serviços — Outros": ["Serviço profissional", "Serviço empresarial", "Outro"],
+  "Serviços — Construção civil e empreitadas": ["Empreitada geral", "Construção de edifícios", "Remodelação", "Obras públicas", "Fiscalização e gestão de obra", "Outros"],
+  "Serviços — Pedreiros e alvenaria": ["Pedreiro", "Assentamento de blocos", "Assentamento de tijolos", "Reboco", "Betonagem", "Pavimentação", "Outros"],
+  "Serviços — Telhados e coberturas": ["Montagem de chapas", "Aplicação de telhas", "Impermeabilização", "Estruturas de cobertura", "Reparação de telhados", "Outros"],
+  "Serviços — Pintura e acabamentos": ["Pintura interior", "Pintura exterior", "Estuque", "Revestimentos", "Aplicação de cerâmica", "Acabamentos", "Outros"],
 };
 const productUnits = ["Unidade", "Conjunto", "Caixa", "Saco", "Pacote", "Quilograma (kg)", "Tonelada (t)", "Litro (L)", "Metro cúbico (m³)", "Metro (m)", "Metro quadrado (m²)", "Rolo", "Palete", "Bidão de 20 L", "Garrafão de 20 L", "Tanque de 1.000 L", "Cisterna", "Outro"];
 
 export default function VendorProductsPage() {
+  const [categories, setCategories] = useState<string[]>(["Outros"]);
   const [vendor, setVendor] = useState<SellerStore | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,6 +148,30 @@ export default function VendorProductsPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/marketplace/categories", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar as categorias.");
+        return await response.json() as { categories?: { id: string; name: string }[] };
+      })
+      .then((data) => {
+        if (!cancelled) {
+          const restrictedUntilSpecializedFlow = new Set(["Seguros e proteção", "Eventos e bilhética"]);
+          const names = Array.isArray(data.categories)
+            ? data.categories
+                .map((category) => category.name)
+                .filter((name) => typeof name === "string" && name.trim().length > 0 && !restrictedUntilSpecializedFlow.has(name))
+            : [];
+          setCategories(names.length ? names : ["Outros"]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCategories(["Outros"]);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
