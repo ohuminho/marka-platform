@@ -10,6 +10,7 @@ type CVContent = {
   templateId: CVTemplateId;
   fullName: string; professionalTitle: string; email: string; phone: string; location: string; summary: string;
   experience: Experience[]; education: Education[]; skills: string[]; languages: string[];
+  certifications: string[]; projects: string[]; references: string[]; linkedin: string; portfolio: string;
 };
 type DocumentRecord = { id: string; title: string; content: CVContent; updatedAt: string };
 const cvTemplates: { id: CVTemplateId; name: string; description: string; premium: boolean; accent: string }[] = [
@@ -24,7 +25,7 @@ const emptyEducation: Education = { qualification: "", institution: "", location
 const emptyCV: CVContent = {
   templateId: "ats",
   fullName: "", professionalTitle: "", email: "", phone: "", location: "", summary: "",
-  experience: [], education: [], skills: [], languages: [],
+  experience: [], education: [], skills: [], languages: [], certifications: [], projects: [], references: [], linkedin: "", portfolio: "",
 };
 
 const inputClass = "mt-2 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-sm text-[var(--theme-text)] outline-none transition focus:border-[var(--theme-accent)]";
@@ -237,6 +238,8 @@ export default function MarkaCvPage() {
               <label className={labelClass}>E-mail<input type="email" className={inputClass} value={cv.email} onChange={(e) => update("email", e.target.value)} placeholder="nome@email.com" /></label>
               <label className={labelClass}>Telefone<input className={inputClass} value={cv.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+244 ..." /></label>
               <label className={labelClass + " sm:col-span-2"}>Localização<input className={inputClass} value={cv.location} onChange={(e) => update("location", e.target.value)} placeholder="Cidade, país" /></label>
+              <label className={labelClass}>LinkedIn<input className={inputClass} value={cv.linkedin} onChange={(e) => update("linkedin", e.target.value)} placeholder="linkedin.com/in/..." /></label>
+              <label className={labelClass}>Portefólio / website<input className={inputClass} value={cv.portfolio} onChange={(e) => update("portfolio", e.target.value)} placeholder="oseusite.com" /></label>
             </div>
             <label className={labelClass + " mt-4"}>Resumo profissional<textarea className={inputClass + " min-h-28 resize-y"} value={cv.summary} onChange={(e) => update("summary", e.target.value)} placeholder="Apresente a sua experiência, especialidade e principais competências." /></label>
           </section>
@@ -274,6 +277,9 @@ export default function MarkaCvPage() {
             <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Competências e idiomas</h2>
             <label className={labelClass + " mt-5"}>Competências (separadas por vírgulas)<textarea className={inputClass + " min-h-20"} value={cv.skills.join(", ")} onChange={(e) => update("skills", e.target.value.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 40))} placeholder="Gestão de projetos, Excel, Atendimento..." /></label>
             <label className={labelClass + " mt-4"}>Idiomas (separados por vírgulas)<input className={inputClass} value={cv.languages.join(", ")} onChange={(e) => update("languages", e.target.value.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 20))} placeholder="Português, Inglês..." /></label>
+            <label className={labelClass + " mt-4"}>Certificações e cursos (separados por vírgulas)<textarea className={inputClass + " min-h-20"} value={cv.certifications.join(", ")} onChange={(e) => update("certifications", e.target.value.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 20))} placeholder="Certificação, entidade, ano..." /></label>
+            <label className={labelClass + " mt-4"}>Projetos relevantes (separados por vírgulas)<textarea className={inputClass + " min-h-20"} value={cv.projects.join(", ")} onChange={(e) => update("projects", e.target.value.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 20))} placeholder="Projeto e resultado alcançado..." /></label>
+            <label className={labelClass + " mt-4"}>Referências (opcional, separadas por vírgulas)<textarea className={inputClass + " min-h-16"} value={cv.references.join(", ")} onChange={(e) => update("references", e.target.value.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 10))} placeholder="Disponíveis mediante solicitação" /></label>
           </section>
 
           <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)]/95 p-3 shadow-xl backdrop-blur no-print">
@@ -299,12 +305,15 @@ export default function MarkaCvPage() {
               <div className="cv-content relative z-[1]">
                 <h1 className={`break-words font-semibold tracking-tight ${cv.templateId === "creative" ? "text-4xl" : "text-3xl"}`}>{cv.fullName || "O seu nome completo"}</h1>
                 <p className="mt-2 text-sm font-medium" style={{ color: "var(--cv-accent)" }}>{cv.professionalTitle || "Título profissional"}</p>
-                <p className="mt-3 break-words text-[10px] text-[#555]">{[cv.email, cv.phone, cv.location].filter(Boolean).join(" · ") || "E-mail · Telefone · Localização"}</p>
+                <p className="mt-3 break-words text-[10px] text-[#555]">{[cv.email, cv.phone, cv.location, cv.linkedin, cv.portfolio].filter(Boolean).join(" · ") || "E-mail · Telefone · Localização · LinkedIn"}</p>
                 {cv.summary && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Perfil profissional</h2><p className="mt-3 whitespace-pre-wrap text-xs leading-5">{cv.summary}</p></section>}
                 {cv.experience.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Experiência profissional</h2>{cv.experience.map((item, index) => <div key={index} className="cv-entry mt-4"><h3 className="text-sm font-semibold">{item.role || "Cargo"}{item.company ? ` · ${item.company}` : ""}</h3><p className="mt-1 text-[10px] text-[#666]">{[item.location, item.startDate, item.endDate].filter(Boolean).join(" · ")}</p>{item.description && <p className="mt-2 whitespace-pre-wrap text-xs leading-5">{item.description}</p>}</div>)}</section>}
                 {cv.education.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Formação académica</h2>{cv.education.map((item, index) => <div key={index} className="cv-entry mt-4"><h3 className="text-sm font-semibold">{item.qualification || "Qualificação"}</h3><p className="mt-1 text-[10px] text-[#666]">{[item.institution, item.location, item.startDate, item.endDate].filter(Boolean).join(" · ")}</p>{item.details && <p className="mt-2 text-xs leading-5">{item.details}</p>}</div>)}</section>}
                 {cv.skills.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Competências</h2><p className="mt-3 text-xs leading-6">{cv.skills.join(" · ")}</p></section>}
                 {cv.languages.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Idiomas</h2><p className="mt-3 text-xs leading-6">{cv.languages.join(" · ")}</p></section>}
+                {cv.certifications.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Certificações e cursos</h2><p className="mt-3 text-xs leading-6">{cv.certifications.join(" · ")}</p></section>}
+                {cv.projects.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Projetos relevantes</h2><p className="mt-3 text-xs leading-6">{cv.projects.join(" · ")}</p></section>}
+                {cv.references.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Referências</h2><p className="mt-3 text-xs leading-6">{cv.references.join(" · ")}</p></section>}
               </div>
               {!cvTemplates.find((template) => template.id === cv.templateId)?.premium && <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[45%] -rotate-[28deg] text-center text-5xl font-bold tracking-[0.3em] text-black/[0.06]">MARKA</div>}
               <div className="absolute bottom-5 left-0 right-0 text-center text-[8px] uppercase tracking-[0.2em] text-[#999]">Criado com MARKA CV</div>
