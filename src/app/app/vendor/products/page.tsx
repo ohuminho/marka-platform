@@ -10,7 +10,7 @@ type SellerStore = {
   name: string;
   status: string;
   verified: boolean;
-  store: { id: string; name: string; status: string; description?: string | null };
+  store: { id: string; name: string; status: string; description?: string | null; isIndividualListing: boolean };
 };
 type Product = {
   id: string;
@@ -142,7 +142,7 @@ export default function VendorProductsPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeName, ...sellerProfile }),
+        body: JSON.stringify({ storeName, ...sellerProfile, sellerMode: "STORE" }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível criar a loja.");
@@ -150,6 +150,24 @@ export default function VendorProductsPage() {
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível criar a loja.");
+    } finally { setSaving(false); }
+  }
+
+  async function createIndividualSeller() {
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/vendors/register", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sellerMode: "SINGLE_LISTING", businessType: "INDIVIDUAL", phone: sellerProfile.phone, country: sellerProfile.country }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível ativar o perfil de vendedor individual.");
+      setNotice("Perfil individual ativado. Agora pode publicar um produto sem abrir uma loja.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível ativar o perfil individual.");
     } finally { setSaving(false); }
   }
 
@@ -294,13 +312,13 @@ export default function VendorProductsPage() {
               <p className="marka-kicker">MARKA / SELLER STUDIO</p>
               <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-6xl">A sua loja. O seu negócio.</h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--theme-text-muted)]">
-                Abra uma loja com poucos dados, organize o catálogo e comece a vender. A verificação Verified é um processo separado e opcional, pensado para reforçar a confiança dos compradores.
+                {vendor?.store.isIndividualListing ? "Venda um produto sem criar uma loja. O perfil individual mantém um único anúncio ativo de cada vez." : "Abra uma loja com poucos dados, organize o catálogo e comece a vender. Também pode começar com um único produto sem abrir loja. A verificação Verified é um processo separado e opcional."}
               </p>
             </div>
             {vendor && <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-4">
               <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Estado do vendedor</p>
               <p className="mt-2 text-sm font-semibold text-[var(--theme-text)]">{vendor.status === "ACTIVE" ? "Conta ativa" : "Em análise"}</p>
-              <p className="mt-1 text-xs text-[var(--theme-text-muted)]">{vendor.verified ? "Selo MARKA Verified ativo" : "Loja sem selo Verified — pode solicitar verificação"}</p>
+              <p className="mt-1 text-xs text-[var(--theme-text-muted)]">{vendor.verified ? "Selo MARKA Verified ativo" : vendor.store.isIndividualListing ? "Vendedor individual — sem loja pública" : "Loja sem selo Verified — pode solicitar verificação"}</p>
             </div>}
           </header>
 
@@ -312,9 +330,9 @@ export default function VendorProductsPage() {
               <div className="flex flex-wrap items-start justify-between gap-5">
                 <div className="max-w-2xl">
                   <p className="marka-kicker">MARKA / VERIFIED</p>
-                  <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">Construa confiança. Verifique a sua loja.</h2>
+                  <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">{vendor.store.isIndividualListing ? "Confirme a sua identidade de vendedor." : "Construa confiança. Verifique a sua loja."}</h2>
                   <p className="mt-3 text-sm leading-7 text-[var(--theme-text-muted)]">
-                    A abertura da loja e o selo Verified são processos diferentes. Pode vender sem o selo nas categorias elegíveis. Se quiser reforçar a confiança, submeta a documentação de identidade ou da empresa no Centro de Conformidade. O selo só é atribuído depois da análise e aprovação por um revisor autorizado.
+                    A publicação e o selo Verified são processos diferentes. Pode anunciar sem o selo nas categorias elegíveis. Se quiser reforçar a confiança, submeta a documentação de identidade ou da empresa no Centro de Conformidade. O selo só é atribuído depois da análise e aprovação por um revisor autorizado.
                   </p>
                   <p className="mt-2 text-xs leading-6 text-[var(--theme-text-faint)]">
                     A verificação é opcional. Qualquer eventual taxa e respetivo método de pagamento terão de ser apresentados antes da confirmação; não faça pagamentos fora dos canais oficiais da MARKA.
@@ -360,6 +378,11 @@ export default function VendorProductsPage() {
                   <div className="grid gap-4 sm:grid-cols-2"><div><label className={label} htmlFor="sellerPhone">Telefone de contacto</label><input id="sellerPhone" className={field} type="tel" autoComplete="tel" maxLength={40} value={sellerProfile.phone} onChange={(e) => setSellerProfile({ ...sellerProfile, phone: e.target.value })} placeholder="+244 9XX XXX XXX" /></div><div><label className={label} htmlFor="sellerCountry">País de operação</label><input id="sellerCountry" className={field} required maxLength={80} value={sellerProfile.country} onChange={(e) => setSellerProfile({ ...sellerProfile, country: e.target.value })} placeholder="Angola" /></div></div>
                   <button disabled={saving} className="w-full rounded-full bg-[var(--theme-text)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:opacity-50">{saving ? "A criar candidatura…" : "Abrir a minha loja"}</button>
                 </form>
+                <div className="mt-6 border-t border-[var(--theme-border)] pt-6">
+                  <p className="text-sm font-semibold text-[var(--theme-text)]">Não precisa de uma loja?</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--theme-text-muted)]">Se só pretende vender um artigo, pode criar um perfil individual e publicar um único anúncio ativo. Não terá de escolher nome, logótipo ou apresentação de loja.</p>
+                  <button type="button" onClick={() => void createIndividualSeller()} disabled={saving} className="mt-4 w-full rounded-full border border-[var(--theme-border)] px-5 py-4 text-xs font-bold uppercase tracking-[0.16em] text-[var(--theme-text)] transition hover:bg-[var(--theme-surface)] disabled:opacity-50">{saving ? "A preparar perfil individual…" : "Vender um produto sem loja"}</button>
+                </div>
                 <p className="mt-4 text-xs leading-6 text-[var(--theme-text-faint)]">É necessário ter uma conta MARKA ativa. O registo individual não exige empresa nem documentos comerciais para abrir a loja. Algumas categorias ou operações podem exigir verificação adicional por razões de segurança e conformidade.</p>
               </div>
               <aside className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-background)] p-7 sm:p-10">
@@ -383,8 +406,8 @@ export default function VendorProductsPage() {
               <section className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
                 <div className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
                   <p className="marka-kicker">NOVO ANÚNCIO</p>
-                  <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">Adicionar produto</h2>
-                  <form onSubmit={createProduct} className="mt-6 space-y-4">
+                  <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">{vendor.store.isIndividualListing ? "Publicar o seu produto" : "Adicionar produto"}</h2>
+                  {vendor.store.isIndividualListing && <p className="mt-3 text-xs leading-6 text-[var(--theme-text-muted)]">Este perfil permite um anúncio ativo de cada vez. Pode arquivar o artigo atual para publicar outro.</p>}\n                  <form onSubmit={createProduct} className="mt-6 space-y-4">
                     <div><label className={label} htmlFor="productName">Nome do produto</label><input id="productName" className={field} required minLength={2} maxLength={180} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Candeeiro artesanal" /></div>
                     <div><label className={label} htmlFor="productDescription">Descrição</label><textarea id="productDescription" className={field} rows={4} maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalhes, estado, dimensões, garantia…" /></div>
                     <div>
