@@ -94,6 +94,7 @@ export async function GET() {
           banner: vendor.store.banner,
           location: vendor.store.location,
           status: vendor.store.status,
+          isIndividualListing: vendor.store.isIndividualListing,
         },
       },
       products: products.map((product) => ({
@@ -133,13 +134,24 @@ export async function POST(request: Request) {
       orderBy: { createdAt: "asc" },
     });
     if (!vendor?.store) {
-      return NextResponse.json({ message: "Abra primeiro a sua loja para começar a listar produtos.", code: "STORE_REQUIRED" }, { status: 409 });
+      return NextResponse.json({ message: "Crie um perfil de vendedor individual ou abra uma loja para publicar anúncios.", code: "SELLER_PROFILE_REQUIRED" }, { status: 409 });
     }
     if (vendor.status === "SUSPENDED" || vendor.status === "CLOSED") {
       return NextResponse.json({ message: "A sua conta comercial não pode criar anúncios neste momento." }, { status: 403 });
     }
 
     const input = parsed.data;
+    if (vendor.store.isIndividualListing) {
+      const existingListingCount = await prisma.product.count({
+        where: { storeId: vendor.store.id, status: { not: "ARCHIVED" } },
+      });
+      if (existingListingCount > 0) {
+        return NextResponse.json({
+          message: "O perfil individual permite um anúncio ativo de cada vez. Arquive o anúncio atual ou transforme o perfil numa loja para gerir vários produtos.",
+          code: "SINGLE_LISTING_LIMIT_REACHED",
+        }, { status: 409 });
+      }
+    }
     const categoryName = input.categoryName.toLocaleLowerCase();
     const isServiceCategory = categoryName.startsWith("serviços");
     const isPropertyCategory = categoryName === "imóveis e arrendamento";
