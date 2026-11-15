@@ -94,7 +94,12 @@ export default function MobilityFreightCustomerQuotes() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
+    const refreshAfterCreate = () => void load();
+    window.addEventListener("marka:freight-request-created", refreshAfterCreate);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("marka:freight-request-created", refreshAfterCreate);
+    };
   }, [load]);
 
   const decide = async (requestId: string, decision: "ACCEPT" | "REJECT") => {
@@ -164,7 +169,7 @@ export default function MobilityFreightCustomerQuotes() {
               {item.status === "REQUESTED" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Pedido recebido. A equipa está a preparar uma cotação; não precisa de fazer mais nada por agora.</p>}
               {item.status === "AWAITING_PAYMENT" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Cotação aceite. O pedido aguarda instruções e confirmação de pagamento. Ainda não foi enviado para os prestadores.</p>}
               {item.status === "QUOTED" && !actionable && <p className="mt-4 text-xs text-[var(--theme-text-muted)]">Esta cotação expirou. Contacte a equipa MARKA para solicitar uma nova proposta.</p>}
-              {["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED", "EXCEPTION"].includes(item.status) && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Estado operacional: {item.status.replaceAll("_", " ").toLowerCase()}.</p>}
+              {["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED", "EXCEPTION"].includes(item.status) && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">{statusLabel(item.status)}. Consulte esta página para acompanhar novas actualizações.</p>}
             </article>
           );
         })}
