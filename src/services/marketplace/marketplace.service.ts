@@ -19,7 +19,7 @@ export class MarketplaceService {
   }
 
   async getProducts(query?: MarketplaceQuery) {
-    const searchTerms = query?.search?.trim().split(/\\s+/).filter((term) => term.length > 1) ?? [];
+    const searchTerms = query?.search?.trim().split(/\s+/).filter((term) => term.length > 1) ?? [];
     let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: "desc" };
     if (query?.sortBy === "price_asc") orderBy = { price: "asc" };
     if (query?.sortBy === "price_desc") orderBy = { price: "desc" };
