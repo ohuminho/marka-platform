@@ -155,6 +155,10 @@ export function canAcceptFreightAlongsideActiveAssignments(input: {
   ) return false;
 
   let totalQuantity = candidateQuantity;
+  const destinationPoints = [{
+    latitude: candidate.destinationLatitude,
+    longitude: candidate.destinationLongitude,
+  }];
   for (const active of activeAssignments) {
     if (
       active.requestType !== candidate.requestType ||
@@ -179,11 +183,23 @@ export function canAcceptFreightAlongsideActiveAssignments(input: {
     if (activeQuantity === null) return false;
     totalQuantity += activeQuantity;
 
-    const distance = haversineDistanceKm(
-      { latitude: candidate.destinationLatitude, longitude: candidate.destinationLongitude },
-      { latitude: active.destinationLatitude, longitude: active.destinationLongitude },
-    );
-    if (distance > (input.maxDestinationDistanceKm ?? 5)) return false;
+    const activePoint = {
+      latitude: active.destinationLatitude,
+      longitude: active.destinationLongitude,
+    };
+    const maxDistanceKm = input.maxDestinationDistanceKm ?? 5;
+    if (destinationPoints.some((point) => haversineDistanceKm(point, activePoint) > maxDistanceKm)) {
+      return false;
+    }
+    destinationPoints.push(activePoint);
+  }
+
+  for (let index = 0; index < destinationPoints.length; index += 1) {
+    for (let otherIndex = index + 1; otherIndex < destinationPoints.length; otherIndex += 1) {
+      if (haversineDistanceKm(destinationPoints[index], destinationPoints[otherIndex]) > (input.maxDestinationDistanceKm ?? 5)) {
+        return false;
+      }
+    }
   }
 
   return totalQuantity <= capacity;
