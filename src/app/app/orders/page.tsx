@@ -4,7 +4,7 @@ import Link from "next/link";
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 import { useEffect, useState } from "react";
 
-interface OrderSummary {
+interface EncomendaSummary {
   id: string;
   userId: string;
   status: string;
@@ -52,11 +52,11 @@ function statusLabel(
     );
 }
 
-export default function OrdersPage() {
+export default function EncomendasPage() {
   const [
     orders,
-    setOrders,
-  ] = useState<OrderSummary[]>([]);
+    setEncomendas,
+  ] = useState<EncomendaSummary[]>([]);
 
   const [
     loading,
@@ -73,7 +73,7 @@ export default function OrdersPage() {
   useEffect(() => {
     let active = true;
 
-    const loadOrders =
+    const loadEncomendas =
       async () => {
         try {
           setLoading(true);
@@ -96,7 +96,7 @@ export default function OrdersPage() {
           if (!response.ok) {
             throw new Error(
               data?.message ??
-                "Unable to load orders."
+                "Não foi possível carregar as encomendas."
             );
           }
 
@@ -104,7 +104,7 @@ export default function OrdersPage() {
             return;
           }
 
-          setOrders(
+          setEncomendas(
             Array.isArray(data)
               ? data
               : []
@@ -122,7 +122,7 @@ export default function OrdersPage() {
           setError(
             error instanceof Error
               ? error.message
-              : "Unable to load orders."
+              : "Não foi possível carregar as encomendas."
           );
         } finally {
           if (active) {
@@ -131,7 +131,7 @@ export default function OrdersPage() {
         }
       };
 
-    loadOrders();
+    loadEncomendas();
 
     return () => {
       active = false;
@@ -140,16 +140,16 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen space-y-8 p-8">
+      <main className="min-h-screen space-y-6 px-4 py-5 sm:space-y-8 sm:p-8">
         <RoleContextSummary />
 
       <section className="mb-10">
           <h1 className="marka-editorial text-4xl text-[var(--theme-text)]">
-            Orders
+            Encomendas
           </h1>
 
           <p className="mt-3 text-[var(--theme-text)]/50">
-            Loading your order history...
+            A carregar o histórico de encomendas...
           </p>
         </section>
 
@@ -178,15 +178,15 @@ export default function OrdersPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen space-y-8 p-8">
+      <main className="min-h-screen space-y-6 px-4 py-5 sm:space-y-8 sm:p-8">
         <RoleContextSummary />
         <section className="mb-10">
-          <h1 className="text-4xl font-semibold">
-            Orders
+          <h1 className="text-2xl font-semibold sm:text-4xl">
+            Encomendas
           </h1>
 
           <p className="mt-3 text-[var(--theme-text)]/50">
-            Your purchases and order activity.
+            Acompanhe as suas compras e entregas.
           </p>
         </section>
 
@@ -200,7 +200,7 @@ export default function OrdersPage() {
           "
         >
           <p className="font-medium">
-            Unable to load orders
+            Não foi possível carregar as encomendas
           </p>
 
           <p className="mt-2 text-sm text-[var(--theme-text)]/50">
@@ -212,15 +212,15 @@ export default function OrdersPage() {
   }
 
   return (
-    <main className="min-h-screen space-y-8 p-8">
+    <main className="min-h-screen space-y-6 px-4 py-5 sm:space-y-8 sm:p-8">
       <RoleContextSummary />
       <section className="mb-10">
-        <h1 className="text-4xl font-semibold">
-          Orders
+        <h1 className="text-2xl font-semibold sm:text-4xl">
+          Encomendas
         </h1>
 
         <p className="mt-3 text-[var(--theme-text)]/50">
-          Track your purchases and order activity.
+          Acompanhe as suas compras e o estado das entregas.
         </p>
       </section>
 
@@ -231,16 +231,16 @@ export default function OrdersPage() {
             border
             border-[var(--theme-border)]
             bg-[var(--theme-surface-strong)]/5
-            p-10
+            p-6 sm:p-10
             text-center
           "
         >
           <h2 className="marka-editorial text-3xl text-[var(--theme-text)]">
-            No orders yet
+            Ainda não tem encomendas
           </h2>
 
           <p className="mt-3 text-[var(--theme-text)]/50">
-            Your marketplace purchases will appear here.
+            As suas compras no Marketplace aparecerão aqui.
           </p>
 
           <Link
@@ -259,7 +259,7 @@ export default function OrdersPage() {
               hover:bg-[var(--theme-surface-strong)]/90
             "
           >
-            Explore Marketplace
+            Explorar Marketplace
           </Link>
         </section>
       ) : (
@@ -292,7 +292,7 @@ export default function OrdersPage() {
               >
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-[var(--theme-text)]/40">
-                    Order
+                    Encomenda
                   </p>
 
                   <p className="mt-2 break-all font-mono text-sm text-[var(--theme-text)]/70">
@@ -309,7 +309,7 @@ export default function OrdersPage() {
                 <div className="flex items-center justify-between gap-8 md:justify-end">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--theme-text)]/40">
-                      Status
+                      Estado
                     </p>
 
                     <p className="mt-2 font-medium">
