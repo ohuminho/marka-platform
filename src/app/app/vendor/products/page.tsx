@@ -310,7 +310,7 @@ export default function VendorProductsPage() {
           <header className="flex flex-col justify-between gap-5 border-b border-[var(--theme-border)] pb-7 md:flex-row md:items-end">
             <div>
               <p className="marka-kicker">MARKA / SELLER STUDIO</p>
-              <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-6xl">A sua loja. O seu negócio.</h1>
+              <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] lg:text-6xl">{vendor?.store.isIndividualListing ? "O seu anúncio. A sua venda." : "A sua loja. O seu negócio."}</h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--theme-text-muted)]">
                 {vendor?.store.isIndividualListing ? "Venda um produto sem criar uma loja. O perfil individual mantém um único anúncio ativo de cada vez." : "Abra uma loja com poucos dados, organize o catálogo e comece a vender. Também pode começar com um único produto sem abrir loja. A verificação Verified é um processo separado e opcional."}
               </p>
@@ -350,7 +350,7 @@ export default function VendorProductsPage() {
             </section>
           )}
 
-          {vendor && <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
+          {vendor && !vendor.store.isIndividualListing && <section className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
             <div className="mb-6">
               <p className="marka-kicker">IDENTIDADE COMERCIAL</p>
               <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">Perfil da loja</h2>
@@ -407,7 +407,8 @@ export default function VendorProductsPage() {
                 <div className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
                   <p className="marka-kicker">NOVO ANÚNCIO</p>
                   <h2 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">{vendor.store.isIndividualListing ? "Publicar o seu produto" : "Adicionar produto"}</h2>
-                  {vendor.store.isIndividualListing && <p className="mt-3 text-xs leading-6 text-[var(--theme-text-muted)]">Este perfil permite um anúncio ativo de cada vez. Pode arquivar o artigo atual para publicar outro.</p>}\n                  <form onSubmit={createProduct} className="mt-6 space-y-4">
+                  {vendor.store.isIndividualListing && <p className="mt-3 text-xs leading-6 text-[var(--theme-text-muted)]">Este perfil permite um anúncio ativo de cada vez. Pode arquivar o artigo atual para publicar outro.</p>}
+                  <form onSubmit={createProduct} className="mt-6 space-y-4">
                     <div><label className={label} htmlFor="productName">Nome do produto</label><input id="productName" className={field} required minLength={2} maxLength={180} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Candeeiro artesanal" /></div>
                     <div><label className={label} htmlFor="productDescription">Descrição</label><textarea id="productDescription" className={field} rows={4} maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalhes, estado, dimensões, garantia…" /></div>
                     <div>
