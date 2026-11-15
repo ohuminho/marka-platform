@@ -3,8 +3,10 @@ import { prisma } from "@/database/client/prisma";
 export class VendorService {
   async createVendor(
     ownerId: string,
-    input: { storeName: string; businessType: "INDIVIDUAL" | "COMPANY"; phone?: string; country?: string; organizationId?: string }
+    input: { storeName?: string; businessType: "INDIVIDUAL" | "COMPANY"; phone?: string; country?: string; organizationId?: string; sellerMode?: "STORE" | "SINGLE_LISTING" }
   ) {
+    const sellerName = input.storeName?.trim() || "Vendedor individual";
+    const sellerMode = input.sellerMode ?? "STORE";
     const existing = await prisma.vendor.findFirst({
       where: { ownerId },
       select: { id: true },
@@ -30,7 +32,7 @@ export class VendorService {
         const personalOrganization = await tx.organization.upsert({
           where: { slug: `seller-${ownerId}` },
           update: {
-            name: input.storeName.trim(),
+            name: sellerName,
             tenantId: tenant.id,
             type: "VENDOR",
           },
@@ -88,13 +90,13 @@ export class VendorService {
           const businessOrganization = await tx.organization.upsert({
             where: { slug: `business-${ownerId}` },
             update: {
-              name: input.storeName.trim(),
+              name: sellerName,
               tenantId: tenant.id,
               type: "BUSINESS",
             },
             create: {
               tenantId: tenant.id,
-              name: input.storeName.trim(),
+              name: sellerName,
               slug: `business-${ownerId}`,
               type: "BUSINESS",
               status: "ACTIVE",
@@ -127,7 +129,7 @@ export class VendorService {
           verified: false,
           store: {
             create: {
-              name: input.storeName.trim(),
+              name: sellerName,
               status: "ACTIVE",
             },
           },
