@@ -41,7 +41,19 @@ export async function POST(request: Request) {
     );
   }
 
-  if (provider.availability !== "AVAILABLE" && provider.availability !== "BUSY") {
+  const activeAssignments = await prisma.freightRequest.count({
+    where: {
+      organizationId: auth.session.organizationId,
+      assignedProviderId: provider.id,
+      status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"] },
+    },
+  });
+
+  if (
+    provider.availability !== "AVAILABLE" &&
+    provider.availability !== "BUSY" &&
+    activeAssignments === 0
+  ) {
     return NextResponse.json(
       { message: "Active a disponibilidade antes de partilhar a localização.", code: "FREIGHT_PROVIDER_NOT_AVAILABLE" },
       { status: 409 },
