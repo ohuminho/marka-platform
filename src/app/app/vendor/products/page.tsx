@@ -159,8 +159,11 @@ export default function VendorProductsPage() {
       })
       .then((data) => {
         if (!cancelled) {
+          const restrictedUntilSpecializedFlow = new Set(["Seguros e proteção", "Eventos e bilhética"]);
           const names = Array.isArray(data.categories)
-            ? data.categories.map((category) => category.name).filter((name) => typeof name === "string" && name.trim().length > 0)
+            ? data.categories
+                .map((category) => category.name)
+                .filter((name) => typeof name === "string" && name.trim().length > 0 && !restrictedUntilSpecializedFlow.has(name))
             : [];
           setCategories(names.length ? names : ["Outros"]);
         }
