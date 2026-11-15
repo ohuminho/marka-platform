@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 type Experience = { role: string; company: string; location: string; startDate: string; endDate: string; description: string };
 type Education = { qualification: string; institution: string; location: string; startDate: string; endDate: string; details: string };
@@ -12,7 +12,6 @@ type CVContent = {
   experience: Experience[]; education: Education[]; skills: string[]; languages: string[];
   certifications: string[]; projects: string[]; references: string[]; linkedin: string; portfolio: string;
 };
-type DocumentRecord = { id: string; title: string; content: CVContent; updatedAt: string };
 const cvTemplates: { id: CVTemplateId; name: string; description: string; premium: boolean; accent: string }[] = [
   { id: "ats", name: "ATS Essencial", description: "Leitura simples, compatível com sistemas de recrutamento.", premium: false, accent: "#285b50" },
   { id: "classic", name: "Clássico", description: "Visual editorial discreto para qualquer área.", premium: false, accent: "#806b43" },
@@ -32,47 +31,10 @@ const inputClass = "mt-2 w-full rounded-xl border border-[var(--theme-border)] b
 const labelClass = "block text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]";
 
 export default function MarkaCvPage() {
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [activeId, setActiveId] = useState("");
-  const [title, setTitle] = useState("O meu currículo");
   const [cv, setCv] = useState<CVContent>(emptyCV);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
-  const saveInFlightRef = useRef(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    async function loadDocuments() {
-      try {
-        const response = await fetch("/api/cv", {
-          credentials: "include",
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Não foi possível carregar os currículos.");
-        const rows = (data.documents || []) as DocumentRecord[];
-        if (controller.signal.aborted) return;
-        setDocuments(rows);
-        if (rows.length) {
-          setActiveId(rows[0].id);
-          setTitle(rows[0].title);
-          setCv({ ...emptyCV, ...rows[0].content });
-        }
-      } catch (err) {
-        if (!controller.signal.aborted) {
-          setError(err instanceof Error ? err.message : "Falha ao carregar os currículos.");
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }
-    void loadDocuments();
-    return () => controller.abort();
-  }, []);
 
   function update<K extends keyof CVContent>(key: K, value: CVContent[K]) {
     setDirty(true);
@@ -89,66 +51,6 @@ export default function MarkaCvPage() {
     setCv((current) => ({ ...current, education: current.education.map((item, i) => i === index ? { ...item, [key]: value } : item) }));
   }
 
-  async function saveCV() {
-    if (saveInFlightRef.current) return;
-    saveInFlightRef.current = true;
-    setSaving(true);
-    setNotice("");
-    setError("");
-    try {
-      const response = await fetch("/api/cv", {
-        method: activeId ? "PUT" : "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...(activeId ? { id: activeId } : {}), title, content: cv }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível guardar o currículo.");
-      const saved = data.document as DocumentRecord;
-      setActiveId(saved.id);
-      setDirty(false);
-      setDocuments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
-      setNotice("Currículo guardado com segurança na sua conta.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao guardar o currículo.");
-    } finally {
-      saveInFlightRef.current = false;
-      setSaving(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!dirty || loading || !cv.fullName.trim()) return;
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      if (saveInFlightRef.current) return;
-      saveInFlightRef.current = true;
-      setSaving(true);
-      try {
-        const response = await fetch("/api/cv", {
-          method: activeId ? "PUT" : "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({ ...(activeId ? { id: activeId } : {}), title, content: cv }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Não foi possível guardar automaticamente.");
-        if (controller.signal.aborted) return;
-        const saved = data.document as DocumentRecord;
-        setActiveId(saved.id);
-        setDocuments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
-        setDirty(false);
-        setNotice("Guardado automaticamente.");
-      } catch (err) {
-        if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Falha na gravação automática.");
-      } finally {
-        saveInFlightRef.current = false;
-        setSaving(false);
-      }
-    }, 1400);
-    return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [activeId, cv, dirty, loading, title]);
 
   function exportPDF() {
     if (cvTemplates.find((template) => template.id === cv.templateId)?.premium) { setError("Este modelo pertence ao MARKA CV Premium. A exportação sem marca de água será desbloqueada após validação do pagamento."); return; }
@@ -158,40 +60,11 @@ export default function MarkaCvPage() {
   }
 
   function newCV() {
-    setDirty(false);
-    setActiveId("");
-    setTitle("Novo currículo");
+    const hasContent = Boolean(cv.fullName || cv.professionalTitle || cv.email || cv.phone || cv.summary || cv.experience.length || cv.education.length || cv.skills.length || cv.languages.length || cv.certifications.length || cv.projects.length || cv.references.length);
+    if (dirty && hasContent && !window.confirm("Criar outro currículo? O conteúdo atual não será guardado na MARKA e será perdido ao continuar.")) return;
     setCv(emptyCV);
-    setNotice("");
-    setError("");
-  }
-
-  function openCV(document: DocumentRecord) {
     setDirty(false);
-    setActiveId(document.id);
-    setTitle(document.title);
-    setCv({ ...emptyCV, ...document.content });
-    setNotice("");
     setError("");
-  }
-
-  async function deleteCV() {
-    if (!activeId || !window.confirm("Apagar este currículo e os seus dados guardados?")) return;
-    setError("");
-    try {
-      const response = await fetch("/api/cv", {
-        method: "DELETE", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: activeId }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível apagar o currículo.");
-      const remaining = documents.filter((item) => item.id !== activeId);
-      setDocuments(remaining);
-      if (remaining.length) openCV(remaining[0]); else newCV();
-      setNotice("Currículo apagado.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao apagar o currículo.");
-    }
   }
 
   return (
@@ -223,15 +96,9 @@ export default function MarkaCvPage() {
 
       <div className="no-print grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)]">
         <section className="space-y-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <select aria-label="Currículos guardados" value={activeId} onChange={(event) => {
-              const found = documents.find((item) => item.id === event.target.value);
-              if (found) openCV(found); else newCV();
-            }} className="min-w-0 flex-1 rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-3 text-xs text-[var(--theme-text)]">
-              <option value="">Novo currículo</option>
-              {documents.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-            </select>
-            <button type="button" onClick={newCV} className="rounded-full border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text)]">Novo</button>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
+            <div><p className="text-sm font-semibold text-[var(--theme-text)]">Um currículo de cada vez</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Os dados permanecem apenas nesta sessão. A MARKA não guarda o documento.</p></div>
+            <button type="button" onClick={newCV} className="rounded-full border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text)]">Criar outro</button>
           </div>
 
           <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
@@ -241,7 +108,6 @@ export default function MarkaCvPage() {
 
           <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
             <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Identificação profissional</h2>
-            <label className={labelClass + " mt-5"}>Nome desta versão<input className={inputClass} value={title} onChange={(e) => { setDirty(true); setTitle(e.target.value); }} placeholder="Ex.: CV — Gestor de projetos" /></label>
             <label className={labelClass + " mt-5"}>Nome completo<input className={inputClass} value={cv.fullName} onChange={(e) => update("fullName", e.target.value)} placeholder="O seu nome" /></label>
             <label className={labelClass + " mt-4"}>Título profissional<input className={inputClass} value={cv.professionalTitle} onChange={(e) => update("professionalTitle", e.target.value)} placeholder="Ex.: Técnico de contabilidade" /></label>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -293,13 +159,10 @@ export default function MarkaCvPage() {
           </section>
 
           <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)]/95 p-3 shadow-xl backdrop-blur no-print">
-            <button type="button" disabled={saving || loading} onClick={() => void saveCV()} className="rounded-full bg-[var(--theme-text)] px-6 py-3 text-xs font-bold text-[var(--theme-background)] disabled:opacity-50">{saving ? "A guardar..." : "Guardar currículo"}</button>
-            <button type="button" onClick={exportPDF} className="rounded-full border border-[var(--theme-border)] px-6 py-3 text-xs font-semibold text-[var(--theme-text)]">Exportar PDF gratuito</button>
-            {activeId && <button type="button" onClick={() => void deleteCV()} className="ml-auto px-3 py-3 text-xs text-red-500">Apagar</button>}
+            <button type="button" onClick={exportPDF} className="rounded-full bg-[var(--theme-text)] px-6 py-3 text-xs font-bold text-[var(--theme-background)]">Exportar PDF</button>
+            <button type="button" onClick={newCV} className="rounded-full border border-[var(--theme-border)] px-6 py-3 text-xs font-semibold text-[var(--theme-text)]">Criar outro currículo</button>
           </div>
-          {notice && <p role="status" className="text-sm text-emerald-600">{notice}</p>}
           {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
-          {loading && <p className="text-xs text-[var(--theme-text-muted)]">A carregar os seus currículos...</p>}
         </section>
 
         <aside className="space-y-5">
