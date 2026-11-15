@@ -10,7 +10,7 @@ type PageProps = { params: Promise<{ id: string }> };
 
 async function getStore(id: string) {
   const store = await prisma.store.findFirst({
-    where: { id, status: "ACTIVE", vendor: { status: "ACTIVE" } },
+    where: { id, status: "ACTIVE", isIndividualListing: false, vendor: { status: "ACTIVE" } },
     include: {
       vendor: {
         select: {
