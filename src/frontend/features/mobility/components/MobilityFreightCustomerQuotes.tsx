@@ -94,7 +94,12 @@ export default function MobilityFreightCustomerQuotes() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
+    const refreshAfterCreate = () => void load();
+    window.addEventListener("marka:freight-request-created", refreshAfterCreate);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("marka:freight-request-created", refreshAfterCreate);
+    };
   }, [load]);
 
   const decide = async (requestId: string, decision: "ACCEPT" | "REJECT") => {
