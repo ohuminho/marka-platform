@@ -90,7 +90,13 @@ export default function MarkaCvPage() {
     }
   }
 
-  function exportPDF() {\n    if (!cv.fullName.trim()) { setError("Introduza o seu nome completo antes de exportar o currículo."); return; }\n    setError("");\n    window.print();\n  }\n\n  function newCV() {
+  function exportPDF() {
+    if (!cv.fullName.trim()) { setError("Introduza o seu nome completo antes de exportar o currículo."); return; }
+    setError("");
+    window.print();
+  }
+
+  function newCV() {
     setActiveId("");
     setTitle("Novo currículo");
     setCv(emptyCV);
@@ -166,7 +172,8 @@ export default function MarkaCvPage() {
           </div>
 
           <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
-            <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Identificação profissional</h2>\n            <label className={labelClass + " mt-5"}>Nome desta versão<input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: CV — Gestor de projetos" /></label>
+            <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Identificação profissional</h2>
+            <label className={labelClass + " mt-5"}>Nome desta versão<input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: CV — Gestor de projetos" /></label>
             <label className={labelClass + " mt-5"}>Nome completo<input className={inputClass} value={cv.fullName} onChange={(e) => update("fullName", e.target.value)} placeholder="O seu nome" /></label>
             <label className={labelClass + " mt-4"}>Título profissional<input className={inputClass} value={cv.professionalTitle} onChange={(e) => update("professionalTitle", e.target.value)} placeholder="Ex.: Técnico de contabilidade" /></label>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
