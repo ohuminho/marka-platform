@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Experience = { role: string; company: string; location: string; startDate: string; endDate: string; description: string };
 type Education = { qualification: string; institution: string; location: string; startDate: string; endDate: string; details: string };
@@ -34,20 +34,88 @@ export default function MarkaCvPage() {
   const [cv, setCv] = useState<CVContent>(emptyCV);
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"loading" | "empty" | "saving" | "saved" | "error">("loading");
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const revisionRef = useRef(0);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDraft() {
+      try {
+        const response = await fetch("/api/cv", { method: "GET", cache: "no-store" });
+        if (!response.ok) throw new Error(response.status === 401 ? "Inicie sessão para usar o MARKA CV." : "Não foi possível carregar o rascunho.");
+        const result = await response.json();
+        if (cancelled) return;
+        if (result.draft?.content) {
+          setCv(result.draft.content as CVContent);
+          setExpiresAt(result.draft.expiresAt ?? null);
+          setSaveStatus("saved");
+        } else {
+          setSaveStatus("empty");
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Falha ao carregar o currículo.");
+          setSaveStatus("error");
+        }
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    }
+    void loadDraft();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!loaded || !dirty) return;
+    const snapshot = cv;
+    const revision = revisionRef.current;
+    setSaveStatus("saving");
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/cv", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cv: snapshot }),
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.message || "Não foi possível guardar o rascunho.");
+        }
+        const result = await response.json();
+        if (revisionRef.current === revision) {
+          setExpiresAt(result.expiresAt ?? null);
+          setDirty(false);
+          setSaveStatus("saved");
+        }
+      } catch (saveError) {
+        if (revisionRef.current === revision) {
+          setSaveStatus("error");
+          setError(saveError instanceof Error ? saveError.message : "Falha ao guardar o currículo.");
+        }
+      }
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [cv, dirty, loaded]);
+
+  function markDirty() {
+    revisionRef.current += 1;
+    setDirty(true);
+  }
 
   function update<K extends keyof CVContent>(key: K, value: CVContent[K]) {
-    setDirty(true);
+    markDirty();
     setCv((current) => ({ ...current, [key]: value }));
   }
 
   function updateExperience(index: number, key: keyof Experience, value: string) {
-    setDirty(true);
+    markDirty();
     setCv((current) => ({ ...current, experience: current.experience.map((item, i) => i === index ? { ...item, [key]: value } : item) }));
   }
 
   function updateEducation(index: number, key: keyof Education, value: string) {
-    setDirty(true);
+    markDirty();
     setCv((current) => ({ ...current, education: current.education.map((item, i) => i === index ? { ...item, [key]: value } : item) }));
   }
 
@@ -59,13 +127,30 @@ export default function MarkaCvPage() {
     window.print();
   }
 
-  function newCV() {
-    const hasContent = Boolean(cv.fullName || cv.professionalTitle || cv.email || cv.phone || cv.summary || cv.experience.length || cv.education.length || cv.skills.length || cv.languages.length || cv.certifications.length || cv.projects.length || cv.references.length);
-    if (dirty && hasContent && !window.confirm("Criar outro currículo? O conteúdo atual não será guardado na MARKA e será perdido ao continuar.")) return;
-    setCv(emptyCV);
-    setDirty(false);
-    setError("");
+  async function newCV() {
+    const hasContent = Boolean(cv.fullName || cv.professionalTitle || cv.email || cv.phone || cv.location || cv.summary || cv.experience.length || cv.education.length || cv.skills.length || cv.languages.length || cv.certifications.length || cv.projects.length || cv.references.length || cv.linkedin || cv.portfolio);
+    if (hasContent && !window.confirm("Criar outro currículo? O rascunho atual será eliminado permanentemente.")) return;
+    setSaveStatus("saving");
+    try {
+      const response = await fetch("/api/cv", { method: "DELETE" });
+      if (!response.ok) throw new Error("Não foi possível eliminar o rascunho. Tente novamente.");
+      revisionRef.current += 1;
+      setCv(emptyCV);
+      setDirty(false);
+      setExpiresAt(null);
+      setSaveStatus("empty");
+      setError("");
+    } catch (deleteError) {
+      setSaveStatus("error");
+      setError(deleteError instanceof Error ? deleteError.message : "Falha ao eliminar o currículo.");
+    }
   }
+
+  if (!loaded) {
+    return <main className="mx-auto max-w-xl px-6 py-20 text-center"><p className="marka-kicker">MARKA · Carreira</p><h1 className="marka-editorial mt-3 text-3xl text-[var(--theme-text)]">A carregar o seu currículo</h1><p className="mt-3 text-sm text-[var(--theme-text-muted)]">A verificar se existe um rascunho temporário guardado.</p></main>;
+  }
+
+  const saveLabel = saveStatus === "saving" ? "A guardar…" : saveStatus === "saved" ? "Guardado" : saveStatus === "error" ? "Atenção: não guardado" : "Sem rascunho guardado";
 
   return (
     <main className="space-y-8">
@@ -89,7 +174,7 @@ export default function MarkaCvPage() {
         <div>
           <p className="marka-kicker">MARKA · Carreira</p>
           <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] sm:text-5xl">MARKA CV</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Crie um currículo profissional, exporte o PDF e comece outro quando precisar. A MARKA não armazena os seus documentos.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Crie, edite e exporte o seu currículo. O rascunho fica guardado temporariamente e é eliminado após 24 horas sem atividade.</p>
         </div>
         <Link href="/app" className="text-xs text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]">← Voltar ao painel</Link>
       </header>
@@ -97,7 +182,7 @@ export default function MarkaCvPage() {
       <div className="no-print grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)]">
         <section className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
-            <div><p className="text-sm font-semibold text-[var(--theme-text)]">Um currículo de cada vez</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Os dados permanecem apenas nesta sessão. A MARKA não guarda o documento.</p></div>
+            <div><p className="text-sm font-semibold text-[var(--theme-text)]">Um currículo temporário de cada vez</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{saveLabel}{expiresAt ? ` · Expira em ${new Date(expiresAt).toLocaleString("pt-AO")}` : " · O rascunho será guardado automaticamente quando editar."}</p></div>
             <button type="button" onClick={newCV} className="rounded-full border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text)]">Criar outro</button>
           </div>
 
@@ -192,7 +277,7 @@ export default function MarkaCvPage() {
               <div className="absolute bottom-5 left-0 right-0 text-center text-[8px] uppercase tracking-[0.2em] text-[#999]">Criado com MARKA CV</div>
             </div>
           </div>
-          <p className="text-[11px] leading-5 text-[var(--theme-text-faint)]">O conteúdo é processado apenas nesta sessão do navegador e não é guardado nos servidores da MARKA. Depois de exportar, guarde o PDF no seu dispositivo. Ao criar outro currículo ou fechar/atualizar a página, o conteúdo em edição será perdido. Reveja sempre os dados antes de enviar uma candidatura.</p>
+          <p className="text-[11px] leading-5 text-[var(--theme-text-faint)]">O rascunho é guardado de forma temporária e protegido pela sua sessão. Cada edição renova o prazo de 24 horas. Depois desse prazo sem atividade, o documento deixa de estar acessível e é eliminado automaticamente. Exporte o PDF e guarde-o no seu dispositivo. Reveja sempre os dados antes de enviar uma candidatura.</p>
         </aside>
       </div>
     </main>
