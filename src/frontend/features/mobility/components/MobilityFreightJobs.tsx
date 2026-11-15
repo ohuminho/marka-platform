@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
+import { doesFreightFitVehicleCapacity } from "@/freight-engine/freight-provider-availability";
 
 type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string; capacity?: number | string | null; capacityUnit?: string | null; waterType?: string | null };
 type FreightProvider = { status: string; availability: string; vehicles: FreightVehicle[] };
@@ -126,12 +127,19 @@ export default function MobilityFreightJobs() {
       const compatible = activeVehicles.find((vehicle) => {
         const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
         if (!kinds.includes(vehicle.kind)) return false;
-        if (job.requestType !== "WATER_DELIVERY") return true;
-        if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
-        if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
-        const capacityLitres = Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1);
-        const requestedLitres = job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
-        return capacityLitres >= requestedLitres;
+        return doesFreightFitVehicleCapacity({
+          requestType: job.requestType,
+          quantity: job.quantity,
+          quantityUnit: job.quantityUnit,
+          details: job.details,
+          vehicle: {
+            id: vehicle.id,
+            kind: vehicle.kind,
+            capacity: vehicle.capacity ?? null,
+            capacityUnit: vehicle.capacityUnit ?? null,
+            waterType: vehicle.waterType ?? null,
+          },
+        });
       });
       return [job.id, current[job.id] ?? compatible?.id ?? ""];
     })));
@@ -250,11 +258,19 @@ export default function MobilityFreightJobs() {
               if (vehicle.status !== "ACTIVE") return false;
               const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
               if (!kinds.includes(vehicle.kind)) return false;
-              if (job.requestType !== "WATER_DELIVERY") return true;
-              const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
-              if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
-              if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
-              return Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1) >= job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
+              return doesFreightFitVehicleCapacity({
+                requestType: job.requestType,
+                quantity: job.quantity,
+                quantityUnit: job.quantityUnit,
+                details: job.details,
+                vehicle: {
+                  id: vehicle.id,
+                  kind: vehicle.kind,
+                  capacity: vehicle.capacity ?? null,
+                  capacityUnit: vehicle.capacityUnit ?? null,
+                  waterType: vehicle.waterType ?? null,
+                },
+              });
             });
             const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleIds[job.id]);
             return <article key={job.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
