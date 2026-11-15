@@ -38,7 +38,25 @@ function serviceLabel(value: string) {
     CARGO_SHIPMENT: "Transporte de carga",
     WATER_DELIVERY: "Entrega de água",
     ROADSIDE_ASSISTANCE: "Assistência rodoviária",
-  } as Record<string, string>)[value] ?? value;
+  } as Record<string, string>)[value] ?? "Outro serviço";
+}
+
+function statusLabel(value: string) {
+  return ({
+    REQUESTED: "Pedido recebido",
+    QUOTED: "Cotação disponível",
+    AWAITING_PAYMENT: "A aguardar pagamento",
+    PAID: "Pagamento confirmado",
+    SEARCHING_PROVIDER: "A procurar prestador",
+    ASSIGNED: "Prestador atribuído",
+    PROVIDER_EN_ROUTE: "Prestador a caminho",
+    PROVIDER_ARRIVED: "Prestador chegou",
+    PICKED_UP: "Recolha confirmada",
+    IN_TRANSIT: "Em transporte",
+    COMPLETED: "Concluído",
+    CANCELLED: "Cancelado",
+    EXCEPTION: "A requerer apoio",
+  } as Record<string, string>)[value] ?? "Em processamento";
 }
 
 export default function MobilityFreightCustomerQuotes() {
@@ -65,9 +83,7 @@ export default function MobilityFreightCustomerQuotes() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível consultar os pedidos.");
-      setRequests((data.requests as CustomerFreightRequest[]).filter((item) =>
-        ["QUOTED", "AWAITING_PAYMENT", "PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED", "EXCEPTION"].includes(item.status),
-      ));
+      setRequests(Array.isArray(data.requests) ? data.requests as CustomerFreightRequest[] : []);
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao consultar pedidos.");
@@ -125,7 +141,7 @@ export default function MobilityFreightCustomerQuotes() {
         {loading ? (
           <p className="py-6 text-center text-xs text-[var(--theme-text-faint)]">A consultar as suas cotações…</p>
         ) : requests.length === 0 ? (
-          <p className="py-6 text-center text-xs text-[var(--theme-text-faint)]">Ainda não existem cotações ou serviços de carga activos.</p>
+          <p className="py-6 text-center text-xs text-[var(--theme-text-faint)]">Ainda não tem pedidos. Quando solicitar um serviço, poderá acompanhar aqui cada actualização.</p>
         ) : requests.map((item) => {
           const actionable = item.status === "QUOTED" && !!item.quoteExpiresAt && new Date(item.quoteExpiresAt) > new Date();
           return (
@@ -135,7 +151,7 @@ export default function MobilityFreightCustomerQuotes() {
                   <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--theme-text)]">{item.reference}</p>
                   <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-[var(--theme-text-faint)]">{serviceLabel(item.requestType)}</p>
                 </div>
-                <span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-muted)]">{item.status.replaceAll("_", " ")}</span>
+                <span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-muted)]">{statusLabel(item.status)}</span>
               </div>
               {item.quotedAmount !== null && <p className="mt-4 text-lg font-semibold text-[var(--theme-text)]">{money(item.quotedAmount, item.currency)}</p>}
               {item.quoteExpiresAt && <p className="mt-1 text-[10px] text-[var(--theme-text-faint)]">Cotação válida até {formatDate(item.quoteExpiresAt)}</p>}
@@ -145,6 +161,7 @@ export default function MobilityFreightCustomerQuotes() {
                   <button type="button" disabled={busyId === item.id} onClick={() => void decide(item.id, "REJECT")} className="min-h-10 rounded-full border border-[var(--theme-border)] px-5 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--theme-text-muted)] disabled:opacity-50">Rejeitar</button>
                 </div>
               )}
+              {item.status === "REQUESTED" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Pedido recebido. A equipa está a preparar uma cotação; não precisa de fazer mais nada por agora.</p>}
               {item.status === "AWAITING_PAYMENT" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Cotação aceite. O pedido aguarda instruções e confirmação de pagamento. Ainda não foi enviado para os prestadores.</p>}
               {item.status === "QUOTED" && !actionable && <p className="mt-4 text-xs text-[var(--theme-text-muted)]">Esta cotação expirou. Contacte a equipa MARKA para solicitar uma nova proposta.</p>}
               {["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED", "EXCEPTION"].includes(item.status) && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Estado operacional: {item.status.replaceAll("_", " ").toLowerCase()}.</p>}
