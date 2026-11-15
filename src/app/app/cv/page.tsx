@@ -89,7 +89,7 @@ export default function MarkaCvPage() {
         <div>
           <p className="marka-kicker">MARKA · Carreira</p>
           <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)] sm:text-5xl">MARKA CV</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Crie um currículo profissional, guarde as suas versões e prepare um PDF pronto para candidatura.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Crie um currículo profissional, exporte o PDF e comece outro quando precisar. A MARKA não armazena os seus documentos.</p>
         </div>
         <Link href="/app" className="text-xs text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]">← Voltar ao painel</Link>
       </header>
