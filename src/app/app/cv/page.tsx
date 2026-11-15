@@ -90,7 +90,7 @@ export default function MarkaCvPage() {
     }
   }
 
-  function newCV() {
+  function exportPDF() {\n    if (!cv.fullName.trim()) { setError("Introduza o seu nome completo antes de exportar o currículo."); return; }\n    setError("");\n    window.print();\n  }\n\n  function newCV() {
     setActiveId("");
     setTitle("Novo currículo");
     setCv(emptyCV);
@@ -133,7 +133,7 @@ export default function MarkaCvPage() {
           body { background: #fff !important; color: #111 !important; }
           body * { visibility: hidden !important; }
           #marka-cv-print, #marka-cv-print * { visibility: visible !important; }
-          #marka-cv-print { position: absolute; inset: 0; width: 100%; min-height: 100%; padding: 0; color: #171717 !important; background: #fff !important; }
+          #marka-cv-print { position: absolute; inset: 0; width: 100%; min-height: 0; height: auto; overflow: visible !important; padding: 0; color: #171717 !important; background: #fff !important; }
           #marka-cv-print::after { content: "MARKA"; position: fixed; inset: 42% 0 auto; text-align: center; font-size: 76px; font-weight: 700; letter-spacing: .25em; color: rgba(20,20,20,.075); transform: rotate(-28deg); pointer-events: none; z-index: 0; }
           #marka-cv-print .cv-content { position: relative; z-index: 1; }
           #marka-cv-print h1 { font-size: 26pt !important; }
@@ -166,7 +166,7 @@ export default function MarkaCvPage() {
           </div>
 
           <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
-            <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Identificação profissional</h2>
+            <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Identificação profissional</h2>\n            <label className={labelClass + " mt-5"}>Nome desta versão<input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: CV — Gestor de projetos" /></label>
             <label className={labelClass + " mt-5"}>Nome completo<input className={inputClass} value={cv.fullName} onChange={(e) => update("fullName", e.target.value)} placeholder="O seu nome" /></label>
             <label className={labelClass + " mt-4"}>Título profissional<input className={inputClass} value={cv.professionalTitle} onChange={(e) => update("professionalTitle", e.target.value)} placeholder="Ex.: Técnico de contabilidade" /></label>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -214,7 +214,7 @@ export default function MarkaCvPage() {
 
           <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)]/95 p-3 shadow-xl backdrop-blur no-print">
             <button type="button" disabled={saving || loading} onClick={() => void saveCV()} className="rounded-full bg-[var(--theme-text)] px-6 py-3 text-xs font-bold text-[var(--theme-background)] disabled:opacity-50">{saving ? "A guardar..." : "Guardar currículo"}</button>
-            <button type="button" onClick={() => window.print()} className="rounded-full border border-[var(--theme-border)] px-6 py-3 text-xs font-semibold text-[var(--theme-text)]">Exportar PDF gratuito</button>
+            <button type="button" onClick={exportPDF} className="rounded-full border border-[var(--theme-border)] px-6 py-3 text-xs font-semibold text-[var(--theme-text)]">Exportar PDF gratuito</button>
             {activeId && <button type="button" onClick={() => void deleteCV()} className="ml-auto px-3 py-3 text-xs text-red-500">Apagar</button>}
           </div>
           {notice && <p role="status" className="text-sm text-emerald-600">{notice}</p>}
