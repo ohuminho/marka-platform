@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Experience = { role: string; company: string; location: string; startDate: string; endDate: string; description: string };
 type Education = { qualification: string; institution: string; location: string; startDate: string; endDate: string; details: string };
@@ -31,26 +31,36 @@ export default function MarkaCvPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  const loadDocuments = useCallback(async () => {
-    try {
-      const response = await fetch("/api/cv", { credentials: "include", cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível carregar os currículos.");
-      const rows = (data.documents || []) as DocumentRecord[];
-      setDocuments(rows);
-      if (rows.length) {
-        setActiveId(rows[0].id);
-        setTitle(rows[0].title);
-        setCv({ ...emptyCV, ...rows[0].content });
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadDocuments() {
+      try {
+        const response = await fetch("/api/cv", {
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Não foi possível carregar os currículos.");
+        const rows = (data.documents || []) as DocumentRecord[];
+        if (controller.signal.aborted) return;
+        setDocuments(rows);
+        if (rows.length) {
+          setActiveId(rows[0].id);
+          setTitle(rows[0].title);
+          setCv({ ...emptyCV, ...rows[0].content });
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : "Falha ao carregar os currículos.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao carregar os currículos.");
-    } finally {
-      setLoading(false);
     }
+    void loadDocuments();
+    return () => controller.abort();
   }, []);
-
-  useEffect(() => { void loadDocuments(); }, [loadDocuments]);
 
   function update<K extends keyof CVContent>(key: K, value: CVContent[K]) {
     setCv((current) => ({ ...current, [key]: value }));
