@@ -78,4 +78,54 @@ assert.equal(canAcceptFreightAlongsideActiveAssignments({
   vehicle: tanker,
 }), false);
 
+const truck = {
+  id: "truck-1",
+  kind: "LIGHT_TRUCK",
+  capacity: 5,
+  capacityUnit: "TON",
+  waterType: null,
+};
+const activeCargo = {
+  requestType: "CARGO_SHIPMENT",
+  assignedVehicleId: "truck-1",
+  quantity: 2,
+  quantityUnit: "TON",
+  destinationLatitude: -8.8389,
+  destinationLongitude: 13.2894,
+  details: { cargoItems: [{ description: "Cimento" }] },
+};
+const candidateCargo = {
+  requestType: "CARGO_SHIPMENT",
+  assignedVehicleId: "truck-1",
+  quantity: 2500,
+  quantityUnit: "KG",
+  destinationLatitude: -8.85,
+  destinationLongitude: 13.29,
+  details: { cargoItems: [{ description: "Blocos" }] },
+};
+
+assert.equal(canAcceptFreightAlongsideActiveAssignments({
+  activeAssignments: [activeCargo],
+  candidate: candidateCargo,
+  vehicle: truck,
+}), true);
+
+assert.equal(canAcceptFreightAlongsideActiveAssignments({
+  activeAssignments: [activeCargo],
+  candidate: { ...candidateCargo, quantity: 3500 },
+  vehicle: truck,
+}), false);
+
+assert.equal(canAcceptFreightAlongsideActiveAssignments({
+  activeAssignments: [{ ...activeCargo, quantity: null }],
+  candidate: candidateCargo,
+  vehicle: truck,
+}), false);
+
+assert.equal(canAcceptFreightAlongsideActiveAssignments({
+  activeAssignments: [activeCargo],
+  candidate: { ...candidateCargo, quantityUnit: "M3" },
+  vehicle: truck,
+}), false);
+
 console.log("Freight provider assignment and capacity rules passed.");
