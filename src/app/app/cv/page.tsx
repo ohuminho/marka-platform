@@ -73,7 +73,6 @@ export default function MarkaCvPage() {
     if (!loaded || !dirty) return;
     const snapshot = cv;
     const revision = revisionRef.current;
-    setSaveStatus("saving");
     const timer = window.setTimeout(() => {
       saveTimerRef.current = null;
       saveQueueRef.current = saveQueueRef.current.catch(() => undefined).then(async () => {
@@ -111,6 +110,7 @@ export default function MarkaCvPage() {
   function markDirty() {
     revisionRef.current += 1;
     setDirty(true);
+    setSaveStatus("saving");
   }
 
   function update<K extends keyof CVContent>(key: K, value: CVContent[K]) {
