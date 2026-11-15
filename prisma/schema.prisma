@@ -862,7 +862,6 @@ model User {
   freightProviders FreightProvider[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   notifications   Notification[]
-  markaCvs         MarkaCvDocument[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2484,16 +2483,3 @@ model SpaceBookingEvent {
   @@index([actorUserId, createdAt])
 }
 
-
-model MarkaCvDocument {
-  id        String   @id @default(uuid())
-  userId    String
-  title     String   @default("O meu currículo")
-  content   Json     @db.JsonB
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, updatedAt])
-}
