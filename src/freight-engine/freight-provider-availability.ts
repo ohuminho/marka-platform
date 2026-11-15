@@ -70,6 +70,42 @@ function capacityBaseUnit(unit: string, requestType: string): string | null {
   return null;
 }
 
+export function doesFreightFitVehicleCapacity(input: {
+  requestType: string;
+  quantity: number | null;
+  quantityUnit: string | null;
+  details: unknown;
+  vehicle: FreightVehicleCapacity;
+}): boolean {
+  const { requestType, quantity, quantityUnit, details, vehicle } = input;
+  if (requestType === "ROADSIDE_ASSISTANCE") return true;
+  if (requestType !== "WATER_DELIVERY" && requestType !== "CARGO_SHIPMENT") return false;
+
+  if (requestType === "CARGO_SHIPMENT" && quantity === null && quantityUnit === null) {
+    return vehicle.kind !== "WATER_TANKER";
+  }
+  if (quantity === null || !quantityUnit || !vehicle.capacity || !vehicle.capacityUnit) return false;
+
+  if (requestType === "WATER_DELIVERY") {
+    if (
+      vehicle.kind !== "WATER_TANKER" ||
+      !vehicle.waterType ||
+      waterTypeOf(details) !== vehicle.waterType
+    ) return false;
+  } else if (vehicle.kind === "WATER_TANKER") {
+    return false;
+  }
+
+  const targetUnit = capacityBaseUnit(vehicle.capacityUnit, requestType);
+  const capacity = toCapacityBaseUnits(Number(vehicle.capacity), vehicle.capacityUnit, requestType);
+  const requested = toCapacityBaseUnits(quantity, quantityUnit, requestType);
+  return targetUnit !== null &&
+    capacity !== null &&
+    requested !== null &&
+    capacityBaseUnit(quantityUnit, requestType) === targetUnit &&
+    requested <= capacity;
+}
+
 /**
  * Multiple jobs are safe only when they use the same vehicle, same service
  * family and nearby delivery destinations, and their combined declared
@@ -82,6 +118,15 @@ export function canAcceptFreightAlongsideActiveAssignments(input: {
   maxDestinationDistanceKm?: number;
 }): boolean {
   const { activeAssignments, candidate, vehicle } = input;
+  if (
+    !doesFreightFitVehicleCapacity({
+      requestType: candidate.requestType,
+      quantity: candidate.quantity,
+      quantityUnit: candidate.quantityUnit,
+      details: candidate.details,
+      vehicle,
+    })
+  ) return false;
   if (activeAssignments.length === 0) return true;
   if (
     candidate.requestType !== "WATER_DELIVERY" &&
