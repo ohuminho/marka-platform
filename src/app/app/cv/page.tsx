@@ -38,6 +38,7 @@ export default function MarkaCvPage() {
   const [saveStatus, setSaveStatus] = useState<"loading" | "empty" | "saving" | "saved" | "error">("loading");
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const revisionRef = useRef(0);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let cancelled = false;
@@ -72,29 +73,31 @@ export default function MarkaCvPage() {
     const snapshot = cv;
     const revision = revisionRef.current;
     setSaveStatus("saving");
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch("/api/cv", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cv: snapshot }),
-        });
-        if (!response.ok) {
-          const result = await response.json().catch(() => null);
-          throw new Error(result?.message || "Não foi possível guardar o rascunho.");
+    const timer = window.setTimeout(() => {
+      saveQueueRef.current = saveQueueRef.current.catch(() => undefined).then(async () => {
+        try {
+          const response = await fetch("/api/cv", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cv: snapshot }),
+          });
+          if (!response.ok) {
+            const result = await response.json().catch(() => null);
+            throw new Error(result?.message || "Não foi possível guardar o rascunho.");
+          }
+          const result = await response.json();
+          if (revisionRef.current === revision) {
+            setExpiresAt(result.expiresAt ?? null);
+            setDirty(false);
+            setSaveStatus("saved");
+          }
+        } catch (saveError) {
+          if (revisionRef.current === revision) {
+            setSaveStatus("error");
+            setError(saveError instanceof Error ? saveError.message : "Falha ao guardar o currículo.");
+          }
         }
-        const result = await response.json();
-        if (revisionRef.current === revision) {
-          setExpiresAt(result.expiresAt ?? null);
-          setDirty(false);
-          setSaveStatus("saved");
-        }
-      } catch (saveError) {
-        if (revisionRef.current === revision) {
-          setSaveStatus("error");
-          setError(saveError instanceof Error ? saveError.message : "Falha ao guardar o currículo.");
-        }
-      }
+      });
     }, 800);
     return () => window.clearTimeout(timer);
   }, [cv, dirty, loaded]);
@@ -130,8 +133,12 @@ export default function MarkaCvPage() {
   async function newCV() {
     const hasContent = Boolean(cv.fullName || cv.professionalTitle || cv.email || cv.phone || cv.location || cv.summary || cv.experience.length || cv.education.length || cv.skills.length || cv.languages.length || cv.certifications.length || cv.projects.length || cv.references.length || cv.linkedin || cv.portfolio);
     if (hasContent && !window.confirm("Criar outro currículo? O rascunho atual será eliminado permanentemente.")) return;
+    setLoaded(false);
     setSaveStatus("saving");
     try {
+      // Wait for an already-started autosave before deleting, so an older
+      // request cannot recreate the draft after the user starts a new CV.
+      await saveQueueRef.current.catch(() => undefined);
       const response = await fetch("/api/cv", { method: "DELETE" });
       if (!response.ok) throw new Error("Não foi possível eliminar o rascunho. Tente novamente.");
       revisionRef.current += 1;
@@ -143,6 +150,8 @@ export default function MarkaCvPage() {
     } catch (deleteError) {
       setSaveStatus("error");
       setError(deleteError instanceof Error ? deleteError.message : "Falha ao eliminar o currículo.");
+    } finally {
+      setLoaded(true);
     }
   }
 
