@@ -1,4 +1,4 @@
-import { haversineDistanceKm } from "@/freight-engine/freight-proximity";
+import { haversineDistanceKm } from "./freight-proximity";
 
 export type FreightProviderAvailabilityState =
   | "OFFLINE"
