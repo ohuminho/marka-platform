@@ -25,7 +25,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const { id } = await context.params;
     const store = await prisma.store.findFirst({
-      where: { id, status: "ACTIVE", vendor: { status: "ACTIVE" } },
+      where: { id, status: "ACTIVE", isIndividualListing: false, vendor: { status: "ACTIVE" } },
       include: { vendor: { select: { ownerId: true } } },
     });
     if (!store) return NextResponse.json({ message: "Loja não encontrada ou indisponível." }, { status: 404 });
