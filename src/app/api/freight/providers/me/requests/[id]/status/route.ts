@@ -58,6 +58,7 @@ export async function PATCH(
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
       const current = await tx.freightRequest.findFirst({
         where: {
           id,
