@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     const expiresAt = new Date(now.getTime() + RETENTION_MS);
     await prisma.markaCvDraft.upsert({
       where: { userId },
-      create: { userId, content: content as Prisma.InputJsonValue, expiresAt },
+      create: { userId, content: content as unknown as Prisma.InputJsonValue, expiresAt },
       update: { content: content as Prisma.InputJsonValue, expiresAt },
     });
 
