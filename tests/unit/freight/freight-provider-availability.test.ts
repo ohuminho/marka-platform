@@ -138,6 +138,22 @@ assert.equal(doesFreightFitVehicleCapacity({
   vehicle: truck,
 }), true);
 
+assert.equal(doesFreightFitVehicleCapacity({
+  requestType: "CARGO_SHIPMENT",
+  quantity: null,
+  quantityUnit: "KG",
+  details: {},
+  vehicle: truck,
+}), false);
+
+assert.equal(doesFreightFitVehicleCapacity({
+  requestType: "CARGO_SHIPMENT",
+  quantity: 1000,
+  quantityUnit: null,
+  details: {},
+  vehicle: truck,
+}), false);
+
 assert.equal(canAcceptFreightAlongsideActiveAssignments({
   activeAssignments: [activeCargo],
   candidate: candidateCargo,
