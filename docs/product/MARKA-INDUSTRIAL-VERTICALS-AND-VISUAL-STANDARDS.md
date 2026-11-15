@@ -161,7 +161,10 @@ O Marketplace mantém a categoria principal existente e acrescenta filtros de de
 - Matérias-primas, consumíveis, peças e manutenção industrial.
 - Continuar a aceitar novas indústrias através da categoria geral e da descrição do anúncio; esta lista é uma base inicial, não um catálogo fechado.
 
-A seleção de categorias deve continuar recolhida até o utilizador a abrir. A pesquisa global deve continuar a encontrar anúncios pelo nome, descrição e categoria, incluindo sinónimos locais como burgau/burgalho. Não criar produtos, preços, stock ou vendedores fictícios para preencher estas categorias.
+A seleção de categorias deve continuar recolhida até o utilizador a abrir.
+
+**Limites de publicação:** as categorias de seguros e bilhética podem permanecer pesquisáveis, mas a publicação de produtos de seguro exige verificação empresarial e prova de autorização/licença aplicável. A venda de bilhetes exige fluxo próprio de emissão QR, validação atómica e prevenção de reutilização. Não expor esses dois fluxos no formulário genérico de produtos antes de os controlos correspondentes estarem implementados.
+ A pesquisa global deve continuar a encontrar anúncios pelo nome, descrição e categoria, incluindo sinónimos locais como burgau/burgalho. Não criar produtos, preços, stock ou vendedores fictícios para preencher estas categorias.
 
 ## 9. Sequência de implementação sem duplicar sistemas
 1. Expandir a taxonomia e os atributos do formulário atual de loja/anúncio.
