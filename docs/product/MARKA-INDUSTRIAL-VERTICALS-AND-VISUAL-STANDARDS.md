@@ -127,6 +127,42 @@ A Lei n.º 22/11, de 17 de Junho, exige transparência, licitude, proporcionalid
 
 A MARKA não deve ameaçar genericamente “levar todos ao tribunal”: deve reservar direitos e agir apenas quando exista contrato válido, prova suficiente, dano ou valor devido e fundamento legal. Qualquer penalidade contratual deve ser validada quanto à validade, proporcionalidade e exigibilidade. Nenhuma cláusula garante risco zero ou torna automaticamente exigível qualquer multa.
 
+## 9. Taxonomia inicial de materiais, metalurgia e eletrónica
+
+O Marketplace mantém a categoria principal existente e acrescenta filtros de descoberta específicos, sem criar lojas ou módulos paralelos.
+
+### Construção e agregados
+- Areia; burgau/burgalho; brita e agregados.
+- Cimento, cal e argamassas.
+- Blocos, pavês e tijolos.
+- Telhas, chapas de zinco, perfis e coberturas.
+- Ferro, aço, varões, tubos, ferragens e ferramentas.
+- Tintas, impermeabilização, cerâmica, sanitários, vidros e caixilharia.
+
+### Metalurgia e transformação
+- Metalurgia e transformação de metais.
+- Chapas, perfis e tubos metálicos.
+- Alumínio, inox, serralharia, estruturas metálicas e trabalhos de corte/soldadura.
+- Fabricantes, distribuidores, grossistas e prestadores de instalação podem publicar no mesmo catálogo.
+
+### Construção civil e serviços
+- Empreitadas, pedreiros, alvenaria, assentamento, telhados, coberturas, pintura e acabamentos.
+- Distinguir sempre produto físico de mão de obra/serviço; a categoria não transforma um prestador em vendedor de stock.
+
+### Eletrónica e tecnologia
+- Telemóveis e acessórios.
+- Computadores, informática e periféricos.
+- Televisores, áudio e vídeo.
+- Eletrodomésticos.
+- Componentes e acessórios eletrónicos.
+
+### Equipamentos e indústria
+- Máquinas de construção e ferramentas profissionais.
+- Matérias-primas, consumíveis, peças e manutenção industrial.
+- Continuar a aceitar novas indústrias através da categoria geral e da descrição do anúncio; esta lista é uma base inicial, não um catálogo fechado.
+
+A seleção de categorias deve continuar recolhida até o utilizador a abrir. A pesquisa global deve continuar a encontrar anúncios pelo nome, descrição e categoria, incluindo sinónimos locais como burgau/burgalho. Não criar produtos, preços, stock ou vendedores fictícios para preencher estas categorias.
+
 ## 8. Sequência de implementação sem duplicar sistemas
 1. Expandir a taxonomia e os atributos do formulário atual de loja/anúncio.
 2. Reutilizar Vendor, Store, Product, Category, Order, Fulfillment, Dispatch, Messaging, Payments e ledger existentes.
