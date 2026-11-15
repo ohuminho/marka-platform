@@ -33,6 +33,11 @@ export const NavigationConfig = {
           description: "Your MARKA command experience",
         },
         {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
+        },
+        {
           title: "AI Assistant",
           route: "/app/assistant",
           description: "Get intelligent assistance inside MARKA",
@@ -120,6 +125,11 @@ export const NavigationConfig = {
           permissions: ["VENDOR_MANAGE"],
         },
         {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
+        },
+        {
           title: "AI Assistant",
           route: "/app/assistant",
           description: "Get intelligent assistance for your business",
@@ -179,6 +189,11 @@ export const NavigationConfig = {
           route: "/app/admin",
           description: "Platform overview",
           permissions: ["ADMIN_ACCESS"],
+        },
+        {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
         },
         {
           title: "AI Assistant",
@@ -282,6 +297,11 @@ export const NavigationConfig = {
           route: "/app/super-admin",
           description: "Global platform control",
           permissions: ["SYSTEM_ADMIN"],
+        },
+        {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
         },
         {
           title: "AI Assistant",
