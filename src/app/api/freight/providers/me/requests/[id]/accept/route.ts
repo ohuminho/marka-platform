@@ -51,6 +51,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   try {
     const assigned = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
       const providerClaim = await tx.freightProvider.updateMany({
         where: { id: provider.id, status: "VERIFIED", availability: { in: ["AVAILABLE", "BUSY"] } },
         data: { availability: "BUSY" },
