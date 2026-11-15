@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const remainingStoreSlots = Math.max(0, MAX_DYNAMIC_URLS - products.length);
     const stores = remainingStoreSlots > 0
       ? await prisma.store.findMany({
-          where: { status: "ACTIVE", vendor: { status: "ACTIVE" }, products: { some: { status: "ACTIVE", stock: { gt: 0 } } } },
+          where: { status: "ACTIVE", isIndividualListing: false, vendor: { status: "ACTIVE" }, products: { some: { status: "ACTIVE", stock: { gt: 0 } } } },
           select: { id: true, updatedAt: true },
           orderBy: { updatedAt: "desc" },
           take: remainingStoreSlots,
