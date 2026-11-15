@@ -79,7 +79,8 @@ async function main() {
     "Serviços — Decoração, som e iluminação", "Serviços — Fotografia e vídeo",
     "Serviços — Casa e manutenção", "Serviços — Beleza e bem-estar",
     "Serviços — Limpeza e apoio", "Serviços — Educação e formação",
-    "Serviços — Tecnologia e profissionais", "Serviços — Outros", "Lojas de bairro", "Outros",
+    "Serviços — Tecnologia e profissionais", "Serviços — Outros", "Seguros e proteção",
+    "Eventos e bilhética", "Energia solar e soluções energéticas", "Lojas de bairro", "Outros",
   ];
 
   for (const name of marketplaceCategories) {
