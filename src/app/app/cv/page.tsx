@@ -39,6 +39,7 @@ export default function MarkaCvPage() {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const revisionRef = useRef(0);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +75,7 @@ export default function MarkaCvPage() {
     const revision = revisionRef.current;
     setSaveStatus("saving");
     const timer = window.setTimeout(() => {
+      saveTimerRef.current = null;
       saveQueueRef.current = saveQueueRef.current.catch(() => undefined).then(async () => {
         try {
           const response = await fetch("/api/cv", {
@@ -99,7 +101,11 @@ export default function MarkaCvPage() {
         }
       });
     }, 800);
-    return () => window.clearTimeout(timer);
+    saveTimerRef.current = timer;
+    return () => {
+      window.clearTimeout(timer);
+      if (saveTimerRef.current === timer) saveTimerRef.current = null;
+    };
   }, [cv, dirty, loaded]);
 
   function markDirty() {
@@ -133,6 +139,10 @@ export default function MarkaCvPage() {
   async function newCV() {
     const hasContent = Boolean(cv.fullName || cv.professionalTitle || cv.email || cv.phone || cv.location || cv.summary || cv.experience.length || cv.education.length || cv.skills.length || cv.languages.length || cv.certifications.length || cv.projects.length || cv.references.length || cv.linkedin || cv.portfolio);
     if (hasContent && !window.confirm("Criar outro currículo? O rascunho atual será eliminado permanentemente.")) return;
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
     setLoaded(false);
     setSaveStatus("saving");
     try {
