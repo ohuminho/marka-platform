@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {
   canAcceptAdditionalFreightAssignment,
   shouldReleaseFreightProvider,
-} from "../../src/freight-engine/freight-provider-availability";
+} from "../../../src/freight-engine/freight-provider-availability";
 
 assert.equal(canAcceptAdditionalFreightAssignment("AVAILABLE"), true);
 assert.equal(canAcceptAdditionalFreightAssignment("BUSY"), true);
