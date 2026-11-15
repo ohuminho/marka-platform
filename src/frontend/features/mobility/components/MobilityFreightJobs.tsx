@@ -72,8 +72,8 @@ export default function MobilityFreightJobs() {
       setError("Este dispositivo não disponibiliza localização GPS.");
       return;
     }
-    if (!provider || provider.status !== "VERIFIED" || !["AVAILABLE", "BUSY"].includes(provider.availability)) {
-      setError("A localização só pode ser partilhada por prestadores verificados que estejam disponíveis ou em serviço.");
+    if (!provider || provider.status !== "VERIFIED" || (!["AVAILABLE", "BUSY"].includes(provider.availability) && assignedJobs.length === 0)) {
+      setError("A localização só pode ser partilhada por prestadores verificados disponíveis ou com serviços em curso.");
       return;
     }
     if (locationWatchId.current !== null) return;
@@ -101,7 +101,7 @@ export default function MobilityFreightJobs() {
       );
     }, 30000);
     setLocationSharing(true);
-  }, [provider, sendProviderLocation]);
+  }, [provider, assignedJobs.length, sendProviderLocation]);
 
   const refresh = useCallback(async () => {
     setError(null);
