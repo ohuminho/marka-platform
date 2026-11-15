@@ -182,6 +182,7 @@ export default function MobilityFreightRequestForm() {
         // O registo do servidor é a fonte de verdade.
       }
       setCargoDescription("");
+      setCargoQuantity("");
       setVehicleDescription("");
       setNotes("");
       setOrigin({ address: "", point: null, searching: false });
