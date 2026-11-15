@@ -169,7 +169,7 @@ export default function MobilityFreightCustomerQuotes() {
               {item.status === "REQUESTED" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Pedido recebido. A equipa está a preparar uma cotação; não precisa de fazer mais nada por agora.</p>}
               {item.status === "AWAITING_PAYMENT" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Cotação aceite. O pedido aguarda instruções e confirmação de pagamento. Ainda não foi enviado para os prestadores.</p>}
               {item.status === "QUOTED" && !actionable && <p className="mt-4 text-xs text-[var(--theme-text-muted)]">Esta cotação expirou. Contacte a equipa MARKA para solicitar uma nova proposta.</p>}
-              {["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED", "EXCEPTION"].includes(item.status) && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Estado operacional: {item.status.replaceAll("_", " ").toLowerCase()}.</p>}
+              {["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED", "EXCEPTION"].includes(item.status) && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">{statusLabel(item.status)}. Consulte esta página para acompanhar novas actualizações.</p>}
             </article>
           );
         })}
