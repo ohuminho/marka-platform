@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
 
 type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string; capacity?: number | string | null; capacityUnit?: string | null; waterType?: string | null };
@@ -24,6 +24,77 @@ export default function MobilityFreightJobs() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [locationSharing, setLocationSharing] = useState(false);
+  const locationWatchId = useRef<number | null>(null);
+  const locationHeartbeatId = useRef<number | null>(null);
+  const latestPosition = useRef<GeolocationPosition | null>(null);
+  const lastLocationSentAt = useRef(0);
+
+  const sendProviderLocation = useCallback(async (force = false) => {
+    const position = latestPosition.current;
+    if (!position) return;
+    const now = Date.now();
+    if (!force && now - lastLocationSentAt.current < 15000) return;
+    if (position.coords.accuracy > 1000) {
+      setError("A precisão do GPS é insuficiente. Active a localização de alta precisão e tente novamente.");
+      return;
+    }
+    const response = await fetch("/api/freight/providers/me/location", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracyM: Math.round(position.coords.accuracy),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message ?? "Não foi possível actualizar a localização GPS.");
+    lastLocationSentAt.current = now;
+  }, []);
+
+  const stopLocationSharing = useCallback(() => {
+    if (locationWatchId.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(locationWatchId.current);
+    }
+    if (locationHeartbeatId.current !== null) {
+      window.clearInterval(locationHeartbeatId.current);
+    }
+    locationWatchId.current = null;
+    locationHeartbeatId.current = null;
+    latestPosition.current = null;
+    setLocationSharing(false);
+  }, []);
+
+  const startLocationSharing = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError("Este dispositivo não disponibiliza localização GPS.");
+      return;
+    }
+    if (!provider || provider.status !== "VERIFIED" || !["AVAILABLE", "BUSY"].includes(provider.availability)) {
+      setError("A localização só pode ser partilhada por prestadores verificados que estejam disponíveis ou em serviço.");
+      return;
+    }
+    if (locationWatchId.current !== null) return;
+    setError(null);
+    locationWatchId.current = navigator.geolocation.watchPosition(
+      (position) => {
+        latestPosition.current = position;
+        void sendProviderLocation().catch((cause) =>
+          setError(cause instanceof Error ? cause.message : "Falha ao actualizar a localização GPS."),
+        );
+      },
+      () => setError("Não foi possível obter o GPS. Verifique a permissão de localização do dispositivo."),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+    );
+    locationHeartbeatId.current = window.setInterval(() => {
+      void sendProviderLocation(true).catch((cause) =>
+        setError(cause instanceof Error ? cause.message : "Falha ao actualizar a localização GPS."),
+      );
+    }, 30000);
+    setLocationSharing(true);
+  }, [provider, sendProviderLocation]);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -64,6 +135,13 @@ export default function MobilityFreightJobs() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [refresh]);
+
+  useEffect(() => () => {
+    if (locationWatchId.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(locationWatchId.current);
+    }
+    if (locationHeartbeatId.current !== null) window.clearInterval(locationHeartbeatId.current);
+  }, []);
 
   function nextAction(job: FreightJob): { status: string; label: string } | null {
     if (job.status === "ASSIGNED") return { status: "PROVIDER_EN_ROUTE", label: "Iniciar deslocação" };
@@ -121,9 +199,15 @@ export default function MobilityFreightJobs() {
     <section className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[#b89a5b]">Despacho de carga e assistência</p><h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Pedidos pagos disponíveis</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Só aparecem pedidos com pagamento confirmado e viaturas compatíveis. A aceitação é exclusiva: o primeiro prestador elegível a confirmar fica com o serviço.</p></div>
-        <button type="button" onClick={() => { setLoading(true); refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao actualizar.")).finally(() => setLoading(false)); }} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]">Actualizar</button>
+        <div className="flex flex-wrap gap-2">
+          {locationSharing
+            ? <button type="button" onClick={stopLocationSharing} className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700">GPS activo · Parar</button>
+            : <button type="button" onClick={startLocationSharing} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]">Activar GPS para pedidos próximos</button>}
+          <button type="button" onClick={() => { setLoading(true); refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao actualizar.")).finally(() => setLoading(false)); }} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]">Actualizar</button>
+        </div>
       </div>
       {provider && <p className="mt-4 text-[11px] text-[var(--theme-text-muted)]">Estado do prestador: <strong>{provider.status}</strong> · Disponibilidade: <strong>{provider.availability}</strong></p>}
+      <p className="mt-2 text-[10px] leading-5 text-[var(--theme-text-faint)]">A localização GPS só é partilhada depois de activar esta opção. É usada para mostrar pedidos próximos e deixa de ser actualizada quando parar a partilha ou fechar esta área.</p>
       {notice && <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
       {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-700">{error}</p>}
       {assignedJobs.length > 0 && (
