@@ -1039,6 +1039,7 @@ model Store {
   longitude   Decimal?    @db.Decimal(10, 7)
   rating      Decimal     @default(0) @db.Decimal(5, 2)
   status      StoreStatus @default(ACTIVE)
+  isIndividualListing Boolean @default(false)
 
   vendorId String @unique
   vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
