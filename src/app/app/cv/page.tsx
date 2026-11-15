@@ -5,15 +5,24 @@ import { useEffect, useState } from "react";
 
 type Experience = { role: string; company: string; location: string; startDate: string; endDate: string; description: string };
 type Education = { qualification: string; institution: string; location: string; startDate: string; endDate: string; details: string };
+type CVTemplateId = "ats" | "classic" | "executive" | "creative";
 type CVContent = {
+  templateId: CVTemplateId;
   fullName: string; professionalTitle: string; email: string; phone: string; location: string; summary: string;
   experience: Experience[]; education: Education[]; skills: string[]; languages: string[];
 };
 type DocumentRecord = { id: string; title: string; content: CVContent; updatedAt: string };
+const cvTemplates: { id: CVTemplateId; name: string; description: string; premium: boolean; accent: string }[] = [
+  { id: "ats", name: "ATS Essencial", description: "Leitura simples, compatível com sistemas de recrutamento.", premium: false, accent: "#285b50" },
+  { id: "classic", name: "Clássico", description: "Visual editorial discreto para qualquer área.", premium: false, accent: "#806b43" },
+  { id: "executive", name: "Executivo", description: "Hierarquia visual forte para perfis sénior.", premium: true, accent: "#173b63" },
+  { id: "creative", name: "Criativo", description: "Composição contemporânea para portefólios e comunicação.", premium: true, accent: "#7444a2" },
+];
 
 const emptyExperience: Experience = { role: "", company: "", location: "", startDate: "", endDate: "", description: "" };
 const emptyEducation: Education = { qualification: "", institution: "", location: "", startDate: "", endDate: "", details: "" };
 const emptyCV: CVContent = {
+  templateId: "ats",
   fullName: "", professionalTitle: "", email: "", phone: "", location: "", summary: "",
   experience: [], education: [], skills: [], languages: [],
 };
@@ -99,6 +108,7 @@ export default function MarkaCvPage() {
   }
 
   function exportPDF() {
+    if (cvTemplates.find((template) => template.id === cv.templateId)?.premium) { setError("Este modelo pertence ao MARKA CV Premium. A exportação sem marca de água será desbloqueada após validação do pagamento."); return; }
     if (!cv.fullName.trim()) { setError("Introduza o seu nome completo antes de exportar o currículo."); return; }
     setError("");
     window.print();
@@ -180,6 +190,11 @@ export default function MarkaCvPage() {
           </div>
 
           <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Escolha o seu modelo</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">A pré-visualização muda imediatamente. Os modelos Premium ficam disponíveis para experimentar.</p></div><span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[9px] uppercase tracking-wider text-[var(--theme-text-muted)]">4 modelos</span></div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">{cvTemplates.map((template) => <button key={template.id} type="button" aria-pressed={cv.templateId === template.id} onClick={() => update("templateId", template.id)} className={`rounded-xl border p-4 text-left transition ${cv.templateId === template.id ? "border-[var(--theme-text)] ring-1 ring-[var(--theme-text)]" : "border-[var(--theme-border)] hover:border-[var(--theme-text-muted)]"}`}><span className="flex items-center justify-between gap-2"><span className="text-sm font-semibold text-[var(--theme-text)]">{template.name}</span><span className={`rounded-full px-2 py-1 text-[8px] uppercase tracking-wider ${template.premium ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"}`}>{template.premium ? "Premium" : "Grátis"}</span></span><span className="mt-2 block text-[11px] leading-5 text-[var(--theme-text-muted)]">{template.description}</span><span className="mt-3 block h-1.5 w-full rounded-full" style={{ backgroundColor: template.accent }} /></button>)}</div>
+          </section>
+
+          <section className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6">
             <h2 className="marka-editorial text-2xl text-[var(--theme-text)]">Identificação profissional</h2>
             <label className={labelClass + " mt-5"}>Nome desta versão<input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: CV — Gestor de projetos" /></label>
             <label className={labelClass + " mt-5"}>Nome completo<input className={inputClass} value={cv.fullName} onChange={(e) => update("fullName", e.target.value)} placeholder="O seu nome" /></label>
@@ -240,16 +255,16 @@ export default function MarkaCvPage() {
         <aside className="space-y-5">
           <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
             <p className="marka-kicker">MARKA CV · Premium</p>
-            <h2 className="marka-editorial mt-3 text-2xl text-[var(--theme-text)]">Uma apresentação à altura do seu percurso.</h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">Os templates Premium e a exportação sem marca de água serão ativados depois de o sistema de pagamento existente estar validado. Não será necessário criar outra conta.</p>
-            <span className="mt-5 inline-flex rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)]">Premium · Em preparação</span>
+            <h2 className="marka-editorial mt-3 text-2xl text-[var(--theme-text)]">Modelos profissionais para cada etapa da carreira.</h2>
+            <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">Os modelos Executivo e Criativo já podem ser pré-visualizados. O desbloqueio e a exportação sem marca de água aguardam a validação real do pagamento HappyPay.</p>
+            <span className="mt-5 inline-flex rounded-full border border-[var(--theme-border)] px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)]">Modelos Premium · Pré-visualização</span>
           </div>
           <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
             <div className="mb-4 flex items-center justify-between"><p className="marka-kicker">Pré-visualização · Free</p><span className="text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text-faint)]">A4</span></div>
-            <div id="marka-cv-print" className="relative min-h-[520px] overflow-hidden bg-white p-7 text-[#171717] shadow-lg sm:p-9">
+            <div id="marka-cv-print" data-template={cv.templateId} className={`relative min-h-[520px] overflow-hidden bg-white p-7 text-[#171717] shadow-lg sm:p-9 ${cv.templateId === "executive" ? "border-l-[12px] border-[#173b63]" : cv.templateId === "creative" ? "rounded-t-[3rem] border-t-[12px] border-[#7444a2]" : ""}`} style={{ "--cv-accent": cvTemplates.find((template) => template.id === cv.templateId)?.accent ?? "#285b50" } as React.CSSProperties}>
               <div className="cv-content relative z-[1]">
-                <h1 className="break-words text-3xl font-semibold tracking-tight">{cv.fullName || "O seu nome completo"}</h1>
-                <p className="mt-2 text-sm font-medium text-[#806b43]">{cv.professionalTitle || "Título profissional"}</p>
+                <h1 className={`break-words font-semibold tracking-tight ${cv.templateId === "creative" ? "text-4xl" : "text-3xl"}`}>{cv.fullName || "O seu nome completo"}</h1>
+                <p className="mt-2 text-sm font-medium" style={{ color: "var(--cv-accent)" }}>{cv.professionalTitle || "Título profissional"}</p>
                 <p className="mt-3 break-words text-[10px] text-[#555]">{[cv.email, cv.phone, cv.location].filter(Boolean).join(" · ") || "E-mail · Telefone · Localização"}</p>
                 {cv.summary && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Perfil profissional</h2><p className="mt-3 whitespace-pre-wrap text-xs leading-5">{cv.summary}</p></section>}
                 {cv.experience.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Experiência profissional</h2>{cv.experience.map((item, index) => <div key={index} className="cv-entry mt-4"><h3 className="text-sm font-semibold">{item.role || "Cargo"}{item.company ? ` · ${item.company}` : ""}</h3><p className="mt-1 text-[10px] text-[#666]">{[item.location, item.startDate, item.endDate].filter(Boolean).join(" · ")}</p>{item.description && <p className="mt-2 whitespace-pre-wrap text-xs leading-5">{item.description}</p>}</div>)}</section>}
@@ -257,7 +272,7 @@ export default function MarkaCvPage() {
                 {cv.skills.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Competências</h2><p className="mt-3 text-xs leading-6">{cv.skills.join(" · ")}</p></section>}
                 {cv.languages.length > 0 && <section className="mt-7"><h2 className="border-b border-[#d7d2c8] pb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Idiomas</h2><p className="mt-3 text-xs leading-6">{cv.languages.join(" · ")}</p></section>}
               </div>
-              <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[45%] -rotate-[28deg] text-center text-5xl font-bold tracking-[0.3em] text-black/[0.06]">MARKA</div>
+              {!cvTemplates.find((template) => template.id === cv.templateId)?.premium && <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[45%] -rotate-[28deg] text-center text-5xl font-bold tracking-[0.3em] text-black/[0.06]">MARKA</div>}
               <div className="absolute bottom-5 left-0 right-0 text-center text-[8px] uppercase tracking-[0.2em] text-[#999]">Criado com MARKA CV</div>
             </div>
           </div>
