@@ -28,6 +28,7 @@ const educationSchema = z.object({
 });
 
 const cvContentSchema = z.object({
+  templateId: z.enum(["ats", "classic", "executive", "creative"]).default("ats"),
   fullName: z.string().trim().max(160).default(""),
   professionalTitle: z.string().trim().max(160).default(""),
   email: z.string().trim().max(254).default(""),
