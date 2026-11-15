@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Experience = { role: string; company: string; location: string; startDate: string; endDate: string; description: string };
 type Education = { qualification: string; institution: string; location: string; startDate: string; endDate: string; details: string };
@@ -41,6 +41,7 @@ export default function MarkaCvPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
+  const saveInFlightRef = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -89,6 +90,8 @@ export default function MarkaCvPage() {
   }
 
   async function saveCV() {
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
     setSaving(true);
     setNotice("");
     setError("");
@@ -109,6 +112,7 @@ export default function MarkaCvPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao guardar o currículo.");
     } finally {
+      saveInFlightRef.current = false;
       setSaving(false);
     }
   }
@@ -117,6 +121,9 @@ export default function MarkaCvPage() {
     if (!dirty || loading || !cv.fullName.trim()) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
+      if (saveInFlightRef.current) return;
+      saveInFlightRef.current = true;
+      setSaving(true);
       try {
         const response = await fetch("/api/cv", {
           method: activeId ? "PUT" : "POST",
@@ -135,6 +142,9 @@ export default function MarkaCvPage() {
         setNotice("Guardado automaticamente.");
       } catch (err) {
         if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Falha na gravação automática.");
+      } finally {
+        saveInFlightRef.current = false;
+        setSaving(false);
       }
     }, 1400);
     return () => { window.clearTimeout(timer); controller.abort(); };
