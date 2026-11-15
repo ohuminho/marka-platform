@@ -11,7 +11,7 @@ This document records the current server-side eligibility rules for freight prov
 - Cargo and roadside pickup use the request origin. Water delivery uses the delivery destination because the request has no pickup point.
 - The API rechecks location freshness, accuracy and distance when the provider accepts an offer.
 - Only the provider's latest coordinates are stored on the provider record. The location endpoint does not create a public location feed or a location history.
-- Stopping GPS sharing or leaving the freight jobs component clears the saved coordinates; if the browser closes unexpectedly, the last fix becomes ineligible after 3 minutes.
+- Explicitly stopping GPS sharing clears the saved coordinates. Leaving the freight jobs component stops updates; if the browser closes unexpectedly, the last fix becomes ineligible after 3 minutes.
 
 ## Multiple active assignments
 
