@@ -38,7 +38,7 @@ export class VendorService {
           },
           create: {
             tenantId: tenant.id,
-            name: input.storeName.trim(),
+            name: sellerName,
             slug: `seller-${ownerId}`,
             type: "VENDOR",
             status: "ACTIVE",
@@ -117,7 +117,7 @@ export class VendorService {
 
       return tx.vendor.create({
         data: {
-          name: input.storeName.trim(),
+          name: sellerName,
           ownerId,
           organizationId,
           businessType: input.businessType,
@@ -131,6 +131,7 @@ export class VendorService {
             create: {
               name: sellerName,
               status: "ACTIVE",
+              isIndividualListing: sellerMode === "SINGLE_LISTING",
             },
           },
         },
