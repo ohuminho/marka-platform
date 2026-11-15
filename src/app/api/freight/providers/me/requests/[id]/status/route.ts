@@ -92,11 +92,32 @@ export async function PATCH(
       if (changed.count !== 1) throw new Error("FREIGHT_STATUS_CONFLICT");
 
       if (requestedNext === "COMPLETED") {
-        const released = await tx.freightProvider.updateMany({
-          where: { id: provider.id, availability: "BUSY" },
-          data: { availability: "AVAILABLE" },
+        const remainingActiveAssignments = await tx.freightRequest.count({
+          where: {
+            organizationId: auth.session.organizationId,
+            assignedProviderId: provider.id,
+            id: { not: current.id },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PROVIDER_EN_ROUTE",
+                "PROVIDER_ARRIVED",
+                "PICKED_UP",
+                "IN_TRANSIT",
+                "EXCEPTION",
+              ],
+            },
+          },
         });
-        if (released.count !== 1) throw new Error("FREIGHT_PROVIDER_RELEASE_CONFLICT");
+
+        // A provider may carry several nearby jobs. Only release BUSY state
+        // after the last active assignment is completed.
+        if (remainingActiveAssignments === 0) {
+          await tx.freightProvider.updateMany({
+            where: { id: provider.id, availability: "BUSY" },
+            data: { availability: "AVAILABLE" },
+          });
+        }
       }
 
       return tx.freightRequest.findUniqueOrThrow({
