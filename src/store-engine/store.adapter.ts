@@ -19,7 +19,7 @@ export class StoreAdapter {
       where: { id: storeId },
     });
 
-    if (!store) {
+    if (!store || store.isIndividualListing) {
       return null;
     }
 
@@ -41,6 +41,7 @@ export class StoreAdapter {
         status: {
           in: ["ACTIVE"],
         },
+        isIndividualListing: false,
       },
       orderBy: {
         createdAt: "desc",
