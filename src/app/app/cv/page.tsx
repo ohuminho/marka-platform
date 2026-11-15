@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Experience = { role: string; company: string; location: string; startDate: string; endDate: string; description: string };
 type Education = { qualification: string; institution: string; location: string; startDate: string; endDate: string; details: string };
@@ -30,8 +30,6 @@ export default function MarkaCvPage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-
-  const activeDocument = useMemo(() => documents.find((item) => item.id === activeId), [documents, activeId]);
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
