@@ -41,6 +41,7 @@ export default function MobilityExperience() {
   const [origin, setOrigin] = useState<MapPoint | null>(null);
   const [destination, setDestination] = useState<MapPoint | null>(null);
   const [serviceType, setServiceType] = useState<string>("TAXI");
+  const [serviceGroup, setServiceGroup] = useState<"PASSENGER" | "GROUP">("PASSENGER");
   const [passengerCount, setPassengerCount] = useState(1);
   const [safetyMode, setSafetyMode] = useState<"STANDARD" | "TRUSTED" | "CHILD">("STANDARD");
   const [creating, setCreating] = useState(false);
@@ -48,6 +49,12 @@ export default function MobilityExperience() {
   const [rideResult, setRideResult] = useState<RideResult | null>(null);
   const [requestReference, setRequestReference] = useState<string | null>(null);
 
+  const visibleServices = useMemo(
+    () => services.filter((service) => serviceGroup === "PASSENGER"
+      ? ["TAXI", "EXECUTIVE", "MOTO_TAXI"].includes(service.id)
+      : ["VAN", "MINIBUS", "BUS", "COACH"].includes(service.id)),
+    [serviceGroup],
+  );
   const selectedService = useMemo(
     () => services.find((service) => service.id === serviceType) ?? services[0],
     [serviceType],
@@ -191,11 +198,22 @@ export default function MobilityExperience() {
             <span className="rounded-xl border border-white/[.08] bg-white/[.035] px-3 py-2 text-[9px] font-semibold text-white/45">AO · AOA</span>
           </div>
 
-          <div role="group" aria-label="Categorias de transporte" className="mt-5 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
-            {services.map((service) => {
+          <div role="group" aria-label="Tipo de serviço" className="mt-5 grid grid-cols-2 gap-2">
+            <button type="button" aria-pressed={serviceGroup === "PASSENGER"} onClick={() => { setServiceGroup("PASSENGER"); setServiceType("TAXI"); setPassengerCount(1); }} className={`min-h-[76px] rounded-2xl border px-3 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-[#E9BD58] ${serviceGroup === "PASSENGER" ? "border-[#E9BD58]/65 bg-[#E9BD58]/[.09]" : "border-white/[.09] bg-white/[.025] hover:border-white/20"}`}>
+              <span className={`block text-xs font-semibold ${serviceGroup === "PASSENGER" ? "text-[#F2CD70]" : "text-white/85"}`}>Táxi e mototáxi</span>
+              <span className="mt-1 block text-[9px] leading-4 text-white/45">Viagens individuais e urbanas</span>
+            </button>
+            <button type="button" aria-pressed={serviceGroup === "GROUP"} onClick={() => { setServiceGroup("GROUP"); setServiceType("VAN"); setPassengerCount(1); }} className={`min-h-[76px] rounded-2xl border px-3 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-[#E9BD58] ${serviceGroup === "GROUP" ? "border-[#E9BD58]/65 bg-[#E9BD58]/[.09]" : "border-white/[.09] bg-white/[.025] hover:border-white/20"}`}>
+              <span className={`block text-xs font-semibold ${serviceGroup === "GROUP" ? "text-[#F2CD70]" : "text-white/85"}`}>Transporte de grupos</span>
+              <span className="mt-1 block text-[9px] leading-4 text-white/45">Carrinhas, minibuses e autocarros</span>
+            </button>
+          </div>
+
+          <div role="group" aria-label="Viaturas disponíveis" className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            {visibleServices.map((service) => {
               const selected = serviceType === service.id;
               return (
-                <button key={service.id} type="button" aria-pressed={selected} onClick={() => { setServiceType(service.id); if (service.id === "MOTO_TAXI") setPassengerCount(1); }} className={`group relative flex min-w-[190px] shrink-0 snap-start items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#E9BD58] lg:min-w-0 lg:w-full lg:p-3.5 ${selected ? "border-[#E9BD58]/65 bg-[linear-gradient(110deg,rgba(233,189,88,.12),rgba(233,189,88,.025))] shadow-[inset_0_0_0_1px_rgba(233,189,88,.08)]" : "border-white/[.09] bg-white/[.02] hover:border-white/20 hover:bg-white/[.04]"}`}>
+                <button key={service.id} type="button" aria-pressed={selected} onClick={() => { setServiceType(service.id); if (service.id === "MOTO_TAXI") setPassengerCount(1); }} className={`group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left transition duration-200 focus:outline-none focus:ring-2 focus:ring-[#E9BD58] lg:w-full lg:p-3.5 ${selected ? "border-[#E9BD58]/65 bg-[linear-gradient(110deg,rgba(233,189,88,.12),rgba(233,189,88,.025))] shadow-[inset_0_0_0_1px_rgba(233,189,88,.08)]" : "border-white/[.09] bg-white/[.02] hover:border-white/20 hover:bg-white/[.04]"}`}>
                   <div className={`flex h-20 w-[7.25rem] shrink-0 items-center justify-center rounded-xl transition ${selected ? "bg-[#E9BD58]/[.11] text-[#F2CD70]" : "bg-white/[.045] text-white/55"}`}><MarkaVehicleIllustration kind={service.icon} className="h-16 w-28 sm:h-[4.5rem] sm:w-32"/></div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2"><p className="text-sm font-semibold tracking-tight">{service.name}</p>{service.id === "TAXI" && <span className="rounded-full bg-white/[.07] px-2 py-0.5 text-[8px] font-semibold text-white/45">CONFORTO</span>}</div>
@@ -207,7 +225,6 @@ export default function MobilityExperience() {
               );
             })}
           </div>
-          <p className="mt-1 text-[9px] text-white/35 lg:hidden">Deslize para consultar todas as categorias.</p>
           <p className="mt-3 text-[10px] leading-4 text-white/40">{selectedService.description}</p>
 
           <div className="mt-5 space-y-4 border-t border-white/[.08] pt-5">
