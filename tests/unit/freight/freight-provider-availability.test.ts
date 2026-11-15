@@ -56,6 +56,15 @@ assert.equal(canAcceptFreightAlongsideActiveAssignments({
 }), false);
 
 assert.equal(canAcceptFreightAlongsideActiveAssignments({
+  activeAssignments: [
+    activeWater,
+    { ...activeWater, destinationLatitude: -8.95, destinationLongitude: 13.29 },
+  ],
+  candidate: candidateWater,
+  vehicle: tanker,
+}), false);
+
+assert.equal(canAcceptFreightAlongsideActiveAssignments({
   activeAssignments: [activeWater],
   candidate: { ...candidateWater, assignedVehicleId: "other-tanker" },
   vehicle: tanker,
