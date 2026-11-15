@@ -32,8 +32,6 @@ export default function MarkaCvPage() {
   const [error, setError] = useState("");
 
   const loadDocuments = useCallback(async () => {
-    setLoading(true);
-    setError("");
     try {
       const response = await fetch("/api/cv", { credentials: "include", cache: "no-store" });
       const data = await response.json();
