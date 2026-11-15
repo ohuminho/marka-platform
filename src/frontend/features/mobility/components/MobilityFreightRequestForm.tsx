@@ -38,6 +38,7 @@ export default function MobilityFreightRequestForm() {
   const [origin, setOrigin] = useState<PointField>({ address: "", point: null, searching: false });
   const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false });
   const [cargoDescription, setCargoDescription] = useState("");
+  const [vehiclePreference, setVehiclePreference] = useState("ANY");
   const [waterType, setWaterType] = useState<"POTABLE_WATER" | "NON_POTABLE_WATER">("POTABLE_WATER");
   const [quantity, setQuantity] = useState("");
   const [quantityUnit, setQuantityUnit] = useState<"LITRE" | "M3">("LITRE");
@@ -125,7 +126,7 @@ export default function MobilityFreightRequestForm() {
     try {
       const requestFingerprint = JSON.stringify({
         service, origin: origin.point, destination: destination.point,
-        cargoDescription: cargoDescription.trim(), waterType, quantity: Number(quantity),
+        cargoDescription: cargoDescription.trim(), vehiclePreference, waterType, quantity: Number(quantity),
         quantityUnit, vehicleDescription: vehicleDescription.trim(), assistanceType,
         notes: notes.trim(),
       });
@@ -144,6 +145,7 @@ export default function MobilityFreightRequestForm() {
       const details: Record<string, unknown> = { notes: notes.trim() || undefined };
       if (service === "CARGO_SHIPMENT") {
         details.cargoItems = [{ description: cargoDescription.trim(), quantity: 1, category: "GENERAL" }];
+        if (vehiclePreference !== "ANY") details.vehiclePreference = vehiclePreference;
       } else if (service === "WATER_DELIVERY") {
         details.waterType = waterType;
       } else {
@@ -215,6 +217,7 @@ export default function MobilityFreightRequestForm() {
           {pointInput("Local de recolha", origin, setOrigin)}
           {pointInput("Destino", destination, setDestination)}
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">O que pretende transportar?</span><input value={cargoDescription} onChange={(event) => setCargoDescription(event.target.value)} placeholder="Ex.: 20 sacos de cimento, mobiliário…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
+          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de viatura preferida</span><select value={vehiclePreference} onChange={(event) => setVehiclePreference(event.target.value)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="ANY">Qualquer viatura adequada</option><option value="CARGO_TRICYCLE">Carrinho de carga de 3 rodas (tipo MyLads)</option><option value="PICKUP">Pick-up de caixa aberta</option><option value="LIGHT_TRUCK">Camião ligeiro de caixa aberta (Canter / Dyna)</option><option value="FLATBED_TRUCK">Camião de plataforma aberta</option><option value="CARGO_VAN">Carrinha fechada</option><option value="TIPPER_TRUCK">Camião basculante</option><option value="HEAVY_TRUCK">Camião pesado</option></select><p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">As carrinhas abertas e as fechadas são opções diferentes. A preferência será respeitada na correspondência com prestadores elegíveis.</p></label>
         </>}
         {service === "WATER_DELIVERY" && <>
           {pointInput("Endereço de entrega", destination, setDestination)}
