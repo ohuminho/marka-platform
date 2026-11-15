@@ -33,6 +33,11 @@ export const NavigationConfig = {
           description: "Your MARKA command experience",
         },
         {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
+        },
+        {
           title: "AI Assistant",
           route: "/app/assistant",
           description: "Get intelligent assistance inside MARKA",
@@ -120,6 +125,11 @@ export const NavigationConfig = {
           permissions: ["VENDOR_MANAGE"],
         },
         {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
+        },
+        {
           title: "AI Assistant",
           route: "/app/assistant",
           description: "Get intelligent assistance for your business",
@@ -179,6 +189,11 @@ export const NavigationConfig = {
           route: "/app/admin",
           description: "Platform overview",
           permissions: ["ADMIN_ACCESS"],
+        },
+        {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
         },
         {
           title: "AI Assistant",
@@ -251,6 +266,7 @@ export const NavigationConfig = {
       group: "Mobility",
       items: [
         { title: "Driver Workspace", route: "/app/driver", description: "Driver operational workspace" },
+        { title: "MARKA CV", route: "/app/cv", description: "Create and manage professional CVs" },
         { title: "AI Assistant", route: "/app/assistant", description: "Get intelligent assistance" },
         
         { title: "Support", route: "/app/support", description: "Open and track support requests inside MARKA" },
@@ -264,6 +280,7 @@ export const NavigationConfig = {
       group: "Delivery",
       items: [
         { title: "Workspace", route: "/app/delivery-agent", description: "Delivery operations" },
+        { title: "MARKA CV", route: "/app/cv", description: "Create and manage professional CVs" },
         { title: "AI Assistant", route: "/app/assistant", description: "Get intelligent assistance" },
         { title: "Available Deliveries", route: "/app/delivery-agent/offers", description: "Review and accept delivery offers", permissions: ["DELIVERY_AGENT_OPERATE"] },
         { title: "My Deliveries", route: "/app/delivery-agent/deliveries", description: "Operate assigned deliveries", permissions: ["DELIVERY_AGENT_OPERATE"] },
@@ -282,6 +299,11 @@ export const NavigationConfig = {
           route: "/app/super-admin",
           description: "Global platform control",
           permissions: ["SYSTEM_ADMIN"],
+        },
+        {
+          title: "MARKA CV",
+          route: "/app/cv",
+          description: "Create and manage professional CVs",
         },
         {
           title: "AI Assistant",

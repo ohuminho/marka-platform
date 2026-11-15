@@ -826,6 +826,7 @@ model User {
   lastLoginAt     DateTime?
 
   profile                 Profile?
+  cvDraft                 MarkaCvDraft?
   sessions                Session[]
   emailVerificationTokens EmailVerificationToken[]
   memberships             OrganizationMembership[]
@@ -2481,4 +2482,19 @@ model SpaceBookingEvent {
 
   @@index([bookingId, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+
+
+model MarkaCvDraft {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  content   Json
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }
