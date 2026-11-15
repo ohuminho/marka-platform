@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
+import { shouldReleaseFreightProvider } from "@/freight-engine/freight-provider-availability";
 
 const bodySchema = z.object({
   status: z.enum([
@@ -112,7 +113,7 @@ export async function PATCH(
 
         // A provider may carry several nearby jobs. Only release BUSY state
         // after the last active assignment is completed.
-        if (remainingActiveAssignments === 0) {
+        if (shouldReleaseFreightProvider(remainingActiveAssignments)) {
           await tx.freightProvider.updateMany({
             where: { id: provider.id, availability: "BUSY" },
             data: { availability: "AVAILABLE" },
