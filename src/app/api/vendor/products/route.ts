@@ -147,7 +147,7 @@ export async function POST(request: Request) {
       });
       if (existingListingCount > 0) {
         return NextResponse.json({
-          message: "O perfil individual permite um anúncio ativo de cada vez. Arquive o anúncio atual ou transforme o perfil numa loja para gerir vários produtos.",
+          message: "O perfil individual permite um anúncio ativo de cada vez. Arquive o anúncio atual antes de publicar outro.",
           code: "SINGLE_LISTING_LIMIT_REACHED",
         }, { status: 409 });
       }
