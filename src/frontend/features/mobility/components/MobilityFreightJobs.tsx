@@ -89,8 +89,15 @@ export default function MobilityFreightJobs() {
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
     );
     locationHeartbeatId.current = window.setInterval(() => {
-      void sendProviderLocation(true).catch((cause) =>
-        setError(cause instanceof Error ? cause.message : "Falha ao actualizar a localização GPS."),
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          latestPosition.current = position;
+          void sendProviderLocation(true).catch((cause) =>
+            setError(cause instanceof Error ? cause.message : "Falha ao actualizar a localização GPS."),
+          );
+        },
+        () => setError("O GPS deixou de fornecer uma posição actualizada. Verifique a localização do dispositivo."),
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
       );
     }, 30000);
     setLocationSharing(true);
