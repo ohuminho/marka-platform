@@ -72,10 +72,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
   if (
     freight.requestType === "CARGO_SHIPMENT" &&
-    freight.quantity !== null &&
     !doesFreightFitVehicleCapacity({
       requestType: freight.requestType,
-      quantity: Number(freight.quantity),
+      quantity: freight.quantity === null ? null : Number(freight.quantity),
       quantityUnit: freight.quantityUnit,
       details: freight.details,
       vehicle: {
