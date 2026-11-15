@@ -80,7 +80,7 @@ async function main() {
     "Serviços — Casa e manutenção", "Serviços — Beleza e bem-estar",
     "Serviços — Limpeza e apoio", "Serviços — Educação e formação",
     "Serviços — Tecnologia e profissionais", "Serviços — Outros", "Seguros e proteção",
-    "Eventos e bilhética", "Energia solar e soluções energéticas", "Lojas de bairro", "Outros",
+    "Eventos e bilhética", "Energia solar e soluções energéticas", "Carreira e currículos", "Lojas de bairro", "Outros",
   ];
 
   for (const name of marketplaceCategories) {
