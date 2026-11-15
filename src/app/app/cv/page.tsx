@@ -39,6 +39,7 @@ export default function MarkaCvPage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -72,14 +73,17 @@ export default function MarkaCvPage() {
   }, []);
 
   function update<K extends keyof CVContent>(key: K, value: CVContent[K]) {
+    setDirty(true);
     setCv((current) => ({ ...current, [key]: value }));
   }
 
   function updateExperience(index: number, key: keyof Experience, value: string) {
+    setDirty(true);
     setCv((current) => ({ ...current, experience: current.experience.map((item, i) => i === index ? { ...item, [key]: value } : item) }));
   }
 
   function updateEducation(index: number, key: keyof Education, value: string) {
+    setDirty(true);
     setCv((current) => ({ ...current, education: current.education.map((item, i) => i === index ? { ...item, [key]: value } : item) }));
   }
 
@@ -98,6 +102,7 @@ export default function MarkaCvPage() {
       if (!response.ok) throw new Error(data.message || "Não foi possível guardar o currículo.");
       const saved = data.document as DocumentRecord;
       setActiveId(saved.id);
+      setDirty(false);
       setDocuments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setNotice("Currículo guardado com segurança na sua conta.");
     } catch (err) {
@@ -107,6 +112,33 @@ export default function MarkaCvPage() {
     }
   }
 
+  useEffect(() => {
+    if (!dirty || loading || !cv.fullName.trim()) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/cv", {
+          method: activeId ? "PUT" : "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({ ...(activeId ? { id: activeId } : {}), title, content: cv }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Não foi possível guardar automaticamente.");
+        if (controller.signal.aborted) return;
+        const saved = data.document as DocumentRecord;
+        setActiveId(saved.id);
+        setDocuments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+        setDirty(false);
+        setNotice("Guardado automaticamente.");
+      } catch (err) {
+        if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Falha na gravação automática.");
+      }
+    }, 1400);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [activeId, cv, dirty, loading, title]);
+
   function exportPDF() {
     if (cvTemplates.find((template) => template.id === cv.templateId)?.premium) { setError("Este modelo pertence ao MARKA CV Premium. A exportação sem marca de água será desbloqueada após validação do pagamento."); return; }
     if (!cv.fullName.trim()) { setError("Introduza o seu nome completo antes de exportar o currículo."); return; }
@@ -115,6 +147,7 @@ export default function MarkaCvPage() {
   }
 
   function newCV() {
+    setDirty(false);
     setActiveId("");
     setTitle("Novo currículo");
     setCv(emptyCV);
@@ -123,6 +156,7 @@ export default function MarkaCvPage() {
   }
 
   function openCV(document: DocumentRecord) {
+    setDirty(false);
     setActiveId(document.id);
     setTitle(document.title);
     setCv({ ...emptyCV, ...document.content });
