@@ -7,11 +7,8 @@ import { prisma } from "@/database/client/prisma";
 import { VendorService } from "@/services/vendors/vendor.service";
 
 const registerVendorSchema = z.object({
-  storeName: z
-    .string()
-    .trim()
-    .min(2, "Store name must contain at least 2 characters.")
-    .max(160, "Store name is too long."),
+  storeName: z.string().trim().max(160, "Store name is too long.").optional().default(""),
+  sellerMode: z.enum(["STORE", "SINGLE_LISTING"]).default("STORE"),
   organizationId: z.string().uuid("Invalid organization ID.").optional(),
   businessType: z.enum(["INDIVIDUAL", "COMPANY"]).default("INDIVIDUAL"),
   phone: z.string().trim().max(40).optional(),
@@ -51,6 +48,13 @@ export async function POST(request: Request) {
         code: "INVALID_VENDOR_DATA",
         errors: parsed.error.flatten().fieldErrors,
       }, { status: 400 });
+    }
+
+    if (parsed.data.sellerMode === "STORE" && parsed.data.storeName.length < 2) {
+      return NextResponse.json({ message: "Indique o nome da loja ou negócio.", code: "STORE_NAME_REQUIRED" }, { status: 400 });
+    }
+    if (parsed.data.sellerMode === "SINGLE_LISTING" && parsed.data.businessType !== "INDIVIDUAL") {
+      return NextResponse.json({ message: "O anúncio individual sem loja está disponível para pessoas singulares.", code: "INDIVIDUAL_SELLER_REQUIRED" }, { status: 400 });
     }
 
     const vendor = await new VendorService().createVendor(user.id, parsed.data);
