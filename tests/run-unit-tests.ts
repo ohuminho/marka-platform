@@ -43,7 +43,10 @@ async function main(): Promise<void> {
   for (const testFile of testFiles) {
     console.log(`\n→ ${testFile}`);
 
-    await import(pathToFileURL(testFile).href);
+    const testModule = await import(pathToFileURL(testFile).href);
+    if (typeof testModule.default === "function") {
+      await testModule.default();
+    }
   }
 
   console.log("\nAll unit tests passed.");

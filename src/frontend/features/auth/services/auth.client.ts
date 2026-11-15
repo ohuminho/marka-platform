@@ -5,7 +5,7 @@ export interface AuthRegistrationResponse {
 }
 
 export async function login(
-  email: string,
+  identifier: string,
   password: string
 ) {
   const response = await fetch("/api/auth/login", {
@@ -14,7 +14,7 @@ export async function login(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      email,
+      identifier,
       password,
     }),
   });

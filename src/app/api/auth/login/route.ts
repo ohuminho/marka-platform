@@ -7,6 +7,7 @@ import {
 import {
   SessionService,
 } from "@/core/auth/sessions/session.service";
+import { resolveLoginIdentifier } from "@/core/auth/phone/login-identifier";
 
 import { prisma } from "@/database/client/prisma";
 
@@ -38,17 +39,21 @@ export async function POST(
     const body =
       await request.json();
 
-    const email =
-      typeof body.email === "string"
-        ? normalizeEmail(body.email)
-        : "";
+    const rawIdentifier =
+      typeof body.identifier === "string"
+        ? body.identifier
+        : typeof body.email === "string"
+          ? body.email
+          : "";
+
+    const identifier = resolveLoginIdentifier(rawIdentifier);
 
     const password =
       typeof body.password === "string"
         ? body.password
         : "";
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return NextResponse.json(
         {
           message:
@@ -60,10 +65,11 @@ export async function POST(
     }
 
     const user =
-      await prisma.user.findUnique({
-        where: {
-          emailNormalized: email,
-        },
+      await prisma.user.findFirst({
+        where:
+          identifier.kind === "email"
+            ? { emailNormalized: normalizeEmail(identifier.value) }
+            : { phoneE164: identifier.value },
       });
 
     if (!user) {
@@ -71,6 +77,19 @@ export async function POST(
         {
           message:
             "Invalid credentials.",
+          code: "INVALID_CREDENTIALS",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (
+      identifier.kind === "phone" &&
+      !user.phoneVerifiedAt
+    ) {
+      return NextResponse.json(
+        {
+          message: "Invalid credentials.",
           code: "INVALID_CREDENTIALS",
         },
         { status: 401 }
