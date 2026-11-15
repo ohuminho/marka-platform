@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   const eligibleRequests = assignedRequests.length === 0
     ? matched
     : matched.filter((candidate) => {
-        if (candidate.requestType !== "WATER_DELIVERY") return false;
+        if (candidate.requestType !== "WATER_DELIVERY" && candidate.requestType !== "CARGO_SHIPMENT") return false;
         const details = candidate.details && typeof candidate.details === "object"
           ? candidate.details as Record<string, unknown>
           : {};
