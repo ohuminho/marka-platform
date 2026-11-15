@@ -12,6 +12,7 @@ const ecosystem = [
   { title: "Wallet", description: "Digital financial infrastructure", route: "/app/wallet", index: "02" },
   { title: "Mobility", description: "Rides, safety, dispatch and financial orchestration", route: "/app/mobility", index: "03" },
   { title: "Business", description: "Enterprise and merchant tools", route: "/app/vendor", index: "04" },
+  { title: "Entregas", description: "Compre no Marketplace e acompanhe a entrega das suas encomendas", route: "/app/marketplace", index: "05" },
 ];
 
 type DashboardMetrics = {
