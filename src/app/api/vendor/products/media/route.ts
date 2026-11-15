@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       select: { id: true },
       orderBy: { createdAt: "asc" },
     });
-    if (!vendor) return NextResponse.json({ message: "Abra primeiro uma loja na MARKA." }, { status: 409 });
+    if (!vendor) return NextResponse.json({ message: "Ative primeiro um perfil de vendedor individual ou abra uma loja na MARKA." }, { status: 409 });
 
     const form = await request.formData();
     const file = form.get("file");
