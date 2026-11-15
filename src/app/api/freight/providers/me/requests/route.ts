@@ -5,6 +5,7 @@ import { prisma } from "@/database/client/prisma";
 import {
   canAcceptAdditionalFreightAssignment,
   canAcceptFreightAlongsideActiveAssignments,
+  doesFreightFitVehicleCapacity,
 } from "@/freight-engine/freight-provider-availability";
 import {
   isFreightProviderLocationFresh,
@@ -65,13 +66,19 @@ export async function GET(request: Request) {
     if (!compatibleKinds[item.requestType].includes(vehicle.kind as never)) return false;
     const requestDetails = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
     if (typeof requestDetails.vehiclePreference === "string" && requestDetails.vehiclePreference !== "ANY" && vehicle.kind !== requestDetails.vehiclePreference) return false;
-    if (item.requestType !== "WATER_DELIVERY") return true;
-    const details = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
-    if (vehicle.waterType !== details.waterType) return false;
-    if (!vehicle.capacity || !vehicle.capacityUnit || !item.quantity || !item.quantityUnit) return false;
-    const capacityLitres = Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1);
-    const requestedLitres = Number(item.quantity) * (item.quantityUnit === "M3" ? 1000 : 1);
-    return ["M3", "LITRE"].includes(vehicle.capacityUnit) && ["M3", "LITRE"].includes(item.quantityUnit) && capacityLitres >= requestedLitres;
+    return doesFreightFitVehicleCapacity({
+      requestType: item.requestType,
+      quantity: item.quantity === null ? null : Number(item.quantity),
+      quantityUnit: item.quantityUnit,
+      details: item.details,
+      vehicle: {
+        id: vehicle.id,
+        kind: vehicle.kind,
+        capacity: vehicle.capacity === null ? null : Number(vehicle.capacity),
+        capacityUnit: vehicle.capacityUnit,
+        waterType: vehicle.waterType,
+      },
+    });
   }));
 
   const assignedRequests = await prisma.freightRequest.findMany({
@@ -81,7 +88,6 @@ export async function GET(request: Request) {
       status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"] },
     },
     orderBy: { assignedAt: "asc" },
-    take: 50,
   });
 
   const eligibleRequests = assignedRequests.length === 0
@@ -114,7 +120,7 @@ export async function GET(request: Request) {
             vehicle: {
               id: vehicle.id,
               kind: vehicle.kind,
-              capacity: vehicle.capacity,
+              capacity: vehicle.capacity === null ? null : Number(vehicle.capacity),
               capacityUnit: vehicle.capacityUnit,
               waterType: vehicle.waterType,
             },
