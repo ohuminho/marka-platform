@@ -127,7 +127,7 @@ A Lei n.º 22/11, de 17 de Junho, exige transparência, licitude, proporcionalid
 
 A MARKA não deve ameaçar genericamente “levar todos ao tribunal”: deve reservar direitos e agir apenas quando exista contrato válido, prova suficiente, dano ou valor devido e fundamento legal. Qualquer penalidade contratual deve ser validada quanto à validade, proporcionalidade e exigibilidade. Nenhuma cláusula garante risco zero ou torna automaticamente exigível qualquer multa.
 
-## 9. Taxonomia inicial de materiais, metalurgia e eletrónica
+## 8. Taxonomia inicial de materiais, metalurgia e eletrónica
 
 O Marketplace mantém a categoria principal existente e acrescenta filtros de descoberta específicos, sem criar lojas ou módulos paralelos.
 
@@ -163,7 +163,7 @@ O Marketplace mantém a categoria principal existente e acrescenta filtros de de
 
 A seleção de categorias deve continuar recolhida até o utilizador a abrir. A pesquisa global deve continuar a encontrar anúncios pelo nome, descrição e categoria, incluindo sinónimos locais como burgau/burgalho. Não criar produtos, preços, stock ou vendedores fictícios para preencher estas categorias.
 
-## 8. Sequência de implementação sem duplicar sistemas
+## 9. Sequência de implementação sem duplicar sistemas
 1. Expandir a taxonomia e os atributos do formulário atual de loja/anúncio.
 2. Reutilizar Vendor, Store, Product, Category, Order, Fulfillment, Dispatch, Messaging, Payments e ledger existentes.
 3. Confirmar que serviços e imóveis não ficam incorretamente sujeitos a stock físico: onde o modelo atual exigir stock, usar uma disponibilidade representativa e documentar a limitação antes de abrir reservas automáticas.
