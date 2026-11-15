@@ -64,7 +64,7 @@ export default function MobilityFreightRequestForm() {
     }
   };
 
-  const useGps = (setter: typeof setOrigin, current: PointField) => {
+  const requestGpsLocation = (setter: typeof setOrigin, current: PointField) => {
     if (!navigator.geolocation) {
       setError("Este dispositivo não disponibiliza localização GPS.");
       return;
@@ -94,7 +94,7 @@ export default function MobilityFreightRequestForm() {
       <div className="flex flex-col gap-2 sm:flex-row">
         <input value={field.address} onChange={(event) => updatePoint(setter, field, event.target.value)} placeholder="Bairro, rua ou município" className="min-h-11 min-w-0 flex-1 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" />
         <button type="button" disabled={field.searching || !field.address.trim()} onClick={() => void findPoint(field, setter)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text)] disabled:opacity-40">{field.searching ? "A localizar…" : "Localizar"}</button>
-        <button type="button" disabled={field.searching} onClick={() => useGps(setter, field)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text-muted)] disabled:opacity-40">Usar GPS</button>
+        <button type="button" disabled={field.searching} onClick={() => requestGpsLocation(setter, field)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text-muted)] disabled:opacity-40">Usar GPS</button>
       </div>
       {field.point && <p className="text-[11px] text-emerald-700 dark:text-emerald-300">Local confirmado</p>}
     </div>
