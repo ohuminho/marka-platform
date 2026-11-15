@@ -152,11 +152,6 @@ export default function MobilityFreightJobs() {
       navigator.geolocation.clearWatch(locationWatchId.current);
     }
     if (locationHeartbeatId.current !== null) window.clearInterval(locationHeartbeatId.current);
-    void fetch("/api/freight/providers/me/location", {
-      method: "DELETE",
-      credentials: "include",
-      keepalive: true,
-    }).catch(() => undefined);
   }, []);
 
   function nextAction(job: FreightJob): { status: string; label: string } | null {
