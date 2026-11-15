@@ -39,7 +39,7 @@ export default function MobilityFreightRequestForm() {
   const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false });
   const [cargoDescription, setCargoDescription] = useState("");
   const [waterType, setWaterType] = useState<"POTABLE_WATER" | "NON_POTABLE_WATER">("POTABLE_WATER");
-  const [quantity, setQuantity] = useState("1000");
+  const [quantity, setQuantity] = useState("");
   const [quantityUnit, setQuantityUnit] = useState<"LITRE" | "M3">("LITRE");
   const [vehicleDescription, setVehicleDescription] = useState("");
   const [assistanceType, setAssistanceType] = useState<(typeof assistanceOptions)[number][0]>("TOW");
@@ -123,7 +123,24 @@ export default function MobilityFreightRequestForm() {
 
     setSubmitting(true);
     try {
-      const idempotencyKey = globalThis.crypto.randomUUID();
+      const requestFingerprint = JSON.stringify({
+        service, origin: origin.point, destination: destination.point,
+        cargoDescription: cargoDescription.trim(), waterType, quantity: Number(quantity),
+        quantityUnit, vehicleDescription: vehicleDescription.trim(), assistanceType,
+        notes: notes.trim(),
+      });
+      const storageKey = "marka:freight:pending:" + organizationId;
+      let idempotencyKey: string;
+      try {
+        const pendingRaw = window.sessionStorage.getItem(storageKey);
+        const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string; fingerprint?: string } : null;
+        idempotencyKey = pending?.fingerprint === requestFingerprint && typeof pending.key === "string"
+          ? pending.key
+          : globalThis.crypto.randomUUID();
+        window.sessionStorage.setItem(storageKey, JSON.stringify({ key: idempotencyKey, fingerprint: requestFingerprint }));
+      } catch {
+        idempotencyKey = globalThis.crypto.randomUUID();
+      }
       const details: Record<string, unknown> = { notes: notes.trim() || undefined };
       if (service === "CARGO_SHIPMENT") {
         details.cargoItems = [{ description: cargoDescription.trim(), quantity: 1, category: "GENERAL" }];
@@ -152,6 +169,13 @@ export default function MobilityFreightRequestForm() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível registar o pedido.");
       setMessage(`Pedido ${data.request.reference} recebido. Acompanhe a cotação nesta página.`);
+      try {
+        const pendingRaw = window.sessionStorage.getItem(storageKey);
+        const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
+        if (pending?.key === idempotencyKey) window.sessionStorage.removeItem(storageKey);
+      } catch {
+        // O registo do servidor é a fonte de verdade.
+      }
       setCargoDescription("");
       setVehicleDescription("");
       setNotes("");
@@ -195,7 +219,7 @@ export default function MobilityFreightRequestForm() {
         {service === "WATER_DELIVERY" && <>
           {pointInput("Endereço de entrega", destination, setDestination)}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
             <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="LITRE">Litros</option><option value="M3">Metros cúbicos (m³)</option></select></label>
           </div>
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de água</span><select value={waterType} onChange={(event) => setWaterType(event.target.value as typeof waterType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="POTABLE_WATER">Potável</option><option value="NON_POTABLE_WATER">Não potável</option></select></label>
