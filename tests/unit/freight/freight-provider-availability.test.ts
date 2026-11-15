@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   canAcceptAdditionalFreightAssignment,
   canAcceptFreightAlongsideActiveAssignments,
+  doesFreightFitVehicleCapacity,
   shouldReleaseFreightProvider,
 } from "../../../src/freight-engine/freight-provider-availability";
 
@@ -103,6 +104,30 @@ const candidateCargo = {
   destinationLongitude: 13.29,
   details: { cargoItems: [{ description: "Blocos" }] },
 };
+
+assert.equal(doesFreightFitVehicleCapacity({
+  requestType: "CARGO_SHIPMENT",
+  quantity: 2500,
+  quantityUnit: "KG",
+  details: {},
+  vehicle: truck,
+}), true);
+
+assert.equal(doesFreightFitVehicleCapacity({
+  requestType: "CARGO_SHIPMENT",
+  quantity: 6000,
+  quantityUnit: "KG",
+  details: {},
+  vehicle: truck,
+}), false);
+
+assert.equal(doesFreightFitVehicleCapacity({
+  requestType: "CARGO_SHIPMENT",
+  quantity: null,
+  quantityUnit: null,
+  details: {},
+  vehicle: truck,
+}), true);
 
 assert.equal(canAcceptFreightAlongsideActiveAssignments({
   activeAssignments: [activeCargo],
