@@ -48,19 +48,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ message: "O pedido só pode ser aceite depois da confirmação do pagamento.", code: "FREIGHT_PAYMENT_NOT_CONFIRMED" }, { status: 409 });
   }
 
-  const pickupLatitude = freight.originLatitude ?? freight.destinationLatitude;
-  const pickupLongitude = freight.originLongitude ?? freight.destinationLongitude;
+  const pickupPoint = freight.originLatitude !== null && freight.originLongitude !== null
+    ? { latitude: freight.originLatitude, longitude: freight.originLongitude }
+    : freight.destinationLatitude !== null && freight.destinationLongitude !== null
+      ? { latitude: freight.destinationLatitude, longitude: freight.destinationLongitude }
+      : null;
   if (
     provider.currentLatitude === null ||
     provider.currentLongitude === null ||
     provider.locationAccuracyM === null ||
     provider.locationAccuracyM > 1000 ||
     !isFreightProviderLocationFresh(provider.locationUpdatedAt) ||
-    pickupLatitude === null ||
-    pickupLongitude === null ||
+    pickupPoint === null ||
     !isWithinFreightPickupRadius(
       { latitude: Number(provider.currentLatitude), longitude: Number(provider.currentLongitude) },
-      { latitude: Number(pickupLatitude), longitude: Number(pickupLongitude) },
+      { latitude: Number(pickupPoint.latitude), longitude: Number(pickupPoint.longitude) },
     )
   ) {
     return NextResponse.json(
@@ -171,7 +173,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const code = error instanceof Error ? error.message : "FREIGHT_ASSIGNMENT_FAILED";
     const conflict = code === "PROVIDER_ALREADY_CLAIMED" || code === "REQUEST_ALREADY_ASSIGNED_OR_UNPAID" || code === "FREIGHT_MULTI_ASSIGNMENT_LIMIT_OR_CAPACITY";
     const message = code === "FREIGHT_MULTI_ASSIGNMENT_LIMIT_OR_CAPACITY"
-      ? "Para aceitar vários serviços, a MARKA exige entregas de água com a mesma cisterna, destinos próximos e volume total dentro da capacidade. Outros serviços continuam limitados a uma atribuição de cada vez."
+      ? "Para agrupar serviços, a MARKA exige o mesmo tipo de serviço, a mesma viatura, destinos próximos e quantidade total declarada dentro da capacidade. Assistência rodoviária fica limitada a uma atribuição."
       : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.";
     return NextResponse.json({ message, code }, { status: conflict ? 409 : 500 });
   }
