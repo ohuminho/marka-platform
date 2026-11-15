@@ -6,6 +6,7 @@ import { prisma } from "@/database/client/prisma";
 import {
   canAcceptAdditionalFreightAssignment,
   canAcceptFreightAlongsideActiveAssignments,
+  doesFreightFitVehicleCapacity,
 } from "@/freight-engine/freight-provider-availability";
 import {
   isFreightProviderLocationFresh,
@@ -67,6 +68,29 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       { status: 409 },
     );
   }
+  if (
+    freight.requestType === "CARGO_SHIPMENT" &&
+    freight.quantity !== null &&
+    !doesFreightFitVehicleCapacity({
+      requestType: freight.requestType,
+      quantity: Number(freight.quantity),
+      quantityUnit: freight.quantityUnit,
+      details: freight.details,
+      vehicle: {
+        id: vehicle.id,
+        kind: vehicle.kind,
+        capacity: vehicle.capacity === null ? null : Number(vehicle.capacity),
+        capacityUnit: vehicle.capacityUnit,
+        waterType: vehicle.waterType,
+      },
+    })
+  ) {
+    return NextResponse.json(
+      { message: "A quantidade indicada excede a capacidade registada da viatura ou usa uma unidade incompatível.", code: "FREIGHT_VEHICLE_CAPACITY_MISMATCH" },
+      { status: 409 },
+    );
+  }
+
   if (freight.requestType === "WATER_DELIVERY") {
     const details = freight.details && typeof freight.details === "object" ? freight.details as Record<string, unknown> : {};
     if (vehicle.kind !== "WATER_TANKER" || vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !freight.quantity || !freight.quantityUnit || !["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(freight.quantityUnit)) {
@@ -120,7 +144,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         vehicle: {
           id: vehicle.id,
           kind: vehicle.kind,
-          capacity: vehicle.capacity,
+          capacity: vehicle.capacity === null ? null : Number(vehicle.capacity),
           capacityUnit: vehicle.capacityUnit,
           waterType: vehicle.waterType,
         },
