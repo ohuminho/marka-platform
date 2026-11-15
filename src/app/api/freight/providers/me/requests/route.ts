@@ -53,12 +53,15 @@ export async function GET(request: Request) {
   }) : [];
 
   const nearby = requests.filter((item) => {
-    const pickupLatitude = item.originLatitude ?? item.destinationLatitude;
-    const pickupLongitude = item.originLongitude ?? item.destinationLongitude;
-    if (pickupLatitude === null || pickupLongitude === null) return false;
+    const pickupPoint = item.originLatitude !== null && item.originLongitude !== null
+      ? { latitude: item.originLatitude, longitude: item.originLongitude }
+      : item.destinationLatitude !== null && item.destinationLongitude !== null
+        ? { latitude: item.destinationLatitude, longitude: item.destinationLongitude }
+        : null;
+    if (!pickupPoint) return false;
     return isWithinFreightPickupRadius(
       { latitude: Number(provider.currentLatitude), longitude: Number(provider.currentLongitude) },
-      { latitude: Number(pickupLatitude), longitude: Number(pickupLongitude) },
+      { latitude: Number(pickupPoint.latitude), longitude: Number(pickupPoint.longitude) },
     );
   });
 
