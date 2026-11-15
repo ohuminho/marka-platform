@@ -225,11 +225,11 @@ export async function POST(request: Request) {
         // Active stores may publish legal listings regardless of verification status.
         status:
           vendor.status === "ACTIVE" &&
-          vendor.store.status === "ACTIVE" &&
+          vendor.store!.status === "ACTIVE" &&
           input.stock > 0
             ? "ACTIVE"
             : "DRAFT",
-        storeId: vendor.store.id,
+        storeId: vendor.store!.id,
         categoryId,
         inventory: {
           create: { quantityOnHand: input.stock, reserved: 0, reorderLevel: 0 },
