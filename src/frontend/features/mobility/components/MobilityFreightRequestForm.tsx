@@ -116,6 +116,10 @@ export default function MobilityFreightRequestForm() {
       setError("Confirme a recolha, o destino e descreva a carga.");
       return;
     }
+    if (service === "CARGO_SHIPMENT" && cargoQuantity.trim() && (!Number.isFinite(Number(cargoQuantity)) || Number(cargoQuantity) <= 0)) {
+      setError("Indique um peso ou volume válido, ou deixe esse campo em branco.");
+      return;
+    }
     if (service === "WATER_DELIVERY" && (!destination.point || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
       setError("Confirme o endereço e a quantidade de água.");
       return;
