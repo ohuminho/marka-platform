@@ -38,7 +38,9 @@ export default function MarkaVehicleIllustration({
   const isMinibus = normalized === "MINIBUS";
   const isBus = ["BUS", "COACH"].includes(normalized);
   const isCoach = normalized === "COACH";
-  const isHeavy = ["HEAVY_TRUCK", "FLATBED_TRUCK", "LIGHT_TRUCK", "TRUCK", "SERVICE_VEHICLE", "SPECIALIZED"].includes(normalized);
+  const isLightTruck = normalized === "LIGHT_TRUCK";
+  const isFlatbed = normalized === "FLATBED_TRUCK";
+  const isHeavy = ["HEAVY_TRUCK", "TRUCK", "SERVICE_VEHICLE", "SPECIALIZED"].includes(normalized);
   const isPhantom = ["PHANTOM", "EXECUTIVE", "LUXURY_SEDAN"].includes(normalized);
   const isSuv = normalized === "SUV";
 
@@ -115,6 +117,18 @@ export default function MarkaVehicleIllustration({
           <path d="M197 95H302Q317 95 329 111L345 132H167Z" fill={`url(#${glassId})`} />
           <path d="M363 137H458V151H363ZM48 151H461M171 139H350M365 144H454" fill="none" opacity=".75" />
           <Wheel cx={137} cy={168} r={25} goldId={goldId} /><Wheel cx={407} cy={168} r={25} goldId={goldId} />
+        </g>
+      ) : isLightTruck || isFlatbed ? (
+        <g stroke={`url(#${goldId})`} strokeWidth="2.5" strokeLinejoin="round">
+          <path d="M42 145 62 132H170L197 91Q207 79 229 79H296Q317 79 331 101L350 132H477V166H42Z" fill={`url(#${bodyId})`} />
+          <path d="M207 94H293Q309 94 320 111L333 132H180Z" fill={`url(#${glassId})`} />
+          <path d="M350 117H477V145H350Z" fill={`url(#${bodyId})`} />
+          <path d="M354 112V148M374 112V148M394 112V148M414 112V148M434 112V148M454 112V148M350 117H477M350 145H477" fill="none" opacity=".85" />
+          <path d={isFlatbed ? "M346 107H484M346 107V150M484 107V150M346 150H484" : "M350 111H477M350 111V149M477 111V149M350 149H477"} fill="none" strokeWidth="3" />
+          <path d="M42 151H485" fill="none" opacity=".55" strokeWidth="2" />
+          <Wheel cx={119} cy={168} r={25} goldId={goldId} />
+          <Wheel cx={386} cy={168} r={25} goldId={goldId} />
+          {isFlatbed && <Wheel cx={447} cy={168} r={25} goldId={goldId} />}
         </g>
       ) : isTipper || isTow || isHeavy ? (
         <g stroke={`url(#${goldId})`} strokeWidth="2.5" strokeLinejoin="round">
