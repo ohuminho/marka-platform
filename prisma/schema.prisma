@@ -1889,6 +1889,10 @@ model FreightProvider {
   taxNumber      String?
   serviceTypes   FreightRequestType[]
   coverageAreas  String[]                    @default([])
+  currentLatitude  Decimal? @db.Decimal(10, 7)
+  currentLongitude Decimal? @db.Decimal(10, 7)
+  locationUpdatedAt DateTime?
+  locationAccuracyM Int?
   ratingAverage  Decimal?                    @db.Decimal(3, 2)
   ratingCount    Int                         @default(0)
   metadata       Json?
