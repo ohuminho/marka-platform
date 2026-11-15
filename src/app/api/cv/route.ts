@@ -39,6 +39,11 @@ const cvContentSchema = z.object({
   education: z.array(educationSchema).max(12).default([]),
   skills: z.array(z.string().trim().min(1).max(80)).max(40).default([]),
   languages: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
+  certifications: z.array(z.string().trim().min(1).max(160)).max(20).default([]),
+  projects: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
+  references: z.array(z.string().trim().min(1).max(160)).max(10).default([]),
+  linkedin: z.string().trim().max(254).default(""),
+  portfolio: z.string().trim().max(254).default(""),
 });
 
 const saveSchema = z.object({
