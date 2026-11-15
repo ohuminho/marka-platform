@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
-import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
+import {
+  canAcceptAdditionalFreightAssignment,
+  canAcceptFreightAlongsideActiveAssignments,
+} from "@/freight-engine/freight-provider-availability";
+import {
+  FREIGHT_PROVIDER_LOCATION_MAX_AGE_MS,
+  isFreightProviderLocationFresh,
+  isWithinFreightPickupRadius,
+} from "@/freight-engine/freight-proximity";
 
 const compatibleKinds = {
   CARGO_SHIPMENT: ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"],
@@ -25,7 +33,14 @@ export async function GET(request: Request) {
   const requestTypes = provider.serviceTypes;
   const eligibleTypes = requestTypes.filter((type) => provider.vehicles.some((vehicle) => compatibleKinds[type].includes(vehicle.kind as never)));
 
-  const requests = canAcceptAdditionalFreightAssignment(provider.availability) && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
+  const locationReady =
+    provider.currentLatitude !== null &&
+    provider.currentLongitude !== null &&
+    provider.locationAccuracyM !== null &&
+    provider.locationAccuracyM <= 1000 &&
+    isFreightProviderLocationFresh(provider.locationUpdatedAt);
+
+  const requests = canAcceptAdditionalFreightAssignment(provider.availability) && locationReady && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.session.organizationId,
       requestType: { in: eligibleTypes },
@@ -37,7 +52,17 @@ export async function GET(request: Request) {
     take: 50,
   }) : [];
 
-  const matched = requests.filter((item) => provider.vehicles.some((vehicle) => {
+  const nearby = requests.filter((item) => {
+    const pickupLatitude = item.originLatitude ?? item.destinationLatitude;
+    const pickupLongitude = item.originLongitude ?? item.destinationLongitude;
+    if (pickupLatitude === null || pickupLongitude === null) return false;
+    return isWithinFreightPickupRadius(
+      { latitude: Number(provider.currentLatitude), longitude: Number(provider.currentLongitude) },
+      { latitude: Number(pickupLatitude), longitude: Number(pickupLongitude) },
+    );
+  });
+
+  const matched = nearby.filter((item) => provider.vehicles.some((vehicle) => {
     if (!compatibleKinds[item.requestType].includes(vehicle.kind as never)) return false;
     const requestDetails = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
     if (typeof requestDetails.vehiclePreference === "string" && requestDetails.vehiclePreference !== "ANY" && vehicle.kind !== requestDetails.vehiclePreference) return false;
@@ -60,6 +85,44 @@ export async function GET(request: Request) {
     take: 50,
   });
 
+  const eligibleRequests = assignedRequests.length === 0
+    ? matched
+    : matched.filter((candidate) => {
+        if (candidate.requestType !== "WATER_DELIVERY") return false;
+        const details = candidate.details && typeof candidate.details === "object"
+          ? candidate.details as Record<string, unknown>
+          : {};
+        return provider.vehicles.some((vehicle) =>
+          canAcceptFreightAlongsideActiveAssignments({
+            activeAssignments: assignedRequests.map((active) => ({
+              requestType: active.requestType,
+              assignedVehicleId: active.assignedVehicleId,
+              quantity: active.quantity === null ? null : Number(active.quantity),
+              quantityUnit: active.quantityUnit,
+              destinationLatitude: active.destinationLatitude === null ? null : Number(active.destinationLatitude),
+              destinationLongitude: active.destinationLongitude === null ? null : Number(active.destinationLongitude),
+              details: active.details,
+            })),
+            candidate: {
+              requestType: candidate.requestType,
+              assignedVehicleId: vehicle.id,
+              quantity: candidate.quantity === null ? null : Number(candidate.quantity),
+              quantityUnit: candidate.quantityUnit,
+              destinationLatitude: candidate.destinationLatitude === null ? null : Number(candidate.destinationLatitude),
+              destinationLongitude: candidate.destinationLongitude === null ? null : Number(candidate.destinationLongitude),
+              details,
+            },
+            vehicle: {
+              id: vehicle.id,
+              kind: vehicle.kind,
+              capacity: vehicle.capacity,
+              capacityUnit: vehicle.capacityUnit,
+              waterType: vehicle.waterType,
+            },
+          }),
+        );
+      });
+
   const serialize = (item: (typeof requests)[number]) => ({
     id: item.id,
     reference: item.reference,
@@ -76,7 +139,7 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json({
-    requests: matched.map(serialize),
+    requests: eligibleRequests.map(serialize),
     assignedRequests: assignedRequests.map(serialize),
   });
 }
