@@ -19,14 +19,22 @@ export class MarketplaceService {
   }
 
   async getProducts(query?: MarketplaceQuery) {
+    const searchTerms = query?.search?.trim().split(/\\s+/).filter((term) => term.length > 1) ?? [];
     let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: "desc" };
     if (query?.sortBy === "price_asc") orderBy = { price: "asc" };
     if (query?.sortBy === "price_desc") orderBy = { price: "desc" };
 
     const products = await prisma.product.findMany({
       where: {
-        name: query?.search
-          ? { contains: query.search, mode: "insensitive" }
+        AND: searchTerms.length
+          ? searchTerms.map((term) => ({
+              OR: [
+                { name: { contains: term, mode: "insensitive" as const } },
+                { description: { contains: term, mode: "insensitive" as const } },
+                { category: { is: { name: { contains: term, mode: "insensitive" as const } } } },
+                { store: { is: { name: { contains: term, mode: "insensitive" as const } } } },
+              ],
+            }))
           : undefined,
         categoryId: query?.categoryId || undefined,
         stock: { gt: 0 },
