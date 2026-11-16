@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     include: { vehicles: { where: { status: "ACTIVE" } } },
   });
 
-  if (!provider) return NextResponse.json({ message: "Prestador não encontrado.", code: "FREIGHT_PROVIDER_NOT_FOUND" }, { status: 404 });
+  if (!provider) return NextResponse.json({ requests: [], assignedRequests: [], providerRegistrationRequired: true, message: "Registe o seu perfil de prestador para começar a receber pedidos." });
   if (provider.status !== "VERIFIED") return NextResponse.json({ requests: [], message: "A conta aguarda verificação." });
 
   const requestTypes = provider.serviceTypes;
