@@ -117,6 +117,16 @@ export async function POST(
       );
     }
 
+    if (["TAXI", "EXECUTIVE"].includes(serviceType) && passengerCount > 4) {
+      return NextResponse.json(
+        {
+          message: "Esta categoria de viatura aceita no máximo quatro passageiros.",
+          code: "PASSENGER_VEHICLE_CAPACITY_EXCEEDED",
+        },
+        { status: 400 },
+      );
+    }
+
     const safetyMode =
       normalizeSafetyMode(
         body?.safetyMode,
