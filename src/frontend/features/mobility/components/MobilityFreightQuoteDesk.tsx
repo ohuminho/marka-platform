@@ -20,6 +20,7 @@ interface FreightQuoteRequest {
   paidAt: string | null;
   assignedAt: string | null;
   updatedAt: string;
+  latestException: { note: string | null; createdAt: string } | null;
   requester: { name: string | null };
 }
 
@@ -229,7 +230,14 @@ export default function MobilityFreightQuoteDesk() {
               {item.status === "SEARCHING_PROVIDER" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pagamento confirmado; o sistema está a procurar um prestador compatível.</p>}
               {["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT"].includes(item.status) && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Serviço em execução. Estado actualizado em {dateTime(item.updatedAt)}.</p>}
               {item.status === "COMPLETED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Serviço concluído em {dateTime(item.updatedAt)}.</p>}
-              {item.status === "EXCEPTION" && <p role="alert" className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Este serviço requer intervenção operacional.</p>}
+              {item.status === "EXCEPTION" && (
+                <div role="alert" className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[var(--theme-text-muted)]">Ocorrência reportada pelo prestador</p>
+                  {item.latestException?.note && <p className="mt-2 text-xs text-[var(--theme-text)]">{item.latestException.note}</p>}
+                  {item.latestException?.createdAt && <p className="mt-2 text-[9px] text-[var(--theme-text-faint)]">{dateTime(item.latestException.createdAt)}</p>}
+                  {!item.latestException?.note && <p className="mt-2 text-xs text-[var(--theme-text-muted)]">Este serviço requer intervenção operacional.</p>}
+                </div>
+              )}
               {item.status === "CANCELLED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pedido cancelado.</p>}
             </article>
           );
