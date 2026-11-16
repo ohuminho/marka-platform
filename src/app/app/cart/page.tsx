@@ -70,6 +70,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [paymentIdempotencyKey, setPaymentIdempotencyKey] = useState("");
@@ -145,6 +146,61 @@ export default function CartPage() {
     return () => window.clearTimeout(timer);
   }, [loadCart]);
 
+  useEffect(() => {
+    if (!cart?.id) return;
+    const storageKey = "marka:checkout:" + cart.id;
+    try {
+      const rawDraft = window.sessionStorage.getItem(storageKey);
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft) as {
+        paymentIdempotencyKey?: string;
+        deliveryAddress?: string;
+        deliveryLatitude?: string;
+        deliveryLongitude?: string;
+        deliveryInstructions?: string;
+      };
+      setPaymentIdempotencyKey(typeof draft.paymentIdempotencyKey === "string" ? draft.paymentIdempotencyKey : "");
+      setDeliveryAddress(typeof draft.deliveryAddress === "string" ? draft.deliveryAddress : "");
+      setDeliveryLatitude(typeof draft.deliveryLatitude === "string" ? draft.deliveryLatitude : "");
+      setDeliveryLongitude(typeof draft.deliveryLongitude === "string" ? draft.deliveryLongitude : "");
+      setDeliveryInstructions(typeof draft.deliveryInstructions === "string" ? draft.deliveryInstructions : "");
+    } catch {
+      window.sessionStorage.removeItem(storageKey);
+    }
+  }, [cart?.id]);
+
+  function updateDeliveryField(field: "address" | "latitude" | "longitude" | "instructions", value: string) {
+    setPaymentIdempotencyKey("");
+    if (field === "address") setDeliveryAddress(value);
+    if (field === "latitude") setDeliveryLatitude(value);
+    if (field === "longitude") setDeliveryLongitude(value);
+    if (field === "instructions") setDeliveryInstructions(value);
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation || locating) {
+      setError("Este dispositivo não disponibiliza localização. Introduza as coordenadas manualmente.");
+      return;
+    }
+    setLocating(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setDeliveryLatitude(position.coords.latitude.toFixed(6));
+        setDeliveryLongitude(position.coords.longitude.toFixed(6));
+        setPaymentIdempotencyKey("");
+        setLocating(false);
+      },
+      (locationError) => {
+        setError(locationError.code === locationError.PERMISSION_DENIED
+          ? "A permissão de localização foi recusada. Autorize-a nas definições do dispositivo ou introduza as coordenadas manualmente."
+          : "Não foi possível obter a localização. Tente novamente ou introduza as coordenadas manualmente.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
+    );
+  }
+
   async function removeItem(itemId: string) {
     try {
       setRemovingItemId(itemId);
@@ -208,6 +264,13 @@ export default function CartPage() {
       if (!paymentIdempotencyKey) {
         setPaymentIdempotencyKey(idempotencyKey);
       }
+      window.sessionStorage.setItem("marka:checkout:" + cart.id, JSON.stringify({
+        paymentIdempotencyKey: idempotencyKey,
+        deliveryAddress: deliveryAddress.trim(),
+        deliveryLatitude,
+        deliveryLongitude,
+        deliveryInstructions: deliveryInstructions.trim(),
+      }));
 
       const response = await fetch("/api/checkout", {
         method: "POST",
@@ -421,34 +484,52 @@ export default function CartPage() {
           <div className="mt-6 border-t border-[var(--theme-border)] pt-5">
             <h3 className="text-sm font-semibold text-[var(--theme-text)]">Entrega</h3>
             <div className="mt-3 space-y-3">
+              <label htmlFor="checkout-delivery-address" className="sr-only">Endereço de entrega</label>
               <input
+                id="checkout-delivery-address"
                 type="text"
+                autoComplete="street-address"
                 value={deliveryAddress}
-                onChange={(event) => setDeliveryAddress(event.target.value)}
+                onChange={(event) => updateDeliveryField("address", event.target.value)}
                 placeholder="Endereço de entrega"
                 className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
               />
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                disabled={locating || checkingOut}
+                className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2.5 text-sm font-medium text-[var(--theme-text)] transition hover:bg-[var(--theme-background)] disabled:opacity-50"
+              >
+                {locating ? "A obter localização..." : "Usar a minha localização"}
+              </button>
+              <p className="text-xs text-[var(--theme-text-muted)]">A localização só é partilhada para calcular e executar esta entrega.</p>
               <div className="grid grid-cols-2 gap-3">
+                <label className="sr-only" htmlFor="checkout-delivery-latitude">Latitude</label>
                 <input
+                  id="checkout-delivery-latitude"
                   type="number"
                   step="any"
                   value={deliveryLatitude}
-                  onChange={(event) => setDeliveryLatitude(event.target.value)}
+                  onChange={(event) => updateDeliveryField("latitude", event.target.value)}
                   placeholder="Latitude"
                   className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
                 />
+                <label className="sr-only" htmlFor="checkout-delivery-longitude">Longitude</label>
                 <input
+                  id="checkout-delivery-longitude"
                   type="number"
                   step="any"
                   value={deliveryLongitude}
-                  onChange={(event) => setDeliveryLongitude(event.target.value)}
+                  onChange={(event) => updateDeliveryField("longitude", event.target.value)}
                   placeholder="Longitude"
                   className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
                 />
               </div>
+              <label className="sr-only" htmlFor="checkout-delivery-instructions">Instruções de entrega</label>
               <textarea
+                id="checkout-delivery-instructions"
                 value={deliveryInstructions}
-                onChange={(event) => setDeliveryInstructions(event.target.value)}
+                onChange={(event) => updateDeliveryField("instructions", event.target.value)}
                 placeholder="Instruções de entrega (opcional)"
                 rows={3}
                 className="w-full rounded-md border border-[var(--theme-border)] px-3 py-2 text-sm outline-none focus:border-[var(--theme-accent)]"
