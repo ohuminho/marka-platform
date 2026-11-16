@@ -31,7 +31,6 @@ const nextStatuses: Record<string, string[]> = {
   PROVIDER_ARRIVED: ["PICKED_UP", "COMPLETED", "EXCEPTION"],
   PICKED_UP: ["IN_TRANSIT", "EXCEPTION"],
   IN_TRANSIT: ["COMPLETED", "EXCEPTION"],
-  EXCEPTION: ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "COMPLETED"],
 };
 
 export async function PATCH(
