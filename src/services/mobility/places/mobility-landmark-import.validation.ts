@@ -49,10 +49,11 @@ function parseLandmark(value: unknown, index: number): NormalizedMobilityLandmar
   if (typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
     throw new Error(`Record ${index + 1}: longitude must be a finite number between -180 and 180.`);
   }
-  const countryCode = item.countryCode == null ? "AO" : requiredText(item.countryCode, "countryCode", 2).toUpperCase();
-  if (!/^[A-Z]{2}$/.test(countryCode)) {
+  const countryCodeInput = item.countryCode == null ? "AO" : item.countryCode;
+  if (typeof countryCodeInput !== "string" || !/^[A-Za-z]{2}$/.test(countryCodeInput.trim())) {
     throw new Error(`Record ${index + 1}: countryCode must be a two-letter ISO 3166-1 alpha-2 code.`);
   }
+  const countryCode = countryCodeInput.trim().toUpperCase();
 
   const source = requiredText(item.source, "source", 32).toUpperCase();
   if (!["OPENSTREETMAP", "OFFICIAL", "FIELD_VERIFIED", "PARTNER_VERIFIED"].includes(source)) {
