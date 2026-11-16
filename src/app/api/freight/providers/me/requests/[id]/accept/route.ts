@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
 import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
-import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
+import { canVehicleCarryCombinedQuantities, canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
 import { isFreshAccurateProviderLocation } from "@/freight-engine/freight-geography";
 
 const bodySchema = z.object({ vehicleId: z.string().uuid() });
@@ -87,6 +87,33 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const assigned = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
+
+      if (freight.requestType === "CARGO_SHIPMENT" || freight.requestType === "WATER_DELIVERY") {
+        const activeVehicleJobs = await tx.freightRequest.findMany({
+          where: {
+            organizationId: auth.session.organizationId,
+            assignedProviderId: provider.id,
+            assignedVehicleId: vehicle.id,
+            requestType: freight.requestType,
+            status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"] },
+          },
+          select: { quantity: true, quantityUnit: true },
+        });
+        const reservedQuantities = [
+          ...activeVehicleJobs.map((job) => ({
+            quantity: job.quantity === null ? null : Number(job.quantity),
+            unit: job.quantityUnit,
+          })),
+          { quantity: freight.quantity === null ? null : Number(freight.quantity), unit: freight.quantityUnit },
+        ];
+        const combinedCapacityMatches = canVehicleCarryCombinedQuantities(
+          vehicle.capacity === null ? null : Number(vehicle.capacity),
+          vehicle.capacityUnit,
+          reservedQuantities,
+        );
+        if (!combinedCapacityMatches) throw new Error("VEHICLE_COMBINED_CAPACITY_EXCEEDED");
+      }
+
       const providerClaim = await tx.freightProvider.updateMany({
         where: { id: provider.id, status: "VERIFIED", availability: { in: ["AVAILABLE", "BUSY"] } },
         data: { availability: "BUSY" },
@@ -104,7 +131,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ request: { id: assigned.id, reference: assigned.reference, status: assigned.status, assignedAt: assigned.assignedAt } });
   } catch (error) {
     const code = error instanceof Error ? error.message : "FREIGHT_ASSIGNMENT_FAILED";
-    const conflict = code === "PROVIDER_ALREADY_CLAIMED" || code === "REQUEST_ALREADY_ASSIGNED_OR_UNPAID";
-    return NextResponse.json({ message: conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.", code }, { status: conflict ? 409 : 500 });
+    const conflict = code === "PROVIDER_ALREADY_CLAIMED" || code === "REQUEST_ALREADY_ASSIGNED_OR_UNPAID" || code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED";
+    return NextResponse.json({ message: code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED" ? "A quantidade deste pedido, somada às cargas activas nesta viatura, ultrapassa a capacidade registada. Escolha outra viatura ou conclua uma entrega antes." : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.", code }, { status: conflict ? 409 : 500 });
   }
 }
