@@ -198,7 +198,7 @@ export default function MobilityFreightRequestForm() {
       <div className="max-w-xl">
         <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[var(--theme-text-faint)]">Outros serviços</p>
         <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">O que precisa de transportar?</h2>
-        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Escolha um serviço e indique apenas os dados necessários. A MARKA procura uma proposta para si.</p>
+        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Escolha um serviço e indique os dados necessários. A equipa MARKA analisa o pedido e emite uma cotação.</p>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Tipo de serviço">
