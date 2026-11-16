@@ -487,12 +487,14 @@ export class MobilityDispatchService {
       );
     }
 
+    // Assignment atomically claims the driver as BUSY before acceptance.
+    // Requiring AVAILABLE here would reject every correctly assigned ride.
     if (
       driver.availability?.status !==
-      MobilityAvailabilityStatus.AVAILABLE
+      MobilityAvailabilityStatus.BUSY
     ) {
       throw new DispatchDomainError(
-        "Driver is no longer available.",
+        "Driver assignment is no longer active.",
         "DRIVER_NOT_AVAILABLE"
       );
     }
