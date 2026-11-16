@@ -17,10 +17,10 @@ export type NormalizedMobilityLandmark = {
 export function normalizeMobilityLandmarkName(value: string): string {
   return value
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-AO")
     .replace(/[^a-z0-9 ]/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
