@@ -112,11 +112,21 @@ export class CheckoutService {
         | null;
       const sameCheckout =
         existingOrder?.userId === userId &&
-        paymentMetadata?.checkout?.cartId === cartId;
+        paymentMetadata?.checkout?.cartId === cartId &&
+        existingOrder.deliveryAddress === delivery.address.trim() &&
+        Number(existingOrder.deliveryLatitude) === delivery.latitude &&
+        Number(existingOrder.deliveryLongitude) === delivery.longitude &&
+        (existingOrder.deliveryInstructions ?? "") === (delivery.instructions?.trim() || "");
 
       if (!existingOrder || !sameCheckout) {
         throw new Error(
-          "Idempotency key is already associated with another checkout.",
+          "Idempotency key is already associated with another checkout or different delivery details.",
+        );
+      }
+
+      if (!existingOrder.inventoryReserved) {
+        throw new Error(
+          "Idempotency key identifies a checkout requiring payment and inventory reconciliation. Do not create a replacement order.",
         );
       }
 
