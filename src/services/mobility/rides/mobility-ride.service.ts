@@ -10,6 +10,7 @@ import { prisma } from "@/database/client/prisma";
 
 import {
   isTerminalRideStatus,
+  resolveDriverAvailabilityForActiveRides,
   transitionRideStatus,
 } from "@/services/mobility/rides/mobility-ride.state-machine";
 
@@ -965,48 +966,51 @@ export class MobilityRideService {
         );
 
         if (ride.driverId) {
-          if (
-            nextStatus === MobilityRideStatus.TRIP_STARTED ||
-            nextStatus === MobilityRideStatus.TRIP_IN_PROGRESS
-          ) {
-            await tx.mobilityDriverAvailability.updateMany({
-              where: {
-                driverId: ride.driverId,
-                status: {
-                  in: [
-                    MobilityAvailabilityStatus.AVAILABLE,
-                    MobilityAvailabilityStatus.BUSY,
-                    MobilityAvailabilityStatus.ON_TRIP,
-                  ],
-                },
+          // Availability is derived from every other active assignment, not
+          // only this ride. Completing one ride must not mark a driver free
+          // while another assigned or in-progress ride still exists.
+          const activeRideStatuses = [
+            MobilityRideStatus.DRIVER_ASSIGNED,
+            MobilityRideStatus.DRIVER_ARRIVING,
+            MobilityRideStatus.DRIVER_ARRIVED,
+            MobilityRideStatus.TRIP_STARTED,
+            MobilityRideStatus.TRIP_IN_PROGRESS,
+          ] as const;
+
+          const otherActiveRides = await tx.mobilityRide.findMany({
+            where: {
+              driverId: ride.driverId,
+              id: { not: rideId },
+              status: { in: [...activeRideStatuses] },
+            },
+            select: { status: true },
+          });
+
+          const nextDriverAvailability =
+            resolveDriverAvailabilityForActiveRides([
+              ...otherActiveRides.map((activeRide) => activeRide.status),
+              ...(activeRideStatuses.includes(
+                nextStatus as (typeof activeRideStatuses)[number],
+              )
+                ? [nextStatus]
+                : []),
+            ]);
+
+          await tx.mobilityDriverAvailability.updateMany({
+            where: {
+              driverId: ride.driverId,
+              status: {
+                in: [
+                  MobilityAvailabilityStatus.AVAILABLE,
+                  MobilityAvailabilityStatus.BUSY,
+                  MobilityAvailabilityStatus.ON_TRIP,
+                ],
               },
-              data: {
-                status: MobilityAvailabilityStatus.ON_TRIP,
-              },
-            });
-          } else if (
-            nextStatus === MobilityRideStatus.TRIP_COMPLETED ||
-            nextStatus === MobilityRideStatus.CANCELLED ||
-            nextStatus === MobilityRideStatus.EXPIRED ||
-            nextStatus === MobilityRideStatus.NO_DRIVER_FOUND ||
-            nextStatus === MobilityRideStatus.FAILED ||
-            nextStatus === MobilityRideStatus.DISPUTED
-          ) {
-            await tx.mobilityDriverAvailability.updateMany({
-              where: {
-                driverId: ride.driverId,
-                status: {
-                  in: [
-                    MobilityAvailabilityStatus.BUSY,
-                    MobilityAvailabilityStatus.ON_TRIP,
-                  ],
-                },
-              },
-              data: {
-                status: MobilityAvailabilityStatus.AVAILABLE,
-              },
-            });
-          }
+            },
+            data: {
+              status: nextDriverAvailability,
+            },
+          });
         }
 
         // Compare-and-set prevents concurrent transitions from both
