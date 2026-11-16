@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
           "normalizedName" LIKE ${pattern}
           OR EXISTS (
             SELECT 1
-            FROM unnest("aliases") AS alias
-            WHERE alias LIKE ${pattern}
+            FROM unnest("aliases") AS alias(value)
+            WHERE value LIKE ${pattern}
           )
         )
       ORDER BY "verifiedAt" DESC NULLS LAST, "name" ASC
