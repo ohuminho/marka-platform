@@ -115,6 +115,52 @@ async function main(): Promise<void> {
       error.code === "MOBILITY_ROUTE_GEOMETRY_INVALID",
   );
 
+  const matrixFetch: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    assert.equal(url.pathname, "/table/v1/driving/13.2,-8.8;13.21,-8.81;13.3,-8.9;13.22,-8.82;13.31,-8.91");
+    assert.equal(url.searchParams.get("annotations"), "duration");
+    return new Response(JSON.stringify({
+      code: "Ok",
+      durations: [
+        [0, 120, 420, 150, 500],
+        [120, 0, 300, 90, 420],
+        [420, 300, 0, 330, 120],
+        [150, 90, 330, 0, 300],
+        [500, 420, 120, 300, 0],
+      ],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const durationMatrix = await service.getDurationMatrix(
+    [
+      { latitude: -8.8, longitude: 13.2 },
+      { latitude: -8.81, longitude: 13.21 },
+      { latitude: -8.9, longitude: 13.3 },
+      { latitude: -8.82, longitude: 13.22 },
+      { latitude: -8.91, longitude: 13.31 },
+    ],
+    { baseUrl: "https://routing.example.test", fetcher: matrixFetch },
+  );
+  assert.equal(durationMatrix.length, 5);
+  assert.equal(durationMatrix[0][1], 120);
+
+  const malformedMatrixFetch: typeof fetch = async () =>
+    new Response(JSON.stringify({
+      code: "Ok",
+      durations: [[0, 10], [10, null]],
+    }), { status: 200 });
+  await assert.rejects(
+    () => service.getDurationMatrix(
+      [
+        { latitude: -8.8, longitude: 13.2 },
+        { latitude: -8.81, longitude: 13.21 },
+      ],
+      { baseUrl: "https://routing.example.test", fetcher: malformedMatrixFetch },
+    ),
+    (error: unknown) =>
+      error instanceof MobilityRoutingError &&
+      error.code === "MOBILITY_ROUTE_MATRIX_INVALID",
+  );
+
   console.log("Mobility routing adapter tests passed.");
 }
 
