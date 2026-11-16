@@ -28,6 +28,8 @@ export default function MobilityFreightJobs() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [exceptionJobId, setExceptionJobId] = useState<string | null>(null);
+  const [exceptionNote, setExceptionNote] = useState("");
 
   const refresh = useCallback(async () => {
     if (!organizationId) throw new Error("Seleccione uma organização activa para consultar os pedidos.");
@@ -153,6 +155,32 @@ export default function MobilityFreightJobs() {
     }
   }
 
+  async function reportException(job: FreightJob) {
+    if (!organizationId) { setError("Seleccione uma organização activa."); return; }
+    const note = exceptionNote.trim();
+    if (!note) { setError("Descreva a ocorrência antes de enviar."); return; }
+    setBusyId(job.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/freight/providers/me/requests/${job.id}/status`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+        body: JSON.stringify({ status: "EXCEPTION", note }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "Não foi possível registar a ocorrência.");
+      setExceptionJobId(null);
+      setExceptionNote("");
+      await refresh();
+      setNotice(`Ocorrência registada no pedido ${job.reference}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao registar a ocorrência.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function accept(job: FreightJob) {
     const vehicleId = vehicleIds[job.id];
     if (!organizationId) { setError("Seleccione uma organização activa."); return; }
@@ -194,7 +222,23 @@ export default function MobilityFreightJobs() {
                   <p><strong className="text-[var(--theme-text)]">Recolha:</strong> {job.origin?.address ?? "Não indicada"}</p>
                   <p><strong className="text-[var(--theme-text)]">Destino:</strong> {job.destination?.address ?? "Não indicado"}</p>
                 </div>
-                {action ? <button type="button" disabled={busyId === job.id} onClick={() => updateJobStatus(job)} className="mt-4 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === job.id ? "A actualizar…" : action.label}</button> : <p className="mt-4 text-xs text-amber-700">Serviço em excepção. Contacte o suporte para resolução.</p>}
+                {action ? <button type="button" disabled={busyId === job.id} onClick={() => updateJobStatus(job)} className="mt-4 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === job.id ? "A actualizar…" : action.label}</button> : <p className="mt-4 text-xs text-amber-700">Serviço em excepção. Aguarda resolução operacional.</p>}
+                {job.status !== "EXCEPTION" && (
+                  <div className="mt-3">
+                    {exceptionJobId === job.id ? (
+                      <div className="space-y-2 rounded-xl border border-[var(--theme-border)] p-3">
+                        <label className="block text-[10px] font-semibold uppercase tracking-[.12em] text-[var(--theme-text-muted)]" htmlFor={`freight-exception-${job.id}`}>Descreva a ocorrência</label>
+                        <textarea id={`freight-exception-${job.id}`} value={exceptionNote} onChange={(event) => setExceptionNote(event.target.value)} maxLength={1000} rows={3} className="w-full resize-y rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-xs text-[var(--theme-text)] outline-none focus:border-[#b89a5b]" placeholder="Explique o impedimento ou incidente…" />
+                        <div className="flex gap-2">
+                          <button type="button" disabled={busyId === job.id || !exceptionNote.trim()} onClick={() => void reportException(job)} className="min-h-10 flex-1 rounded-lg bg-[#d8c18c] px-3 text-[10px] font-bold text-[#171814] disabled:opacity-50">{busyId === job.id ? "A enviar…" : "Registar ocorrência"}</button>
+                          <button type="button" disabled={busyId === job.id} onClick={() => { setExceptionJobId(null); setExceptionNote(""); }} className="min-h-10 rounded-lg border border-[var(--theme-border)] px-3 text-[10px] text-[var(--theme-text-muted)]">Fechar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => { setExceptionJobId(job.id); setExceptionNote(""); }} className="min-h-10 w-full rounded-xl border border-[var(--theme-border)] px-4 text-[10px] font-semibold text-[var(--theme-text-muted)]">Reportar ocorrência</button>
+                    )}
+                  </div>
+                )}
               </article>;
             })}
           </div>
