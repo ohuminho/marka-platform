@@ -1,20 +1,273 @@
 "use client";
-import { useCallback,useEffect,useRef,useState } from "react";
-import maplibregl,{type GeoJSONSource,type Map as MapLibreMap,type Marker} from "maplibre-gl";
-export type MobilityMapPoint={lat:number;lon:number;label:string};
-export type MobilityRoute={distanceMeters:number;durationSeconds:number;geometry:{type:"LineString";coordinates:[number,number][]};fare?:{currency:string;totalMinor:string;totalAOA:number}|null;fareStatus?:string};
-type Props={onPointsChange?:(points:{origin:MobilityMapPoint|null;destination:MobilityMapPoint|null})=>void;onRouteChange?:(route:MobilityRoute|null)=>void;serviceType?:string;driverPoint?:{lat:number;lon:number;bearing?:number|null}|null};
-const STYLE_URL="https://tiles.openfreemap.org/styles/dark";
-function markerElement(kind:"pickup"|"dropoff"|"driver"){const el=document.createElement("div");el.className="marka-map-marker marka-map-marker--"+kind+(kind==="pickup"?" marka-route-pulse":"");el.innerHTML="<span>"+(kind==="pickup"?"A":kind==="dropoff"?"B":"◆")+"</span>";return el;}
-export default function MobilityLiveMap({onPointsChange,onRouteChange,serviceType="TAXI",driverPoint=null}:Props){
- const hostRef=useRef<HTMLDivElement>(null),mapRef=useRef<MapLibreMap|null>(null),markersRef=useRef<{pickup:Marker|null;dropoff:Marker|null;driver:Marker|null}>({pickup:null,dropoff:null,driver:null}),requestRef=useRef(0),routeRef=useRef<MobilityRoute|null>(null),serviceRef=useRef(serviceType);
- const [origin,setOrigin]=useState<MobilityMapPoint|null>(null),[destination,setDestination]=useState<MobilityMapPoint|null>(null),[destinationText,setDestinationText]=useState(""),[suggestions,setSuggestions]=useState<Array<{label:string;lat:number;lon:number}>>([]),[busy,setBusy]=useState(false),[status,setStatus]=useState("Ative o GPS ou pesquise um destino."),[mapError,setMapError]=useState<string|null>(null);
- useEffect(()=>{if(!hostRef.current||mapRef.current)return;const map=new maplibregl.Map({container:hostRef.current,style:STYLE_URL,center:[0,0],zoom:2.2,attributionControl:{},cooperativeGestures:true,pitchWithRotate:false,dragRotate:false,maxPitch:0});map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");map.on("load",()=>{map.addSource("marka-route",{type:"geojson",data:{type:"FeatureCollection",features:[]}});map.addLayer({id:"marka-route-glow",type:"line",source:"marka-route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#E5B84B","line-width":10,"line-opacity":.16,"line-blur":4}});map.addLayer({id:"marka-route-line",type:"line",source:"marka-route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#E5B84B","line-width":4,"line-opacity":.96}});if(routeRef.current)(map.getSource("marka-route") as GeoJSONSource).setData({type:"Feature",properties:{},geometry:routeRef.current.geometry});});map.on("error",e=>{if(e.error?.message)setMapError("O mapa não conseguiu carregar os tiles. Verifique a ligação.");});mapRef.current=map;const resize=new ResizeObserver(()=>map.resize());resize.observe(hostRef.current);return()=>{resize.disconnect();Object.values(markersRef.current).forEach(m=>m?.remove());map.remove();mapRef.current=null;};},[]);
- const calculateRoute=useCallback(async(from:MobilityMapPoint,to:MobilityMapPoint)=>{const id=++requestRef.current;setBusy(true);setStatus("A calcular a rota rodoviária…");try{const q=new URLSearchParams({originLat:String(from.lat),originLng:String(from.lon),destinationLat:String(to.lat),destinationLng:String(to.lon),serviceType});const response=await fetch("/api/mobility/routing/geometry?"+q.toString(),{credentials:"include",cache:"no-store"});const data=await response.json() as {route?:MobilityRoute;fare?:{currency:string;totalMinor:string;totalAOA:number}|null;fareStatus?:string;message?:string};if(!response.ok||!data.route)throw new Error(data.message||"Rota indisponível.");if(id!==requestRef.current)return;const resolvedRoute:MobilityRoute={...data.route,fare:data.fare??null,fareStatus:data.fareStatus??"TARIFF_NOT_CONFIGURED"};const map=mapRef.current;routeRef.current=resolvedRoute;const source=map?.getSource("marka-route") as GeoJSONSource|undefined;source?.setData({type:"Feature",properties:{},geometry:resolvedRoute.geometry});const coords=resolvedRoute.geometry.coordinates;if(map&&coords.length){const bounds=coords.reduce((b,c)=>b.extend(c as [number,number]),new maplibregl.LngLatBounds(coords[0],coords[0]));map.fitBounds(bounds,{padding:{top:120,right:65,bottom:310,left:65},maxZoom:15,duration:850});}onRouteChange?.(resolvedRoute);setStatus("Rota calculada.");}catch(e){if(id===requestRef.current){onRouteChange?.(null);setStatus(e instanceof Error?e.message:"Falha ao calcular a rota.");}}finally{if(id===requestRef.current)setBusy(false);}},[onRouteChange,serviceType]);
- const setPoint=useCallback((point:MobilityMapPoint,kind:"pickup"|"dropoff")=>{const map=mapRef.current;if(!map)return;requestRef.current++;const nextOrigin=kind==="pickup"?point:origin,nextDestination=kind==="dropoff"?point:destination;if(kind==="pickup")setOrigin(point);else setDestination(point);markersRef.current[kind]?.remove();markersRef.current[kind]=new maplibregl.Marker({element:markerElement(kind)}).setLngLat([point.lon,point.lat]).addTo(map);onPointsChange?.({origin:nextOrigin,destination:nextDestination});if(nextOrigin&&nextDestination)void calculateRoute(nextOrigin,nextDestination);else{routeRef.current=null;onRouteChange?.(null);(map.getSource("marka-route") as GeoJSONSource|undefined)?.setData({type:"FeatureCollection",features:[]});map.flyTo({center:[point.lon,point.lat],zoom:15,duration:650});}},[calculateRoute,destination,onPointsChange,onRouteChange,origin]);
- const locateMe=useCallback(()=>{if(!navigator.geolocation){setStatus("Este dispositivo não disponibiliza GPS.");return;}setBusy(true);navigator.geolocation.getCurrentPosition(pos=>{setPoint({lat:pos.coords.latitude,lon:pos.coords.longitude,label:"A minha localização GPS"},"pickup");setStatus("Localização GPS definida.");setBusy(false);},e=>{setStatus(e.code===e.PERMISSION_DENIED?"Permita o acesso à localização nas definições do dispositivo.":"Não foi possível obter a localização GPS.");setBusy(false);},{enableHighAccuracy:true,timeout:12000,maximumAge:10000});},[setPoint]);
- useEffect(()=>{const value=destinationText.trim();if(value.length<3){setSuggestions([]);return;}const controller=new AbortController();const timer=window.setTimeout(async()=>{let localRows:Array<{label:string;lat:number;lon:number}>=[];try{try{const localResponse=await fetch("/api/mobility/places/search?q="+encodeURIComponent(value),{signal:controller.signal,credentials:"same-origin",cache:"no-store"});if(localResponse.ok){const localData=await localResponse.json() as {places?:Array<{label:string;lat:number;lon:number}>};localRows=(localData.places??[]).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon)&&p.lat>=-90&&p.lat<=90&&p.lon>=-180&&p.lon<=180);}}catch{if(controller.signal.aborted)return;}const url=new URL("https://photon.komoot.io/api/");url.searchParams.set("q",value);url.searchParams.set("limit","8");url.searchParams.set("lang","pt");const response=await fetch(url,{signal:controller.signal,headers:{Accept:"application/json"}});if(!response.ok)throw new Error("Pesquisa indisponível");const data=await response.json() as {features?:Array<{geometry?:{coordinates?:[number,number]};properties?:Record<string,unknown>}>};const rows=(data.features??[]).flatMap(f=>{const c=f.geometry?.coordinates,p=f.properties??{};if(!c||!Number.isFinite(c[0])||!Number.isFinite(c[1]))return[];const label=[p.name,p.street,p.district,p.city,p.state,p.country].filter((x):x is string=>typeof x==="string"&&x.length>0).filter((x,i,a)=>a.indexOf(x)===i).join(", ");return label?[{label,lon:c[0],lat:c[1]}]:[];});const seen=new Set(localRows.map(p=>p.label.toLocaleLowerCase()));const merged=[...localRows,...rows.filter(p=>!seen.has(p.label.toLocaleLowerCase("pt-AO")))];setSuggestions(merged.slice(0,6));}catch{if(!controller.signal.aborted)setSuggestions(localRows);}},350);return()=>{clearTimeout(timer);controller.abort();};},[destinationText]);
- useEffect(()=>{if(serviceRef.current!==serviceType){serviceRef.current=serviceType;if(origin&&destination)void calculateRoute(origin,destination);}},[serviceType,origin,destination,calculateRoute]);
- useEffect(()=>{const map=mapRef.current;if(!map)return;if(!driverPoint){markersRef.current.driver?.remove();markersRef.current.driver=null;return;}if(!markersRef.current.driver)markersRef.current.driver=new maplibregl.Marker({element:markerElement("driver"),className:"marka-driver-marker",rotationAlignment:"map"}).setLngLat([driverPoint.lon,driverPoint.lat]).addTo(map);else markersRef.current.driver.setLngLat([driverPoint.lon,driverPoint.lat]);markersRef.current.driver.setRotation(Number.isFinite(driverPoint.bearing)?Number(driverPoint.bearing):0);},[driverPoint?.lat,driverPoint?.lon,driverPoint?.bearing]);
- return <div className="marka-mobility-map absolute inset-0"><div ref={hostRef} className="absolute inset-0" role="application" aria-label="Mapa de mobilidade MARKA"/><div className="absolute left-4 right-4 top-24 z-10 mx-auto max-w-xl"><div className="relative rounded-2xl border border-white/10 bg-[#141417]/90 p-2 shadow-2xl backdrop-blur-xl"><div className="flex items-center gap-2"><button type="button" onClick={locateMe} disabled={busy} aria-label="Definir partida pelo GPS" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-xl text-[#E5B84B]">⌖</button><input value={destinationText} onChange={e=>setDestinationText(e.target.value)} placeholder="Para onde vamos?" aria-label="Destino" className="h-11 min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none placeholder:text-white/35"/></div>{suggestions.length>0&&<div className="absolute left-2 right-2 top-[calc(100%+8px)] overflow-hidden rounded-xl border border-white/10 bg-[#141417] shadow-2xl">{suggestions.map((item,i)=><button key={item.label+i} type="button" onClick={()=>{setDestinationText(item.label);setSuggestions([]);setPoint(item,"dropoff");}} className="flex min-h-12 w-full items-center gap-3 border-b border-white/[.06] px-3 text-left text-xs text-white/80 last:border-0 hover:bg-white/[.05]"><span className="text-[#E5B84B]">⌖</span><span className="line-clamp-2">{item.label}</span></button>)}</div>}{!destinationText.trim()&&}</div><p aria-live="polite" className="mt-2 px-2 text-[10px] text-white/55">{busy?"A processar…":status}</p>{mapError&&<p role="alert" className="mt-2 rounded-lg bg-[#141417]/90 p-2 text-[10px] text-rose-200">{mapError}</p>}</div><div className="absolute bottom-[300px] right-4 z-10 rounded-xl border border-white/10 bg-[#141417]/85 px-3 py-2 text-[9px] text-white/50 backdrop-blur-lg">OpenFreeMap · OpenStreetMap</div><div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-[#09090B] via-[#09090B]/55 to-transparent"/></div>;
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type Marker } from "maplibre-gl";
+
+export type MobilityMapPoint = { lat: number; lon: number; label: string };
+export type MobilityRoute = {
+  distanceMeters: number;
+  durationSeconds: number;
+  geometry: { type: "LineString"; coordinates: [number, number][] };
+  fare?: { currency: string; totalMinor: string; totalAOA: number } | null;
+  fareStatus?: string;
+};
+
+type Props = {
+  onPointsChange?: (points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => void;
+  onRouteChange?: (route: MobilityRoute | null) => void;
+  serviceType?: string;
+  driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
+  originPoint?: MobilityMapPoint | null;
+  destinationPoint?: MobilityMapPoint | null;
+};
+
+const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
+
+function markerElement(kind: "pickup" | "dropoff" | "driver") {
+  const el = document.createElement("div");
+  el.className = "marka-map-marker marka-map-marker--" + kind + (kind === "pickup" ? " marka-route-pulse" : "");
+  if (kind === "driver") {
+    el.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 19.5 7.5 12a3 3 0 0 1 2.8-2h11.4a3 3 0 0 1 2.8 2l2.5 7.5v5H5z" fill="#171717" stroke="#E5B84B" stroke-width="1.6"/><path d="M10 12h12l2 5H8z" fill="#737373"/><circle cx="10" cy="24" r="2.2" fill="#09090B" stroke="#E5B84B"/><circle cx="22" cy="24" r="2.2" fill="#09090B" stroke="#E5B84B"/></svg>';
+  } else {
+    el.innerHTML = "<span>" + (kind === "pickup" ? "A" : "B") + "</span>";
+  }
+  return el;
+}
+
+function tuneDarkStyle(map: MapLibreMap) {
+  for (const layer of map.getStyle().layers ?? []) {
+    const id = layer.id.toLowerCase();
+    try {
+      if (layer.type === "background") {
+        map.setPaintProperty(layer.id, "background-color", "#0B0D10");
+      } else if (layer.type === "fill" && /(water|ocean|river|lake)/.test(id)) {
+        map.setPaintProperty(layer.id, "fill-color", "#0B0D10");
+      } else if (layer.type === "line" && /(road|street|highway|transportation)/.test(id)) {
+        map.setPaintProperty(layer.id, "line-color", "#1E2229");
+      } else if (layer.type === "fill" && /(building)/.test(id)) {
+        map.setPaintProperty(layer.id, "fill-color", "#14171C");
+      }
+    } catch {
+      // A style layer may not expose the paint property we are tuning.
+    }
+  }
+}
+
+export default function MobilityLiveMap({
+  onPointsChange,
+  onRouteChange,
+  serviceType = "TAXI",
+  driverPoint = null,
+  originPoint = null,
+  destinationPoint = null,
+}: Props) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const markersRef = useRef<{ pickup: Marker | null; dropoff: Marker | null; driver: Marker | null }>({
+    pickup: null,
+    dropoff: null,
+    driver: null,
+  });
+  const requestRef = useRef(0);
+  const routeRef = useRef<MobilityRoute | null>(null);
+  const serviceRef = useRef(serviceType);
+  const [origin, setOrigin] = useState<MobilityMapPoint | null>(null);
+  const [destination, setDestination] = useState<MobilityMapPoint | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hostRef.current || mapRef.current) return;
+    const map = new maplibregl.Map({
+      container: hostRef.current,
+      style: STYLE_URL,
+      center: [13.23, -8.83],
+      zoom: 11,
+      attributionControl: {},
+      cooperativeGestures: true,
+      pitchWithRotate: false,
+      dragRotate: false,
+      maxPitch: 0,
+    });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+    map.on("load", () => {
+      tuneDarkStyle(map);
+      map.addSource("marka-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "marka-route-glow",
+        type: "line",
+        source: "marka-route",
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#E5B84B", "line-width": 10, "line-opacity": 0.16, "line-blur": 4 },
+      });
+      map.addLayer({
+        id: "marka-route-line",
+        type: "line",
+        source: "marka-route",
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#E5B84B", "line-width": 4, "line-opacity": 0.98 },
+      });
+      if (routeRef.current) {
+        (map.getSource("marka-route") as GeoJSONSource).setData({
+          type: "Feature",
+          properties: {},
+          geometry: routeRef.current.geometry,
+        });
+      }
+      map.resize();
+    });
+    map.on("error", (event) => {
+      if (event.error?.message) setMapError("O mapa não conseguiu carregar os tiles. Verifique a ligação.");
+    });
+    mapRef.current = map;
+    const resize = new ResizeObserver(() => map.resize());
+    resize.observe(hostRef.current);
+    return () => {
+      resize.disconnect();
+      Object.values(markersRef.current).forEach((marker) => marker?.remove());
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  const calculateRoute = useCallback(async (from: MobilityMapPoint, to: MobilityMapPoint) => {
+    const id = ++requestRef.current;
+    setBusy(true);
+    setStatus("A calcular a rota rodoviária…");
+    try {
+      const query = new URLSearchParams({
+        originLat: String(from.lat),
+        originLng: String(from.lon),
+        destinationLat: String(to.lat),
+        destinationLng: String(to.lon),
+        serviceType,
+      });
+      const response = await fetch("/api/mobility/routing/geometry?" + query.toString(), {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await response.json() as {
+        route?: MobilityRoute;
+        fare?: { currency: string; totalMinor: string; totalAOA: number } | null;
+        fareStatus?: string;
+        message?: string;
+      };
+      if (!response.ok || !data.route) throw new Error(data.message || "Rota indisponível.");
+      if (id !== requestRef.current) return;
+      const resolvedRoute: MobilityRoute = {
+        ...data.route,
+        fare: data.fare ?? null,
+        fareStatus: data.fareStatus ?? "TARIFF_NOT_CONFIGURED",
+      };
+      routeRef.current = resolvedRoute;
+      const map = mapRef.current;
+      const source = map?.getSource("marka-route") as GeoJSONSource | undefined;
+      source?.setData({ type: "Feature", properties: {}, geometry: resolvedRoute.geometry });
+      const coordinates = resolvedRoute.geometry.coordinates;
+      if (map && coordinates.length) {
+        const bounds = coordinates.reduce(
+          (value, coordinate) => value.extend(coordinate as [number, number]),
+          new maplibregl.LngLatBounds(coordinates[0], coordinates[0]),
+        );
+        map.fitBounds(bounds, {
+          padding: { top: 112, right: 58, bottom: 340, left: 58 },
+          maxZoom: 16,
+          duration: 850,
+        });
+      }
+      onRouteChange?.(resolvedRoute);
+      setStatus("Rota calculada.");
+    } catch (error) {
+      if (id === requestRef.current) {
+        onRouteChange?.(null);
+        setStatus(error instanceof Error ? error.message : "Falha ao calcular a rota.");
+      }
+    } finally {
+      if (id === requestRef.current) setBusy(false);
+    }
+  }, [onRouteChange, serviceType]);
+
+  const setPoint = useCallback((point: MobilityMapPoint, kind: "pickup" | "dropoff") => {
+    const map = mapRef.current;
+    if (!map) return;
+    requestRef.current += 1;
+    const nextOrigin = kind === "pickup" ? point : origin;
+    const nextDestination = kind === "dropoff" ? point : destination;
+    if (kind === "pickup") setOrigin(point);
+    else setDestination(point);
+
+    markersRef.current[kind]?.remove();
+    markersRef.current[kind] = new maplibregl.Marker({ element: markerElement(kind) })
+      .setLngLat([point.lon, point.lat])
+      .addTo(map);
+    onPointsChange?.({ origin: nextOrigin, destination: nextDestination });
+
+    if (nextOrigin && nextDestination) {
+      void calculateRoute(nextOrigin, nextDestination);
+    } else {
+      routeRef.current = null;
+      onRouteChange?.(null);
+      (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
+        type: "FeatureCollection",
+        features: [],
+      });
+      map.flyTo({ center: [point.lon, point.lat], zoom: 15, duration: 650 });
+    }
+  }, [calculateRoute, destination, onPointsChange, onRouteChange, origin]);
+
+  useEffect(() => {
+    if (originPoint && (originPoint.lat !== origin?.lat || originPoint.lon !== origin?.lon)) {
+      setPoint(originPoint, "pickup");
+    }
+  }, [originPoint?.lat, originPoint?.lon, origin?.lat, origin?.lon, setPoint]);
+
+  useEffect(() => {
+    if (destinationPoint && (destinationPoint.lat !== destination?.lat || destinationPoint.lon !== destination?.lon)) {
+      setPoint(destinationPoint, "dropoff");
+    }
+  }, [destinationPoint?.lat, destinationPoint?.lon, destination?.lat, destination?.lon, setPoint]);
+
+  useEffect(() => {
+    if (serviceRef.current !== serviceType) {
+      serviceRef.current = serviceType;
+      if (origin && destination) void calculateRoute(origin, destination);
+    }
+  }, [serviceType, origin, destination, calculateRoute]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!driverPoint) {
+      markersRef.current.driver?.remove();
+      markersRef.current.driver = null;
+      return;
+    }
+    if (!markersRef.current.driver) {
+      markersRef.current.driver = new maplibregl.Marker({
+        element: markerElement("driver"),
+        className: "marka-driver-marker",
+        rotationAlignment: "map",
+      }).setLngLat([driverPoint.lon, driverPoint.lat]).addTo(map);
+    } else {
+      markersRef.current.driver.setLngLat([driverPoint.lon, driverPoint.lat]);
+    }
+    markersRef.current.driver.setRotation(Number.isFinite(driverPoint.bearing) ? Number(driverPoint.bearing) : 0);
+  }, [driverPoint?.lat, driverPoint?.lon, driverPoint?.bearing]);
+
+  return (
+    <div className="marka-mobility-map absolute inset-0">
+      <div ref={hostRef} className="absolute inset-0" role="application" aria-label="Mapa de mobilidade MARKA" />
+      <div className="absolute bottom-[310px] right-4 z-10 rounded-xl border border-white/10 bg-[#141417]/85 px-3 py-2 text-[9px] text-white/50 backdrop-blur-lg">
+        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#E5B84B]" />
+        {busy ? "A calcular rota…" : status}
+      </div>
+      {mapError && (
+        <p role="alert" className="absolute left-4 top-20 z-10 rounded-xl border border-rose-200/15 bg-[#141417]/90 p-3 text-[10px] text-rose-100">
+          {mapError}
+        </p>
+      )}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-[#09090B] via-[#09090B]/55 to-transparent" />
+    </div>
+  );
 }
