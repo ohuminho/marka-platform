@@ -15,7 +15,7 @@ import {
   SedanExecutivoSVG,
 } from "@/frontend/features/mobility/components/VehicleIcons";
 
-type Group = "EXECUTIVE" | "MOTO" | "CARGO";
+type Group = "EXECUTIVE" | "MOTO";
 type Ride = {
   id: string;
   reference?: string | null;
@@ -50,13 +50,6 @@ const choices: Record<Group, Array<{ id: string; title: string; detail: string; 
     { id: "EXECUTIVE", title: "Executivo", detail: "Conforto premium", icon: "sedan" },
   ],
   MOTO: [{ id: "MOTO_TAXI", title: "Moto", detail: "Moto-táxi · 1 passageiro", icon: "motorcycle" }],
-  CARGO: [
-    { id: "VAN", title: "Carrinha fechada", detail: "Carga protegida", icon: "van" },
-    { id: "PICKUP", title: "Pick-up", detail: "Caixa aberta", icon: "pickup" },
-    { id: "MEDIUM_TRUCK", title: "Canter / Dyna", detail: "Camião ligeiro urbano", icon: "canter" },
-    { id: "TIPPER_TRUCK", title: "Basculante", detail: "Areia, brita e inertes", icon: "tipper" },
-    { id: "HEAVY_TRUCK", title: "Camião pesado", detail: "Plataforma e carga pesada", icon: "heavy" },
-  ],
 };
 
 const labels: Record<string, string> = {
@@ -643,7 +636,13 @@ export default function MobilityLuxuryExperience() {
                   type="button"
                   role="tab"
                   aria-selected={group === tab.id}
-                  onClick={() => changeGroup(tab.id)}
+                  onClick={() => {
+                    if (tab.id === "CARGO") {
+                      router.push("/app/mobility/carga");
+                      return;
+                    }
+                    changeGroup(tab.id);
+                  }}
                   className={"min-h-10 rounded-xl border text-[11px] font-semibold " + (group === tab.id
                     ? "border-[#E5B84B]/60 bg-[#E5B84B]/10 text-[#E5B84B]"
                     : "border-white/10 bg-white/[.025] text-white/50")}
@@ -761,14 +760,14 @@ export default function MobilityLuxuryExperience() {
 
             {group !== "MOTO" && (
               <div className="mt-3 flex items-center justify-between gap-3">
-                <label htmlFor="marka-passengers" className="text-[10px] text-white/55">{group === "CARGO" ? "Unidades / capacidade solicitada" : "Passageiros"}</label>
+                <label htmlFor="marka-passengers" className="text-[10px] text-white/55">Passageiros</label>
                 <input
                   id="marka-passengers"
                   type="number"
                   min={1}
-                  max={group === "CARGO" ? 100 : 4}
+                  max={4}
                   value={passengers}
-                  onChange={(event) => setPassengers(Math.max(1, Math.min(group === "CARGO" ? 100 : 4, Number(event.target.value) || 1)))}
+                  onChange={(event) => setPassengers(Math.max(1, Math.min(4, Number(event.target.value) || 1)))}
                   className="w-20 rounded-lg border border-white/10 bg-black/30 px-2 py-2 text-center text-xs text-white"
                 />
               </div>
