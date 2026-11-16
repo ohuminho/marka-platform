@@ -102,29 +102,6 @@ export async function GET() {
     select: { entityId: true, metadata: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   }) : [];
-  const exceptionReviewEvents = requests.length > 0 ? await prisma.auditLog.findMany({
-    where: {
-      organizationId: auth.organizationId,
-      entityType: "FreightRequest",
-      entityId: { in: requests.map((item) => item.id) },
-      action: "FREIGHT_EXCEPTION_REVIEWED",
-    },
-    select: { entityId: true, metadata: true, createdAt: true, actor: { select: { name: true } } },
-    orderBy: { createdAt: "desc" },
-  }) : [];
-  const latestExceptionReviewByRequest = new Map<string, { note: string; reviewedAt: string; reviewedBy: string | null }>();
-  for (const event of exceptionReviewEvents) {
-    if (!event.entityId || latestExceptionReviewByRequest.has(event.entityId)) continue;
-    const metadata = event.metadata && typeof event.metadata === "object"
-      ? event.metadata as Record<string, unknown>
-      : {};
-    latestExceptionReviewByRequest.set(event.entityId, {
-      note: typeof metadata.note === "string" ? metadata.note : "Ocorrência analisada.",
-      reviewedAt: event.createdAt.toISOString(),
-      reviewedBy: event.actor?.name ?? null,
-    });
-  }
-
   const latestExceptionByRequest = new Map<string, { note: string | null; createdAt: string }>();
   for (const event of exceptionEvents) {
     if (!event.entityId || latestExceptionByRequest.has(event.entityId)) continue;
@@ -151,7 +128,7 @@ export async function GET() {
   for (const event of reviewEvents) {
     if (!event.entityId || latestReviewByRequest.has(event.entityId)) continue;
     const exceptionAt = latestExceptionByRequest.get(event.entityId)?.createdAt;
-    if (!exceptionAt || event.createdAt.getTime() < new Date(exceptionAt).getTime()) continue;
+    if (!exceptionAt || event.createdAt.getTime() <= new Date(exceptionAt).getTime()) continue;
     const metadata = event.metadata && typeof event.metadata === "object"
       ? event.metadata as Record<string, unknown>
       : {};
@@ -167,11 +144,6 @@ export async function GET() {
       ...item,
       latestException: latestExceptionByRequest.get(item.id) ?? null,
       latestExceptionReview: latestReviewByRequest.get(item.id) ?? null,
-      latestExceptionReview: (() => {
-        const exception = latestExceptionByRequest.get(item.id);
-        const review = latestExceptionReviewByRequest.get(item.id);
-        return exception && review && review.reviewedAt > exception.createdAt ? review : null;
-      })(),
       quantity: item.quantity === null ? null : Number(item.quantity),
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
       quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
