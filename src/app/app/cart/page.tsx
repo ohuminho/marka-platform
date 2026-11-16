@@ -127,6 +127,29 @@ export default function CartPage() {
       }
 
       setCart(rawCart as Cart);
+
+      // Restore the draft as part of the asynchronous cart load. This avoids
+      // synchronously cascading state updates from an effect.
+      const storageKey = "marka:checkout:" + rawCart.id;
+      try {
+        const rawDraft = window.sessionStorage.getItem(storageKey);
+        if (rawDraft) {
+          const draft = JSON.parse(rawDraft) as {
+            paymentIdempotencyKey?: string;
+            deliveryAddress?: string;
+            deliveryLatitude?: string;
+            deliveryLongitude?: string;
+            deliveryInstructions?: string;
+          };
+          setPaymentIdempotencyKey(typeof draft.paymentIdempotencyKey === "string" ? draft.paymentIdempotencyKey : "");
+          setDeliveryAddress(typeof draft.deliveryAddress === "string" ? draft.deliveryAddress : "");
+          setDeliveryLatitude(typeof draft.deliveryLatitude === "string" ? draft.deliveryLatitude : "");
+          setDeliveryLongitude(typeof draft.deliveryLongitude === "string" ? draft.deliveryLongitude : "");
+          setDeliveryInstructions(typeof draft.deliveryInstructions === "string" ? draft.deliveryInstructions : "");
+        }
+      } catch {
+        window.sessionStorage.removeItem(storageKey);
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -145,29 +168,6 @@ export default function CartPage() {
 
     return () => window.clearTimeout(timer);
   }, [loadCart]);
-
-  useEffect(() => {
-    if (!cart?.id) return;
-    const storageKey = "marka:checkout:" + cart.id;
-    try {
-      const rawDraft = window.sessionStorage.getItem(storageKey);
-      if (!rawDraft) return;
-      const draft = JSON.parse(rawDraft) as {
-        paymentIdempotencyKey?: string;
-        deliveryAddress?: string;
-        deliveryLatitude?: string;
-        deliveryLongitude?: string;
-        deliveryInstructions?: string;
-      };
-      setPaymentIdempotencyKey(typeof draft.paymentIdempotencyKey === "string" ? draft.paymentIdempotencyKey : "");
-      setDeliveryAddress(typeof draft.deliveryAddress === "string" ? draft.deliveryAddress : "");
-      setDeliveryLatitude(typeof draft.deliveryLatitude === "string" ? draft.deliveryLatitude : "");
-      setDeliveryLongitude(typeof draft.deliveryLongitude === "string" ? draft.deliveryLongitude : "");
-      setDeliveryInstructions(typeof draft.deliveryInstructions === "string" ? draft.deliveryInstructions : "");
-    } catch {
-      window.sessionStorage.removeItem(storageKey);
-    }
-  }, [cart?.id]);
 
   function updateDeliveryField(field: "address" | "latitude" | "longitude" | "instructions", value: string) {
     setPaymentIdempotencyKey("");
