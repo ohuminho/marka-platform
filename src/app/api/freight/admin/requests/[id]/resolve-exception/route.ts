@@ -19,6 +19,7 @@ const resumableStatuses = [
   "PROVIDER_ARRIVED",
   "PICKED_UP",
   "IN_TRANSIT",
+  "PROVIDER_COMPLETED_PENDING_CONFIRMATION",
 ] as const;
 
 type ResumableStatus = (typeof resumableStatuses)[number];
@@ -162,7 +163,7 @@ export async function POST(
       });
       if (changed.count !== 1) throw new Error("FREIGHT_EXCEPTION_RESOLUTION_CONFLICT");
 
-      if (provider.availability === "AVAILABLE") {
+      if (previousStatus !== "PROVIDER_COMPLETED_PENDING_CONFIRMATION" && provider.availability === "AVAILABLE") {
         await tx.freightProvider.updateMany({
           where: { id: provider.id, status: "VERIFIED", availability: "AVAILABLE" },
           data: { availability: "BUSY" },
