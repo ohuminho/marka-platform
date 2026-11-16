@@ -171,7 +171,7 @@ export default function MobilityFreightRequestForm() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível registar o pedido.");
-      setMessage(`Pedido ${data.request.reference} recebido. Acompanhe a cotação nesta página.`);
+      setMessage(`Pedido ${data.request.reference} registado. Guarde esta referência para acompanhamento.`);
       try {
         const pendingRaw = window.sessionStorage.getItem(storageKey);
         const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
