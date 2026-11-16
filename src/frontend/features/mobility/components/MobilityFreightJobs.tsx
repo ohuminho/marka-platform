@@ -74,6 +74,47 @@ export default function MobilityFreightJobs() {
       window.removeEventListener("marka:freight-provider-updated", load);
     };
   }, [refresh]);
+  useEffect(() => {
+    if (
+      !provider ||
+      provider.status !== "VERIFIED" ||
+      !["AVAILABLE", "BUSY"].includes(provider.availability) ||
+      !navigator.geolocation
+    ) return;
+
+    let lastSentAt = 0;
+    let active = true;
+    const watchId = navigator.geolocation.watchPosition(async (position) => {
+      const now = Date.now();
+      if (!active || now - lastSentAt < 15000) return;
+      lastSentAt = now;
+      try {
+        const response = await fetch("/api/freight/providers/me/location", {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId ?? "" },
+          body: JSON.stringify({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracyMeters: position.coords.accuracy,
+          }),
+        });
+        if (!response.ok && active) {
+          const data = await response.json().catch(() => ({}));
+          setNotice(data.message ?? "Não foi possível actualizar a localização GPS.");
+        }
+      } catch {
+        if (active) setNotice("Sem ligação para actualizar a localização GPS. A localização será reenviada quando a ligação voltar.");
+      }
+    }, () => {
+      if (active) setNotice("Permita o acesso à localização do dispositivo para receber pedidos de carga.");
+    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
+
+    return () => {
+      active = false;
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [provider?.id, provider?.status, provider?.availability, organizationId]);
 
   function nextAction(job: FreightJob): { status: string; label: string } | null {
     if (job.status === "ASSIGNED") return { status: "PROVIDER_EN_ROUTE", label: "Iniciar deslocação" };
