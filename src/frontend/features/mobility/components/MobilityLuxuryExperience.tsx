@@ -143,7 +143,6 @@ export default function MobilityLuxuryExperience() {
     setQuote(null);
     setFareStatus("NO_ROUTE");
     setFareByService({});
-    setRide(null);
     setError(null);
   }, []);
 
