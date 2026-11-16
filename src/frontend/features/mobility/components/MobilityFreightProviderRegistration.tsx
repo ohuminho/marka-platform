@@ -102,16 +102,13 @@ export default function MobilityFreightProviderRegistration() {
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>(["CARGO_SHIPMENT"]);
   const [coverageAreas, setCoverageAreas] = useState("");
   const [vehicles, setVehicles] = useState<VehicleDraft[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(organizationId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!organizationId) {
-      setLoading(false);
-      return;
-    }
+    if (!organizationId) return;
     let cancelled = false;
     const load = async () => {
       setError(null);
@@ -152,7 +149,7 @@ export default function MobilityFreightProviderRegistration() {
         if (!cancelled) setLoading(false);
       }
     };
-    const timer = window.setTimeout(() => { void load(); }, 0);
+    const timer = window.setTimeout(() => { setLoading(true); void load(); }, 0);
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [organizationId]);
 
