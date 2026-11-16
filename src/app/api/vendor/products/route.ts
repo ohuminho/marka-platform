@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { canPublishIndividualListing } from "@/marketplace-engine/individual-listing-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -209,7 +210,7 @@ export async function POST(request: Request) {
         const existingListingCount = await tx.product.count({
           where: { storeId: vendor.store!.id, status: { not: "ARCHIVED" } },
         });
-        if (existingListingCount > 0) return null;
+        if (!canPublishIndividualListing(existingListingCount)) return null;
       }
       return tx.product.create({
       data: {
@@ -295,7 +296,32 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ message: "A loja está suspensa ou indisponível. Contacte o suporte.", code: "STORE_NOT_AVAILABLE" }, { status: 409 });
       }
       if (product.stock < 1) return NextResponse.json({ message: "Adicione stock antes de publicar." }, { status: 422 });
-      const updated = await prisma.product.update({ where: { id: product.id }, data: { status: "ACTIVE" } });
+      const updated = await prisma.$transaction(async (tx) => {
+        if (vendor.store!.isIndividualListing) {
+          // Use the same store-scoped lock as product creation so two drafts
+          // cannot be published concurrently into a multi-listing state.
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(741920, hashtext(${vendor.store!.id}))`;
+          const otherListings = await tx.product.count({
+            where: {
+              storeId: vendor.store!.id,
+              id: { not: product.id },
+              status: { not: "ARCHIVED" },
+            },
+          });
+          if (!canPublishIndividualListing(otherListings)) return null;
+        }
+
+        return tx.product.update({
+          where: { id: product.id },
+          data: { status: "ACTIVE" },
+        });
+      });
+      if (!updated) {
+        return NextResponse.json({
+          message: "O perfil individual permite um anúncio de cada vez. Arquive o anúncio atual antes de publicar outro.",
+          code: "SINGLE_LISTING_LIMIT_REACHED",
+        }, { status: 409 });
+      }
       return NextResponse.json({ product: updated, message: "Produto publicado." });
     }
 
