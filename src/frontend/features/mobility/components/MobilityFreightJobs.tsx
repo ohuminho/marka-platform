@@ -223,7 +223,7 @@ export default function MobilityFreightJobs() {
                   <p><strong className="text-[var(--theme-text)]">Destino:</strong> {job.destination?.address ?? "Não indicado"}</p>
                 </div>
                 {action ? <button type="button" disabled={busyId === job.id} onClick={() => updateJobStatus(job)} className="mt-4 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === job.id ? "A actualizar…" : action.label}</button> : job.status === "PROVIDER_COMPLETED_PENDING_CONFIRMATION" ? <p className="mt-4 text-xs text-emerald-700 dark:text-emerald-300">Serviço declarado concluído. Aguarda confirmação do cliente; a sua disponibilidade já foi libertada.</p> : <p className="mt-4 text-xs text-amber-700">Serviço em excepção. Aguarda resolução operacional.</p>}
-                {job.status !== "EXCEPTION" && (
+                {job.status !== "EXCEPTION" && job.status !== "PROVIDER_COMPLETED_PENDING_CONFIRMATION" && (
                   <div className="mt-3">
                     {exceptionJobId === job.id ? (
                       <div className="space-y-2 rounded-xl border border-[var(--theme-border)] p-3">
