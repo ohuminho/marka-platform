@@ -529,188 +529,173 @@ export class FulfillmentAdapter
     reason?: string,
   ): Promise<FulfillmentRequest> {
     if (!fulfillmentId.trim()) {
-      throw new Error(
-        "Fulfillment is required.",
-      );
+      throw new Error("Fulfillment is required.");
     }
 
-    const current =
-      await prisma.fulfillmentRequest.findUnique(
-        {
+    // orderId is immutable. Read it first so every competing order/payment
+    // operation acquires locks in the same Order -> Fulfillment order.
+    const reference = await prisma.fulfillmentRequest.findUnique({
+      where: { id: fulfillmentId },
+      select: { id: true, orderId: true },
+    });
+
+    if (!reference) {
+      throw new Error("Fulfillment not found.");
+    }
+
+    const outcome = await prisma.$transaction(async (database) => {
+      await database.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "Order"
+        WHERE "id" = ${reference.orderId}
+        FOR UPDATE
+      `;
+
+      await database.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "FulfillmentRequest"
+        WHERE "id" = ${fulfillmentId}
+        FOR UPDATE
+      `;
+
+      const current = await database.fulfillmentRequest.findUnique({
+        where: { id: fulfillmentId },
+      });
+
+      if (!current || current.orderId !== reference.orderId) {
+        throw new Error("Fulfillment not found.");
+      }
+
+      const currentStatus = current.status as FulfillmentStatus;
+
+      if (currentStatus === status) {
+        return { result: current, fromStatus: currentStatus };
+      }
+
+      if (!this.isValidTransition(currentStatus, status)) {
+        throw new Error(
+          `Invalid fulfillment transition: ${currentStatus} -> ${status}.`,
+        );
+      }
+
+      const order = await database.order.findUnique({
+        where: { id: current.orderId },
+        select: { id: true, status: true },
+      });
+
+      if (!order) {
+        throw new Error("Fulfillment order not found.");
+      }
+
+      if (status === "CANCELLED") {
+        const activeOrCapturedPayment = await database.payment.findFirst({
           where: {
-            id: fulfillmentId,
+            orderId: order.id,
+            status: {
+              in: ["CREATED", "PENDING", "PROCESSING", "COMPLETED"],
+            },
           },
+          select: { id: true, status: true },
+        });
+
+        if (activeOrCapturedPayment) {
+          throw new Error(
+            activeOrCapturedPayment.status === "COMPLETED"
+              ? "Paid orders require a confirmed refund before delivery cancellation."
+              : "An active payment must be cancelled or reconciled before delivery cancellation.",
+          );
+        }
+      }
+
+      const result = await database.fulfillmentRequest.update({
+        where: { id: fulfillmentId },
+        data: {
+          status,
+          exceptionCode:
+            status === "EXCEPTION"
+              ? reason?.trim() || "FULFILLMENT_EXCEPTION"
+              : null,
         },
-      );
+      });
 
-    if (!current) {
-      throw new Error(
-        "Fulfillment not found.",
-      );
+      const orderStatusByFulfillmentStatus: Partial<
+        Record<FulfillmentStatus, OrderStatus>
+      > = {
+        PREPARING: "PROCESSING",
+        READY_FOR_PICKUP: "PROCESSING",
+        PICKED_UP: "SHIPPED",
+        IN_TRANSIT: "SHIPPED",
+        COMPLETED: "DELIVERED",
+        CANCELLED: "CANCELLED",
+      };
+
+      const nextOrderStatus = orderStatusByFulfillmentStatus[status];
+
+      if (nextOrderStatus) {
+        const allowedCurrentStatuses: OrderStatus[] =
+          nextOrderStatus === OrderStatus.CANCELLED
+            ? [
+                OrderStatus.PENDING,
+                OrderStatus.CONFIRMED,
+                OrderStatus.PROCESSING,
+                OrderStatus.SHIPPED,
+              ]
+            : nextOrderStatus === OrderStatus.SHIPPED
+              ? [OrderStatus.CONFIRMED, OrderStatus.PROCESSING]
+              : nextOrderStatus === OrderStatus.DELIVERED
+                ? [OrderStatus.SHIPPED, OrderStatus.PROCESSING]
+                : [OrderStatus.CONFIRMED, OrderStatus.PROCESSING];
+
+        const orderUpdate = await database.order.updateMany({
+          where: {
+            id: result.orderId,
+            status: { in: allowedCurrentStatuses },
+          },
+          data: { status: nextOrderStatus },
+        });
+
+        if (orderUpdate.count !== 1) {
+          throw new Error(
+            `Order cannot transition to ${nextOrderStatus} from its current state.`,
+          );
+        }
+      }
+
+      if (status === "COMPLETED" || status === "CANCELLED") {
+        await database.fulfillmentAssignment.updateMany({
+          where: {
+            fulfillmentId,
+            acceptedAt: null,
+          },
+          data: {
+            acceptedAt: status === "COMPLETED" ? new Date() : null,
+          },
+        });
+      }
+
+      return { result, fromStatus: currentStatus };
+    }, {
+      isolationLevel: "Serializable",
+      maxWait: 5000,
+      timeout: 10000,
+    });
+
+    if (outcome.result.status !== status) {
+      return this.toContract(outcome.result);
     }
-
-    const currentStatus =
-      current.status as FulfillmentStatus;
-
-    if (
-      currentStatus === status
-    ) {
-      return this.toContract(
-        current,
-      );
-    }
-
-    if (
-      !this.isValidTransition(
-        currentStatus,
-        status,
-      )
-    ) {
-      throw new Error(
-        `Invalid fulfillment transition: ${currentStatus} -> ${status}.`,
-      );
-    }
-
-    const updated =
-      await prisma.$transaction(
-        async (database) => {
-          const result =
-            await database.fulfillmentRequest.update(
-              {
-                where: {
-                  id: fulfillmentId,
-                },
-                data: {
-                  status,
-                  exceptionCode:
-                    status ===
-                    "EXCEPTION"
-                      ? reason?.trim() ||
-                        "FULFILLMENT_EXCEPTION"
-                      : null,
-                },
-              },
-            );
-
-          const orderStatusByFulfillmentStatus:
-            Partial<
-              Record<
-                FulfillmentStatus,
-                OrderStatus
-              >
-            > = {
-              PREPARING:
-                "PROCESSING",
-              READY_FOR_PICKUP:
-                "PROCESSING",
-              PICKED_UP:
-                "SHIPPED",
-              IN_TRANSIT:
-                "SHIPPED",
-              COMPLETED:
-                "DELIVERED",
-              CANCELLED:
-                "CANCELLED",
-            };
-
-          const nextOrderStatus =
-            orderStatusByFulfillmentStatus[
-              status
-            ];
-
-          if (nextOrderStatus) {
-            const allowedCurrentStatuses:
-              OrderStatus[] =
-              nextOrderStatus ===
-              OrderStatus.CANCELLED
-                ? [
-                    OrderStatus.PENDING,
-                    OrderStatus.CONFIRMED,
-                    OrderStatus.PROCESSING,
-                    OrderStatus.SHIPPED,
-                  ]
-                : nextOrderStatus ===
-                    OrderStatus.SHIPPED
-                  ? [
-                      OrderStatus.CONFIRMED,
-                      OrderStatus.PROCESSING,
-                    ]
-                  : nextOrderStatus ===
-                      OrderStatus.DELIVERED
-                    ? [
-                        OrderStatus.SHIPPED,
-                        OrderStatus.PROCESSING,
-                      ]
-                    : [
-                        OrderStatus.CONFIRMED,
-                        OrderStatus.PROCESSING,
-                      ];
-
-            await database.order.updateMany(
-              {
-                where: {
-                  id:
-                    result.orderId,
-                  status: {
-                    in:
-                      allowedCurrentStatuses,
-                  },
-                },
-                data: {
-                  status:
-                    nextOrderStatus,
-                },
-              },
-            );
-          }
-
-          if (
-            status ===
-              "COMPLETED" ||
-            status ===
-              "CANCELLED"
-          ) {
-            await database.fulfillmentAssignment.updateMany(
-              {
-                where: {
-                  fulfillmentId,
-                  acceptedAt:
-                    null,
-                },
-                data: {
-                  acceptedAt:
-                    status ===
-                    "COMPLETED"
-                      ? new Date()
-                      : null,
-                },
-              },
-            );
-          }
-
-          return result;
-        },
-      );
 
     await this.recordEvent(
-      this.eventTypeForStatus(
-        status,
-      ),
+      this.eventTypeForStatus(status),
       fulfillmentId,
-      updated.organizationId,
+      outcome.result.organizationId,
       {
-        fromStatus:
-          currentStatus,
-        toStatus:
-          status,
-        reason:
-          reason ?? null,
+        fromStatus: outcome.fromStatus,
+        toStatus: status,
+        reason: reason ?? null,
       },
     );
 
-    return this.toContract(
-      updated,
-    );
+    return this.toContract(outcome.result);
   }
 
   async completeDeliveryDispatch(
