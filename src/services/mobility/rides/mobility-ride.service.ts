@@ -1042,6 +1042,23 @@ export class MobilityRideService {
             select: { status: true },
           });
 
+          // A driver may hold a second compatible assignment, but may only
+          // carry one active passenger trip at a time. The driver-row lock
+          // above serializes simultaneous start attempts across both rides.
+          if (
+            nextStatus === MobilityRideStatus.TRIP_STARTED &&
+            otherActiveRides.some(
+              (activeRide) =>
+                activeRide.status === MobilityRideStatus.TRIP_STARTED ||
+                activeRide.status === MobilityRideStatus.TRIP_IN_PROGRESS,
+            )
+          ) {
+            throw new MobilityDomainError(
+              "Complete the current passenger trip before starting the next assigned ride.",
+              "DRIVER_ALREADY_ON_ACTIVE_TRIP",
+            );
+          }
+
           const nextDriverAvailability =
             resolveDriverAvailabilityForActiveRides([
               ...otherActiveRides.map((activeRide) => activeRide.status),
