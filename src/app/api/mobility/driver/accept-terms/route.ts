@@ -14,9 +14,12 @@ export async function POST(request: Request) {
   const session = await new SessionService().validate(token);
   if (!session) return NextResponse.json({ message: "Sessão inválida ou expirada.", code: "INVALID_SESSION" }, { status: 401 });
 
-  let body: { accepted?: unknown };
+  let body: { accepted?: unknown; countryCode?: unknown };
   try { body = await request.json(); } catch { return NextResponse.json({ message: "Pedido inválido." }, { status: 400 }); }
   if (body.accepted !== true) return NextResponse.json({ message: "É necessário assinalar a aceitação expressa dos termos." , code: "EXPLICIT_ACCEPTANCE_REQUIRED" }, { status: 422 });
+  const countryCode = typeof body.countryCode === "string" ? body.countryCode.trim().toUpperCase() : "AO";
+  if (!/^[A-Z]{2}$/.test(countryCode)) return NextResponse.json({ message: "Indica um código de país ISO válido.", code: "INVALID_COUNTRY_CODE" }, { status: 400 });
+  if (countryCode !== "AO") return NextResponse.json({ message: "Os termos e requisitos de adesão para este país ainda não foram aprovados. A candidatura internacional não pode ser submetida até existir enquadramento legal local.", code: "JURISDICTION_TERMS_UNAVAILABLE" }, { status: 409 });
 
   const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true, status: true } });
   if (!user || user.status !== "ACTIVE") return NextResponse.json({ message: "A conta MARKA deve estar ativa.", code: "USER_NOT_ACTIVE" }, { status: 403 });
@@ -42,6 +45,7 @@ export async function POST(request: Request) {
         acceptedAt: acceptedAt.toISOString(),
         acceptanceMethod: "explicit-checkbox",
         documentTitle: "Termos de Adesão do Motorista Parceiro MARKA Mobility",
+        countryCode,
       },
     },
   });
