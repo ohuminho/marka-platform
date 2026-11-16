@@ -10,6 +10,7 @@ This document records the current server-side eligibility rules for freight prov
 - A paid offer is shown only when its pickup point is within 20 km of the provider's latest eligible location.
 - Cargo and roadside pickup use the request origin. Water delivery uses the delivery destination because the request has no pickup point.
 - The API rechecks location freshness, accuracy and distance when the provider accepts an offer.
+- GPS updates, explicit GPS removal and offer acceptance use the same provider-scoped PostgreSQL advisory lock. Acceptance re-reads consent state, GPS freshness, accuracy, radius and provider availability inside its transaction, so a concurrent opt-out or expired fix cannot be silently ignored.
 - Only the provider's latest coordinates are stored on the provider record. The location endpoint does not create a public location feed or a location history.
 - Explicitly stopping GPS sharing clears the saved coordinates. Leaving the freight jobs component stops updates; if the browser closes unexpectedly, the last fix becomes ineligible after 3 minutes.
 
