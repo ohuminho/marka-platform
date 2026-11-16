@@ -302,7 +302,10 @@ export default function MobilityLuxuryExperience() {
   const changeGroup = (next: Group) => {
     setGroup(next);
     setServiceType(choices[next][0].id);
+    setRoute(null);
     setQuote(null);
+    setFareByService({});
+    setFareStatus("NO_ROUTE");
     setError(null);
   };
 
@@ -712,6 +715,7 @@ export default function MobilityLuxuryExperience() {
                     onClick={() => {
                       setServiceType(item.id);
                       setQuote(fareByService[item.id] ?? null);
+                      setFareStatus(fareByService[item.id] ? "AVAILABLE" : fareByService[item.id] === null ? "TARIFF_NOT_CONFIGURED" : "NO_ROUTE");
                       setError(null);
                     }}
                     aria-pressed={serviceType === item.id}
