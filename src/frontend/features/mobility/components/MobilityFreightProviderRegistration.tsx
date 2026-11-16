@@ -114,7 +114,6 @@ export default function MobilityFreightProviderRegistration() {
     }
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
       setError(null);
       try {
         const response = await fetch("/api/freight/providers/me", {
@@ -153,8 +152,8 @@ export default function MobilityFreightProviderRegistration() {
         if (!cancelled) setLoading(false);
       }
     };
-    void load();
-    return () => { cancelled = true; };
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [organizationId]);
 
   const toggleService = (value: ServiceType) => {
