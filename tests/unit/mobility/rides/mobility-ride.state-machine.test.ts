@@ -81,4 +81,45 @@ assertThrows(
   "An active trip cannot be redispatched."
 );
 
+
+const driverLifecycle = [
+  MobilityRideStatus.DRIVER_ASSIGNED,
+  MobilityRideStatus.DRIVER_ARRIVING,
+  MobilityRideStatus.DRIVER_ARRIVED,
+  MobilityRideStatus.TRIP_STARTED,
+  MobilityRideStatus.TRIP_IN_PROGRESS,
+  MobilityRideStatus.TRIP_COMPLETED,
+] as const;
+
+for (let index = 0; index < driverLifecycle.length - 1; index += 1) {
+  assert(
+    canTransitionRideStatus(driverLifecycle[index], driverLifecycle[index + 1]),
+    `Driver lifecycle must allow ${driverLifecycle[index]} -> ${driverLifecycle[index + 1]}.`,
+  );
+}
+
+assert(
+  !canTransitionRideStatus(
+    MobilityRideStatus.DRIVER_ASSIGNED,
+    MobilityRideStatus.DRIVER_ARRIVED,
+  ),
+  "A driver cannot skip the arrival transition after accepting an assignment.",
+);
+
+assert(
+  !canTransitionRideStatus(
+    MobilityRideStatus.DRIVER_ASSIGNED,
+    MobilityRideStatus.TRIP_STARTED,
+  ),
+  "A driver cannot start a trip before confirming arrival.",
+);
+
+assert(
+  !canTransitionRideStatus(
+    MobilityRideStatus.TRIP_COMPLETED,
+    MobilityRideStatus.DRIVER_ASSIGNED,
+  ),
+  "A completed ride cannot be assigned again.",
+);
+
 console.log("Mobility ride state machine tests passed.");
