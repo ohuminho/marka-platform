@@ -213,7 +213,7 @@ export default function MobilityFreightProviderRegistration() {
         serviceTypes,
         coverageAreas: coverageAreas.split("\n").map((area) => area.trim()).filter(Boolean),
       };
-      if (validVehicles.length > 0) {
+      if (provider || validVehicles.length > 0) {
         payload.vehicles = validVehicles.map((vehicle) => ({
           kind: vehicle.kind,
           registrationNumber: vehicle.registrationNumber.trim() || undefined,
