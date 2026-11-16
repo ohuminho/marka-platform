@@ -15,6 +15,7 @@ import {
 } from "@/services/mobility/rides/mobility-ride.state-machine";
 
 import { MobilityDomainError } from "@/services/mobility/errors/mobility-domain.error";
+import { areMobilityRidesCompatible } from "@/services/mobility/matching/mobility-ride-compatibility";
 
 import {
   MobilityMatchCandidate,
@@ -436,6 +437,7 @@ export class MobilityRideService {
                 id: true,
                 organizationId: true,
                 status: true,
+                capacity: true,
               },
             },
           },
@@ -527,36 +529,57 @@ export class MobilityRideService {
           FOR UPDATE
         `;
 
-        const conflictingRide = await tx.mobilityRide.findFirst({
+        const activeRideStatuses = [
+          MobilityRideStatus.DRIVER_ASSIGNED,
+          MobilityRideStatus.DRIVER_ARRIVING,
+          MobilityRideStatus.DRIVER_ARRIVED,
+          MobilityRideStatus.TRIP_STARTED,
+          MobilityRideStatus.TRIP_IN_PROGRESS,
+        ];
+        const conflictingRides = await tx.mobilityRide.findMany({
           where: {
-            id: {
-              not: input.rideId,
-            },
+            id: { not: input.rideId },
             OR: [
               { driverId: input.driverId },
               { vehicleId: input.vehicleId },
             ],
-            status: {
-              in: [
-                MobilityRideStatus.DRIVER_ASSIGNED,
-                MobilityRideStatus.DRIVER_ARRIVING,
-                MobilityRideStatus.DRIVER_ARRIVED,
-                MobilityRideStatus.TRIP_STARTED,
-                MobilityRideStatus.TRIP_IN_PROGRESS,
-              ],
-            },
+            status: { in: activeRideStatuses },
           },
           select: {
             id: true,
             driverId: true,
             vehicleId: true,
+            pickupLatitude: true,
+            pickupLongitude: true,
+            dropoffLatitude: true,
+            dropoffLongitude: true,
+            serviceType: true,
+            status: true,
+            metadata: true,
           },
         });
 
-        if (conflictingRide) {
+        if (conflictingRides.some((activeRide) => activeRide.vehicleId === input.vehicleId)) {
           throw new MobilityDomainError(
-            "Driver or vehicle is already assigned to another active ride.",
-            "DRIVER_OR_VEHICLE_ALREADY_ASSIGNED"
+            "Vehicle is already assigned to another active ride.",
+            "VEHICLE_ALREADY_ASSIGNED"
+          );
+        }
+
+        const driverActiveRides = conflictingRides.filter(
+          (activeRide) => activeRide.driverId === input.driverId,
+        );
+        if (
+          driverActiveRides.length > 0 &&
+          !areMobilityRidesCompatible(
+            ride,
+            driverActiveRides,
+            Number(assignment.vehicle.capacity ?? 1),
+          )
+        ) {
+          throw new MobilityDomainError(
+            "Driver has an active ride that is not compatible with this route, timing, or vehicle capacity.",
+            "DRIVER_ACTIVE_RIDE_NOT_COMPATIBLE"
           );
         }
 
@@ -603,7 +626,12 @@ export class MobilityRideService {
           await tx.mobilityDriverAvailability.updateMany({
             where: {
               driverId: input.driverId,
-              status: MobilityAvailabilityStatus.AVAILABLE,
+              status: {
+                in: [
+                  MobilityAvailabilityStatus.AVAILABLE,
+                  MobilityAvailabilityStatus.BUSY,
+                ],
+              },
             },
             data: {
               status: MobilityAvailabilityStatus.BUSY,
