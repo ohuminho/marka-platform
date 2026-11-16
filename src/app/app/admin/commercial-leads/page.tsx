@@ -67,7 +67,8 @@ export default function AdminCommercialLeadsPage() {
   }, [filter]);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   function updateLead(id: string, patch: Partial<Lead>) {
