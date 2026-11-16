@@ -160,6 +160,16 @@ export class MobilityDispatchService {
             ride.pickupLongitude
           ),
 
+        dropoffLatitude:
+          Number(
+            ride.dropoffLatitude
+          ),
+
+        dropoffLongitude:
+          Number(
+            ride.dropoffLongitude
+          ),
+
         serviceType:
           ride.serviceType,
 
