@@ -73,6 +73,8 @@ export default function MobilityFreightQuoteDesk() {
   const [notice, setNotice] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!organizationId) {
@@ -176,6 +178,38 @@ export default function MobilityFreightQuoteDesk() {
       setError(cause instanceof Error ? cause.message : "Falha ao registar a análise.");
     } finally {
       setReviewingId(null);
+    }
+  };
+
+  const resolveException = async (requestId: string) => {
+    if (!organizationId) return;
+    const note = (resolutionNotes[requestId] ?? "").trim();
+    if (note.length < 5) {
+      setError("Registe a decisão administrativa com pelo menos cinco caracteres.");
+      return;
+    }
+    setResolvingId(requestId);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/freight/admin/requests/${requestId}/resolve-exception`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Organization-Id": organizationId,
+        },
+        body: JSON.stringify({ note }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível resolver a ocorrência.");
+      setResolutionNotes((current) => ({ ...current, [requestId]: "" }));
+      setNotice(`Ocorrência resolvida para ${data.request?.reference ?? requestId}.`);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao resolver a ocorrência.");
+    } finally {
+      setResolvingId(null);
     }
   };
 
@@ -294,7 +328,28 @@ export default function MobilityFreightQuoteDesk() {
                       </button>
                     </div>
                   )}
-                  <p className="mt-3 text-[9px] text-[var(--theme-text-faint)]">A análise fica no histórico. A retoma ou o cancelamento exigem uma decisão operacional separada.</p>
+                  <div className="mt-4 space-y-2 border-t border-amber-500/20 pt-3">
+                    <label htmlFor={`freight-resolution-${item.id}`} className="block text-[9px] font-semibold uppercase tracking-[.12em] text-[var(--theme-text-muted)]">Decisão administrativa para retomar</label>
+                    <textarea
+                      id={`freight-resolution-${item.id}`}
+                      rows={2}
+                      maxLength={1000}
+                      value={resolutionNotes[item.id] ?? ""}
+                      onChange={(event) => setResolutionNotes((current) => ({ ...current, [item.id]: event.target.value }))}
+                      placeholder="Registe a verificação efectuada e a decisão de retoma…"
+                      className="w-full resize-y rounded-lg border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text)] outline-none focus:border-[#b89a5b]"
+                    />
+                    <button
+                      type="button"
+                      disabled={resolvingId === item.id || (resolutionNotes[item.id] ?? "").trim().length < 5}
+                      onClick={() => void resolveException(item.id)}
+                      className="min-h-10 w-full rounded-full bg-[#d8c18c] px-4 text-[9px] font-semibold uppercase tracking-[.12em] text-[#171814] disabled:opacity-50"
+                    >
+                      {resolvingId === item.id ? "A registar decisão…" : "Aprovar retoma do serviço"}
+                    </button>
+                    <p className="text-[9px] leading-4 text-[var(--theme-text-faint)]">A retoma só é permitida se o prestador continuar verificado e a viatura atribuída estiver activa. O estado anterior é recuperado do histórico.</p>
+                  </div>
+                  <p className="mt-3 text-[9px] text-[var(--theme-text-faint)]">A análise fica no histórico. O cancelamento de serviços pagos permanece dependente do processo de reembolso do prestador de pagamentos.</p>
                 </div>
               )}
               {item.status === "CANCELLED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pedido cancelado.</p>}
