@@ -88,6 +88,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Dados de candidatura inválidos.", code: "INVALID_ONBOARDING_DATA" }, { status: 400 });
   }
 
+  if (input.countryCode.toUpperCase() !== "AO") {
+    return NextResponse.json({ message: "A candidatura para este país ainda não está aberta: faltam termos, documentos e validações legais locais aprovados.", code: "MOBILITY_MARKET_NOT_CONFIGURED" }, { status: 409 });
+  }
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
