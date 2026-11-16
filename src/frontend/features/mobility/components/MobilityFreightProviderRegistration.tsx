@@ -27,6 +27,7 @@ type RegisteredVehicle = {
   capacity: number | string | null;
   capacityUnit: CapacityUnit | null;
   waterType: string | null;
+  cargoBody: VehicleDraft["cargoBody"] | null;
 };
 type Provider = {
   id: string;
@@ -144,7 +145,7 @@ export default function MobilityFreightProviderRegistration() {
           capacity: vehicle.capacity === null ? "" : String(vehicle.capacity),
           capacityUnit: vehicle.capacityUnit ?? "KG",
           waterType: (vehicle.waterType as VehicleDraft["waterType"]) ?? "POTABLE_WATER",
-          cargoBody: "OPEN",
+          cargoBody: vehicle.cargoBody ?? "OPEN",
         })));
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : "Falha ao carregar o registo.");
@@ -254,7 +255,7 @@ export default function MobilityFreightProviderRegistration() {
           capacity: vehicle.capacity === null ? "" : String(vehicle.capacity),
           capacityUnit: vehicle.capacityUnit ?? "KG",
           waterType: (vehicle.waterType as VehicleDraft["waterType"]) ?? "POTABLE_WATER",
-          cargoBody: "OPEN",
+          cargoBody: vehicle.cargoBody ?? "OPEN",
         })));
       }
     } catch (cause) {
@@ -306,7 +307,7 @@ export default function MobilityFreightProviderRegistration() {
             </div>
 
             {activeVehicles.map((vehicle) => <div key={vehicle.id} className="rounded-xl border border-emerald-500/20 bg-emerald-500/[.035] p-3 text-xs text-[var(--theme-text-muted)]">
-              <strong className="text-[var(--theme-text)]">{vehicle.kind.replaceAll("_", " ")}</strong>{vehicle.registrationNumber ? ` · ${vehicle.registrationNumber}` : ""} — activa
+              <strong className="text-[var(--theme-text)]">{vehicle.kind.replaceAll("_", " ")}</strong>{vehicle.registrationNumber ? ` · ${vehicle.registrationNumber}` : ""}{vehicle.make || vehicle.model ? ` · ${[vehicle.make, vehicle.model].filter(Boolean).join(" ")}` : ""} — activa
               {vehicle.capacity !== null && <span> · capacidade {vehicle.capacity} {vehicle.capacityUnit}</span>}
             </div>)}
 
