@@ -11,7 +11,6 @@ assert.equal(canVehicleCarryQuantity(null, "KG", 10, "KG"), false);
 assert.equal(canVehicleCarryQuantity(0, "KG", 10, "KG"), false);
 assert.equal(canVehicleCarryQuantity(10, "UNKNOWN", 5, "KG"), false);
 
-console.log("freight capacity checks passed");
 
 assert.equal(canVehicleCarryCombinedQuantities(2, "TON", [
   { quantity: 750, unit: "KG" },
@@ -29,3 +28,5 @@ assert.equal(canVehicleCarryCombinedQuantities(2, "TON", [
   { quantity: 1, unit: "M3" },
 ]), false);
 assert.equal(canVehicleCarryCombinedQuantities(2, "TON", []), false);
+
+console.log("freight capacity checks passed");
