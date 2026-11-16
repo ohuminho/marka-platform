@@ -171,7 +171,7 @@ async function main() {
         created += 1;
       }
     }
-  });
+  }, { maxWait: 10_000, timeout: 60_000 });
 
   console.log(`Mobility landmark import complete: ${created} created, ${updated} updated, ${records.length} processed.`);
 }
