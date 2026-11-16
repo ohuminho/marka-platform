@@ -83,7 +83,7 @@ export async function GET() {
       updatedAt: true,
       requester: { select: { name: true } },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: { updatedAt: "desc" },
     take: 100,
   });
 
