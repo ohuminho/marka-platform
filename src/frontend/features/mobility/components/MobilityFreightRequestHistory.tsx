@@ -154,7 +154,7 @@ export default function MobilityFreightRequestHistory() {
           {requests.map((item) => {
             const expiresAt = item.quoteExpiresAt ? new Date(item.quoteExpiresAt) : null;
             const quoteExpired = expiresAt && currentTime !== null ? expiresAt.getTime() <= currentTime : false;
-            const canDecide = item.status === "QUOTED" && item.quotedAmount !== null && expiresAt !== null && Number.isFinite(expiresAt.getTime()) && !quoteExpired;
+            const canDecide = currentTime !== null && item.status === "QUOTED" && item.quotedAmount !== null && expiresAt !== null && Number.isFinite(expiresAt.getTime()) && !quoteExpired;
             const displayStatus = item.status === "QUOTED" && quoteExpired ? "Cotação expirada" : statusLabels[item.status] ?? item.status.replaceAll("_", " ");
             return (
               <article key={item.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4 sm:p-5">
