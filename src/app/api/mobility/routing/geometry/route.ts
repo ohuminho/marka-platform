@@ -94,8 +94,20 @@ export async function GET(request: Request) {
       },
     );
 
+    const fare = parsed.data.serviceType
+      ? quoteMobilityFare(
+          parsed.data.serviceType,
+          route.distanceMeters,
+          route.durationSeconds,
+        )
+      : null;
+
     return NextResponse.json(
-      { route },
+      {
+        route,
+        fare,
+        fareStatus: fare ? "AVAILABLE" : "TARIFF_NOT_CONFIGURED",
+      },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch (error) {
