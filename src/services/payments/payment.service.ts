@@ -1125,6 +1125,8 @@ export class PaymentService {
       );
     }
 
+    const orderId = input.orderId;
+
     const organizationId =
       input.organizationId ??
       (
@@ -1157,7 +1159,7 @@ export class PaymentService {
         await database.$queryRaw<Array<{ id: string }>>`
           SELECT "id"
           FROM "Order"
-          WHERE "id" = ${input.orderId}
+          WHERE "id" = ${orderId}
           FOR UPDATE
         `;
 
@@ -1178,7 +1180,7 @@ export class PaymentService {
 
         const currentOrder = await database.order.findFirst({
           where: {
-            id: input.orderId,
+            id: orderId,
             userId: input.userId,
           },
           select: {
