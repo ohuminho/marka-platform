@@ -160,6 +160,13 @@ export default function MobilityFreightJobs() {
       navigator.geolocation.clearWatch(locationWatchId.current);
     }
     if (locationHeartbeatId.current !== null) window.clearInterval(locationHeartbeatId.current);
+    // Best-effort cleanup when navigating away; the server-side 3-minute
+    // freshness limit remains the fallback if the browser terminates abruptly.
+    void fetch("/api/freight/providers/me/location", {
+      method: "DELETE",
+      credentials: "include",
+      keepalive: true,
+    }).catch(() => undefined);
   }, []);
 
   function nextAction(job: FreightJob): { status: string; label: string } | null {
@@ -226,7 +233,7 @@ export default function MobilityFreightJobs() {
         </div>
       </div>
       {provider && <p className="mt-4 text-[11px] text-[var(--theme-text-muted)]">Estado do prestador: <strong>{provider.status}</strong> · Disponibilidade: <strong>{provider.availability}</strong></p>}
-      <p className="mt-2 text-[10px] leading-5 text-[var(--theme-text-faint)]">A localização GPS só é partilhada depois de activar esta opção. É usada para mostrar pedidos próximos e é limpa do perfil quando parar a partilha ou sair desta área.</p>
+      <p className="mt-2 text-[10px] leading-5 text-[var(--theme-text-faint)]">A localização GPS só é partilhada depois de activar esta opção. É removida quando parar a partilha; ao sair desta área, as actualizações param e a última posição expira automaticamente em até 3 minutos.</p>
       {notice && <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
       {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-700">{error}</p>}
       {assignedJobs.length > 0 && (
