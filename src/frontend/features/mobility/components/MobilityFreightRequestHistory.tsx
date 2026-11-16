@@ -90,10 +90,14 @@ export default function MobilityFreightRequestHistory() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void refresh(); }, 0);
+    const interval = window.setInterval(() => {
+      if (!document.hidden) void refresh(true);
+    }, 20000);
     const onCreated = () => { void refresh(true); };
     window.addEventListener("marka:freight-request-created", onCreated);
     return () => {
       window.clearTimeout(timer);
+      window.clearInterval(interval);
       window.removeEventListener("marka:freight-request-created", onCreated);
     };
   }, [refresh]);
