@@ -89,7 +89,7 @@ export async function GET(request: Request) {
     where: {
       organizationId: auth.session.organizationId,
       assignedProviderId: provider.id,
-      status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"] },
+      status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION", "PROVIDER_COMPLETED_PENDING_CONFIRMATION"] },
     },
     orderBy: { assignedAt: "asc" },
     take: 50,
