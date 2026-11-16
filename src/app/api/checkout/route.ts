@@ -146,6 +146,26 @@ export async function POST(request: Request) {
         ? error.message
         : "Checkout failed.";
 
+    if (message.startsWith("Payment for order ") && message.includes("fulfillment reconciliation.")) {
+      return NextResponse.json(
+        {
+          message,
+          code: "PAYMENT_COMPLETED_RECONCILIATION_REQUIRED",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (message.startsWith("Order ") && message.includes("requires reconciliation.")) {
+      return NextResponse.json(
+        {
+          message,
+          code: "PAYMENT_RECONCILIATION_REQUIRED",
+        },
+        { status: 409 },
+      );
+    }
+
     if (message.startsWith("Marketplace payment provider is not configured.")) {
       return NextResponse.json(
         {
