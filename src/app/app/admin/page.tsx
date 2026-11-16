@@ -21,6 +21,7 @@ export default function AdminPage() {
             <a href="/app/admin/delivery-agents" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Delivery Agents</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Delivery operations.</p></a>
             <a href="/app/admin/reports" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Reports</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Platform intelligence.</p></a>
             <a href="/app/admin/growth" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Growth Analytics</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Visitors, Marketplace activity and AI Core usage.</p></a>
+            <a href="/app/admin/commercial-leads" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6"><p className="text-lg text-[var(--theme-text)]">Commercial Leads</p><p className="mt-2 text-sm text-[var(--theme-text)]/40">Partner, merchant, supplier and advertising enquiries.</p></a>
           </section>
         </main>
       </AppShell>

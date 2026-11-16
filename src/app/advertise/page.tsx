@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, type FormEvent } from "react";
 
 const advertisingFormats = [
   {
@@ -34,12 +35,48 @@ const audiences = [
   "Utilizadores da comunidade MARKA",
 ];
 
-function contactHref(email: string, subject: string) {
-  return "mailto:" + email + "?subject=" + encodeURIComponent(subject);
-}
-
 export default function AdvertisePage() {
-  const salesEmail = process.env.NEXT_PUBLIC_MARKA_ADVERTISING_EMAIL || "info@markaao.com";
+  const [submitting, setSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState("");
+  const [formError, setFormError] = useState(false);
+
+  async function handleLeadSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const payload = {
+      name: String(values.get("name") ?? ""),
+      organizationName: String(values.get("organizationName") ?? ""),
+      email: String(values.get("email") ?? ""),
+      phone: String(values.get("phone") ?? ""),
+      leadType: String(values.get("leadType") ?? "ADVERTISER"),
+      message: String(values.get("message") ?? ""),
+      consent: values.get("consent") === "on",
+      website: String(values.get("website") ?? ""),
+    };
+
+    setSubmitting(true);
+    setFormMessage("");
+    setFormError(false);
+    try {
+      const response = await fetch("/api/commercial/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) {
+        throw new Error(result.message || "Não foi possível enviar o pedido. Tente novamente.");
+      }
+      form.reset();
+      setFormMessage("Pedido recebido. A equipa comercial irá analisar o contacto.");
+    } catch (error) {
+      setFormError(true);
+      setFormMessage(error instanceof Error ? error.message : "Não foi possível enviar o pedido.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[var(--theme-background)] px-5 py-10 text-[var(--theme-text)] sm:px-8 lg:px-12">
@@ -76,19 +113,12 @@ export default function AdvertisePage() {
               resultados mensuráveis.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              {salesEmail ? (
-                <a
-                  href={contactHref(salesEmail, "Publicidade na MARKA")}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3 text-sm font-semibold text-[var(--theme-background)] transition hover:opacity-85"
-                >
-                  Solicitar proposta comercial
-                </a>
-              ) : (
-                <div className="max-w-lg rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5 py-4 text-sm leading-6 text-[var(--theme-text-muted)]">
-                  O canal de contacto comercial será ativado quando a MARKA
-                  configurar o endereço oficial de publicidade.
-                </div>
-              )}
+              <a
+                href="#contact-form"
+                className="inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3 text-sm font-semibold text-[var(--theme-background)] transition hover:opacity-85"
+              >
+                Solicitar proposta comercial
+              </a>
               <Link
                 href="/app/marketplace"
                 className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--theme-border)] px-6 py-3 text-sm font-semibold transition hover:border-[var(--theme-text)]"
@@ -146,35 +176,72 @@ export default function AdvertisePage() {
           </div>
         </section>
 
-        <section className="rounded-[1.5rem] border border-[var(--theme-border)] p-7 sm:p-10">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--theme-text-faint)]">
-            Para anunciantes
-          </p>
-          <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <h2 className="marka-editorial text-3xl sm:text-4xl">
-                Prepare a sua próxima campanha.
+        <section id="contact-form" className="scroll-mt-8 rounded-[1.5rem] border border-[var(--theme-border)] p-7 sm:p-10">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--theme-text-faint)]">
+                Contacto comercial
+              </p>
+              <h2 className="marka-editorial mt-4 text-3xl sm:text-4xl">
+                Vamos construir uma parceria.
               </h2>
               <p className="mt-4 text-sm leading-7 text-[var(--theme-text-muted)]">
-                Marcas como operadores de telecomunicações, retalhistas,
-                instituições financeiras e empresas locais podem explorar
-                oportunidades de publicidade na MARKA, sujeitas à disponibilidade
-                de inventário e à aprovação comercial.
+                Envie o seu interesse em publicidade, comércio, fornecimento,
+                logística ou parceria estratégica. O pedido fica registado
+                no sistema para acompanhamento pela equipa MARKA.
+              </p>
+              <p className="mt-6 text-xs leading-6 text-[var(--theme-text-faint)]">
+                Os dados de contacto são utilizados apenas para responder a
+                este pedido e gerir a relação comercial, conforme a política
+                de privacidade aplicável.
               </p>
             </div>
-            {salesEmail ? (
-              <a
-                href={contactHref(salesEmail, "Quero anunciar na MARKA")}
-                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3 text-sm font-semibold text-[var(--theme-background)] transition hover:opacity-85"
-              >
-                Falar com a equipa comercial
-              </a>
-            ) : (
-              <p className="max-w-sm text-xs leading-6 text-[var(--theme-text-faint)]">
-                Para ativar pedidos comerciais, configure
-                NEXT_PUBLIC_MARKA_ADVERTISING_EMAIL no ambiente de produção.
-              </p>
-            )}
+
+            <form onSubmit={handleLeadSubmit} className="grid gap-4 sm:grid-cols-2">
+              <input name="website" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[10000px] h-px w-px opacity-0" />
+              <label className="text-xs text-[var(--theme-text-muted)]">
+                Nome completo *
+                <input name="name" required minLength={2} maxLength={120} autoComplete="name" className="mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="text-xs text-[var(--theme-text-muted)]">
+                Organização
+                <input name="organizationName" maxLength={160} autoComplete="organization" className="mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="text-xs text-[var(--theme-text-muted)]">
+                Tipo de interesse *
+                <select name="leadType" defaultValue="ADVERTISER" required className="mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]">
+                  <option value="ADVERTISER">Publicidade</option>
+                  <option value="MERCHANT">Comércio / vendedor</option>
+                  <option value="LOGISTICS">Logística / entregas</option>
+                  <option value="SUPPLIER">Fornecedor</option>
+                  <option value="SERVICE_PROVIDER">Prestador de serviços</option>
+                  <option value="STRATEGIC_PARTNER">Parceria estratégica</option>
+                  <option value="OTHER">Outro</option>
+                </select>
+              </label>
+              <label className="text-xs text-[var(--theme-text-muted)]">
+                E-mail
+                <input name="email" type="email" maxLength={254} autoComplete="email" className="mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="text-xs text-[var(--theme-text-muted)]">
+                Telefone
+                <input name="phone" type="tel" maxLength={32} autoComplete="tel" placeholder="+244 ..." className="mt-2 min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-4 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="text-xs text-[var(--theme-text-muted)] sm:col-span-2">
+                Como podemos colaborar?
+                <textarea name="message" rows={4} maxLength={4000} className="mt-2 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-4 py-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="flex items-start gap-3 text-xs leading-5 text-[var(--theme-text-muted)] sm:col-span-2">
+                <input name="consent" type="checkbox" required className="mt-1" />
+                Autorizo a MARKA a utilizar estes dados para responder a este pedido comercial.
+              </label>
+              <div className="sm:col-span-2">
+                <button type="submit" disabled={submitting} className="inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3 text-sm font-semibold text-[var(--theme-background)] transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50">
+                  {submitting ? "A enviar…" : "Enviar pedido comercial"}
+                </button>
+                {formMessage ? <p role="status" aria-live="polite" className={"mt-4 text-sm " + (formError ? "text-rose-400" : "text-emerald-500")}>{formMessage}</p> : null}
+              </div>
+            </form>
           </div>
         </section>
 

@@ -2499,3 +2499,46 @@ model MarkaCvDraft {
 
   @@index([expiresAt])
 }
+
+
+enum CommercialLeadType {
+  ADVERTISER
+  MERCHANT
+  LOGISTICS
+  SUPPLIER
+  SERVICE_PROVIDER
+  STRATEGIC_PARTNER
+  OTHER
+}
+
+enum CommercialLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  DISQUALIFIED
+}
+
+model CommercialLead {
+  id               String              @id @default(uuid())
+  name             String              @db.VarChar(120)
+  email            String?             @db.VarChar(254)
+  phone            String?             @db.VarChar(32)
+  organizationName String?             @db.VarChar(160)
+  leadType         CommercialLeadType  @default(OTHER)
+  message          String?             @db.Text
+  source           String              @default("MARKA_PUBLIC_SITE") @db.VarChar(64)
+  consentAt        DateTime            @db.Timestamptz(3)
+  status           CommercialLeadStatus @default(NEW)
+  internalNotes    String?             @db.Text
+  ipFingerprint    String?             @db.Char(64)
+  userAgent        String?             @db.VarChar(500)
+  lastContactedAt  DateTime?           @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @db.Timestamptz(3)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([leadType, createdAt(sort: Desc)])
+  @@index([email])
+  @@index([phone])
+}
