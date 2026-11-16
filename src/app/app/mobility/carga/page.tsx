@@ -18,7 +18,7 @@ export default function MobilityFreightPage() {
               <p className="mt-6 text-[9px] font-bold uppercase tracking-[.24em] text-[#E5B84B]">MARKA Mobility · Logística</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Carga, água e assistência.</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55">
-                Registe um pedido com a quantidade, a unidade e a viatura adequada. A rede procura um prestador compatível.
+                Indique a quantidade, a unidade e a viatura adequada. O pedido fica registado para análise e cotação; a atribuição do prestador depende da confirmação do pagamento.
               </p>
             </div>
           </header>
