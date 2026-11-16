@@ -124,43 +124,38 @@ assert(
 );
 
 
-assert.equal(
-  resolveDriverAvailabilityForActiveRides([]),
-  "AVAILABLE",
+assert(
+  resolveDriverAvailabilityForActiveRides([]) === "AVAILABLE",
   "A driver with no remaining active assignments must become available.",
 );
 
-assert.equal(
+assert(
   resolveDriverAvailabilityForActiveRides([
     MobilityRideStatus.DRIVER_ASSIGNED,
-  ]),
-  "BUSY",
+  ]) === "BUSY",
   "A driver with an accepted assignment must remain busy.",
 );
 
-assert.equal(
+assert(
   resolveDriverAvailabilityForActiveRides([
     MobilityRideStatus.TRIP_IN_PROGRESS,
-  ]),
-  "ON_TRIP",
+  ]) === "ON_TRIP",
   "An in-progress ride must keep the driver on trip.",
 );
 
-assert.equal(
+assert(
   resolveDriverAvailabilityForActiveRides([
     MobilityRideStatus.TRIP_IN_PROGRESS,
     MobilityRideStatus.DRIVER_ASSIGNED,
-  ]),
-  "ON_TRIP",
+  ]) === "ON_TRIP",
   "Completing a second queued ride must not mark a driver free while another trip is in progress.",
 );
 
-assert.equal(
+assert(
   resolveDriverAvailabilityForActiveRides([
     MobilityRideStatus.DRIVER_ARRIVING,
     MobilityRideStatus.DRIVER_ASSIGNED,
-  ]),
-  "BUSY",
+  ]) === "BUSY",
   "Releasing one assignment must preserve busy status when another assignment remains.",
 );
 
