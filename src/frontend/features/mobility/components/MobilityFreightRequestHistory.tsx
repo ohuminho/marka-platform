@@ -249,7 +249,7 @@ export default function MobilityFreightRequestHistory() {
                     <button type="button" disabled={busyId === item.id} onClick={() => void confirmCompletion(item.id)} className="mt-3 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === item.id ? "A confirmar…" : "Confirmar conclusão do serviço"}</button>
                   </div>
                 )}
-                {item.status === "COMPLETED" && <p className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300">Conclusão confirmada por si.</p>
+                {item.status === "COMPLETED" && <p className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300">Conclusão confirmada por si.</p>}
                 {["REQUESTED", "QUOTED", "AWAITING_PAYMENT"].includes(item.status) && !item.paidAt && (
                   <button
                     type="button"
