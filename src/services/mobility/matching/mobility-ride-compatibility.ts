@@ -100,6 +100,7 @@ export const MIN_SHARED_RIDE_DETOUR_BUDGET_SECONDS = 5 * 60;
  */
 export function isSharedRideSequenceWithinDetour(
   durations: readonly (readonly number[])[],
+  preserveExistingPickupFirst = false,
 ): boolean {
   if (
     durations.length !== 5 ||
@@ -109,14 +110,20 @@ export function isSharedRideSequenceWithinDetour(
   ) return false;
 
   const baselineSeconds = durations[0][1] + durations[1][2];
-  const validOrders = [
-    [1, 2, 3, 4],
-    [1, 3, 2, 4],
-    [1, 3, 4, 2],
-    [3, 1, 2, 4],
-    [3, 1, 4, 2],
-    [3, 4, 1, 2],
-  ] as const;
+  const validOrders = preserveExistingPickupFirst
+    ? [
+        [1, 2, 3, 4],
+        [1, 3, 2, 4],
+        [1, 3, 4, 2],
+      ] as const
+    : [
+        [1, 2, 3, 4],
+        [1, 3, 2, 4],
+        [1, 3, 4, 2],
+        [3, 1, 2, 4],
+        [3, 1, 4, 2],
+        [3, 4, 1, 2],
+      ] as const;
 
   let bestSharedSeconds = Number.POSITIVE_INFINITY;
   for (const order of validOrders) {
