@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
 import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
+import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string; capacity?: number | string | null; capacityUnit?: string | null; waterType?: string | null };
 type FreightProvider = { status: string; availability: string; vehicles: FreightVehicle[] };
@@ -17,6 +18,8 @@ const typeLabels: Record<FreightJob["requestType"], string> = {
 };
 
 export default function MobilityFreightJobs() {
+  const { activeOrganization } = useAuth();
+  const organizationId = activeOrganization?.id;
   const [provider, setProvider] = useState<FreightProvider | null>(null);
   const [jobs, setJobs] = useState<FreightJob[]>([]);
   const [assignedJobs, setAssignedJobs] = useState<FreightJob[]>([]);
@@ -27,10 +30,11 @@ export default function MobilityFreightJobs() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!organizationId) throw new Error("Seleccione uma organização activa para consultar os pedidos.");
     setError(null);
     const [providerResponse, jobsResponse] = await Promise.all([
-      fetch("/api/freight/providers/me", { credentials: "include", cache: "no-store" }),
-      fetch("/api/freight/providers/me/requests", { credentials: "include", cache: "no-store" }),
+      fetch("/api/freight/providers/me", { credentials: "include", cache: "no-store", headers: { "X-Organization-Id": organizationId } }),
+      fetch("/api/freight/providers/me/requests", { credentials: "include", cache: "no-store", headers: { "X-Organization-Id": organizationId } }),
     ]);
     const providerData = await providerResponse.json();
     const jobsData = await jobsResponse.json();
@@ -54,7 +58,7 @@ export default function MobilityFreightJobs() {
       return [job.id, compatible?.id ?? ""];
     })));
     setNotice(jobsData.message ?? null);
-  }, []);
+  }, [organizationId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -81,13 +85,14 @@ export default function MobilityFreightJobs() {
   async function updateJobStatus(job: FreightJob) {
     const action = nextAction(job);
     if (!action) return;
+    if (!organizationId) { setError("Seleccione uma organização activa."); return; }
     setBusyId(job.id);
     setError(null);
     try {
       const response = await fetch(`/api/freight/providers/me/requests/${job.id}/status`, {
         method: "PATCH",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId ?? "" },
         body: JSON.stringify({ status: action.status }),
       });
       const data = await response.json();
@@ -103,11 +108,12 @@ export default function MobilityFreightJobs() {
 
   async function accept(job: FreightJob) {
     const vehicleId = vehicleIds[job.id];
+    if (!organizationId) { setError("Seleccione uma organização activa."); return; }
     if (!vehicleId) { setError("Seleccione uma viatura activa antes de aceitar."); return; }
     setBusyId(job.id); setError(null);
     try {
       const response = await fetch(`/api/freight/providers/me/requests/${job.id}/accept`, {
-        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vehicleId }),
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId }, body: JSON.stringify({ vehicleId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message ?? "Não foi possível aceitar o pedido.");
