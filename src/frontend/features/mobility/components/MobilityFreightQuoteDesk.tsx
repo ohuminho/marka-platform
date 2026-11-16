@@ -207,7 +207,7 @@ export default function MobilityFreightQuoteDesk() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível resolver a ocorrência.");
       setResolutionNotes((current) => ({ ...current, [requestId]: "" }));
-      setNotice(`Ocorrência resolvida para ${data.request?.reference ?? requestId}.`);
+      setNotice(data.message ?? `Ocorrência resolvida para ${data.request?.reference ?? requestId}.`);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao resolver a ocorrência.");
