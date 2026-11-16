@@ -59,6 +59,7 @@ const FAQ = [
   ["Onde consulto as condições e os meus dados?", "Os Termos de Adesão e o Aviso de Privacidade estão disponíveis nos links desta página. O estado dos documentos pode ser consultado na candidatura e no Centro de Conformidade."],
 ];
 
+const DRIVER_MARKET_COUNTRY_CODE = "AO";
 const inputClass = "mt-2 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent-strong)]";
 const labelClass = "block text-sm text-[var(--theme-text-muted)]";
 
@@ -70,7 +71,6 @@ export default function DriverOnboardingPanel() {
   const [requiredDocuments, setRequiredDocuments] = useState(DEFAULT_DRIVER_DOCUMENTS);
   const [vehicleDocuments, setVehicleDocuments] = useState(DEFAULT_VEHICLE_DOCUMENTS);
   const [licenseNumber, setLicenseNumber] = useState("");
-  const [countryCode, setCountryCode] = useState("AO");
   const [displayName, setDisplayName] = useState("");
   const [termsChecked, setTermsChecked] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -98,8 +98,6 @@ export default function DriverOnboardingPanel() {
       const vehicleData = await vehicleResponse.json() as VehicleResponse;
       if (!vehicleResponse.ok) throw new Error(vehicleData.message || "Não foi possível consultar os dados do veículo.");
       setProfile(driverData.driver);
-      if (driverData.driver?.countryCode) setCountryCode(driverData.driver.countryCode.toUpperCase());
-      else if (vehicleData.vehicle?.countryCode) setCountryCode(vehicleData.vehicle.countryCode.toUpperCase());
       setRequiredDocuments(driverData.requiredDriverDocuments ?? DEFAULT_DRIVER_DOCUMENTS);
       setVehicleDocuments(vehicleData.requiredVehicleDocuments ?? driverData.requiredVehicleDocuments?.map((document) => typeof document === "string" ? { documentType: document, label: document } : document) ?? DEFAULT_VEHICLE_DOCUMENTS);
       setVehicle(vehicleData.vehicle);
@@ -145,7 +143,7 @@ export default function DriverOnboardingPanel() {
       const response = await fetch("/api/mobility/driver/accept-terms", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
-        body: JSON.stringify({ accepted: true, countryCode }),
+        body: JSON.stringify({ accepted: true, countryCode: DRIVER_MARKET_COUNTRY_CODE }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || "Não foi possível registar a aceitação.");
@@ -165,7 +163,7 @@ export default function DriverOnboardingPanel() {
       const response = await fetch("/api/mobility/driver/onboarding", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
-        body: JSON.stringify({ displayName: displayName.trim() || undefined, licenseNumber: licenseNumber.trim() || undefined, countryCode: countryCode.trim().toUpperCase() }),
+        body: JSON.stringify({ displayName: displayName.trim() || undefined, licenseNumber: licenseNumber.trim() || undefined, countryCode: DRIVER_MARKET_COUNTRY_CODE }),
       });
       const data = await response.json() as OnboardingResponse;
       if (!response.ok) throw new Error(data.message || "Não foi possível enviar a candidatura.");
@@ -216,7 +214,7 @@ export default function DriverOnboardingPanel() {
     form.set("file", file);
     form.set("subjectType", "KYD");
     form.set("documentType", documentType);
-    form.set("countryCode", countryCode.trim().toUpperCase());
+    form.set("countryCode", DRIVER_MARKET_COUNTRY_CODE);
     if (expiryDates[documentType]) form.set("expiresAt", new Date(expiryDates[documentType] + "T23:59:59.000Z").toISOString());
     setUploading(documentType);
     try {
@@ -268,7 +266,7 @@ export default function DriverOnboardingPanel() {
       </div>
     </header>
 
-    <div className="max-w-xl">{<label className={labelClass}>País de operação (código ISO 3166-1 alpha-2)<input required value={countryCode} disabled={Boolean(profile)} onChange={(event) => setCountryCode(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))} minLength={2} maxLength={2} pattern="[A-Z]{2}" placeholder="AO" className={inputClass} /><span className="mt-1 block text-xs">Ex.: AO, PT, FR, BR, US. Atualmente, apenas Angola está habilitada; outros países exigem termos e validações locais antes da abertura.</span></label>}</div>
+    <div className="max-w-xl rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)]/35 px-4 py-3 text-sm"><span className="font-semibold text-[var(--theme-text)]">Mercado desta candidatura: Angola (AO)</span><p className="mt-1 text-xs text-[var(--theme-text-muted)]">As regras, documentos e tarifas angolanas permanecem inalterados. O mapa e a pesquisa geográfica da MARKA Mobility continuam abertos mundialmente; a operação noutros países será configurada conforme as respetivas regras locais.</p></div>
 
     {error && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-[var(--theme-text)]">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-[var(--theme-text)]">{notice}</p>}
@@ -302,7 +300,7 @@ export default function DriverOnboardingPanel() {
     {!loading && !profile && <form onSubmit={apply} className="space-y-4 rounded-2xl border border-[var(--theme-border)] p-4 sm:p-5">
       <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">Etapa 02 · Dados do candidato</p><h3 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">Iniciar candidatura</h3></div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className={labelClass}>País de operação (código ISO 3166-1 alpha-2)<input required value={countryCode} onChange={(event) => setCountryCode(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))} minLength={2} maxLength={2} pattern="[A-Z]{2}" placeholder="AO" className={inputClass} /><span className="mt-1 block text-xs">Ex.: AO, PT, FR, BR, US. A candidatura fora de Angola fica pendente de validação legal e operacional local.</span></label>
+        
         <label className={labelClass}>Nome profissional (opcional)<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={120} className={inputClass} /></label>
         <label className={labelClass}>Número da carta de condução (opcional nesta etapa)<input value={licenseNumber} onChange={(event) => setLicenseNumber(event.target.value)} maxLength={80} className={inputClass} /></label>
       </div>
