@@ -6,7 +6,7 @@ import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string; capacity?: number | string | null; capacityUnit?: string | null; waterType?: string | null };
-type FreightProvider = { status: string; availability: string; vehicles: FreightVehicle[] };
+type FreightProvider = { id: string; status: string; availability: string; vehicles: FreightVehicle[] };
 type FreightJob = {
   id: string; reference: string; requestType: "CARGO_SHIPMENT" | "WATER_DELIVERY" | "ROADSIDE_ASSISTANCE";
   status: string; origin: { address?: string | null } | null; destination: { address?: string | null } | null;
