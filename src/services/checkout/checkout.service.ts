@@ -356,11 +356,48 @@ export class CheckoutService {
         userAgent: input.userAgent,
       });
     } catch (error) {
+      // A provider timeout can mean that the provider created the payment
+      // intent but MARKA did not receive its response. Keep the order and
+      // inventory reserved while that outcome is unresolved; releasing stock
+      // here could sell the same item twice after a successful external charge.
+      const paymentAfterFailure = await prisma.payment.findUnique({
+        where: { idempotencyKey: paymentIdempotencyKey },
+        select: { id: true, status: true },
+      });
+
+      const paymentOutcomeUnresolved =
+        paymentAfterFailure !== null &&
+        ["CREATED", "PENDING", "PROCESSING", "COMPLETED"].includes(
+          paymentAfterFailure.status,
+        );
+
+      if (paymentOutcomeUnresolved) {
+        console.error(
+          "[CHECKOUT_PAYMENT_OUTCOME_UNRESOLVED]",
+          {
+            orderId: order.id,
+            paymentId: paymentAfterFailure.id,
+            paymentStatus: paymentAfterFailure.status,
+          },
+        );
+
+        throw new Error(
+          `Order ${order.id} is preserved with inventory reserved because payment confirmation requires reconciliation. Do not submit a replacement checkout.`,
+        );
+      }
+
       try {
         await prisma.$transaction(async (database) => {
           const reservation = await database.order.updateMany({
-            where: { id: order.id, inventoryReserved: true },
-            data: { inventoryReserved: false },
+            where: {
+              id: order.id,
+              status: "PENDING",
+              inventoryReserved: true,
+            },
+            data: {
+              inventoryReserved: false,
+              status: "CANCELLED",
+            },
           });
 
           if (reservation.count === 1) {
@@ -371,16 +408,17 @@ export class CheckoutService {
                 quantity: item.quantity,
               })),
             );
-          }
 
-          await database.cart.update({
-            where: {
-              id: cartId,
-            },
-            data: {
-              status: "ACTIVE",
-            },
-          });
+            await database.cart.updateMany({
+              where: {
+                id: cartId,
+                status: "CHECKED_OUT",
+              },
+              data: {
+                status: "ACTIVE",
+              },
+            });
+          }
         });
       } catch (rollbackError) {
         console.error(
