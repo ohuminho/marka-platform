@@ -247,6 +247,18 @@ export class MobilityMatchingService {
         if (vehicleMetadata.vehicleSubtype !== "LUXURY_SEDAN") continue;
       }
 
+      const distanceMeters =
+        this.calculateDistanceMeters(
+          input.pickupLatitude,
+          input.pickupLongitude,
+          Number(location.latitude),
+          Number(location.longitude)
+        );
+
+      if (distanceMeters > radiusMeters) {
+        continue;
+      }
+
       if (activeRides.length > 0) {
         // Bound external routing calls during dispatch. If the OSRM matrix
         // cannot be verified, fail closed for shared assignments; ordinary
@@ -281,18 +293,6 @@ export class MobilityMatchingService {
         } catch {
           continue;
         }
-      }
-
-      const distanceMeters =
-        this.calculateDistanceMeters(
-          input.pickupLatitude,
-          input.pickupLongitude,
-          Number(location.latitude),
-          Number(location.longitude)
-        );
-
-      if (distanceMeters > radiusMeters) {
-        continue;
       }
 
       const score =
