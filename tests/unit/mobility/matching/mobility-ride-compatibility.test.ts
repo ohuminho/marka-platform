@@ -55,6 +55,16 @@ assert.equal(
 
 assert.equal(
   areMobilityRidesCompatible(
+    current,
+    [ride(-8.839, 13.235, -8.816, 13.246, MobilityRideStatus.DRIVER_ARRIVED)],
+    4,
+  ),
+  false,
+  "A driver who has already reached the existing pickup must not be diverted to a new passenger.",
+);
+
+assert.equal(
+  areMobilityRidesCompatible(
     ride(-8.8383, 13.2344, -8.815, 13.245, MobilityRideStatus.SEARCHING, 3),
     [nearby],
     4,
