@@ -39,6 +39,8 @@ export default function MobilityFreightRequestForm() {
   const [origin, setOrigin] = useState<PointField>({ address: "", point: null, searching: false });
   const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false });
   const [cargoDescription, setCargoDescription] = useState("");
+  const [cargoQuantity, setCargoQuantity] = useState("");
+  const [cargoQuantityUnit, setCargoQuantityUnit] = useState<"KG" | "TON" | "M3">("KG");
   const [vehiclePreference, setVehiclePreference] = useState("ANY");
   const [waterType, setWaterType] = useState<"POTABLE_WATER" | "NON_POTABLE_WATER">("POTABLE_WATER");
   const [quantity, setQuantity] = useState("");
@@ -114,6 +116,10 @@ export default function MobilityFreightRequestForm() {
       setError("Confirme a recolha, o destino e descreva a carga.");
       return;
     }
+    if (service === "CARGO_SHIPMENT" && cargoQuantity.trim() && (!Number.isFinite(Number(cargoQuantity)) || Number(cargoQuantity) <= 0)) {
+      setError("Indique um peso ou volume válido, ou deixe esse campo em branco.");
+      return;
+    }
     if (service === "WATER_DELIVERY" && (!destination.point || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
       setError("Confirme o endereço e a quantidade de água.");
       return;
@@ -127,7 +133,7 @@ export default function MobilityFreightRequestForm() {
     try {
       const requestFingerprint = JSON.stringify({
         service, origin: origin.point, destination: destination.point,
-        cargoDescription: cargoDescription.trim(), vehiclePreference, waterType, quantity: Number(quantity),
+        cargoDescription: cargoDescription.trim(), cargoQuantity: Number(cargoQuantity), cargoQuantityUnit, vehiclePreference, waterType, quantity: Number(quantity),
         quantityUnit, vehicleDescription: vehicleDescription.trim(), assistanceType,
         notes: notes.trim(),
       });
@@ -158,8 +164,8 @@ export default function MobilityFreightRequestForm() {
         idempotencyKey,
         origin: origin.point ?? undefined,
         destination: destination.point ?? undefined,
-        quantity: service === "WATER_DELIVERY" ? Number(quantity) : undefined,
-        quantityUnit: service === "WATER_DELIVERY" ? quantityUnit : undefined,
+        quantity: service === "WATER_DELIVERY" ? Number(quantity) : service === "CARGO_SHIPMENT" && cargoQuantity.trim() ? Number(cargoQuantity) : undefined,
+        quantityUnit: service === "WATER_DELIVERY" ? quantityUnit : service === "CARGO_SHIPMENT" && cargoQuantity.trim() ? cargoQuantityUnit : undefined,
         currency: "AOA",
         details,
       };
@@ -180,6 +186,7 @@ export default function MobilityFreightRequestForm() {
         // O registo do servidor é a fonte de verdade.
       }
       setCargoDescription("");
+      setCargoQuantity("");
       setVehicleDescription("");
       setNotes("");
       setOrigin({ address: "", point: null, searching: false });
@@ -218,6 +225,11 @@ export default function MobilityFreightRequestForm() {
           {pointInput("Local de recolha", origin, setOrigin)}
           {pointInput("Destino", destination, setDestination)}
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">O que pretende transportar?</span><input value={cargoDescription} onChange={(event) => setCargoDescription(event.target.value)} placeholder="Ex.: 20 sacos de cimento, mobiliário…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Peso ou volume aproximado (opcional)</span><input type="number" min="0.01" step="any" value={cargoQuantity} onChange={(event) => setCargoQuantity(event.target.value)} placeholder="Ex.: 1200" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={cargoQuantityUnit} onChange={(event) => setCargoQuantityUnit(event.target.value as "KG" | "TON" | "M3")} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="KG">Quilogramas (kg)</option><option value="TON">Toneladas (t)</option><option value="M3">Metros cúbicos (m³)</option></select></label>
+          </div>
+          <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Indicar a quantidade ajuda a validar a capacidade da viatura e a agrupar entregas próximas. Se não souber, pode deixar em branco.</p>
           <fieldset className="space-y-3"><legend className="text-xs font-medium text-[var(--theme-text)]">Tipo de viatura preferida</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{([{value:"ANY",label:"Qualquer adequada",hint:"Mais opções",illustration:null},{value:"CARGO_TRICYCLE",label:"Carrinho tipo MyLads",hint:"Carga ligeira",illustration:"CARGO_TRICYCLE"},{value:"PICKUP",label:"Pick-up aberta",hint:"Caixa aberta",illustration:"PICKUP"},{value:"LIGHT_TRUCK",label:"Canter / Dyna",hint:"Caixa aberta",illustration:"LIGHT_TRUCK"},{value:"FLATBED_TRUCK",label:"Plataforma aberta",hint:"Carga volumosa",illustration:"FLATBED_TRUCK"},{value:"CARGO_VAN",label:"Carrinha fechada",hint:"Carga protegida",illustration:"CARGO_VAN"},{value:"TIPPER_TRUCK",label:"Basculante",hint:"Areia e inertes",illustration:"TIPPER_TRUCK"},{value:"HEAVY_TRUCK",label:"Camião pesado",hint:"Grande volume",illustration:"HEAVY_TRUCK"}] as const).map((option)=><button key={option.value} type="button" aria-pressed={vehiclePreference===option.value} onClick={()=>setVehiclePreference(option.value)} className={`min-w-0 rounded-xl border p-2 text-left transition ${vehiclePreference===option.value?"border-[var(--theme-text-muted)] bg-[var(--theme-background)] ring-1 ring-[var(--theme-text-muted)]":"border-[var(--theme-border)] hover:bg-[var(--theme-background)]"}`}>{option.illustration?<MarkaVehicleIllustration kind={option.illustration} className="h-14 w-full"/>:<div className="flex h-14 items-center justify-center text-[11px] font-semibold text-[var(--theme-text-muted)]">MARKA Mobility</div>}<span className="mt-1 block text-[11px] font-semibold text-[var(--theme-text)]">{option.label}</span><span className="block text-[10px] text-[var(--theme-text-muted)]">{option.hint}</span></button>)}</div><p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Caixa aberta e carrinha fechada são opções distintas. A preferência será usada para encontrar um prestador com a viatura correspondente.</p></fieldset>
         </>}
         {service === "WATER_DELIVERY" && <>
