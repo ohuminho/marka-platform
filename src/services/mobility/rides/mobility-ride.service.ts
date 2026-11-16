@@ -99,8 +99,6 @@ export class MobilityRideService {
                 input.serviceType.trim(),
               currency:
                 input.currency ?? "AOA",
-              metadata: withEstimatedFare(input.metadata, input.estimatedFareMinor),
-
               pickupLatitude:
                 input.pickupLatitude,
               pickupLongitude:
@@ -117,8 +115,7 @@ export class MobilityRideService {
 
               requestedAt: new Date(),
 
-              metadata:
-                input.metadata,
+              metadata: withEstimatedFare(input.metadata, input.estimatedFareMinor),
 
               stops:
                 input.stops &&
@@ -249,7 +246,6 @@ export class MobilityRideService {
             reference,
             serviceType: input.serviceType.trim(),
             currency: input.currency ?? "AOA",
-            metadata: withEstimatedFare(input.metadata, input.estimatedFareMinor),
             pickupLatitude: input.pickupLatitude,
             pickupLongitude: input.pickupLongitude,
             pickupAddress: input.pickupAddress,
@@ -257,7 +253,7 @@ export class MobilityRideService {
             dropoffLongitude: input.dropoffLongitude,
             dropoffAddress: input.dropoffAddress,
             requestedAt: new Date(),
-            metadata: input.metadata,
+            metadata: withEstimatedFare(input.metadata, input.estimatedFareMinor),
             stops: input.stops?.length
               ? {
                   create: input.stops.map((stop) => ({
