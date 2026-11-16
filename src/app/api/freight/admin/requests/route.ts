@@ -141,7 +141,11 @@ export async function GET() {
     requests: requests.map((item) => ({
       ...item,
       latestException: latestExceptionByRequest.get(item.id) ?? null,
-      latestExceptionReview: latestExceptionReviewByRequest.get(item.id) ?? null,
+      latestExceptionReview: (() => {
+        const exception = latestExceptionByRequest.get(item.id);
+        const review = latestExceptionReviewByRequest.get(item.id);
+        return exception && review && review.reviewedAt > exception.createdAt ? review : null;
+      })(),
       quantity: item.quantity === null ? null : Number(item.quantity),
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
       quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
