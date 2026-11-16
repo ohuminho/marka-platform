@@ -196,6 +196,16 @@ export async function POST(
       );
     }
 
+    if (ride.status !== "TRIP_IN_PROGRESS") {
+      return NextResponse.json(
+        {
+          message: "Cash payment can only be prepared while the ride is in progress.",
+          code: "MOBILITY_PAYMENT_INITIALIZATION_OUT_OF_SEQUENCE",
+        },
+        { status: 409 },
+      );
+    }
+
     const metadata = isRecord(ride.metadata) ? ride.metadata : {};
     const pricingSnapshot = isRecord(metadata.pricingSnapshot)
       ? metadata.pricingSnapshot
