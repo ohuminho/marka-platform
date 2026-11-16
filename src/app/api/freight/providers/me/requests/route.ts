@@ -4,6 +4,7 @@ import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
 import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
 import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
+import { haversineDistanceKm, isFreshAccurateProviderLocation } from "@/freight-engine/freight-geography";
 
 const compatibleKinds = {
   CARGO_SHIPMENT: ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"],
@@ -63,6 +64,27 @@ export async function GET(request: Request) {
     return true;
   }));
 
+  const providerHasFreshLocation = isFreshAccurateProviderLocation({
+    latitude: provider.currentLatitude === null ? null : Number(provider.currentLatitude),
+    longitude: provider.currentLongitude === null ? null : Number(provider.currentLongitude),
+    accuracyMeters: provider.locationAccuracyMeters === null ? null : Number(provider.locationAccuracyMeters),
+    updatedAt: provider.locationUpdatedAt,
+  });
+  const rankedMatched = matched.map((item) => ({
+    item,
+    pickupDistanceKm: providerHasFreshLocation && item.originLatitude !== null && item.originLongitude !== null
+      ? haversineDistanceKm(
+          { latitude: Number(provider.currentLatitude), longitude: Number(provider.currentLongitude) },
+          { latitude: Number(item.originLatitude), longitude: Number(item.originLongitude) },
+        )
+      : null,
+  })).sort((a, b) => {
+    if (a.pickupDistanceKm !== null && b.pickupDistanceKm !== null) return a.pickupDistanceKm - b.pickupDistanceKm;
+    if (a.pickupDistanceKm !== null) return -1;
+    if (b.pickupDistanceKm !== null) return 1;
+    return (a.item.paidAt?.getTime() ?? 0) - (b.item.paidAt?.getTime() ?? 0);
+  });
+
   const assignedRequests = await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.session.organizationId,
@@ -73,7 +95,7 @@ export async function GET(request: Request) {
     take: 50,
   });
 
-  const serialize = (item: (typeof requests)[number]) => ({
+  const serialize = (item: (typeof requests)[number], pickupDistanceKm: number | null = null) => ({
     id: item.id,
     reference: item.reference,
     requestType: item.requestType,
@@ -86,10 +108,11 @@ export async function GET(request: Request) {
     details: item.details,
     paidAt: item.paidAt,
     assignedAt: item.assignedAt,
+    pickupDistanceKm,
   });
 
   return NextResponse.json({
-    requests: matched.map(serialize),
+    requests: rankedMatched.map(({ item, pickupDistanceKm }) => serialize(item, pickupDistanceKm)),
     assignedRequests: assignedRequests.map(serialize),
   });
 }
