@@ -9,6 +9,7 @@ export type MobilityRoute = {
   durationSeconds: number;
   geometry: { type: "LineString"; coordinates: [number, number][] };
   fare?: { currency: string; totalMinor: string; totalAOA: number } | null;
+  fares?: Record<string, { currency: string; totalMinor: string; totalAOA: number } | null>;
   fareStatus?: string;
 };
 
@@ -17,6 +18,7 @@ type Props = {
   onPointsChange?: (points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => void;
   onRouteChange?: (route: MobilityRoute | null) => void;
   serviceType?: string;
+  serviceTypes?: string;
   driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
   originPoint?: MobilityMapPoint | null;
   destinationPoint?: MobilityMapPoint | null;
@@ -57,6 +59,7 @@ function tuneDarkStyle(map: MapLibreMap) {
 export default function MobilityLiveMap({
   onRouteChange,
   serviceType = "TAXI",
+  serviceTypes = serviceType,
   driverPoint = null,
   originPoint = null,
   destinationPoint = null,
@@ -139,6 +142,7 @@ export default function MobilityLiveMap({
         destinationLat: String(to.lat),
         destinationLng: String(to.lon),
         serviceType,
+        serviceTypes,
       });
       const response = await fetch("/api/mobility/routing/geometry?" + query.toString(), {
         credentials: "include",
@@ -148,6 +152,7 @@ export default function MobilityLiveMap({
         route?: MobilityRoute;
         fare?: { currency: string; totalMinor: string; totalAOA: number } | null;
         fareStatus?: string;
+        fares?: Record<string, { currency: string; totalMinor: string; totalAOA: number } | null>;
         message?: string;
       };
       if (!response.ok || !data.route) throw new Error(data.message || "Rota indisponível.");
@@ -155,6 +160,7 @@ export default function MobilityLiveMap({
       const resolvedRoute: MobilityRoute = {
         ...data.route,
         fare: data.fare ?? null,
+        fares: data.fares ?? (data.fare ? { [serviceType]: data.fare } : {}),
         fareStatus: data.fareStatus ?? "TARIFF_NOT_CONFIGURED",
       };
       routeRef.current = resolvedRoute;
@@ -184,7 +190,7 @@ export default function MobilityLiveMap({
     } finally {
       if (id === requestRef.current) setBusy(false);
     }
-  }, [onRouteChange, serviceType]);
+  }, [onRouteChange, serviceType, serviceTypes]);
 
   useEffect(() => {
     const map = mapRef.current;
