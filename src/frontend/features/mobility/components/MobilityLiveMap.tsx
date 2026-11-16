@@ -229,6 +229,36 @@ export default function MobilityLiveMap({
   }, [destinationPoint?.lat, destinationPoint?.lon, destination?.lat, destination?.lon, setPoint]);
 
   useEffect(() => {
+    if (destinationPoint || !destination) return;
+    requestRef.current += 1;
+    setDestination(null);
+    markersRef.current.dropoff?.remove();
+    markersRef.current.dropoff = null;
+    routeRef.current = null;
+    (mapRef.current?.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
+      type: "FeatureCollection",
+      features: [],
+    });
+    onPointsChange?.({ origin, destination: null });
+    onRouteChange?.(null);
+  }, [destinationPoint, destination, origin, onPointsChange, onRouteChange]);
+
+  useEffect(() => {
+    if (originPoint || !origin) return;
+    requestRef.current += 1;
+    setOrigin(null);
+    markersRef.current.pickup?.remove();
+    markersRef.current.pickup = null;
+    routeRef.current = null;
+    (mapRef.current?.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
+      type: "FeatureCollection",
+      features: [],
+    });
+    onPointsChange?.({ origin: null, destination });
+    onRouteChange?.(null);
+  }, [originPoint, origin, destination, onPointsChange, onRouteChange]);
+
+  useEffect(() => {
     if (serviceRef.current !== serviceType) {
       serviceRef.current = serviceType;
       if (origin && destination) void calculateRoute(origin, destination);
