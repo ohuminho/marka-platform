@@ -1,6 +1,7 @@
 import {
   MobilityAvailabilityStatus,
   MobilityDriverStatus,
+  MobilityRideStatus,
   MobilityVehicleStatus,
   MobilityVerificationStatus,
 } from "@prisma/client";
@@ -208,7 +209,7 @@ export class MobilityMatchingService {
             dropoffLatitude: input.dropoffLatitude,
             dropoffLongitude: input.dropoffLongitude,
             serviceType: input.serviceType,
-            status: "SEARCHING" as never,
+            status: MobilityRideStatus.SEARCHING,
             metadata: { passengerCount: input.passengerCount ?? 1 },
           },
           activeRides,
