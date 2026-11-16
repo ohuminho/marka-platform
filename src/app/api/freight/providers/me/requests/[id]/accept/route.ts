@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
+import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
 
 const bodySchema = z.object({ vehicleId: z.string().uuid() });
 const compatibleKinds = {
@@ -24,7 +25,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     include: { vehicles: { where: { id: parsed.data.vehicleId, status: "ACTIVE" } } },
   });
   if (!provider || provider.status !== "VERIFIED") return NextResponse.json({ message: "O prestador não está verificado.", code: "FREIGHT_PROVIDER_NOT_VERIFIED" }, { status: 403 });
-  if (provider.availability !== "AVAILABLE") return NextResponse.json({ message: "O prestador não está disponível para aceitar pedidos.", code: "FREIGHT_PROVIDER_NOT_AVAILABLE" }, { status: 409 });
+  if (!canAcceptAdditionalFreightAssignment(provider.availability)) return NextResponse.json({ message: "O prestador não está disponível para aceitar pedidos.", code: "FREIGHT_PROVIDER_NOT_AVAILABLE" }, { status: 409 });
   const vehicle = provider.vehicles[0];
   if (!vehicle) return NextResponse.json({ message: "A viatura não pertence ao prestador ou não está activa.", code: "FREIGHT_VEHICLE_NOT_ACTIVE" }, { status: 409 });
 
@@ -50,8 +51,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   try {
     const assigned = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
       const providerClaim = await tx.freightProvider.updateMany({
-        where: { id: provider.id, status: "VERIFIED", availability: "AVAILABLE" },
+        where: { id: provider.id, status: "VERIFIED", availability: { in: ["AVAILABLE", "BUSY"] } },
         data: { availability: "BUSY" },
       });
       if (providerClaim.count !== 1) throw new Error("PROVIDER_ALREADY_CLAIMED");

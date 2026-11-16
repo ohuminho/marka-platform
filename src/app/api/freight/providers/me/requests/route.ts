@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
+import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
 
 const compatibleKinds = {
   CARGO_SHIPMENT: ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"],
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
   const requestTypes = provider.serviceTypes;
   const eligibleTypes = requestTypes.filter((type) => provider.vehicles.some((vehicle) => compatibleKinds[type].includes(vehicle.kind as never)));
 
-  const requests = provider.availability === "AVAILABLE" && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
+  const requests = canAcceptAdditionalFreightAssignment(provider.availability) && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.session.organizationId,
       requestType: { in: eligibleTypes },

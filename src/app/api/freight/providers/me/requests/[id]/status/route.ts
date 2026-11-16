@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
+import { shouldReleaseFreightProvider } from "@/freight-engine/freight-provider-availability";
 
 const bodySchema = z.object({
   status: z.enum([
@@ -57,6 +58,7 @@ export async function PATCH(
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
       const current = await tx.freightRequest.findFirst({
         where: {
           id,
@@ -92,11 +94,32 @@ export async function PATCH(
       if (changed.count !== 1) throw new Error("FREIGHT_STATUS_CONFLICT");
 
       if (requestedNext === "COMPLETED") {
-        const released = await tx.freightProvider.updateMany({
-          where: { id: provider.id, availability: "BUSY" },
-          data: { availability: "AVAILABLE" },
+        const remainingActiveAssignments = await tx.freightRequest.count({
+          where: {
+            organizationId: auth.session.organizationId,
+            assignedProviderId: provider.id,
+            id: { not: current.id },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PROVIDER_EN_ROUTE",
+                "PROVIDER_ARRIVED",
+                "PICKED_UP",
+                "IN_TRANSIT",
+                "EXCEPTION",
+              ],
+            },
+          },
         });
-        if (released.count !== 1) throw new Error("FREIGHT_PROVIDER_RELEASE_CONFLICT");
+
+        // A provider may carry several nearby jobs. Only release BUSY state
+        // after the last active assignment is completed.
+        if (shouldReleaseFreightProvider(remainingActiveAssignments)) {
+          await tx.freightProvider.updateMany({
+            where: { id: provider.id, availability: "BUSY" },
+            data: { availability: "AVAILABLE" },
+          });
+        }
       }
 
       return tx.freightRequest.findUniqueOrThrow({
