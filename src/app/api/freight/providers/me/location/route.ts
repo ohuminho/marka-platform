@@ -61,14 +61,38 @@ export async function POST(request: Request) {
   }
 
   const updatedAt = new Date();
-  await prisma.freightProvider.update({
-    where: { id: provider.id },
-    data: {
-      currentLatitude: parsed.data.latitude,
-      currentLongitude: parsed.data.longitude,
-      locationUpdatedAt: updatedAt,
-      locationAccuracyM: parsed.data.accuracyM ?? null,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
+    const currentProvider = await tx.freightProvider.findUnique({
+      where: { id: provider.id },
+      select: { status: true, availability: true },
+    });
+    if (!currentProvider || currentProvider.status !== "VERIFIED") {
+      throw new Error("FREIGHT_PROVIDER_NOT_VERIFIED");
+    }
+    const currentAssignments = await tx.freightRequest.count({
+      where: {
+        organizationId: auth.session.organizationId,
+        assignedProviderId: provider.id,
+        status: { in: ["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"] },
+      },
+    });
+    if (
+      currentProvider.availability !== "AVAILABLE" &&
+      currentProvider.availability !== "BUSY" &&
+      currentAssignments === 0
+    ) {
+      throw new Error("FREIGHT_PROVIDER_NOT_AVAILABLE");
+    }
+    await tx.freightProvider.update({
+      where: { id: provider.id },
+      data: {
+        currentLatitude: parsed.data.latitude,
+        currentLongitude: parsed.data.longitude,
+        locationUpdatedAt: updatedAt,
+        locationAccuracyM: parsed.data.accuracyM ?? null,
+      },
+    });
   });
 
   return NextResponse.json(
@@ -98,14 +122,17 @@ export async function DELETE(request: Request) {
     );
   }
 
-  await prisma.freightProvider.update({
-    where: { id: provider.id },
-    data: {
-      currentLatitude: null,
-      currentLongitude: null,
-      locationUpdatedAt: null,
-      locationAccuracyM: null,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
+    await tx.freightProvider.update({
+      where: { id: provider.id },
+      data: {
+        currentLatitude: null,
+        currentLongitude: null,
+        locationUpdatedAt: null,
+        locationAccuracyM: null,
+      },
+    });
   });
 
   return NextResponse.json(
