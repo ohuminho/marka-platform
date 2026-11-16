@@ -966,6 +966,16 @@ export class MobilityRideService {
         );
 
         if (ride.driverId) {
+          // Serialize lifecycle updates for this driver with assignment claims.
+          // Otherwise two concurrent completions could both read stale active
+          // ride sets and overwrite the driver's final availability.
+          await tx.$queryRaw`
+            SELECT "id"
+            FROM "MobilityDriver"
+            WHERE "id" = ${ride.driverId}
+            FOR UPDATE
+          `;
+
           // Availability is derived from every other active assignment, not
           // only this ride. Completing one ride must not mark a driver free
           // while another assigned or in-progress ride still exists.
