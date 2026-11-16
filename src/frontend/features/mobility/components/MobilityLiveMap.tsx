@@ -13,6 +13,8 @@ export type MobilityRoute = {
 };
 
 type Props = {
+  /** Backward-compatible callback for legacy MobilityExperience callers. */
+  onPointsChange?: (points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => void;
   onRouteChange?: (route: MobilityRoute | null) => void;
   serviceType?: string;
   driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
