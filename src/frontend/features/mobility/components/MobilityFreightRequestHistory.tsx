@@ -113,7 +113,7 @@ export default function MobilityFreightRequestHistory() {
       if (!response.ok) throw new Error(data.message ?? "Não foi possível registar a decisão.");
       await refresh(true);
       setNotice(decision === "ACCEPT"
-        ? "Cotação aceite. Aguarde as instruções oficiais de pagamento dentro da MARKA."
+        ? "Cotação aceite. O pedido permanece pendente até a MARKA disponibilizar e confirmar um canal de pagamento. Não faça transferências fora da plataforma."
         : "Cotação rejeitada. O pedido foi encerrado.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível registar a decisão.");
@@ -145,7 +145,7 @@ export default function MobilityFreightRequestHistory() {
           {requests.map((item) => {
             const expiresAt = item.quoteExpiresAt ? new Date(item.quoteExpiresAt) : null;
             const quoteExpired = expiresAt ? expiresAt.getTime() <= Date.now() : false;
-            const canDecide = item.status === "QUOTED" && item.quotedAmount !== null && !quoteExpired;
+            const canDecide = item.status === "QUOTED" && item.quotedAmount !== null && expiresAt !== null && Number.isFinite(expiresAt.getTime()) && !quoteExpired;
             return (
               <article key={item.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -177,7 +177,7 @@ export default function MobilityFreightRequestHistory() {
                   </div>
                 )}
 
-                {item.status === "AWAITING_PAYMENT" && <p className="mt-3 text-[11px] leading-5 text-amber-700 dark:text-amber-300">Cotação aceite. Aguarde as instruções oficiais de pagamento na MARKA. Não transfira valores para contas pessoais.</p>}
+                {item.status === "AWAITING_PAYMENT" && <p className="mt-3 text-[11px] leading-5 text-amber-700 dark:text-amber-300">Cotação aceite. O pedido permanece pendente até a MARKA disponibilizar e confirmar um canal de pagamento. Não faça transferências para contas pessoais.</p>}
                 {item.status === "PAID" || item.status === "SEARCHING_PROVIDER" ? <p className="mt-3 text-[11px] text-[var(--theme-text-muted)]">O pagamento está registado. A atribuição do prestador está em preparação.</p> : null}
                 {item.status === "COMPLETED" && <p className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300">Serviço concluído.</p>}
               </article>
