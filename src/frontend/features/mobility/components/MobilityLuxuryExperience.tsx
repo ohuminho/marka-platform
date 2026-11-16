@@ -109,8 +109,8 @@ export default function MobilityLuxuryExperience() {
   const [communicationError, setCommunicationError] = useState<string | null>(null);
   const [communicationThreadId, setCommunicationThreadId] = useState<string | null>(null);
   const [callPanelOpen, setCallPanelOpen] = useState(false);
-  const [driverEta, setDriverEta] = useState<number | null>(null);
-  const [driverApproachGeometry, setDriverApproachGeometry] = useState<MobilityRoute["geometry"] | null>(null);
+  const [driverEta, setDriverEta] = useState<{ rideId: string; minutes: number } | null>(null);
+  const [driverApproachGeometry, setDriverApproachGeometry] = useState<{ rideId: string; geometry: MobilityRoute["geometry"] } | null>(null);
 
   const driver = useMemo(() => {
     const lat = Number(ride?.driver?.location?.latitude ?? ride?.driver?.latitude);
@@ -131,7 +131,14 @@ export default function MobilityLuxuryExperience() {
     origin: null,
     serviceType: "TAXI",
   });
-  etaInput.current = { driver, origin, serviceType: ride?.serviceType || serviceType };
+  useEffect(() => {
+    etaInput.current = { driver, origin, serviceType: ride?.serviceType || serviceType };
+  }, [driver, origin, ride?.serviceType, serviceType]);
+
+  const visibleDriverEta = active && assigned && driverEta?.rideId === ride?.id ? driverEta.minutes : null;
+  const visibleDriverApproachGeometry = active && assigned && driverApproachGeometry?.rideId === ride?.id
+    ? driverApproachGeometry.geometry
+    : null;
 
   const onRoute = useCallback((value: MobilityRoute | null) => {
     setRoute(value);
@@ -192,11 +199,7 @@ export default function MobilityLuxuryExperience() {
 
   useEffect(() => {
     const value = destinationText.trim();
-    if (value.length < 3 || active) {
-      setSuggestions([]);
-      setSearchBusy(false);
-      return;
-    }
+    if (value.length < 3 || active) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setSearchBusy(true);
@@ -254,21 +257,19 @@ export default function MobilityLuxuryExperience() {
     return () => {
       window.clearTimeout(timer);
       controller.abort();
-      setSearchBusy(false);
     };
   }, [destinationText, active]);
 
   useEffect(() => {
-    if (!active || !assigned) {
-      setDriverEta(null);
-      setDriverApproachGeometry(null);
-      return;
-    }
+    if (!active || !assigned) return;
     let mounted = true;
     const updateEta = async () => {
       const current = etaInput.current;
       if (!current.driver || !current.origin) {
-        setDriverApproachGeometry(null);
+        if (mounted) {
+          setDriverEta(null);
+          setDriverApproachGeometry(null);
+        }
         return;
       }
       try {
@@ -286,9 +287,12 @@ export default function MobilityLuxuryExperience() {
         if (!response.ok) return;
         const data = await response.json() as { route?: { durationSeconds?: number; geometry?: MobilityRoute["geometry"] } };
         if (mounted && Number.isFinite(data.route?.durationSeconds)) {
-          setDriverEta(Math.max(1, Math.ceil(Number(data.route?.durationSeconds) / 60)));
+          const rideId = ride?.id ?? "";
+          setDriverEta({ rideId, minutes: Math.max(1, Math.ceil(Number(data.route?.durationSeconds) / 60)) });
           if (data.route.geometry?.type === "LineString" && data.route.geometry.coordinates.length >= 2) {
-            setDriverApproachGeometry(data.route.geometry);
+            setDriverApproachGeometry({ rideId, geometry: data.route.geometry });
+          } else {
+            setDriverApproachGeometry(null);
           }
         }
       } catch {
@@ -470,7 +474,7 @@ export default function MobilityLuxuryExperience() {
         serviceType={serviceType}
         serviceTypes={serviceTypes}
         driverPoint={driver}
-        driverRouteGeometry={driverApproachGeometry}
+        driverRouteGeometry={visibleDriverApproachGeometry}
         originPoint={origin}
         destinationPoint={destination}
       />
@@ -563,7 +567,7 @@ export default function MobilityLuxuryExperience() {
               <>
                 <div className="mt-4 rounded-2xl border border-[#E5B84B]/20 bg-black/25 p-4">
                   <p className="text-base font-semibold tracking-tight">
-                    {driverEta !== null ? "O seu motorista chega em " + driverEta + " min" : "O seu motorista está a caminho"}
+                    {visibleDriverEta !== null ? "O seu motorista chega em " + visibleDriverEta + " min" : "O seu motorista está a caminho"}
                   </p>
                   <div className="mt-4 flex items-center gap-3">
                     <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-[#E5B84B] bg-[#25252A]">
@@ -673,6 +677,8 @@ export default function MobilityLuxuryExperience() {
                     onChange={(event) => {
                       const value = event.target.value;
                       setDestinationText(value);
+                      setSuggestions([]);
+                      setSearchBusy(false);
                       if (destination && value !== destination.label) {
                         setDestination(null);
                         setRoute(null);
@@ -686,9 +692,9 @@ export default function MobilityLuxuryExperience() {
                     className="h-8 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
                   />
                 </div>
-                {searchBusy && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
+                {searchBusy && destinationText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
               </div>
-              {suggestions.length > 0 && (
+              {suggestions.length > 0 && destinationText.trim().length >= 3 && !active && (
                 <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
                   {suggestions.map((place, index) => (
                     <button
