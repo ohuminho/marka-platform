@@ -18,7 +18,8 @@ type Ride = {
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
 };
 type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP" | "BEGIN_TRIP_PROGRESS";
-type RidePayload = { ride?: Ride | null; orchestration?: { currentStep?: string | null } | null; message?: string };
+type RideOrchestration = { currentStep?: string | null } | null;
+type RidePayload = { ride?: Ride | null; rides?: Ride[]; orchestration?: RideOrchestration; orchestrations?: Array<{ rideId: string; orchestration: RideOrchestration }>; message?: string };
 type AvailabilityPayload = { driver?: { status?: string; displayName?: string | null } | null; availability?: { status?: string } | null; status?: string; message?: string };
 const ACTIVE = ["REQUESTED", "SEARCHING", "MATCHED", "DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"];
 const STATUS: Record<string, string> = {
@@ -40,6 +41,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const { activeOrganization, loading: authLoading } = useAuth();
   const router = useRouter();
   const [payload, setPayload] = useState<RidePayload | null>(null);
+  const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adsEnabled, setAdsEnabled] = useState(true);
@@ -109,7 +111,13 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     };
   }, [refresh]);
 
-  const ride = payload?.ride ?? null;
+  const driverRides = audience === "driver" ? (payload?.rides ?? (payload?.ride ? [payload.ride] : [])) : [];
+  const selectedRide = driverRides.find((item) => item.id === selectedRideId) ?? null;
+  const ride = audience === "driver" ? (selectedRide ?? driverRides[0] ?? null) : (payload?.ride ?? null);
+  const selectedOrchestration = audience === "driver" && ride
+    ? payload?.orchestrations?.find((item) => item.rideId === ride.id)?.orchestration ?? payload?.orchestration
+    : payload?.orchestration;
+  const hasActiveDriverRides = driverRides.some((item) => ACTIVE.includes(item.status));
   const inProgress = ride?.status === "TRIP_IN_PROGRESS";
   const pickupLatitude = num(ride?.pickupLatitude);
   const pickupLongitude = num(ride?.pickupLongitude);
@@ -146,7 +154,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     isNavigationActive: false, isPaymentFlowActive: !inProgress, isSafetyFlowActive: !inProgress,
     lastAdDismissedAt,
   };
-  const active = Boolean(ride && ACTIVE.includes(ride.status));
+  const active = audience === "driver" ? hasActiveDriverRides : Boolean(ride && ACTIVE.includes(ride.status));
   useEffect(() => {
     if (audience !== "driver" || !organizationId || authLoading || loading) {
       const timer = window.setTimeout(() => setGpsStatus("idle"), 0);
@@ -201,7 +209,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   }, [audience, organizationId, authLoading, loading, driverAvailability, active, ride?.id]);
   const driverAction = useMemo(() => {
     if (audience !== "driver") return null;
-    const step = payload?.orchestration?.currentStep;
+    const step = selectedOrchestration?.currentStep;
     const actions: Record<string, { action: RideAction; label: string }> = {
       DRIVER_ASSIGNED: { action: "ACCEPT", label: "Aceitar viagem" },
       DRIVER_ACCEPTED: { action: "DRIVER_ARRIVING", label: "Iniciar deslocação para recolha" },
@@ -210,7 +218,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
       TRIP_STARTED: { action: "BEGIN_TRIP_PROGRESS", label: "Confirmar passageiro a bordo e iniciar percurso" },
     };
     return step ? actions[step] ?? null : null;
-  }, [audience, payload?.orchestration?.currentStep]);
+  }, [audience, selectedOrchestration?.currentStep]);
 
   const toggleDriverAvailability = async () => {
     if (!organizationId || availabilityLoading || active) return;
@@ -303,6 +311,22 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
         </div>}
       </div>
       <aside className="space-y-3">
+        {audience === "driver" && driverRides.length > 0 && <div className="rounded-2xl border border-white/10 bg-white/[.025] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[9px] font-semibold uppercase tracking-[.2em] text-[#e9bd58]">Fila operacional</p>
+            <span className="rounded-full border border-white/10 px-2 py-1 text-[9px] text-white/55">{driverRides.length} ativa{driverRides.length === 1 ? "" : "s"}</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {driverRides.map((item, index) => <button key={item.id} type="button" onClick={() => setSelectedRideId(item.id)} aria-pressed={ride?.id === item.id} className={`w-full rounded-xl border p-3 text-left transition ${ride?.id === item.id ? "border-[#e9bd58]/45 bg-[#e9bd58]/[.08]" : "border-white/[.08] bg-black/10 hover:border-white/20"}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold text-white/85">Viagem {index + 1} · {(item.reference || item.id.slice(0, 8)).toUpperCase()}</span>
+                <span className="text-[9px] text-[#e9bd58]">{STATUS[item.status] || item.status.replaceAll("_", " ")}</span>
+              </div>
+              <p className="mt-2 truncate text-[10px] text-white/55">Recolha: {item.pickupAddress || "Local registado"}</p>
+              <p className="mt-1 truncate text-[10px] text-white/35">Destino: {item.dropoffAddress || "Destino registado"}</p>
+            </button>)}
+          </div>
+        </div>}
         {audience === "driver" && <div className="rounded-2xl border border-[#e9bd58]/25 bg-[#e9bd58]/[.045] p-5">
           <p className="text-[9px] font-semibold uppercase tracking-[.2em] text-[#e9bd58]">Estado operacional</p>
           <div className="mt-3 flex items-center justify-between gap-3">
