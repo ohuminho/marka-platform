@@ -176,6 +176,24 @@ export class MobilityMatchingService {
 
     const candidates: MobilityMatchCandidate[] =
       [];
+    // Prioritize nearby drivers so the bounded OSRM checks are spent on
+    // the most promising shared-ride candidates first.
+    drivers.sort((a, b) => {
+      if (!a.location) return 1;
+      if (!b.location) return -1;
+      return this.calculateDistanceMeters(
+        input.pickupLatitude,
+        input.pickupLongitude,
+        Number(a.location.latitude),
+        Number(a.location.longitude),
+      ) - this.calculateDistanceMeters(
+        input.pickupLatitude,
+        input.pickupLongitude,
+        Number(b.location.latitude),
+        Number(b.location.longitude),
+      );
+    });
+
     let sharedRouteChecks = 0;
 
     for (const driver of drivers) {
