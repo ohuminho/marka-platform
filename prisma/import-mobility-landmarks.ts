@@ -68,18 +68,25 @@ function parseLandmark(value: unknown, index: number): NormalizedLandmark {
   if (typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
     throw new Error(`Record ${index + 1}: longitude must be a finite number between -180 and 180.`);
   }
+  // Broad Angola mainland + Cabinda envelope; not a substitute for national polygon validation.
+  if (latitude < -18.1 || latitude > -4.2 || longitude < 11.5 || longitude > 24.1) {
+    throw new Error(`Record ${index + 1}: coordinates fall outside the Angola validation envelope.`);
+  }
 
   const source = requiredText(item.source, "source", 32).toUpperCase();
   const sourceRef = requiredText(item.sourceRef, "sourceRef", 255);
   const verifiedAtRaw = requiredText(item.verifiedAt, "verifiedAt", 40);
+  if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$/.test(verifiedAtRaw)) {
+    throw new Error(`Record ${index + 1}: verifiedAt must be an ISO 8601 timestamp with timezone.`);
+  }
   const verifiedAt = new Date(verifiedAtRaw);
   if (Number.isNaN(verifiedAt.getTime())) {
     throw new Error(`Record ${index + 1}: verifiedAt must be a valid ISO date.`);
   }
 
   const aliasesInput = item.aliases ?? [];
-  if (!Array.isArray(aliasesInput) || aliasesInput.some((alias) => typeof alias !== "string")) {
-    throw new Error(`Record ${index + 1}: aliases must be an array of strings.`);
+  if (!Array.isArray(aliasesInput) || aliasesInput.length > 20 || aliasesInput.some((alias) => typeof alias !== "string" || alias.trim().length > 180)) {
+    throw new Error(`Record ${index + 1}: aliases must contain at most 20 strings of up to 180 characters.`);
   }
   const aliases = [...new Set(
     (aliasesInput as string[])
