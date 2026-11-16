@@ -213,10 +213,21 @@ export async function POST(
           ...(
             body?.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
               ? Object.fromEntries(Object.entries(body.metadata as Record<string, unknown>).filter(
-                  ([key]) => !["quotedFareMinor", "estimatedFareMinor", "estimatedDistanceMeters", "estimatedDurationSeconds"].includes(key),
+                  ([key]) => !["quotedFareMinor", "estimatedFareMinor", "estimatedDistanceMeters", "estimatedDurationSeconds", "pricingSnapshot"].includes(key),
                 ))
               : {}
           ),
+          // Immutable server-generated quote details are kept with the ride so
+          // payment initialization never trusts a fare supplied by the client.
+          pricingSnapshot: {
+            source: "MARKA_SERVER_TARIFF",
+            version: 1,
+            currency: fare.currency,
+            serviceType,
+            distanceMeters: fare.distanceMeters,
+            durationSeconds: fare.durationSeconds,
+            totalMinor: fare.totalMinor,
+          },
           safetyMode,
           passengerCount,
         },
