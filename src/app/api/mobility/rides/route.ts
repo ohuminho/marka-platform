@@ -7,6 +7,8 @@ import {
 } from "@/app/api/mobility/_lib/auth";
 
 import { mobilityLifecycleService } from "@/services/mobility/orchestration/mobility-lifecycle.service";
+import { mobilityRoutingService } from "@/services/mobility/pricing/mobility-routing.service";
+import { quoteMobilityFare } from "@/services/mobility/pricing/mobility-tariff.service";
 
 import type { MobilitySafetyMode } from "@/services/mobility/orchestration/mobility-lifecycle.types";
 
@@ -57,6 +59,10 @@ export async function POST(
       getRequestContext(
         request,
       );
+
+    if (currency !== "AOA") {
+      return NextResponse.json({ message: "MARKA Mobility currently supports AOA fares only.", code: "MOBILITY_CURRENCY_UNSUPPORTED" }, { status: 400 });
+    }
 
     if (!serviceType) {
       return NextResponse.json(
@@ -130,6 +136,15 @@ export async function POST(
       );
     }
 
+    const routeEstimate = await mobilityRoutingService.estimate(
+      { latitude: Number(body?.pickupLatitude), longitude: Number(body?.pickupLongitude) },
+      { latitude: Number(body?.dropoffLatitude), longitude: Number(body?.dropoffLongitude) },
+    );
+    const fare = quoteMobilityFare(serviceType, routeEstimate.distanceMeters, routeEstimate.durationSeconds);
+    if (!fare) {
+      return NextResponse.json({ message: "A tabela tarifária desta categoria ainda não está configurada.", code: "MOBILITY_TARIFF_NOT_CONFIGURED" }, { status: 409 });
+    }
+
     const { ride } =
       await mobilityRideService.createIdempotent({
         organizationId:
@@ -143,6 +158,7 @@ export async function POST(
         serviceType,
 
         currency,
+        estimatedFareMinor: fare.totalMinor,
 
         pickupLatitude:
           Number(
@@ -197,6 +213,8 @@ export async function POST(
 
           safetyMode,
           passengerCount,
+          estimatedDistanceMeters: routeEstimate.distanceMeters,
+          estimatedDurationSeconds: routeEstimate.durationSeconds,
         },
       }, idempotencyKey);
 

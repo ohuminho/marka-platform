@@ -27,6 +27,7 @@ export interface CreateMobilityRideInput {
   serviceType: string;
 
   currency?: string;
+  estimatedFareMinor?: bigint;
 
   pickupLatitude: number;
   pickupLongitude: number;
@@ -98,6 +99,7 @@ export class MobilityRideService {
                 input.serviceType.trim(),
               currency:
                 input.currency ?? "AOA",
+              estimatedFareMinor: input.estimatedFareMinor ?? BigInt(0),
 
               pickupLatitude:
                 input.pickupLatitude,
@@ -170,8 +172,9 @@ export class MobilityRideService {
     }
 
     const scope = `mobility:ride:create:${input.organizationId}:${input.riderId}`;
+    const { estimatedFareMinor: _fareForReplay, ...requestIdentity } = input;
     const requestHash = createHash("sha256")
-      .update(JSON.stringify(normalizeIdempotencyValue(input)))
+      .update(JSON.stringify(normalizeIdempotencyValue(requestIdentity)))
       .digest("hex");
 
     const existingResult = async () => {
@@ -246,6 +249,7 @@ export class MobilityRideService {
             reference,
             serviceType: input.serviceType.trim(),
             currency: input.currency ?? "AOA",
+            estimatedFareMinor: input.estimatedFareMinor ?? BigInt(0),
             pickupLatitude: input.pickupLatitude,
             pickupLongitude: input.pickupLongitude,
             pickupAddress: input.pickupAddress,
