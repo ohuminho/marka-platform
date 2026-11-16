@@ -209,7 +209,7 @@ export default function MobilityFreightJobs() {
       {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-700">{error}</p>}
       {assignedJobs.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-[var(--theme-text)]">Serviços em curso</h3>
+          <h3 className="text-sm font-semibold text-[var(--theme-text)]">Serviços atribuídos e em confirmação</h3>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {assignedJobs.map((job) => {
               const action = nextAction(job);
@@ -222,7 +222,7 @@ export default function MobilityFreightJobs() {
                   <p><strong className="text-[var(--theme-text)]">Recolha:</strong> {job.origin?.address ?? "Não indicada"}</p>
                   <p><strong className="text-[var(--theme-text)]">Destino:</strong> {job.destination?.address ?? "Não indicado"}</p>
                 </div>
-                {action ? <button type="button" disabled={busyId === job.id} onClick={() => updateJobStatus(job)} className="mt-4 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === job.id ? "A actualizar…" : action.label}</button> : <p className="mt-4 text-xs text-amber-700">Serviço em excepção. Aguarda resolução operacional.</p>}
+                {action ? <button type="button" disabled={busyId === job.id} onClick={() => updateJobStatus(job)} className="mt-4 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === job.id ? "A actualizar…" : action.label}</button> : job.status === "PROVIDER_COMPLETED_PENDING_CONFIRMATION" ? <p className="mt-4 text-xs text-emerald-700 dark:text-emerald-300">Serviço declarado concluído. Aguarda confirmação do cliente; a sua disponibilidade já foi libertada.</p> : <p className="mt-4 text-xs text-amber-700">Serviço em excepção. Aguarda resolução operacional.</p>}
                 {job.status !== "EXCEPTION" && (
                   <div className="mt-3">
                     {exceptionJobId === job.id ? (
