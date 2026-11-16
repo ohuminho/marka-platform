@@ -630,26 +630,29 @@ export default function MobilityLuxuryExperience() {
                 { id: "EXECUTIVE", label: "Executivo" },
                 { id: "MOTO", label: "Moto" },
                 { id: "CARGO", label: "Carga" },
-              ] as const).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={group === tab.id}
-                  onClick={() => {
-                    if (tab.id === "CARGO") {
-                      router.push("/app/mobility/carga");
-                      return;
-                    }
-                    changeGroup(tab.id);
-                  }}
-                  className={"min-h-10 rounded-xl border text-[11px] font-semibold " + (group === tab.id
-                    ? "border-[#E5B84B]/60 bg-[#E5B84B]/10 text-[#E5B84B]"
-                    : "border-white/10 bg-white/[.025] text-white/50")}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              ] as const).map((tab) => {
+                const selected = tab.id !== "CARGO" && group === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => {
+                      if (tab.id === "CARGO") {
+                        router.push("/app/mobility/carga");
+                        return;
+                      }
+                      changeGroup(tab.id);
+                    }}
+                    className={"min-h-10 rounded-xl border text-[11px] font-semibold " + (selected
+                      ? "border-[#E5B84B]/60 bg-[#E5B84B]/10 text-[#E5B84B]"
+                      : "border-white/10 bg-white/[.025] text-white/50")}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="mt-3 rounded-2xl border border-white/[.09] bg-black/25 p-2">
