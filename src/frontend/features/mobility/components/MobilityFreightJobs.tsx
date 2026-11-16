@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
+import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
 
 type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string; capacity?: number | string | null; capacityUnit?: string | null; waterType?: string | null };
 type FreightProvider = { status: string; availability: string; vehicles: FreightVehicle[] };
@@ -41,17 +42,16 @@ export default function MobilityFreightJobs() {
     const activeVehicles: FreightVehicle[] = (providerData.provider?.vehicles ?? []).filter((vehicle: FreightVehicle) => vehicle.status === "ACTIVE");
     setVehicleIds((current) => Object.fromEntries((jobsData.requests ?? []).map((job: FreightJob) => {
       const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
-      const compatible = activeVehicles.find((vehicle) => {
+      const isCompatible = (vehicle: FreightVehicle) => {
         const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
         if (!kinds.includes(vehicle.kind)) return false;
-        if (job.requestType !== "WATER_DELIVERY") return true;
-        if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
-        if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
-        const capacityLitres = Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1);
-        const requestedLitres = job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
-        return capacityLitres >= requestedLitres;
-      });
-      return [job.id, current[job.id] ?? compatible?.id ?? ""];
+        if (job.requestType === "ROADSIDE_ASSISTANCE") return true;
+        if (job.requestType === "WATER_DELIVERY" && vehicle.waterType !== details.waterType) return false;
+        return canVehicleCarryQuantity(vehicle.capacity, vehicle.capacityUnit, job.quantity, job.quantityUnit);
+      };
+      const selected = activeVehicles.find((vehicle) => vehicle.id === current[job.id] && isCompatible(vehicle));
+      const compatible = selected ?? activeVehicles.find(isCompatible);
+      return [job.id, compatible?.id ?? ""];
     })));
     setNotice(jobsData.message ?? null);
   }, []);
@@ -111,7 +111,7 @@ export default function MobilityFreightJobs() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message ?? "Não foi possível aceitar o pedido.");
-      setJobs((current) => current.filter((item) => item.id !== job.id));
+      await refresh();
       setNotice(`Pedido ${job.reference} atribuído à sua conta.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Falha ao aceitar o pedido."); }
     finally { setBusyId(null); }
@@ -155,11 +155,10 @@ export default function MobilityFreightJobs() {
               if (vehicle.status !== "ACTIVE") return false;
               const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
               if (!kinds.includes(vehicle.kind)) return false;
-              if (job.requestType !== "WATER_DELIVERY") return true;
+              if (job.requestType === "ROADSIDE_ASSISTANCE") return true;
               const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
-              if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
-              if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
-              return Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1) >= job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
+              if (job.requestType === "WATER_DELIVERY" && vehicle.waterType !== details.waterType) return false;
+              return canVehicleCarryQuantity(vehicle.capacity, vehicle.capacityUnit, job.quantity, job.quantityUnit);
             });
             const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleIds[job.id]);
             return <article key={job.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
