@@ -307,7 +307,12 @@ export class MobilityMatchingService {
               longitude: input.dropoffLongitude,
             },
           ]);
-          if (!isSharedRideSequenceWithinDetour(durationMatrix)) continue;
+          if (
+            !isSharedRideSequenceWithinDetour(
+              durationMatrix,
+              activeRide.status === MobilityRideStatus.DRIVER_ARRIVING,
+            )
+          ) continue;
         } catch {
           continue;
         }
