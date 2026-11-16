@@ -247,7 +247,8 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const { requestId, amount, validityHours } = parsed.data;
+  const quote = quoteSchema.parse(parsed.data);
+  const { requestId, amount, validityHours } = quote;
   const now = new Date();
   const expiresAt = new Date(now.getTime() + validityHours * 60 * 60 * 1000);
   const freightMeta = await prisma.freightRequest.findFirst({
