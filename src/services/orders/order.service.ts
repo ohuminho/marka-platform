@@ -521,66 +521,94 @@ export class OrderService {
     if (!transitions[status]) {
       throw new Error('Unsupported order status: ' + status + '.');
     }
-    const existingOrder =
-      await prisma.order.findUnique({
-        where: {
-          id: orderId,
-        },
-        select: {
-          id: true,
-          status: true,
-        },
-      });
+    const updatedOrder = await prisma.$transaction(
+      async (database) => {
+        await database.$queryRaw<Array<{ id: string }>>`
+          SELECT "id"
+          FROM "Order"
+          WHERE "id" = ${orderId}
+          FOR UPDATE
+        `;
 
-    if (!existingOrder) {
-      throw new Error(
-        "Order not found."
-      );
-    }
+        const existingOrder = await database.order.findUnique({
+          where: { id: orderId },
+          include: {
+            items: { select: { productId: true, quantity: true } },
+            payments: { select: { id: true, status: true } },
+          },
+        });
 
-    const currentStatus = existingOrder.status as unknown as OrderStatus;
-    const nextStatuses = transitions[currentStatus] ?? [];
+        if (!existingOrder) {
+          throw new Error("Order not found.");
+        }
 
-    if (!nextStatuses.includes(status)) {
-      throw new Error(
-        'Invalid order transition: ' + currentStatus + ' -> ' + status + '.',
-      );
-    }
+        const currentStatus = existingOrder.status as unknown as OrderStatus;
+        const nextStatuses = transitions[currentStatus] ?? [];
 
-    const prismaStatus = status as unknown as PrismaOrderStatus;
-    const updatedOrder =
-      await prisma.order.update({
-        where: {
-          id: orderId,
-        },
-        data: {
-          status: prismaStatus,
-        },
-        select: {
-          id: true,
-          userId: true,
-          status: true,
-          total: true,
-          currency: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+        if (!nextStatuses.includes(status)) {
+          throw new Error(
+            "Invalid order transition: " + currentStatus + " -> " + status + ".",
+          );
+        }
+
+        if (status === OrderStatus.CANCELLED) {
+          const activeOrCapturedPayment = existingOrder.payments.find((payment) =>
+            ["CREATED", "PENDING", "PROCESSING", "COMPLETED"].includes(payment.status),
+          );
+
+          if (activeOrCapturedPayment) {
+            throw new Error(
+              activeOrCapturedPayment.status === "COMPLETED"
+                ? "Paid orders require a confirmed refund before cancellation."
+                : "An active payment must be cancelled or reconciled before order cancellation.",
+            );
+          }
+
+          if (existingOrder.inventoryReserved) {
+            await inventoryService.releaseWithinTransaction(
+              database,
+              existingOrder.items.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+              })),
+            );
+
+            await database.order.update({
+              where: { id: orderId },
+              data: { inventoryReserved: false },
+            });
+          }
+        }
+
+        return database.order.update({
+          where: { id: orderId },
+          data: { status: status as unknown as PrismaOrderStatus },
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            total: true,
+            currency: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 5000,
+        timeout: 10000,
+      },
+    );
 
     return {
       id: updatedOrder.id,
-      userId:
-        updatedOrder.userId,
-      status:
-        updatedOrder.status as OrderStatus,
-      total:
-        Number(updatedOrder.total),
-      currency:
-        updatedOrder.currency,
-      createdAt:
-        updatedOrder.createdAt,
-      updatedAt:
-        updatedOrder.updatedAt,
+      userId: updatedOrder.userId,
+      status: updatedOrder.status as OrderStatus,
+      total: Number(updatedOrder.total),
+      currency: updatedOrder.currency,
+      createdAt: updatedOrder.createdAt,
+      updatedAt: updatedOrder.updatedAt,
     };
   }
 }
