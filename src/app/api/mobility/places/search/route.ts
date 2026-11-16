@@ -60,30 +60,31 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const places = await prisma.mobilityLandmark.findMany({
-      where: {
-        countryCode: "AO",
-        isActive: true,
-        OR: [
-          { normalizedName: { contains: query } },
-          { aliases: { has: query } },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        province: true,
-        municipality: true,
-        category: true,
-        latitude: true,
-        longitude: true,
-      },
-      orderBy: [
-        { verifiedAt: "desc" },
-        { name: "asc" },
-      ],
-      take: 8,
-    });
+    const pattern = `%${query}%`;
+    const places = await prisma.$queryRaw<Array<{
+      id: string;
+      name: string;
+      province: string | null;
+      municipality: string | null;
+      category: string;
+      latitude: number;
+      longitude: number;
+    }>>`
+      SELECT "id", "name", "province", "municipality", "category", "latitude", "longitude"
+      FROM "MobilityLandmark"
+      WHERE "countryCode" = 'AO'
+        AND "isActive" = true
+        AND (
+          "normalizedName" LIKE ${pattern}
+          OR EXISTS (
+            SELECT 1
+            FROM unnest("aliases") AS alias
+            WHERE alias LIKE ${pattern}
+          )
+        )
+      ORDER BY "verifiedAt" DESC NULLS LAST, "name" ASC
+      LIMIT 8
+    `;
 
     return NextResponse.json({
       places: places.map((place) => ({
