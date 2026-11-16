@@ -101,7 +101,7 @@ export default function MobilityLuxuryExperience() {
   const [route, setRoute] = useState<MobilityRoute | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fareStatus, setFareStatus] = useState("NO_ROUTE");
-  const [fareByService, setFareByService] = useState<Record<string, Quote>>({});
+  const [fareByService, setFareByService] = useState<Record<string, Quote | null>>({});
   const [passengers, setPassengers] = useState(1);
   const [safety, setSafety] = useState("STANDARD");
   const [destinationText, setDestinationText] = useState("");
@@ -726,7 +726,7 @@ export default function MobilityLuxuryExperience() {
                       {route ? Math.max(1, Math.round(route.durationSeconds / 60)) + " min de viagem" : "Tempo após rota"}
                     </span>
                     <span className="mt-1 text-xs font-bold text-[#E5B84B]">
-                      {itemQuote ? fmt(itemQuote.totalAOA) : item.id === serviceType && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa pendente" : "Calcular preço"}
+                      {itemQuote ? fmt(itemQuote.totalAOA) : fareByService[item.id] === null || (item.id === serviceType && fareStatus === "TARIFF_NOT_CONFIGURED") ? "Tarifa pendente" : "Calcular preço"}
                     </span>
                   </button>
                 );
