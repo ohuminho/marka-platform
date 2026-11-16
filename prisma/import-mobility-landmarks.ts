@@ -130,9 +130,11 @@ function parseLandmark(value: unknown, index: number): NormalizedLandmark {
 }
 
 async function main() {
-  const inputPath = process.argv[2];
+  const args = process.argv.slice(2);
+  const dryRun = args.includes("--dry-run");
+  const inputPath = args.find((argument) => argument !== "--dry-run");
   if (!inputPath) {
-    throw new Error("Usage: npm run mobility:landmarks:import -- <path-to-json>");
+    throw new Error("Usage: npm run mobility:landmarks:import -- <path-to-json> [--dry-run]");
   }
 
   const raw = await readFile(resolve(process.cwd(), inputPath), "utf8");
@@ -148,6 +150,11 @@ async function main() {
     if (uniqueSourceRefs.has(record.sourceRef)) throw new Error(`Duplicate sourceRef in import: ${record.sourceRef}`);
     uniqueKeys.add(key);
     uniqueSourceRefs.add(record.sourceRef);
+  }
+
+  if (dryRun) {
+    console.log(`Mobility landmark dry run passed: ${records.length} valid record(s); no database writes performed.`);
+    return;
   }
 
   let created = 0;
