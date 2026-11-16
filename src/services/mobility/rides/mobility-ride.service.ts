@@ -842,6 +842,7 @@ export class MobilityRideService {
                 select: {
                   id: true,
                   name: true,
+                  profile: { select: { avatarUrl: true } },
                 },
               },
               availability: true,
@@ -891,7 +892,7 @@ export class MobilityRideService {
         include: {
           driver: {
             include: {
-              user: { select: { id: true, name: true } },
+              user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
               location: true,
             },
           },

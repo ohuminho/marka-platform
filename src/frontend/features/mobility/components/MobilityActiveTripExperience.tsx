@@ -14,7 +14,7 @@ type Ride = {
   pickupLatitude?: number | string | null; pickupLongitude?: number | string | null;
   dropoffLatitude?: number | string | null; dropoffLongitude?: number | string | null;
   startedAt?: string | null; rider?: { name?: string | null } | null;
-  driver?: { user?: { name?: string | null } | null; location?: { latitude?: number | string | null; longitude?: number | string | null; lat?: number | string | null; lng?: number | string | null } | null } | null;
+  driver?: { user?: { name?: string | null } | null; location?: { latitude?: number | string | null; longitude?: number | string | null; lat?: number | string | null; lng?: number | string | null; heading?: number | string | null } | null } | null;
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
 };
 type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP" | "BEGIN_TRIP_PROGRESS";
@@ -119,7 +119,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const driverLongitude = num(ride?.driver?.location?.longitude ?? ride?.driver?.location?.lng);
   const pickupPoint = pickupLatitude !== null && pickupLongitude !== null ? { lat: pickupLatitude, lng: pickupLongitude } : null;
   const dropoffPoint = dropoffLatitude !== null && dropoffLongitude !== null ? { lat: dropoffLatitude, lng: dropoffLongitude } : null;
-  const driverPoint = driverLatitude !== null && driverLongitude !== null ? { lat: driverLatitude, lng: driverLongitude } : null;
+  const driverHeading = num(ride?.driver?.location?.heading);
+  const driverPoint = driverLatitude !== null && driverLongitude !== null ? { lat: driverLatitude, lng: driverLongitude, bearing: driverHeading } : null;
   const startedAt = ride?.startedAt ? new Date(ride.startedAt).getTime() : null;
   const destinationDistance = useMemo(() => {
     if (!ride) return null;

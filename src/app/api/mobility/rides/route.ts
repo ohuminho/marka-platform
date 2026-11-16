@@ -201,20 +201,14 @@ export async function POST(
 
         metadata: {
           ...(
-            body?.metadata &&
-            typeof body.metadata ===
-              "object" &&
-            !Array.isArray(
-              body.metadata,
-            )
-              ? body.metadata
+            body?.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
+              ? Object.fromEntries(Object.entries(body.metadata as Record<string, unknown>).filter(
+                  ([key]) => !["quotedFareMinor", "estimatedDistanceMeters", "estimatedDurationSeconds"].includes(key),
+                ))
               : {}
           ),
-
           safetyMode,
           passengerCount,
-          estimatedDistanceMeters: routeEstimate.distanceMeters,
-          estimatedDurationSeconds: routeEstimate.durationSeconds,
         },
       }, idempotencyKey);
 
