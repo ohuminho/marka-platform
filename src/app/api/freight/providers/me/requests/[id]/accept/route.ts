@@ -5,6 +5,7 @@ import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
 import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
 import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
+import { isFreshAccurateProviderLocation } from "@/freight-engine/freight-geography";
 
 const bodySchema = z.object({ vehicleId: z.string().uuid() });
 const compatibleKinds = {
@@ -30,18 +31,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const vehicle = provider.vehicles[0];
   if (!vehicle) return NextResponse.json({ message: "A viatura não pertence ao prestador ou não está activa.", code: "FREIGHT_VEHICLE_NOT_ACTIVE" }, { status: 409 });
 
-  const locationFreshnessMs = 3 * 60 * 1000;
-  const locationUpdatedAt = provider.locationUpdatedAt?.getTime() ?? 0;
-  const locationAccuracy = provider.locationAccuracyMeters === null
-    ? Number.POSITIVE_INFINITY
-    : Number(provider.locationAccuracyMeters);
-  if (
-    !provider.currentLatitude ||
-    !provider.currentLongitude ||
-    !provider.locationUpdatedAt ||
-    Date.now() - locationUpdatedAt > locationFreshnessMs ||
-    locationAccuracy > 1000
-  ) {
+  if (!isFreshAccurateProviderLocation({
+    latitude: provider.currentLatitude === null ? null : Number(provider.currentLatitude),
+    longitude: provider.currentLongitude === null ? null : Number(provider.currentLongitude),
+    accuracyMeters: provider.locationAccuracyMeters === null ? null : Number(provider.locationAccuracyMeters),
+    updatedAt: provider.locationUpdatedAt,
+  })) {
     return NextResponse.json({
       message: "Actualize a sua localização GPS com precisão suficiente antes de aceitar um serviço.",
       code: "FREIGHT_PROVIDER_LOCATION_STALE",
