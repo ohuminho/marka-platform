@@ -1,4 +1,4 @@
-import { MobilityRideStatus } from "@prisma/client";
+import { MobilityAvailabilityStatus, MobilityRideStatus } from "@prisma/client";
 
 import {
   canTransitionRideStatus,
@@ -125,21 +125,21 @@ assert(
 
 
 assert(
-  resolveDriverAvailabilityForActiveRides([]) === "AVAILABLE",
+  resolveDriverAvailabilityForActiveRides([]) === MobilityAvailabilityStatus.AVAILABLE,
   "A driver with no remaining active assignments must become available.",
 );
 
 assert(
   resolveDriverAvailabilityForActiveRides([
     MobilityRideStatus.DRIVER_ASSIGNED,
-  ]) === "BUSY",
+  ]) === MobilityAvailabilityStatus.BUSY,
   "A driver with an accepted assignment must remain busy.",
 );
 
 assert(
   resolveDriverAvailabilityForActiveRides([
     MobilityRideStatus.TRIP_IN_PROGRESS,
-  ]) === "ON_TRIP",
+  ]) === MobilityAvailabilityStatus.ON_TRIP,
   "An in-progress ride must keep the driver on trip.",
 );
 
