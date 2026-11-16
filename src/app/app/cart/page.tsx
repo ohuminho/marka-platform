@@ -171,10 +171,22 @@ export default function CartPage() {
 
   function updateDeliveryField(field: "address" | "latitude" | "longitude" | "instructions", value: string) {
     setPaymentIdempotencyKey("");
+    const next = {
+      deliveryAddress: field === "address" ? value : deliveryAddress,
+      deliveryLatitude: field === "latitude" ? value : deliveryLatitude,
+      deliveryLongitude: field === "longitude" ? value : deliveryLongitude,
+      deliveryInstructions: field === "instructions" ? value : deliveryInstructions,
+    };
     if (field === "address") setDeliveryAddress(value);
     if (field === "latitude") setDeliveryLatitude(value);
     if (field === "longitude") setDeliveryLongitude(value);
     if (field === "instructions") setDeliveryInstructions(value);
+    if (cart?.id) {
+      window.sessionStorage.setItem("marka:checkout:" + cart.id, JSON.stringify({
+        paymentIdempotencyKey: "",
+        ...next,
+      }));
+    }
   }
 
   function useCurrentLocation() {
@@ -186,9 +198,20 @@ export default function CartPage() {
     setError(null);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setDeliveryLatitude(position.coords.latitude.toFixed(6));
-        setDeliveryLongitude(position.coords.longitude.toFixed(6));
+        const latitude = position.coords.latitude.toFixed(6);
+        const longitude = position.coords.longitude.toFixed(6);
+        setDeliveryLatitude(latitude);
+        setDeliveryLongitude(longitude);
         setPaymentIdempotencyKey("");
+        if (cart?.id) {
+          window.sessionStorage.setItem("marka:checkout:" + cart.id, JSON.stringify({
+            paymentIdempotencyKey: "",
+            deliveryAddress,
+            deliveryLatitude: latitude,
+            deliveryLongitude: longitude,
+            deliveryInstructions,
+          }));
+        }
         setLocating(false);
       },
       (locationError) => {
