@@ -195,8 +195,13 @@ export class MobilityMatchingService {
     });
 
     let sharedRouteChecks = 0;
+    let nextDriverIndex = 0;
 
-    for (const driver of drivers) {
+    // Process candidate evaluation with bounded concurrency. OSRM checks are
+    // network-bound; serial awaits could add up to 50 seconds to dispatch.
+    const processDriverBatch = async () => {
+      while (nextDriverIndex < drivers.length) {
+        const driver = drivers[nextDriverIndex++];
       const location = driver.location;
 
       if (!location) {
@@ -345,7 +350,12 @@ export class MobilityMatchingService {
           locationSource: location.source,
         },
       });
-    }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: 4 }, () => processDriverBatch()),
+    );
 
     candidates.sort(
       (a, b) =>
