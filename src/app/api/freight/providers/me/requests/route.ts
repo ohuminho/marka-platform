@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
 import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
+import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
 
 const compatibleKinds = {
   CARGO_SHIPMENT: ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"],
@@ -41,13 +42,25 @@ export async function GET(request: Request) {
     if (!compatibleKinds[item.requestType].includes(vehicle.kind as never)) return false;
     const requestDetails = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
     if (typeof requestDetails.vehiclePreference === "string" && requestDetails.vehiclePreference !== "ANY" && vehicle.kind !== requestDetails.vehiclePreference) return false;
-    if (item.requestType !== "WATER_DELIVERY") return true;
-    const details = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
-    if (vehicle.waterType !== details.waterType) return false;
-    if (!vehicle.capacity || !vehicle.capacityUnit || !item.quantity || !item.quantityUnit) return false;
-    const capacityLitres = Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1);
-    const requestedLitres = Number(item.quantity) * (item.quantityUnit === "M3" ? 1000 : 1);
-    return ["M3", "LITRE"].includes(vehicle.capacityUnit) && ["M3", "LITRE"].includes(item.quantityUnit) && capacityLitres >= requestedLitres;
+    if (item.requestType === "CARGO_SHIPMENT") {
+      return canVehicleCarryQuantity(
+        vehicle.capacity === null ? null : Number(vehicle.capacity),
+        vehicle.capacityUnit,
+        item.quantity === null ? null : Number(item.quantity),
+        item.quantityUnit,
+      );
+    }
+    if (item.requestType === "WATER_DELIVERY") {
+      const details = item.details && typeof item.details === "object" ? item.details as Record<string, unknown> : {};
+      if (vehicle.waterType !== details.waterType) return false;
+      return canVehicleCarryQuantity(
+        vehicle.capacity === null ? null : Number(vehicle.capacity),
+        vehicle.capacityUnit,
+        item.quantity === null ? null : Number(item.quantity),
+        item.quantityUnit,
+      );
+    }
+    return true;
   }));
 
   const assignedRequests = await prisma.freightRequest.findMany({
