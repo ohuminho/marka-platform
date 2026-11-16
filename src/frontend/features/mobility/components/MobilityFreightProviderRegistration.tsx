@@ -22,6 +22,8 @@ type RegisteredVehicle = {
   kind: VehicleKind;
   status: string;
   registrationNumber: string | null;
+  make: string | null;
+  model: string | null;
   capacity: number | string | null;
   capacityUnit: CapacityUnit | null;
   waterType: string | null;
@@ -72,9 +74,18 @@ const emptyVehicle = (): VehicleDraft => ({
   cargoBody: "OPEN",
 });
 
-function serviceHasVehicle(service: ServiceType, vehicles: Array<{ kind: VehicleKind }>) {
-  if (service === "CARGO_SHIPMENT") return vehicles.some((vehicle) => cargoKinds.includes(vehicle.kind));
-  if (service === "WATER_DELIVERY") return vehicles.some((vehicle) => vehicle.kind === "WATER_TANKER");
+function serviceHasVehicle(service: ServiceType, vehicles: Array<{
+  kind: VehicleKind;
+  capacity?: number | string | null;
+  capacityUnit?: string | null;
+  waterType?: string | null;
+}>) {
+  if (service === "CARGO_SHIPMENT") {
+    return vehicles.some((vehicle) => cargoKinds.includes(vehicle.kind) && Number(vehicle.capacity) > 0 && ["KG", "TON", "M3", "LITRE"].includes(vehicle.capacityUnit ?? ""));
+  }
+  if (service === "WATER_DELIVERY") {
+    return vehicles.some((vehicle) => vehicle.kind === "WATER_TANKER" && Number(vehicle.capacity) > 0 && ["LITRE", "M3"].includes(vehicle.capacityUnit ?? "") && Boolean(vehicle.waterType));
+  }
   return vehicles.some((vehicle) => vehicle.kind === "TOW_TRUCK" || vehicle.kind === "SERVICE_VEHICLE");
 }
 
@@ -128,8 +139,8 @@ export default function MobilityFreightProviderRegistration() {
           key: vehicle.id,
           kind: vehicle.kind,
           registrationNumber: vehicle.registrationNumber ?? "",
-          make: "",
-          model: "",
+          make: vehicle.make ?? "",
+          model: vehicle.model ?? "",
           capacity: vehicle.capacity === null ? "" : String(vehicle.capacity),
           capacityUnit: vehicle.capacityUnit ?? "KG",
           waterType: (vehicle.waterType as VehicleDraft["waterType"]) ?? "POTABLE_WATER",
@@ -243,8 +254,8 @@ export default function MobilityFreightProviderRegistration() {
           key: vehicle.id,
           kind: vehicle.kind,
           registrationNumber: vehicle.registrationNumber ?? "",
-          make: "",
-          model: "",
+          make: vehicle.make ?? "",
+          model: vehicle.model ?? "",
           capacity: vehicle.capacity === null ? "" : String(vehicle.capacity),
           capacityUnit: vehicle.capacityUnit ?? "KG",
           waterType: (vehicle.waterType as VehicleDraft["waterType"]) ?? "POTABLE_WATER",
