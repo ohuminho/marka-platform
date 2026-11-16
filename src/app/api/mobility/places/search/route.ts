@@ -1,8 +1,13 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
+import { AuthConfig } from "@/core/authentication/auth.config";
+import { reserveApiRequest } from "@/core/security/api-rate-limit";
+import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function normalizeSearch(value: string): string {
   return value
@@ -15,11 +20,43 @@ function normalizeSearch(value: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
+  if (!token) {
+    return NextResponse.json({ places: [] }, { status: 401 });
+  }
+
+  const session = await new SessionService().validate(token);
+  if (!session) {
+    return NextResponse.json({ places: [] }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { status: true },
+  });
+  if (!user || user.status !== "ACTIVE") {
+    return NextResponse.json({ places: [] }, { status: 401 });
+  }
+
   const rawQuery = request.nextUrl.searchParams.get("q") ?? "";
   const query = normalizeSearch(rawQuery);
-
   if (query.length < 2 || query.length > 100) {
     return NextResponse.json({ places: [] }, { status: 200 });
+  }
+
+  const quota = await reserveApiRequest({
+    scope: "MOBILITY_LANDMARK_SEARCH",
+    actorUserId: session.userId,
+    windows: [
+      { limit: 30, windowMs: 60_000 },
+      { limit: 300, windowMs: 24 * 60 * 60 * 1_000 },
+    ],
+  });
+  if (!quota.allowed) {
+    return NextResponse.json({ places: [] }, {
+      status: 429,
+      headers: { "Retry-After": String(quota.retryAfterSeconds) },
+    });
   }
 
   try {
@@ -61,11 +98,11 @@ export async function GET(request: NextRequest) {
       })),
     }, {
       headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
       },
     });
   } catch {
-    // Keep the geocoder usable while a newly added migration is rolling out.
+    // During migration rollout, the client can continue with Photon fallback.
     return NextResponse.json({ places: [], catalogUnavailable: true }, { status: 200 });
   }
 }
