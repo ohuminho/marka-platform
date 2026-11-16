@@ -135,8 +135,8 @@ export default function MobilityLuxuryExperience() {
     etaInput.current = { driver, origin, serviceType: ride?.serviceType || serviceType };
   }, [driver, origin, ride?.serviceType, serviceType]);
 
-  const visibleDriverEta = active && assigned && driverEta?.rideId === ride?.id ? driverEta.minutes : null;
-  const visibleDriverApproachGeometry = active && assigned && driverApproachGeometry?.rideId === ride?.id
+  const visibleDriverEta = active && assigned && driverEta && driverEta.rideId === ride?.id ? driverEta.minutes : null;
+  const visibleDriverApproachGeometry = active && assigned && driverApproachGeometry && driverApproachGeometry.rideId === ride?.id
     ? driverApproachGeometry.geometry
     : null;
 
@@ -286,11 +286,12 @@ export default function MobilityLuxuryExperience() {
         });
         if (!response.ok) return;
         const data = await response.json() as { route?: { durationSeconds?: number; geometry?: MobilityRoute["geometry"] } };
-        if (mounted && Number.isFinite(data.route?.durationSeconds)) {
+        const route = data.route;
+        if (mounted && route && Number.isFinite(route.durationSeconds)) {
           const rideId = ride?.id ?? "";
-          setDriverEta({ rideId, minutes: Math.max(1, Math.ceil(Number(data.route?.durationSeconds) / 60)) });
-          if (data.route.geometry?.type === "LineString" && data.route.geometry.coordinates.length >= 2) {
-            setDriverApproachGeometry({ rideId, geometry: data.route.geometry });
+          setDriverEta({ rideId, minutes: Math.max(1, Math.ceil(Number(route.durationSeconds) / 60)) });
+          if (route.geometry?.type === "LineString" && route.geometry.coordinates.length >= 2) {
+            setDriverApproachGeometry({ rideId, geometry: route.geometry });
           } else {
             setDriverApproachGeometry(null);
           }
