@@ -15,7 +15,7 @@ import {
 } from "@/services/mobility/rides/mobility-ride.state-machine";
 
 import { MobilityDomainError } from "@/services/mobility/errors/mobility-domain.error";
-import { areMobilityRidesCompatible } from "@/services/mobility/matching/mobility-ride-compatibility";
+import { areMobilityRidesCompatible, mobilityPassengerCount } from "@/services/mobility/matching/mobility-ride-compatibility";
 
 import {
   MobilityMatchCandidate,
@@ -373,7 +373,7 @@ export class MobilityRideService {
         serviceType:
           ride.serviceType,
 
-        passengerCount: readPassengerCount(ride.metadata),
+        passengerCount: mobilityPassengerCount(ride.metadata),
 
         radiusMeters:
           options?.radiusMeters,
