@@ -97,8 +97,8 @@ export default function MobilityFreightJobs() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message ?? "Não foi possível actualizar o serviço.");
-      setNotice(`Pedido ${job.reference}: estado actualizado.`);
       await refresh();
+      setNotice(`Pedido ${job.reference}: estado actualizado.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao actualizar o serviço.");
     } finally {
