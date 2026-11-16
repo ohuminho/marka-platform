@@ -7,7 +7,7 @@ The Mobility backend now has a server-only OSRM adapter at
 
 - Accepts validated WGS84 origin/destination coordinates.
 - Calls OSRM's driving route endpoint from the server.
-- Requests only route distance and duration (no geometry or turn-by-turn payload).
+- Provides a lightweight distance/duration estimate and a GeoJSON route geometry endpoint for MapLibre; no turn-by-turn instruction payload is requested.
 - Enforces a bounded timeout and rejects malformed, non-positive, or implausible measurements.
 - Does not trust distance/duration supplied by the browser.
 - Uses the public OSRM demo endpoint as a zero-cost pilot fallback when no server URL is configured.
@@ -16,6 +16,12 @@ The Mobility backend now has a server-only OSRM adapter at
 ## Required deployment configuration
 
 For pilot traffic, the adapter defaults to `https://router.project-osrm.org/` and requires no API key. The public demo is community-operated, has no production SLA and must not receive sustained high-volume commercial traffic. Before scaling, deploy an open-source OSRM instance and set `MOBILITY_ROUTING_BASE_URL` in Vercel to its base URL (not the full `/route/v1/...` path).
+
+## Passenger map UI
+
+The passenger entry point at `/app/mobility` is a full-viewport MapLibre GL JS experience using OpenFreeMap's dark vector style and OpenStreetMap attribution. Destination autocomplete uses Photon with Angola-only result filtering. No mapping API key is required. Driver GPS markers are updated from the existing ride polling endpoint and rotate using the recorded GPS heading when available.
+
+The public OpenFreeMap/Photon services are suitable for a zero-cost pilot, not a guaranteed high-volume service. Preserve attribution and observe each service's fair-use policy.
 
 ## Tariff and fare estimate
 
