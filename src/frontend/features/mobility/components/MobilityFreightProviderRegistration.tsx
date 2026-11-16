@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 type ServiceType = "CARGO_SHIPMENT" | "WATER_DELIVERY" | "ROADSIDE_ASSISTANCE";
@@ -155,11 +155,6 @@ export default function MobilityFreightProviderRegistration() {
     void load();
     return () => { cancelled = true; };
   }, [organizationId]);
-
-  const effectiveVehicles = useMemo(
-    () => [...activeVehicles, ...vehicles.map((vehicle) => ({ kind: vehicle.kind }))],
-    [activeVehicles, vehicles],
-  );
 
   const toggleService = (value: ServiceType) => {
     setServiceTypes((current) => current.includes(value)
@@ -320,7 +315,7 @@ export default function MobilityFreightProviderRegistration() {
               return <div key={vehicle.key} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
                 <div className="mb-3 flex items-center justify-between"><p className="text-xs font-semibold text-[var(--theme-text)]">Viatura {index + 1}</p><button type="button" onClick={() => setVehicles((current) => current.filter((item) => item.key !== vehicle.key))} className="text-[10px] text-rose-600">Remover</button></div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-2 text-xs text-[var(--theme-text)]">Categoria<select value={vehicle.kind} onChange={(event) => updateVehicle(vehicle.key, { kind: event.target.value as VehicleKind, capacityUnit: event.target.value === "WATER_TANKER" ? "LITRE" : "KG" })} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"><option value="">Seleccione</option>{vehicleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                  <label className="space-y-2 text-xs text-[var(--theme-text)]">Categoria<select value={vehicle.kind} onChange={(event) => { const kind = event.target.value as VehicleKind; updateVehicle(vehicle.key, { kind, capacityUnit: kind === "WATER_TANKER" ? "LITRE" : "KG", cargoBody: kind === "WATER_TANKER" ? "TANK" : kind === "TIPPER_TRUCK" ? "TIPPER" : kind === "CARGO_VAN" ? "BOX" : kind === "FLATBED_TRUCK" ? "FLATBED" : "OPEN" }); }} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"><option value="">Seleccione</option>{vehicleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
                   <label className="space-y-2 text-xs text-[var(--theme-text)]">Matrícula<input value={vehicle.registrationNumber} onChange={(event) => updateVehicle(vehicle.key, { registrationNumber: event.target.value })} maxLength={40} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3" /></label>
                   <label className="space-y-2 text-xs text-[var(--theme-text)]">Marca<input value={vehicle.make} onChange={(event) => updateVehicle(vehicle.key, { make: event.target.value })} maxLength={80} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3" /></label>
                   <label className="space-y-2 text-xs text-[var(--theme-text)]">Modelo<input value={vehicle.model} onChange={(event) => updateVehicle(vehicle.key, { model: event.target.value })} maxLength={80} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3" /></label>
