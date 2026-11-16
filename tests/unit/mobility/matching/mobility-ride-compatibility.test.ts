@@ -120,4 +120,25 @@ assert.equal(
   "Incomplete route matrices must fail closed.",
 );
 
+const newPickupFirstMatrix = Array.from({ length: 5 }, (_, row) =>
+  Array.from({ length: 5 }, (_, column) => row === column ? 0 : 400),
+);
+newPickupFirstMatrix[0][1] = 100;
+newPickupFirstMatrix[1][2] = 100;
+newPickupFirstMatrix[0][3] = 100;
+newPickupFirstMatrix[3][4] = 100;
+newPickupFirstMatrix[4][1] = 50;
+newPickupFirstMatrix[2][3] = 500;
+newPickupFirstMatrix[4][2] = 500;
+assert.equal(
+  isSharedRideSequenceWithinDetour(newPickupFirstMatrix),
+  true,
+  "An efficient route may prioritize the newly requested pickup before the existing driver begins travelling.",
+);
+assert.equal(
+  isSharedRideSequenceWithinDetour(newPickupFirstMatrix, true),
+  false,
+  "Once the driver is already arriving, the existing pickup must retain priority.",
+);
+
 console.log("Mobility shared-ride compatibility tests passed.");
