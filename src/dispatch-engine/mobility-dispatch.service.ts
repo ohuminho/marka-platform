@@ -8,6 +8,7 @@ import {
 import { prisma } from "@/database/client/prisma";
 
 import { DispatchDomainError } from "@/dispatch-engine/dispatch.errors";
+import { resolveDriverAvailabilityForActiveRides } from "@/services/mobility/rides/mobility-ride.state-machine";
 
 import {
   mobilityMatchingService,
@@ -919,49 +920,76 @@ export class MobilityDispatchService {
       );
     }
 
-    // Compare-and-set prevents a stale rejection/redispatch request from
-    // clearing an assignment that another request has already changed.
-    const released = await prisma.mobilityRide.updateMany({
-      where: {
-        id: ride.id,
-        status: {
-          in: [
-            MobilityRideStatus.DRIVER_ASSIGNED,
-            MobilityRideStatus.DRIVER_ARRIVING,
-          ],
-        },
-        driverId: ride.driverId,
-        vehicleId: ride.vehicleId,
-      },
-      data: {
-        driverId: null,
-        vehicleId: null,
-        driverAssignedAt: null,
-      },
-    });
+    // Serialize release with all other assignment/lifecycle changes for this driver.
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT "id"
+        FROM "MobilityDriver"
+        WHERE "id" = ${ride.driverId}
+        FOR UPDATE
+      `;
 
-    if (released.count !== 1) {
-      throw new DispatchDomainError(
-        "Ride assignment changed before it could be released.",
-        "RIDE_ASSIGNMENT_CHANGED"
+      // Compare-and-set prevents a stale rejection/redispatch request from
+      // clearing an assignment that another request has already changed.
+      const released = await tx.mobilityRide.updateMany({
+        where: {
+          id: ride.id,
+          status: {
+            in: [
+              MobilityRideStatus.DRIVER_ASSIGNED,
+              MobilityRideStatus.DRIVER_ARRIVING,
+            ],
+          },
+          driverId: ride.driverId,
+          vehicleId: ride.vehicleId,
+        },
+        data: {
+          driverId: null,
+          vehicleId: null,
+          driverAssignedAt: null,
+        },
+      });
+
+      if (released.count !== 1) {
+        throw new DispatchDomainError(
+          "Ride assignment changed before it could be released.",
+          "RIDE_ASSIGNMENT_CHANGED"
+        );
+      }
+
+      const activeRides = await tx.mobilityRide.findMany({
+        where: {
+          driverId: ride.driverId,
+          status: {
+            in: [
+              MobilityRideStatus.DRIVER_ASSIGNED,
+              MobilityRideStatus.DRIVER_ARRIVING,
+              MobilityRideStatus.DRIVER_ARRIVED,
+              MobilityRideStatus.TRIP_STARTED,
+              MobilityRideStatus.TRIP_IN_PROGRESS,
+            ],
+          },
+        },
+        select: { status: true },
+      });
+
+      const nextAvailability = resolveDriverAvailabilityForActiveRides(
+        activeRides.map((activeRide) => activeRide.status),
       );
-    }
 
-    // Restore availability only for a pre-trip assignment. Do not clear ON_TRIP
-    // here: the status guard above prevents releasing a trip already in progress.
-    await prisma.mobilityDriverAvailability.updateMany({
-      where: {
-        driverId: ride.driverId,
-        status: {
-          in: [
-            MobilityAvailabilityStatus.BUSY,
-            MobilityAvailabilityStatus.AVAILABLE,
-          ],
+      await tx.mobilityDriverAvailability.updateMany({
+        where: {
+          driverId: ride.driverId,
+          status: {
+            in: [
+              MobilityAvailabilityStatus.AVAILABLE,
+              MobilityAvailabilityStatus.BUSY,
+              MobilityAvailabilityStatus.ON_TRIP,
+            ],
+          },
         },
-      },
-      data: {
-        status: MobilityAvailabilityStatus.AVAILABLE,
-      },
+        data: { status: nextAvailability },
+      });
     });
   }
 
