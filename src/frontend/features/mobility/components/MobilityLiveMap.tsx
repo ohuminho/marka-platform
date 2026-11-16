@@ -20,6 +20,7 @@ type Props = {
   serviceType?: string;
   serviceTypes?: string;
   driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
+  driverRouteGeometry?: MobilityRoute["geometry"] | null;
   originPoint?: MobilityMapPoint | null;
   destinationPoint?: MobilityMapPoint | null;
 };
@@ -61,6 +62,7 @@ export default function MobilityLiveMap({
   serviceType = "TAXI",
   serviceTypes = serviceType,
   driverPoint = null,
+  driverRouteGeometry = null,
   originPoint = null,
   destinationPoint = null,
 }: Props) {
@@ -74,6 +76,8 @@ export default function MobilityLiveMap({
   const requestRef = useRef(0);
   const driverAnimationRef = useRef<number | null>(null);
   const routeRef = useRef<MobilityRoute | null>(null);
+  const driverRouteRef = useRef<MobilityRoute["geometry"] | null>(driverRouteGeometry);
+  driverRouteRef.current = driverRouteGeometry;
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
   const [mapError, setMapError] = useState<string | null>(null);
@@ -109,6 +113,21 @@ export default function MobilityLiveMap({
         layout: { "line-join": "round", "line-cap": "round" },
         paint: { "line-color": "#E5B84B", "line-width": 4, "line-opacity": 0.98 },
       });
+      map.addSource("marka-driver-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "marka-driver-route-line",
+        type: "line",
+        source: "marka-driver-route",
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#E5B84B", "line-width": 2.5, "line-opacity": 0.42, "line-dasharray": [2, 2] },
+      });
+      if (driverRouteRef.current) {
+        (map.getSource("marka-driver-route") as GeoJSONSource).setData({
+          type: "Feature",
+          properties: {},
+          geometry: driverRouteRef.current,
+        });
+      }
       if (routeRef.current) {
         (map.getSource("marka-route") as GeoJSONSource).setData({
           type: "Feature",
@@ -232,6 +251,13 @@ export default function MobilityLiveMap({
     calculateRoute,
     onRouteChange,
   ]);
+
+  useEffect(() => {
+    const source = mapRef.current?.getSource("marka-driver-route") as GeoJSONSource | undefined;
+    source?.setData(driverRouteGeometry
+      ? { type: "Feature", properties: {}, geometry: driverRouteGeometry }
+      : { type: "FeatureCollection", features: [] });
+  }, [driverRouteGeometry]);
 
   useEffect(() => {
     const map = mapRef.current;
