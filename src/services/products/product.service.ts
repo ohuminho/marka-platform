@@ -6,18 +6,20 @@ export class ProductService {
     storeId: string,
     name: string,
     price: number,
-    description?: string
+    description?: string,
+    stock = 0,
+    currency = "AOA",
+    image?: string,
   ) {
     const store = await prisma.store.findUnique({
-      where: {
-        id: storeId,
-      },
+      where: { id: storeId },
       select: {
         id: true,
+        status: true,
         vendor: {
           select: {
             ownerId: true,
-            organizationId: true,
+            status: true,
           },
         },
       },
@@ -28,26 +30,45 @@ export class ProductService {
     }
 
     if (store.vendor.ownerId !== ownerId) {
-      throw new Error(
-        "You do not own this store."
-      );
+      throw new Error("You do not own this store.");
     }
 
-    const sku =
-      `MARKA-${crypto
-        .randomUUID()
-        .split("-")[0]
-        .toUpperCase()}`;
+    if (!Number.isInteger(stock) || stock < 0 || stock > 1_000_000) {
+      throw new Error("Product stock must be a non-negative integer.");
+    }
+
+    if (!/^[A-Z]{3}$/.test(currency)) {
+      throw new Error("Product currency must be a valid ISO 4217 code.");
+    }
+
+    const sku = `MARKA-${crypto
+      .randomUUID()
+      .split("-")[0]
+      .toUpperCase()}`;
+
+    const publishable =
+      store.status === "ACTIVE" &&
+      store.vendor.status === "ACTIVE" &&
+      stock > 0;
 
     return prisma.product.create({
       data: {
         storeId,
         name: name.trim(),
-        price,
+        price: price.toFixed(4),
         description: description?.trim() || undefined,
+        image: image?.trim() || undefined,
+        currency,
         sku,
-        stock: 0,
-        status: "ACTIVE",
+        stock,
+        status: publishable ? "ACTIVE" : "DRAFT",
+        inventory: {
+          create: {
+            quantityOnHand: stock,
+            reserved: 0,
+            reorderLevel: 0,
+          },
+        },
       },
     });
   }
