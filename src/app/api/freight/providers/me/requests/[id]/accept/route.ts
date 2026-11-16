@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
 import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
+import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
 
 const bodySchema = z.object({ vehicleId: z.string().uuid() });
 const compatibleKinds = {
@@ -39,14 +40,35 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (!freight.paidAt || !["PAID", "SEARCHING_PROVIDER"].includes(freight.status)) {
     return NextResponse.json({ message: "O pedido só pode ser aceite depois da confirmação do pagamento.", code: "FREIGHT_PAYMENT_NOT_CONFIRMED" }, { status: 409 });
   }
+  if (freight.requestType === "CARGO_SHIPMENT") {
+    const capacityMatches = canVehicleCarryQuantity(
+      vehicle.capacity === null ? null : Number(vehicle.capacity),
+      vehicle.capacityUnit,
+      freight.quantity === null ? null : Number(freight.quantity),
+      freight.quantityUnit,
+    );
+    if (!capacityMatches) {
+      return NextResponse.json(
+        { message: "A capacidade registada desta viatura não cobre a quantidade e unidade solicitadas.", code: "CARGO_VEHICLE_CAPACITY_MISMATCH" },
+        { status: 409 },
+      );
+    }
+  }
+
   if (freight.requestType === "WATER_DELIVERY") {
     const details = freight.details && typeof freight.details === "object" ? freight.details as Record<string, unknown> : {};
-    if (vehicle.kind !== "WATER_TANKER" || vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !freight.quantity || !freight.quantityUnit || !["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(freight.quantityUnit)) {
-      return NextResponse.json({ message: "A cisterna não corresponde ao tipo ou volume de água solicitado.", code: "WATER_TANKER_CAPACITY_MISMATCH" }, { status: 409 });
+    const capacityMatches = canVehicleCarryQuantity(
+      vehicle.capacity === null ? null : Number(vehicle.capacity),
+      vehicle.capacityUnit,
+      freight.quantity === null ? null : Number(freight.quantity),
+      freight.quantityUnit,
+    );
+    if (vehicle.kind !== "WATER_TANKER" || vehicle.waterType !== details.waterType || !capacityMatches) {
+      return NextResponse.json(
+        { message: "A cisterna não corresponde ao tipo de água ou ao volume solicitado.", code: "WATER_TANKER_CAPACITY_MISMATCH" },
+        { status: 409 },
+      );
     }
-    const availableLitres = Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1);
-    const requestedLitres = Number(freight.quantity) * (freight.quantityUnit === "M3" ? 1000 : 1);
-    if (availableLitres < requestedLitres) return NextResponse.json({ message: "A capacidade da cisterna é inferior ao volume solicitado.", code: "WATER_TANKER_CAPACITY_INSUFFICIENT" }, { status: 409 });
   }
 
   try {
