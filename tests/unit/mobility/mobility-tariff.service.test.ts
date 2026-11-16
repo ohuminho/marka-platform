@@ -22,7 +22,7 @@ try {
 
   const quote = quoteMobilityFare("TAXI", 1000, 60);
   assert.ok(quote);
-  assert.equal(quote.totalMinor, BigInt(120000));
+  assert.equal(quote.totalMinor, "120000");
   assert.equal(quote.totalAOA, 1200);
   assert.equal(quote.currency, "AOA");
 } finally {

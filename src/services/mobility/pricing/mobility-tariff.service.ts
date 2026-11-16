@@ -2,7 +2,7 @@ import { mobilityPricingService } from "./mobility-pricing.service";
 
 export interface MobilityFareQuote {
   currency: "AOA";
-  totalMinor: bigint;
+  totalMinor: string;
   totalAOA: number;
   distanceMeters: number;
   durationSeconds: number;
@@ -30,5 +30,5 @@ export function quoteMobilityFare(serviceType: string, distanceMeters: number, d
     ...(minimumFareMinor === undefined ? {} : { minimumFareMinor }),
   });
   if (result.totalMinor > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Configured mobility fare exceeds the supported display range.");
-  return { currency: "AOA", totalMinor: result.totalMinor, totalAOA: Number(result.totalMinor) / 100, distanceMeters, durationSeconds };
+  return { currency: "AOA", totalMinor: result.totalMinor.toString(), totalAOA: Number(result.totalMinor) / 100, distanceMeters, durationSeconds };
 }

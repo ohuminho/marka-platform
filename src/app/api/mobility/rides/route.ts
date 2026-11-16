@@ -158,7 +158,7 @@ export async function POST(
         serviceType,
 
         currency,
-        estimatedFareMinor: fare.totalMinor,
+        estimatedFareMinor: BigInt(fare.totalMinor),
 
         pickupLatitude:
           Number(
