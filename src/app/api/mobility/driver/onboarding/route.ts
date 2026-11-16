@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const onboardingSchema = z.object({
   displayName: z.string().trim().min(2).max(120).optional(),
   licenseNumber: z.string().trim().min(3).max(80).optional(),
-  countryCode: z.string().trim().length(2).default("AO"),
+  countryCode: z.string().trim().regex(/^[A-Za-z]{2}$/).default("AO"),
 });
 
 const DRIVER_TERMS_VERSION = "MARKA-MOBILITY-DRIVER-2026-10-29";
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       "SEGURO AUTOMÓVEL OBRIGATÓRIO E COBERTURA APLICÁVEL AO SERVIÇO",
       "INSPEÇÃO TÉCNICA E LICENÇA DO VEÍCULO, CONFORME A CATEGORIA",
     ],
-    activationPolicy: "O perfil permanece pendente até a verificação dos requisitos, documentos e veículo. O registo não autoriza automaticamente o início de viagens.",
+    activationPolicy: "O perfil permanece pendente até à verificação dos requisitos, documentos, veículo e enquadramento legal local. Candidaturas fora de AO exigem validação das regras e dos termos aplicáveis à jurisdição antes da ativação. O registo não autoriza automaticamente o início de viagens.",
   }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
 }
 
@@ -144,7 +144,8 @@ export async function POST(request: Request) {
           status: "PENDING",
           metadata: {
             onboardingVersion: 1,
-            country: "AO",
+            countryCode: input.countryCode.toUpperCase(),
+            jurisdictionReviewRequired: input.countryCode.toUpperCase() !== "AO",
             submittedAt: new Date().toISOString(),
             accountIdentityReused: true,
             emailVerifiedAtSignup: user.emailVerifiedAt?.toISOString() ?? null,
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
           status: "PENDING" as const,
           metadata: {
             requirementLabel: document.label,
-            source: "ANGOLA_DRIVER_ONBOARDING_CHECKLIST",
+            source: input.countryCode.toUpperCase() === "AO" ? "AO_DRIVER_ONBOARDING_CHECKLIST" : "INTERNATIONAL_DRIVER_ONBOARDING_CHECKLIST",
             documentSubmitted: false,
           },
         })),
@@ -173,7 +174,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       driver,
       requiredDriverDocuments: REQUIRED_DRIVER_DOCUMENTS,
-      nextStep: "Submeter os documentos exigidos e registar o veículo. O perfil não pode ficar online até a verificação e ativação.",
+      nextStep: input.countryCode.toUpperCase() === "AO" ? "Submeter os documentos exigidos e registar o veículo. O perfil não pode ficar online até à verificação e ativação." : "Candidatura internacional registada. Antes da ativação, a MARKA terá de validar os documentos, licenças, seguros, termos e regras locais deste país.",
     }, { status: 201, headers: { "Cache-Control": "private, no-store, max-age=0" } });
   } catch (error) {
     console.error("[MARKA_DRIVER_ONBOARDING_ERROR]", error);
