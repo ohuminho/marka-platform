@@ -14,6 +14,11 @@ const quoteSchema = z.object({
   amount: z.number().finite().positive().max(1_000_000_000_000),
   validityHours: z.number().int().min(1).max(72).default(24),
 });
+const exceptionReviewSchema = z.object({
+  action: z.literal("REVIEW_EXCEPTION"),
+  requestId: z.string().uuid(),
+  note: z.string().trim().min(5).max(2000),
+});
 
 async function authorizeAdmin() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -97,6 +102,29 @@ export async function GET() {
     select: { entityId: true, metadata: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   }) : [];
+  const exceptionReviewEvents = requests.length > 0 ? await prisma.auditLog.findMany({
+    where: {
+      organizationId: auth.organizationId,
+      entityType: "FreightRequest",
+      entityId: { in: requests.map((item) => item.id) },
+      action: "FREIGHT_EXCEPTION_REVIEWED",
+    },
+    select: { entityId: true, metadata: true, createdAt: true, actor: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+  }) : [];
+  const latestExceptionReviewByRequest = new Map<string, { note: string; reviewedAt: string; reviewedBy: string | null }>();
+  for (const event of exceptionReviewEvents) {
+    if (!event.entityId || latestExceptionReviewByRequest.has(event.entityId)) continue;
+    const metadata = event.metadata && typeof event.metadata === "object"
+      ? event.metadata as Record<string, unknown>
+      : {};
+    latestExceptionReviewByRequest.set(event.entityId, {
+      note: typeof metadata.note === "string" ? metadata.note : "Ocorrência analisada.",
+      reviewedAt: event.createdAt.toISOString(),
+      reviewedBy: event.actor?.name ?? null,
+    });
+  }
+
   const latestExceptionByRequest = new Map<string, { note: string | null; createdAt: string }>();
   for (const event of exceptionEvents) {
     if (!event.entityId || latestExceptionByRequest.has(event.entityId)) continue;
@@ -113,6 +141,7 @@ export async function GET() {
     requests: requests.map((item) => ({
       ...item,
       latestException: latestExceptionByRequest.get(item.id) ?? null,
+      latestExceptionReview: latestExceptionReviewByRequest.get(item.id) ?? null,
       quantity: item.quantity === null ? null : Number(item.quantity),
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
       quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
@@ -130,12 +159,58 @@ export async function PATCH(request: Request) {
   if ("error" in auth) return auth.error;
 
   const body = await request.json().catch(() => null);
-  const parsed = quoteSchema.safeParse(body);
+  const parsed = z.union([quoteSchema, exceptionReviewSchema]).safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({
-      message: "A cotação deve conter um valor válido e uma validade entre 1 e 72 horas.",
+      message: "Dados inválidos. Verifique o valor da cotação ou a descrição da análise.",
       errors: parsed.error.flatten().fieldErrors,
     }, { status: 400 });
+  }
+
+  if ("action" in parsed.data && parsed.data.action === "REVIEW_EXCEPTION") {
+    const { requestId, note } = parsed.data;
+    const requestHeaders = await headers();
+    const ipAddress = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0, 64) ?? null;
+    const userAgent = requestHeaders.get("user-agent")?.slice(0, 500) ?? null;
+    try {
+      const reviewed = await prisma.$transaction(async (tx) => {
+        const current = await tx.freightRequest.findFirst({
+          where: { id: requestId, organizationId: auth.organizationId, status: "EXCEPTION" },
+          select: { id: true, reference: true, assignedProviderId: true, assignedVehicleId: true },
+        });
+        if (!current) return false;
+        await tx.auditLog.create({
+          data: {
+            actorUserId: auth.user.id,
+            actorType: "ADMIN",
+            organizationId: auth.organizationId,
+            action: "FREIGHT_EXCEPTION_REVIEWED",
+            entityType: "FreightRequest",
+            entityId: requestId,
+            ipAddress,
+            userAgent,
+            metadata: {
+              reference: current.reference,
+              note,
+              assignedProviderId: current.assignedProviderId,
+              assignedVehicleId: current.assignedVehicleId,
+              reviewedAt: new Date().toISOString(),
+            },
+          },
+        });
+        return true;
+      });
+      if (!reviewed) {
+        return NextResponse.json({
+          message: "A ocorrência já não está pendente ou o pedido não existe.",
+          code: "FREIGHT_EXCEPTION_NOT_REVIEWABLE",
+        }, { status: 409 });
+      }
+      return NextResponse.json({ success: true, requestId, reviewed: true });
+    } catch (error) {
+      console.error("[MARKA_FREIGHT_EXCEPTION_REVIEW]", error instanceof Error ? error.message : "unknown error");
+      return NextResponse.json({ message: "Não foi possível registar a análise da ocorrência." }, { status: 500 });
+    }
   }
 
   const { requestId, amount, validityHours } = parsed.data;
