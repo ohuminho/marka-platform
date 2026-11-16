@@ -178,6 +178,15 @@ export async function PATCH(request: Request) {
     const userAgent = requestHeaders.get("user-agent")?.slice(0, 500) ?? null;
     try {
       const reviewed = await prisma.$transaction(async (tx) => {
+        const locked = await tx.$queryRaw<Array<{ id: string }>>`
+          SELECT "id"
+          FROM "FreightRequest"
+          WHERE "id" = ${requestId}
+            AND "organizationId" = ${auth.organizationId}
+            AND "status"::text = 'EXCEPTION'
+          FOR UPDATE
+        `;
+        if (locked.length !== 1) return false;
         const current = await tx.freightRequest.findFirst({
           where: { id: requestId, organizationId: auth.organizationId, status: "EXCEPTION" },
           select: { id: true, reference: true, assignedProviderId: true, assignedVehicleId: true },
