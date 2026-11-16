@@ -13,7 +13,6 @@ export type MobilityRoute = {
 };
 
 type Props = {
-  onPointsChange?: (points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => void;
   onRouteChange?: (route: MobilityRoute | null) => void;
   serviceType?: string;
   driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
@@ -54,7 +53,6 @@ function tuneDarkStyle(map: MapLibreMap) {
 }
 
 export default function MobilityLiveMap({
-  onPointsChange,
   onRouteChange,
   serviceType = "TAXI",
   driverPoint = null,
@@ -70,9 +68,6 @@ export default function MobilityLiveMap({
   });
   const requestRef = useRef(0);
   const routeRef = useRef<MobilityRoute | null>(null);
-  const serviceRef = useRef(serviceType);
-  const [origin, setOrigin] = useState<MobilityMapPoint | null>(null);
-  const [destination, setDestination] = useState<MobilityMapPoint | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
   const [mapError, setMapError] = useState<string | null>(null);
@@ -180,6 +175,7 @@ export default function MobilityLiveMap({
       setStatus("Rota calculada.");
     } catch (error) {
       if (id === requestRef.current) {
+        routeRef.current = null;
         onRouteChange?.(null);
         setStatus(error instanceof Error ? error.message : "Falha ao calcular a rota.");
       }
@@ -188,82 +184,44 @@ export default function MobilityLiveMap({
     }
   }, [onRouteChange, serviceType]);
 
-  const setPoint = useCallback((point: MobilityMapPoint, kind: "pickup" | "dropoff") => {
+  useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     requestRef.current += 1;
-    const nextOrigin = kind === "pickup" ? point : origin;
-    const nextDestination = kind === "dropoff" ? point : destination;
-    if (kind === "pickup") setOrigin(point);
-    else setDestination(point);
 
-    markersRef.current[kind]?.remove();
-    markersRef.current[kind] = new maplibregl.Marker({ element: markerElement(kind) })
-      .setLngLat([point.lon, point.lat])
-      .addTo(map);
-    onPointsChange?.({ origin: nextOrigin, destination: nextDestination });
+    markersRef.current.pickup?.remove();
+    markersRef.current.dropoff?.remove();
+    markersRef.current.pickup = originPoint
+      ? new maplibregl.Marker({ element: markerElement("pickup") }).setLngLat([originPoint.lon, originPoint.lat]).addTo(map)
+      : null;
+    markersRef.current.dropoff = destinationPoint
+      ? new maplibregl.Marker({ element: markerElement("dropoff") }).setLngLat([destinationPoint.lon, destinationPoint.lat]).addTo(map)
+      : null;
 
-    if (nextOrigin && nextDestination) {
-      void calculateRoute(nextOrigin, nextDestination);
+    if (originPoint && destinationPoint) {
+      void calculateRoute(originPoint, destinationPoint);
     } else {
       routeRef.current = null;
-      onRouteChange?.(null);
       (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
         type: "FeatureCollection",
         features: [],
       });
-      map.flyTo({ center: [point.lon, point.lat], zoom: 15, duration: 650 });
+      onRouteChange?.(null);
+      const focus = originPoint || destinationPoint;
+      if (focus) map.flyTo({ center: [focus.lon, focus.lat], zoom: 15, duration: 650 });
+      setBusy(false);
+      setStatus("Defina a partida e o destino para calcular a rota.");
     }
-  }, [calculateRoute, destination, onPointsChange, onRouteChange, origin]);
-
-  useEffect(() => {
-    if (originPoint && (originPoint.lat !== origin?.lat || originPoint.lon !== origin?.lon)) {
-      setPoint(originPoint, "pickup");
-    }
-  }, [originPoint?.lat, originPoint?.lon, origin?.lat, origin?.lon, setPoint]);
-
-  useEffect(() => {
-    if (destinationPoint && (destinationPoint.lat !== destination?.lat || destinationPoint.lon !== destination?.lon)) {
-      setPoint(destinationPoint, "dropoff");
-    }
-  }, [destinationPoint?.lat, destinationPoint?.lon, destination?.lat, destination?.lon, setPoint]);
-
-  useEffect(() => {
-    if (destinationPoint || !destination) return;
-    requestRef.current += 1;
-    setDestination(null);
-    markersRef.current.dropoff?.remove();
-    markersRef.current.dropoff = null;
-    routeRef.current = null;
-    (mapRef.current?.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
-      type: "FeatureCollection",
-      features: [],
-    });
-    onPointsChange?.({ origin, destination: null });
-    onRouteChange?.(null);
-  }, [destinationPoint, destination, origin, onPointsChange, onRouteChange]);
-
-  useEffect(() => {
-    if (originPoint || !origin) return;
-    requestRef.current += 1;
-    setOrigin(null);
-    markersRef.current.pickup?.remove();
-    markersRef.current.pickup = null;
-    routeRef.current = null;
-    (mapRef.current?.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
-      type: "FeatureCollection",
-      features: [],
-    });
-    onPointsChange?.({ origin: null, destination });
-    onRouteChange?.(null);
-  }, [originPoint, origin, destination, onPointsChange, onRouteChange]);
-
-  useEffect(() => {
-    if (serviceRef.current !== serviceType) {
-      serviceRef.current = serviceType;
-      if (origin && destination) void calculateRoute(origin, destination);
-    }
-  }, [serviceType, origin, destination, calculateRoute]);
+  }, [
+    originPoint?.lat,
+    originPoint?.lon,
+    originPoint?.label,
+    destinationPoint?.lat,
+    destinationPoint?.lon,
+    destinationPoint?.label,
+    calculateRoute,
+    onRouteChange,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
