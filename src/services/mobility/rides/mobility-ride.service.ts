@@ -559,10 +559,20 @@ export class MobilityRideService {
           },
         });
 
-        if (conflictingRides.some((activeRide) => activeRide.vehicleId === input.vehicleId)) {
+        const vehicleClaimConflict = conflictingRides.some(
+          (activeRide) =>
+            activeRide.vehicleId === input.vehicleId &&
+            activeRide.driverId !== input.driverId,
+        );
+        const driverVehicleConflict = conflictingRides.some(
+          (activeRide) =>
+            activeRide.driverId === input.driverId &&
+            activeRide.vehicleId !== input.vehicleId,
+        );
+        if (vehicleClaimConflict || driverVehicleConflict) {
           throw new MobilityDomainError(
-            "Vehicle is already assigned to another active ride.",
-            "VEHICLE_ALREADY_ASSIGNED"
+            "The vehicle is assigned to another driver or the driver is attempting to mix vehicles across active rides.",
+            "DRIVER_OR_VEHICLE_ALREADY_ASSIGNED"
           );
         }
 
