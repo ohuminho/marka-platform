@@ -124,7 +124,17 @@ export class CheckoutService {
         );
       }
 
-      if (!existingOrder.inventoryReserved) {
+      // A completed payment consumes the reservation and clears this flag.
+      // Permit retries of that same successful checkout, but never replay a
+      // failed/cancelled checkout whose stock reservation has been released.
+      if (
+        !existingOrder.inventoryReserved &&
+        (
+          existingPayment.status !== "COMPLETED" ||
+          existingOrder.status === "CANCELLED" ||
+          existingOrder.status === "REFUNDED"
+        )
+      ) {
         throw new Error(
           "Idempotency key identifies a checkout requiring payment and inventory reconciliation. Do not create a replacement order.",
         );
