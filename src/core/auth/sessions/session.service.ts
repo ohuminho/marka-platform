@@ -89,10 +89,23 @@ export class SessionService {
         revokedAt: true,
         createdAt: true,
         lastSeenAt: true,
+        user: {
+          select: {
+            status: true,
+          },
+        },
       },
     });
 
-    if (!session || session.revokedAt || session.expiresAt <= new Date()) {
+    // Session validity follows the account's current state. This central
+    // check protects every API that validates a session, including older
+    // routes that do not independently reload the user record.
+    if (
+      !session ||
+      session.revokedAt ||
+      session.expiresAt <= new Date() ||
+      session.user.status !== "ACTIVE"
+    ) {
       return null;
     }
 
