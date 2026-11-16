@@ -102,7 +102,7 @@ export async function GET() {
     select: { entityId: true, metadata: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   }) : [];
-  const latestExceptionByRequest = new Map<string, { note: string | null; createdAt: string }>();
+  const latestExceptionByRequest = new Map<string, { note: string | null; createdAt: string; reportedBy: string | null }>();
   for (const event of exceptionEvents) {
     if (!event.entityId || latestExceptionByRequest.has(event.entityId)) continue;
     const metadata = event.metadata && typeof event.metadata === "object"
@@ -111,6 +111,7 @@ export async function GET() {
     latestExceptionByRequest.set(event.entityId, {
       note: typeof metadata.note === "string" ? metadata.note : null,
       createdAt: event.createdAt.toISOString(),
+      reportedBy: typeof metadata.reportedBy === "string" ? metadata.reportedBy : "PROVIDER",
     });
   }
 
