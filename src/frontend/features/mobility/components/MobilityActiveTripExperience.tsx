@@ -16,8 +16,9 @@ type Ride = {
   startedAt?: string | null; rider?: { name?: string | null; profile?: { avatarUrl?: string | null } | null } | null;
   driver?: { user?: { name?: string | null } | null; location?: { latitude?: number | string | null; longitude?: number | string | null; lat?: number | string | null; lng?: number | string | null; heading?: number | string | null } | null } | null;
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
+  metadata?: Record<string, unknown> | null;
 };
-type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP" | "BEGIN_TRIP_PROGRESS";
+type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP" | "BEGIN_TRIP_PROGRESS" | "COMPLETE";
 type RideOrchestration = { currentStep?: string | null } | null;
 type RidePayload = { ride?: Ride | null; rides?: Ride[]; orchestration?: RideOrchestration; orchestrations?: Array<{ rideId: string; orchestration: RideOrchestration }>; message?: string };
 type AvailabilityPayload = { driver?: { status?: string; displayName?: string | null } | null; availability?: { status?: string } | null; status?: string; message?: string };
@@ -55,6 +56,9 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [driverAvailability, setDriverAvailability] = useState("OFFLINE");
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [financialSetupLoading, setFinancialSetupLoading] = useState(false);
+  const [financialSetupMessage, setFinancialSetupMessage] = useState<string | null>(null);
+  const [financialSetupError, setFinancialSetupError] = useState<string | null>(null);
   const [gpsStatus, setGpsStatus] = useState<"idle" | "active" | "permission" | "unavailable" | "error">("idle");
   const lastGpsSentAt = useRef(0);
   const organizationId = activeOrganization?.id;
@@ -127,6 +131,9 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const driverLongitude = num(ride?.driver?.location?.longitude ?? ride?.driver?.location?.lng);
   const pickupPoint = pickupLatitude !== null && pickupLongitude !== null ? { lat: pickupLatitude, lng: pickupLongitude } : null;
   const dropoffPoint = dropoffLatitude !== null && dropoffLongitude !== null ? { lat: dropoffLatitude, lng: dropoffLongitude } : null;
+  const estimatedFareMinor = typeof ride?.metadata?.estimatedFareMinor === "string" && /^[0-9]+$/.test(ride.metadata.estimatedFareMinor)
+    ? ride.metadata.estimatedFareMinor
+    : null;
   const driverHeading = num(ride?.driver?.location?.heading);
   const driverPoint = driverLatitude !== null && driverLongitude !== null ? { lat: driverLatitude, lng: driverLongitude, bearing: driverHeading } : null;
   const startedAt = ride?.startedAt ? new Date(ride.startedAt).getTime() : null;
@@ -216,6 +223,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
       DRIVER_ARRIVING: { action: "DRIVER_ARRIVED", label: "Confirmar chegada" },
       DRIVER_ARRIVED: { action: "START_TRIP", label: "Iniciar viagem" },
       TRIP_STARTED: { action: "BEGIN_TRIP_PROGRESS", label: "Confirmar passageiro a bordo e iniciar percurso" },
+      TRIP_IN_PROGRESS: { action: "COMPLETE", label: "Concluir viagem e fechar pagamento em numerário" },
     };
     return step ? actions[step] ?? null : null;
   }, [audience, selectedOrchestration?.currentStep]);
@@ -250,14 +258,56 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     } finally { setCommunicationLoading(false); }
   };
 
+  const prepareCashPayment = async () => {
+    if (!ride || !organizationId || financialSetupLoading || !estimatedFareMinor) return;
+    setFinancialSetupLoading(true);
+    setFinancialSetupError(null);
+    setFinancialSetupMessage(null);
+    try {
+      const response = await fetch("/api/mobility/rides/" + encodeURIComponent(ride.id) + "/financials", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Organization-Id": organizationId,
+          "Idempotency-Key": "marka-rider-" + ride.id + "-cash-payment-v1",
+        },
+        body: JSON.stringify({ operation: "INITIALIZE", paymentMethod: "CASH" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível preparar o pagamento.");
+      setFinancialSetupMessage("Pagamento em numerário preparado. O motorista já pode concluir a viagem.");
+    } catch (e) {
+      setFinancialSetupError(e instanceof Error ? e.message : "Não foi possível preparar o pagamento.");
+    } finally {
+      setFinancialSetupLoading(false);
+    }
+  };
+
   const performDriverAction = async () => {
     if (!ride || !organizationId || !driverAction || actionLoading) return;
+    if (driverAction.action === "COMPLETE" && !estimatedFareMinor) {
+      setActionError("A tarifa validada desta viagem não está disponível. A conclusão foi bloqueada.");
+      return;
+    }
     setActionLoading(true); setActionError(null);
+    const actionKey = "marka-driver-" + ride.id + "-" + driverAction.action + "-v1";
     try {
       const response = await fetch("/api/mobility/rides/" + encodeURIComponent(ride.id), {
         method: "PATCH", credentials: "include",
-        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": "marka-driver-" + ride.id + "-" + driverAction.action + "-" + Date.now() },
-        body: JSON.stringify({ action: driverAction.action, safetyMode: "STANDARD" }),
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": actionKey },
+        body: JSON.stringify({
+          action: driverAction.action,
+          safetyMode: "STANDARD",
+          ...(driverAction.action === "COMPLETE" ? {
+            finalFareMinor: estimatedFareMinor,
+            estimatedFareMinor,
+            paymentMethod: "CASH",
+            paymentIdempotencyKey: actionKey + ":payment",
+            settlementIdempotencyKey: actionKey + ":settlement",
+            settlementCompletionIdempotencyKey: actionKey + ":settlement-complete",
+          } : {}),
+        }),
       });
       const data = (await response.json()) as RidePayload;
       if (!response.ok) throw new Error(data.message || "Não foi possível atualizar o estado da viagem.");
@@ -307,6 +357,13 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
           </div>
           {["DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"].includes(ride.status) && <div className="mt-5"><button type="button" disabled={communicationLoading} onClick={() => void openRideConversation()} className="flex min-h-11 w-full items-center justify-center rounded-full border border-[#e9bd58]/35 bg-[#e9bd58]/[.07] px-4 py-2.5 text-xs font-semibold text-[#f0d58e] transition hover:bg-[#e9bd58]/[.12] disabled:opacity-50">{communicationLoading ? "A abrir conversa…" : "Mensagem e chamada privadas ↗"}</button>{communicationError && <p role="alert" className="mt-2 text-xs text-rose-200">{communicationError}</p>}</div>}
           <p className="mt-5 rounded-xl border border-white/[.08] bg-black/20 px-4 py-3 text-[11px] leading-5 text-white/45">Segurança e atenção à estrada têm prioridade. A publicidade é ocultada se o estado da viagem, a localização ou a proximidade do destino não permitirem uma apresentação segura.</p>
+          {audience === "rider" && ride.status === "TRIP_IN_PROGRESS" && <div className="mt-5 border-t border-white/[.08] pt-5">
+            <p className="text-xs font-semibold text-white/85">Pagamento da viagem</p>
+            <p className="mt-1 text-[11px] leading-5 text-white/45">Tarifa estimada validada pela MARKA: {estimatedFareMinor ? new Intl.NumberFormat("pt-AO", { style: "currency", currency: "AOA" }).format(Number(estimatedFareMinor) / 100) : "indisponível"}.</p>
+            <button type="button" disabled={financialSetupLoading || !estimatedFareMinor} onClick={() => void prepareCashPayment()} className="mt-3 flex min-h-11 w-full items-center justify-center rounded-full border border-[#e9bd58]/35 bg-[#e9bd58]/[.07] px-4 py-2.5 text-xs font-semibold text-[#f0d58e] disabled:cursor-not-allowed disabled:opacity-50">{financialSetupLoading ? "A preparar pagamento…" : "Preparar pagamento em numerário"}</button>
+            {financialSetupMessage && <p role="status" className="mt-2 text-xs text-emerald-200">{financialSetupMessage}</p>}
+            {financialSetupError && <p role="alert" className="mt-2 text-xs text-rose-200">{financialSetupError}</p>}
+          </div>}
           {audience === "driver" && driverAction && <div className="mt-5 border-t border-white/[.08] pt-5"><button type="button" disabled={actionLoading} onClick={() => void performDriverAction()} className="flex min-h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] px-5 py-3 text-center text-xs font-bold text-[#17130a] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-60">{actionLoading ? "A atualizar viagem…" : driverAction.label + " →"}</button>{actionError && <p role="alert" className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/[.05] p-3 text-xs text-rose-100">{actionError}</p>}</div>}
         </div>}
       </div>
