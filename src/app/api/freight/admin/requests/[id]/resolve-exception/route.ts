@@ -13,13 +13,19 @@ const bodySchema = z.object({
   note: z.string().trim().min(5).max(1000),
 });
 
-const resumableStatuses = new Set([
+const resumableStatuses = [
   "ASSIGNED",
   "PROVIDER_EN_ROUTE",
   "PROVIDER_ARRIVED",
   "PICKED_UP",
   "IN_TRANSIT",
-]);
+] as const;
+
+type ResumableStatus = (typeof resumableStatuses)[number];
+
+function isResumableStatus(value: unknown): value is ResumableStatus {
+  return typeof value === "string" && resumableStatuses.includes(value as ResumableStatus);
+}
 
 export async function POST(
   request: Request,
@@ -127,7 +133,7 @@ export async function POST(
         ? exceptionEvent.metadata as Record<string, unknown>
         : {};
       const previousStatus = exceptionMetadata.previousStatus;
-      if (typeof previousStatus !== "string" || !resumableStatuses.has(previousStatus)) {
+      if (!isResumableStatus(previousStatus)) {
         throw new Error("FREIGHT_EXCEPTION_ORIGIN_UNKNOWN");
       }
 
