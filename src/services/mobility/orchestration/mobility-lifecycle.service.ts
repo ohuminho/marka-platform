@@ -1047,10 +1047,8 @@ export class MobilityLifecycleService {
       authorizedPayment.organizationId !==
         input.organizationId ||
       authorizedPayment.riderId !== ride.riderId ||
-      (
-        ride.driverId &&
-        authorizedPayment.driverId !== ride.driverId
-      )
+      !ride.driverId ||
+      authorizedPayment.driverId !== ride.driverId
     ) {
       throw new Error(
         "Authorized Mobility payment does not match this ride's organization, rider, or assigned driver.",
@@ -1058,11 +1056,31 @@ export class MobilityLifecycleService {
     }
 
     if (
-      BigInt(authorizedPayment.finalFareMinor) !==
-      input.finalFareMinor
+      authorizedPayment.currency !== ride.currency ||
+      authorizedPayment.paymentMethod !== input.paymentMethod
     ) {
       throw new Error(
-        "Final fare does not match the previously authorized server-side fare.",
+        "Payment method or currency does not match the previously authorized Mobility payment.",
+      );
+    }
+
+    if (
+      BigInt(authorizedPayment.estimatedFareMinor) !==
+        input.estimatedFareMinor ||
+      BigInt(authorizedPayment.finalFareMinor) !==
+        input.finalFareMinor
+    ) {
+      throw new Error(
+        "Estimated or final fare does not match the previously authorized server-side fare.",
+      );
+    }
+
+    if (
+      ride.status !== MobilityRideStatus.TRIP_IN_PROGRESS &&
+      ride.status !== MobilityRideStatus.TRIP_COMPLETED
+    ) {
+      throw new Error(
+        "Only an in-progress Mobility trip can be completed or financially recovered.",
       );
     }
 
