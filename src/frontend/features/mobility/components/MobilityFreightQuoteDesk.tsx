@@ -16,6 +16,10 @@ interface FreightQuoteRequest {
   quotedAmount: number | null;
   quoteExpiresAt: string | null;
   quoteExpired: boolean;
+  paymentReference: string | null;
+  paidAt: string | null;
+  assignedAt: string | null;
+  updatedAt: string;
   requester: { name: string | null };
 }
 
@@ -32,7 +36,28 @@ function money(value: number, currency: string) {
 }
 
 function label(value: string) {
-  return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return ({
+    REQUESTED: "Novo pedido",
+    QUOTED: "Cotação emitida",
+    AWAITING_PAYMENT: "A aguardar pagamento",
+    PAID: "Pagamento confirmado",
+    SEARCHING_PROVIDER: "A procurar prestador",
+    ASSIGNED: "Prestador atribuído",
+    PROVIDER_EN_ROUTE: "Prestador a caminho",
+    PROVIDER_ARRIVED: "Prestador chegou",
+    PICKED_UP: "Recolha confirmada",
+    IN_TRANSIT: "Em transporte",
+    COMPLETED: "Concluído",
+    CANCELLED: "Cancelado",
+    EXCEPTION: "Requer intervenção",
+  } as Record<string, string>)[value] ?? value.replaceAll("_", " ");
+}
+
+function dateTime(value: string) {
+  return new Intl.DateTimeFormat("pt-PT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 export default function MobilityFreightQuoteDesk() {
@@ -117,7 +142,7 @@ export default function MobilityFreightQuoteDesk() {
         <div>
           <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[var(--theme-text-faint)]">Freight operations</p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Pedidos e cotações</h2>
-          <p className="mt-2 max-w-2xl text-xs leading-5 text-[var(--theme-text-muted)]">Emita uma cotação válida por 24 horas. A emissão não confirma pagamento nem autoriza despacho.</p>
+          <p className="mt-2 max-w-2xl text-xs leading-5 text-[var(--theme-text-muted)]">Gira cotações e acompanhe o ciclo operacional. O despacho só é autorizado após confirmação financeira no servidor.</p>
         </div>
         <button type="button" onClick={() => { setLoading(true); void load(); }} className="h-10 rounded-full border border-[var(--theme-border)] px-4 text-[9px] font-semibold uppercase tracking-[0.15em] text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]">Actualizar</button>
       </div>
@@ -129,7 +154,7 @@ export default function MobilityFreightQuoteDesk() {
         {loading ? (
           <p className="py-8 text-center text-xs text-[var(--theme-text-faint)]">A carregar pedidos…</p>
         ) : requests.length === 0 ? (
-          <p className="py-8 text-center text-xs text-[var(--theme-text-faint)]">Não existem pedidos pendentes de cotação ou pagamento.</p>
+          <p className="py-8 text-center text-xs text-[var(--theme-text-faint)]">Ainda não existem pedidos nesta organização.</p>
         ) : requests.map((item) => {
           const quoteActive = item.status === "QUOTED" && !item.quoteExpired;
           const canQuote = item.status === "REQUESTED" || (item.status === "QUOTED" && item.quoteExpired);
@@ -176,8 +201,15 @@ export default function MobilityFreightQuoteDesk() {
                   </button>
                 </div>
               )}
-              {item.status === "AWAITING_PAYMENT" && <p className="mt-4 text-[10px] text-[var(--theme-text-muted)]">Cotação aceite/aguarda pagamento. O despacho permanece bloqueado até confirmação server-side do pagamento.</p>}
+              {item.status === "AWAITING_PAYMENT" && <p className="mt-4 text-[10px] text-[var(--theme-text-muted)]">Cotação aceite. O despacho permanece bloqueado até confirmação financeira server-side.</p>}
               {item.status === "QUOTED" && quoteActive && <p className="mt-4 text-[10px] text-[var(--theme-text-faint)]">Cotação válida; aguarda decisão do cliente.</p>}
+              {item.paidAt && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pagamento confirmado em {dateTime(item.paidAt)}{item.paymentReference ? ` · Referência: ${item.paymentReference}` : ""}</p>}
+              {item.assignedAt && <p className="mt-1 text-[10px] text-[var(--theme-text-muted)]">Prestador atribuído em {dateTime(item.assignedAt)}.</p>}
+              {item.status === "SEARCHING_PROVIDER" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pagamento confirmado; o sistema está a procurar um prestador compatível.</p>}
+              {["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT"].includes(item.status) && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Serviço em execução. Estado actualizado em {dateTime(item.updatedAt)}.</p>}
+              {item.status === "COMPLETED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Serviço concluído em {dateTime(item.updatedAt)}.</p>}
+              {item.status === "EXCEPTION" && <p role="alert" className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Este serviço requer intervenção operacional.</p>}
+              {item.status === "CANCELLED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pedido cancelado.</p>}
             </article>
           );
         })}
