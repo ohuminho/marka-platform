@@ -98,6 +98,8 @@ export class PaymentService {
       );
     }
 
+    const orderId = input.orderId;
+
     const organizationId =
       membership.organizationId;
 
@@ -137,14 +139,14 @@ export class PaymentService {
                 await database.$queryRaw<Array<{ id: string }>>`
                   SELECT "id"
                   FROM "Order"
-                  WHERE "id" = ${input.orderId}
+                  WHERE "id" = ${orderId}
                   FOR UPDATE
                 `;
 
                 const order =
                   await database.order.findFirst({
                     where: {
-                      id: input.orderId,
+                      id: orderId,
                       userId: input.userId,
                     },
                     select: {
@@ -1162,7 +1164,7 @@ export class PaymentService {
         const completedPayment = await database.payment.findFirst({
           where: {
             id: input.paymentId,
-            orderId: input.orderId,
+            orderId,
             status: PaymentStatus.COMPLETED,
           },
           select: { id: true },
@@ -1187,29 +1189,31 @@ export class PaymentService {
             deliveryLatitude: true,
             deliveryLongitude: true,
             deliveryInstructions: true,
-            items: {
-              select: {
-                productId: true,
-                quantity: true,
-                storeId: true,
-                product: {
-                  select: {
-                    store: {
-                      select: {
-                        id: true,
-                        location: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
           },
         });
 
         if (!currentOrder) {
           throw new Error("Order not found.");
         }
+
+        const orderItems = await database.orderItem.findMany({
+          where: { orderId: currentOrder.id },
+          select: {
+            productId: true,
+            quantity: true,
+            storeId: true,
+            product: {
+              select: {
+                store: {
+                  select: {
+                    id: true,
+                    location: true,
+                  },
+                },
+              },
+            },
+          },
+        });
 
         if (
           currentOrder.status === "CANCELLED" ||
@@ -1223,7 +1227,7 @@ export class PaymentService {
         if (currentOrder.inventoryReserved) {
           await inventoryService.consumeWithinTransaction(
             database,
-            currentOrder.items.map((item) => ({
+            orderItems.map((item) => ({
               productId: item.productId,
               quantity: item.quantity,
             })),
@@ -1242,7 +1246,7 @@ export class PaymentService {
           });
         }
 
-        return currentOrder;
+        return { ...currentOrder, items: orderItems };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -1251,16 +1255,11 @@ export class PaymentService {
       },
     );
 
-    const storeIds = [
-      ...new Set(
-        order.items
-          .map(
-            (item) =>
-              item.storeId ??
-              item.product.store.id,
-          ),
+    const storeIds = Array.from(
+      new Set<string>(
+        order.items.map((item) => item.storeId ?? item.product.store.id),
       ),
-    ];
+    );
 
     if (storeIds.length !== 1) {
       throw new Error(
