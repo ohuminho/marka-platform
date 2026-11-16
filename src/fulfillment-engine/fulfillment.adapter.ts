@@ -605,6 +605,109 @@ export class FulfillmentAdapter
               : "An active payment must be cancelled or reconciled before delivery cancellation.",
           );
         }
+
+        // Cancel the linked dispatch in the same transaction. Lock the courier
+        // before the dispatch row, matching dispatch acceptance/completion so
+        // a cancelled delivery cannot leave a courier permanently BUSY.
+        const dispatch = await database.dispatchRequest.findUnique({
+          where: {
+            subjectType_subjectId: {
+              subjectType: "FULFILLMENT",
+              subjectId: fulfillmentId,
+            },
+          },
+          select: {
+            id: true,
+            organizationId: true,
+            serviceType: true,
+            status: true,
+            acceptedAgentId: true,
+          },
+        });
+
+        if (dispatch?.status === "COMPLETED") {
+          throw new Error("A completed dispatch cannot be cancelled.");
+        }
+
+        if (
+          dispatch &&
+          dispatch.status !== "CANCELLED" &&
+          dispatch.status !== "EXPIRED"
+        ) {
+          const expectedStatus = dispatch.status;
+          const expectedAcceptedAgentId = dispatch.acceptedAgentId;
+
+          if (
+            dispatch.serviceType === "DELIVERY" &&
+            expectedAcceptedAgentId
+          ) {
+            const lockedAgent = await database.deliveryAgent.updateMany({
+              where: {
+                id: expectedAcceptedAgentId,
+                organizationId: dispatch.organizationId,
+                status: "ACTIVE",
+                availability: "BUSY",
+              },
+              data: { availability: "BUSY" },
+            });
+
+            if (lockedAgent.count !== 1) {
+              throw new Error("DELIVERY_AGENT_STATE_CHANGED_RETRY");
+            }
+          }
+
+          const currentDispatch = await database.dispatchRequest.findUnique({
+            where: { id: dispatch.id },
+            select: { status: true, acceptedAgentId: true },
+          });
+
+          if (
+            !currentDispatch ||
+            currentDispatch.status !== expectedStatus ||
+            currentDispatch.acceptedAgentId !== expectedAcceptedAgentId
+          ) {
+            throw new Error("DISPATCH_REQUEST_STATE_CHANGED_RETRY");
+          }
+
+          if (
+            dispatch.serviceType === "DELIVERY" &&
+            expectedAcceptedAgentId
+          ) {
+            const otherActiveDeliveries = await database.dispatchRequest.count({
+              where: {
+                id: { not: dispatch.id },
+                organizationId: dispatch.organizationId,
+                serviceType: "DELIVERY",
+                acceptedAgentId: expectedAcceptedAgentId,
+                status: "ACCEPTED",
+              },
+            });
+
+            if (otherActiveDeliveries === 0) {
+              await database.deliveryAgent.updateMany({
+                where: {
+                  id: expectedAcceptedAgentId,
+                  organizationId: dispatch.organizationId,
+                  availability: "BUSY",
+                },
+                data: { availability: "AVAILABLE" },
+              });
+            }
+          }
+
+          const cancelledDispatch = await database.dispatchRequest.updateMany({
+            where: {
+              id: dispatch.id,
+              status: expectedStatus,
+              acceptedAgentId: expectedAcceptedAgentId,
+            },
+            data: { status: "CANCELLED" },
+          });
+
+          if (cancelledDispatch.count !== 1) {
+            throw new Error("DISPATCH_REQUEST_STATE_CHANGED_RETRY");
+          }
+        }
       }
 
       const result = await database.fulfillmentRequest.update({
@@ -661,14 +764,14 @@ export class FulfillmentAdapter
         }
       }
 
-      if (status === "COMPLETED" || status === "CANCELLED") {
+      if (status === "COMPLETED") {
         await database.fulfillmentAssignment.updateMany({
           where: {
             fulfillmentId,
             acceptedAt: null,
           },
           data: {
-            acceptedAt: status === "COMPLETED" ? new Date() : null,
+            acceptedAt: new Date(),
           },
         });
       }
@@ -782,6 +885,57 @@ export class FulfillmentAdapter
     const updated =
       await prisma.$transaction(
         async (database) => {
+          // Use the same Order -> Fulfillment -> Agent -> Dispatch lock order
+          // as cancellation to avoid deadlocks during competing lifecycle changes.
+          await database.$queryRaw<Array<{ id: string }>>`
+            SELECT "id"
+            FROM "Order"
+            WHERE "id" = ${current.orderId}
+            FOR UPDATE
+          `;
+
+          await database.$queryRaw<Array<{ id: string }>>`
+            SELECT "id"
+            FROM "FulfillmentRequest"
+            WHERE "id" = ${fulfillmentId}
+            FOR UPDATE
+          `;
+
+          const lockedFulfillment = await database.fulfillmentRequest.findUnique({
+            where: { id: fulfillmentId },
+            select: { orderId: true, status: true, metadata: true },
+          });
+
+          if (
+            !lockedFulfillment ||
+            lockedFulfillment.orderId !== current.orderId ||
+            lockedFulfillment.status !== "IN_TRANSIT"
+          ) {
+            throw new Error("Fulfillment state changed before completion.");
+          }
+
+          const lockedMetadata =
+            lockedFulfillment.metadata &&
+            typeof lockedFulfillment.metadata === "object" &&
+            !Array.isArray(lockedFulfillment.metadata)
+              ? lockedFulfillment.metadata as Record<string, unknown>
+              : {};
+          const lockedDeliveryProof =
+            lockedMetadata.deliveryProof &&
+            typeof lockedMetadata.deliveryProof === "object" &&
+            !Array.isArray(lockedMetadata.deliveryProof)
+              ? lockedMetadata.deliveryProof as Record<string, unknown>
+              : {};
+
+          if (
+            lockedDeliveryProof.method !== "CUSTOMER_CONFIRMATION" ||
+            typeof lockedDeliveryProof.confirmedAt !== "string"
+          ) {
+            throw new Error(
+              "Customer delivery confirmation is required before completion.",
+            );
+          }
+
           // Serialize completion for this agent so concurrent final deliveries
           // cannot leave the agent incorrectly marked BUSY or AVAILABLE.
           const lockedAgent = await database.deliveryAgent.updateMany({
@@ -845,24 +999,17 @@ export class FulfillmentAdapter
               },
             );
 
-          await database.order.updateMany(
-            {
-              where: {
-                id:
-                  result.orderId,
-                status: {
-                  in: [
-                    "SHIPPED",
-                    "PROCESSING",
-                  ],
-                },
-              },
-              data: {
-                status:
-                  "DELIVERED",
-              },
+          const updatedOrder = await database.order.updateMany({
+            where: {
+              id: result.orderId,
+              status: { in: ["SHIPPED", "PROCESSING"] },
             },
-          );
+            data: { status: "DELIVERED" },
+          });
+
+          if (updatedOrder.count !== 1) {
+            throw new Error("Order state changed before delivery completion.");
+          }
 
           await database.fulfillmentAssignment.updateMany(
             {
