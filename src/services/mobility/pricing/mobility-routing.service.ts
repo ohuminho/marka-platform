@@ -19,6 +19,103 @@ export class MobilityRoutingService {
     const result = await this.request(origin,destination,options,true);
     return {distanceMeters:result.distance,durationSeconds:result.duration,provider:"OSRM",profile:"driving",geometry:result.geometry as {type:"LineString";coordinates:[number,number][]}};
   }
+  async getDurationMatrix(
+    points: readonly MobilityRoutePoint[],
+    options: MobilityRoutingOptions = {},
+  ): Promise<number[][]> {
+    if (points.length < 2 || points.length > 5) {
+      throw new MobilityRoutingError(
+        "Mobility route matrix requires between two and five points.",
+        "MOBILITY_ROUTE_MATRIX_SIZE_INVALID",
+      );
+    }
+    points.forEach((point, index) => validatePoint(point, `point ${index}`));
+
+    const base = this.baseUrl(options);
+    let endpoint: URL;
+    try {
+      const coordinates = points
+        .map((point) => `${point.longitude},${point.latitude}`)
+        .join(";");
+      endpoint = new URL(
+        `table/v1/driving/${coordinates}`,
+        base.endsWith("/") ? base : `${base}/`,
+      );
+    } catch {
+      throw new MobilityRoutingError(
+        "Mobility routing provider URL is invalid.",
+        "MOBILITY_ROUTING_CONFIGURATION_INVALID",
+      );
+    }
+    endpoint.searchParams.set("annotations", "duration");
+
+    const timeout = options.timeoutMs ?? 5_000;
+    if (!Number.isInteger(timeout) || timeout < 500 || timeout > 15_000) {
+      throw new MobilityRoutingError(
+        "Mobility routing timeout configuration is invalid.",
+        "MOBILITY_ROUTING_TIMEOUT_INVALID",
+      );
+    }
+
+    let response: Response;
+    try {
+      response = await (options.fetcher ?? fetch)(endpoint, {
+        method: "GET",
+        headers: { accept: "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(timeout),
+      });
+    } catch {
+      throw new MobilityRoutingError(
+        "Mobility routing provider is unavailable.",
+        "MOBILITY_ROUTING_PROVIDER_UNAVAILABLE",
+      );
+    }
+    if (!response.ok) {
+      throw new MobilityRoutingError(
+        "Mobility routing provider returned an unsuccessful response.",
+        "MOBILITY_ROUTING_PROVIDER_ERROR",
+      );
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new MobilityRoutingError(
+        "Mobility routing provider returned invalid JSON.",
+        "MOBILITY_ROUTING_INVALID_RESPONSE",
+      );
+    }
+    if (!record(payload) || payload.code !== "Ok" || !Array.isArray(payload.durations)) {
+      throw new MobilityRoutingError(
+        "No complete route matrix was found for the selected locations.",
+        "MOBILITY_ROUTE_MATRIX_NOT_FOUND",
+      );
+    }
+
+    const matrix = payload.durations;
+    if (
+      matrix.length !== points.length ||
+      matrix.some((row) =>
+        !Array.isArray(row) ||
+        row.length !== points.length ||
+        row.some((duration) =>
+          typeof duration !== "number" ||
+          !Number.isFinite(duration) ||
+          duration < 0 ||
+          duration > 604_800
+        )
+      )
+    ) {
+      throw new MobilityRoutingError(
+        "Mobility routing provider returned an invalid duration matrix.",
+        "MOBILITY_ROUTE_MATRIX_INVALID",
+      );
+    }
+    return matrix as number[][];
+  }
+
   private async request(origin:MobilityRoutePoint,destination:MobilityRoutePoint,options:MobilityRoutingOptions,geometry:boolean):Promise<{distance:number;duration:number;geometry?:unknown}> {
     validatePoint(origin,"origin");validatePoint(destination,"destination");
     let endpoint:URL;
