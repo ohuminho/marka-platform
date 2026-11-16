@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
+import { doesFreightFitVehicleCapacity } from "@/freight-engine/freight-provider-availability";
 
 type FreightVehicle = { id: string; kind: string; registrationNumber?: string | null; status: string; capacity?: number | string | null; capacityUnit?: string | null; waterType?: string | null };
 type FreightProvider = { status: string; availability: string; vehicles: FreightVehicle[] };
@@ -24,6 +25,88 @@ export default function MobilityFreightJobs() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [locationSharing, setLocationSharing] = useState(false);
+  const locationWatchId = useRef<number | null>(null);
+  const locationHeartbeatId = useRef<number | null>(null);
+  const latestPosition = useRef<GeolocationPosition | null>(null);
+  const lastLocationSentAt = useRef(0);
+
+  const sendProviderLocation = useCallback(async (force = false) => {
+    const position = latestPosition.current;
+    if (!position) return;
+    const now = Date.now();
+    if (!force && now - lastLocationSentAt.current < 15000) return;
+    if (position.coords.accuracy > 1000) {
+      setError("A precisão do GPS é insuficiente. Active a localização de alta precisão e tente novamente.");
+      return;
+    }
+    const response = await fetch("/api/freight/providers/me/location", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracyM: Math.round(position.coords.accuracy),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message ?? "Não foi possível actualizar a localização GPS.");
+    lastLocationSentAt.current = now;
+  }, []);
+
+  const stopLocationSharing = useCallback(() => {
+    if (locationWatchId.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(locationWatchId.current);
+    }
+    if (locationHeartbeatId.current !== null) {
+      window.clearInterval(locationHeartbeatId.current);
+    }
+    locationWatchId.current = null;
+    locationHeartbeatId.current = null;
+    latestPosition.current = null;
+    setLocationSharing(false);
+    void fetch("/api/freight/providers/me/location", {
+      method: "DELETE",
+      credentials: "include",
+    }).catch(() => setError("Não foi possível limpar a localização guardada. Tente novamente."));
+  }, []);
+
+  const startLocationSharing = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError("Este dispositivo não disponibiliza localização GPS.");
+      return;
+    }
+    if (!provider || provider.status !== "VERIFIED" || (!["AVAILABLE", "BUSY"].includes(provider.availability) && assignedJobs.length === 0)) {
+      setError("A localização só pode ser partilhada por prestadores verificados disponíveis ou com serviços em curso.");
+      return;
+    }
+    if (locationWatchId.current !== null) return;
+    setError(null);
+    locationWatchId.current = navigator.geolocation.watchPosition(
+      (position) => {
+        latestPosition.current = position;
+        void sendProviderLocation().catch((cause) =>
+          setError(cause instanceof Error ? cause.message : "Falha ao actualizar a localização GPS."),
+        );
+      },
+      () => setError("Não foi possível obter o GPS. Verifique a permissão de localização do dispositivo."),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+    );
+    locationHeartbeatId.current = window.setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          latestPosition.current = position;
+          void sendProviderLocation(true).catch((cause) =>
+            setError(cause instanceof Error ? cause.message : "Falha ao actualizar a localização GPS."),
+          );
+        },
+        () => setError("O GPS deixou de fornecer uma posição actualizada. Verifique a localização do dispositivo."),
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+      );
+    }, 30000);
+    setLocationSharing(true);
+  }, [provider, assignedJobs.length, sendProviderLocation]);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -44,12 +127,19 @@ export default function MobilityFreightJobs() {
       const compatible = activeVehicles.find((vehicle) => {
         const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
         if (!kinds.includes(vehicle.kind)) return false;
-        if (job.requestType !== "WATER_DELIVERY") return true;
-        if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
-        if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
-        const capacityLitres = Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1);
-        const requestedLitres = job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
-        return capacityLitres >= requestedLitres;
+        return doesFreightFitVehicleCapacity({
+          requestType: job.requestType,
+          quantity: job.quantity,
+          quantityUnit: job.quantityUnit,
+          details: job.details,
+          vehicle: {
+            id: vehicle.id,
+            kind: vehicle.kind,
+            capacity: vehicle.capacity ?? null,
+            capacityUnit: vehicle.capacityUnit ?? null,
+            waterType: vehicle.waterType ?? null,
+          },
+        });
       });
       return [job.id, current[job.id] ?? compatible?.id ?? ""];
     })));
@@ -64,6 +154,13 @@ export default function MobilityFreightJobs() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [refresh]);
+
+  useEffect(() => () => {
+    if (locationWatchId.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(locationWatchId.current);
+    }
+    if (locationHeartbeatId.current !== null) window.clearInterval(locationHeartbeatId.current);
+  }, []);
 
   function nextAction(job: FreightJob): { status: string; label: string } | null {
     if (job.status === "ASSIGNED") return { status: "PROVIDER_EN_ROUTE", label: "Iniciar deslocação" };
@@ -120,10 +217,16 @@ export default function MobilityFreightJobs() {
   return (
     <section className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[#b89a5b]">Despacho de carga e assistência</p><h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Pedidos pagos disponíveis</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Só aparecem pedidos com pagamento confirmado e viaturas compatíveis. A aceitação é exclusiva: o primeiro prestador elegível a confirmar fica com o serviço.</p></div>
-        <button type="button" onClick={() => { setLoading(true); refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao actualizar.")).finally(() => setLoading(false)); }} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]">Actualizar</button>
+        <div><p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[#b89a5b]">Despacho de carga e assistência</p><h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Pedidos pagos disponíveis</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Só aparecem pedidos pagos, próximos da sua localização GPS e compatíveis com a viatura. Vários serviços só podem ser agrupados quando o destino é próximo e a capacidade total está validada.</p></div>
+        <div className="flex flex-wrap gap-2">
+          {locationSharing
+            ? <button type="button" onClick={stopLocationSharing} className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700">GPS activo · Parar</button>
+            : <button type="button" onClick={startLocationSharing} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]">Activar GPS para pedidos próximos</button>}
+          <button type="button" onClick={() => { setLoading(true); refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao actualizar.")).finally(() => setLoading(false)); }} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]">Actualizar</button>
+        </div>
       </div>
       {provider && <p className="mt-4 text-[11px] text-[var(--theme-text-muted)]">Estado do prestador: <strong>{provider.status}</strong> · Disponibilidade: <strong>{provider.availability}</strong></p>}
+      <p className="mt-2 text-[10px] leading-5 text-[var(--theme-text-faint)]">A localização GPS só é partilhada depois de activar esta opção. É usada para mostrar pedidos próximos e é limpa do perfil quando parar a partilha ou sair desta área.</p>
       {notice && <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
       {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-700">{error}</p>}
       {assignedJobs.length > 0 && (
@@ -155,11 +258,19 @@ export default function MobilityFreightJobs() {
               if (vehicle.status !== "ACTIVE") return false;
               const kinds = job.requestType === "WATER_DELIVERY" ? ["WATER_TANKER"] : job.requestType === "ROADSIDE_ASSISTANCE" ? ["TOW_TRUCK", "SERVICE_VEHICLE"] : ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
               if (!kinds.includes(vehicle.kind)) return false;
-              if (job.requestType !== "WATER_DELIVERY") return true;
-              const details = job.details && typeof job.details === "object" ? job.details as Record<string, unknown> : {};
-              if (vehicle.waterType !== details.waterType || !vehicle.capacity || !vehicle.capacityUnit || !job.quantity || !job.quantityUnit) return false;
-              if (!["M3", "LITRE"].includes(vehicle.capacityUnit) || !["M3", "LITRE"].includes(job.quantityUnit)) return false;
-              return Number(vehicle.capacity) * (vehicle.capacityUnit === "M3" ? 1000 : 1) >= job.quantity * (job.quantityUnit === "M3" ? 1000 : 1);
+              return doesFreightFitVehicleCapacity({
+                requestType: job.requestType,
+                quantity: job.quantity,
+                quantityUnit: job.quantityUnit,
+                details: job.details,
+                vehicle: {
+                  id: vehicle.id,
+                  kind: vehicle.kind,
+                  capacity: vehicle.capacity ?? null,
+                  capacityUnit: vehicle.capacityUnit ?? null,
+                  waterType: vehicle.waterType ?? null,
+                },
+              });
             });
             const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleIds[job.id]);
             return <article key={job.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4">
