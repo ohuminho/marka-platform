@@ -95,10 +95,19 @@ export default function MobilityFreightCustomerQuotes() {
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     const refreshAfterCreate = () => void load();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 20_000);
     window.addEventListener("marka:freight-request-created", refreshAfterCreate);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       window.clearTimeout(timer);
+      window.clearInterval(poll);
       window.removeEventListener("marka:freight-request-created", refreshAfterCreate);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [load]);
 
