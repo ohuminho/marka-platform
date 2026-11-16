@@ -201,7 +201,9 @@ export async function POST(
     return NextResponse.json({
       success: true,
       request: result,
-      message: "Ocorrência resolvida. O serviço regressou ao estado operacional anterior.",
+      message: result.status === "PROVIDER_COMPLETED_PENDING_CONFIRMATION"
+        ? "Ocorrência analisada. O pedido voltou a aguardar a confirmação do cliente; a disponibilidade do prestador foi preservada."
+        : "Ocorrência resolvida. O serviço regressou ao estado operacional anterior.",
     });
   } catch (error) {
     const code = error instanceof Error ? error.message : "FREIGHT_EXCEPTION_RESOLUTION_FAILED";
