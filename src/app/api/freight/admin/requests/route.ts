@@ -114,6 +114,28 @@ export async function GET() {
     });
   }
 
+  const cancellationEvents = requests.length > 0 ? await prisma.auditLog.findMany({
+    where: {
+      organizationId: auth.organizationId,
+      entityType: "FreightRequest",
+      entityId: { in: requests.map((item) => item.id) },
+      action: "FREIGHT_REQUEST_CANCELLED_BY_REQUESTER",
+    },
+    select: { entityId: true, metadata: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  }) : [];
+  const latestCancellationByRequest = new Map<string, { note: string | null; cancelledAt: string }>();
+  for (const event of cancellationEvents) {
+    if (!event.entityId || latestCancellationByRequest.has(event.entityId)) continue;
+    const metadata = event.metadata && typeof event.metadata === "object"
+      ? event.metadata as Record<string, unknown>
+      : {};
+    latestCancellationByRequest.set(event.entityId, {
+      note: typeof metadata.note === "string" ? metadata.note : null,
+      cancelledAt: event.createdAt.toISOString(),
+    });
+  }
+
   const reviewEvents = requests.length > 0 ? await prisma.auditLog.findMany({
     where: {
       organizationId: auth.organizationId,
@@ -144,6 +166,7 @@ export async function GET() {
       ...item,
       latestException: latestExceptionByRequest.get(item.id) ?? null,
       latestExceptionReview: latestReviewByRequest.get(item.id) ?? null,
+      latestCancellation: latestCancellationByRequest.get(item.id) ?? null,
       quantity: item.quantity === null ? null : Number(item.quantity),
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
       quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
