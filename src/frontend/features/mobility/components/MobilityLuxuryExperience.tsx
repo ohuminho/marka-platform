@@ -117,6 +117,7 @@ export default function MobilityLuxuryExperience() {
   const [communicationThreadId, setCommunicationThreadId] = useState<string | null>(null);
   const [callPanelOpen, setCallPanelOpen] = useState(false);
   const [driverEta, setDriverEta] = useState<number | null>(null);
+  const [driverApproachGeometry, setDriverApproachGeometry] = useState<MobilityRoute["geometry"] | null>(null);
 
   const driver = useMemo(() => {
     const lat = Number(ride?.driver?.location?.latitude ?? ride?.driver?.latitude);
@@ -267,12 +268,16 @@ export default function MobilityLuxuryExperience() {
   useEffect(() => {
     if (!active || !assigned) {
       setDriverEta(null);
+      setDriverApproachGeometry(null);
       return;
     }
     let mounted = true;
     const updateEta = async () => {
       const current = etaInput.current;
-      if (!current.driver || !current.origin) return;
+      if (!current.driver || !current.origin) {
+        setDriverApproachGeometry(null);
+        return;
+      }
       try {
         const query = new URLSearchParams({
           originLat: String(current.driver.lat),
@@ -286,9 +291,12 @@ export default function MobilityLuxuryExperience() {
           cache: "no-store",
         });
         if (!response.ok) return;
-        const data = await response.json() as { route?: { durationSeconds?: number } };
+        const data = await response.json() as { route?: { durationSeconds?: number; geometry?: MobilityRoute["geometry"] } };
         if (mounted && Number.isFinite(data.route?.durationSeconds)) {
           setDriverEta(Math.max(1, Math.ceil(Number(data.route?.durationSeconds) / 60)));
+          if (data.route.geometry?.type === "LineString" && data.route.geometry.coordinates.length >= 2) {
+            setDriverApproachGeometry(data.route.geometry);
+          }
         }
       } catch {
         // Keep the last confirmed ETA; do not invent a replacement.
@@ -469,6 +477,7 @@ export default function MobilityLuxuryExperience() {
         serviceType={serviceType}
         serviceTypes={serviceTypes}
         driverPoint={driver}
+        driverRouteGeometry={driverApproachGeometry}
         originPoint={origin}
         destinationPoint={destination}
       />
