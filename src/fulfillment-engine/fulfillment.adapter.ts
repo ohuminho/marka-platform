@@ -569,7 +569,7 @@ export class FulfillmentAdapter
       const currentStatus = current.status as FulfillmentStatus;
 
       if (currentStatus === status) {
-        return { result: current, fromStatus: currentStatus };
+        return { result: current, fromStatus: currentStatus, changed: false };
       }
 
       if (!this.isValidTransition(currentStatus, status)) {
@@ -673,14 +673,14 @@ export class FulfillmentAdapter
         });
       }
 
-      return { result, fromStatus: currentStatus };
+      return { result, fromStatus: currentStatus, changed: true };
     }, {
       isolationLevel: "Serializable",
       maxWait: 5000,
       timeout: 10000,
     });
 
-    if (outcome.result.status !== status) {
+    if (!outcome.changed) {
       return this.toContract(outcome.result);
     }
 
