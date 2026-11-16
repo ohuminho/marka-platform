@@ -171,18 +171,86 @@ export async function POST(
       );
     }
 
-    // Pricing currently has no active, versioned server-side tariff source.
-    // Never authorize a financial amount or snapshot submitted by a browser.
-    // Re-enable this operation only when a server-owned quote is calculated
-    // from verified route data and persisted immutably against the ride.
-    return NextResponse.json(
-      {
-        message:
-          "Mobility fare authorization is temporarily unavailable until server-side tariff configuration is activated. No client-submitted fare can be authorized.",
-        code:
-          "MOBILITY_SERVER_PRICING_NOT_CONFIGURED",
+    const paymentMethod =
+      typeof body.paymentMethod === "string"
+        ? body.paymentMethod.trim().toUpperCase()
+        : "CASH";
+
+    // Cash is supported by the internal ledger. Digital collection remains
+    // closed until a verified payment-provider webhook is connected.
+    if (paymentMethod !== "CASH") {
+      return NextResponse.json(
+        {
+          message: "Digital Mobility payment is unavailable until provider confirmation is integrated. Select cash for this ride.",
+          code: "MOBILITY_DIGITAL_PAYMENT_NOT_CONFIGURED",
+        },
+        { status: 409 },
+      );
+    }
+
+    const idempotencyKey = getIdempotencyKey(request, body);
+    if (!idempotencyKey) {
+      return NextResponse.json(
+        { message: "Idempotency key is required.", code: "IDEMPOTENCY_KEY_REQUIRED" },
+        { status: 400 },
+      );
+    }
+
+    const metadata = isRecord(ride.metadata) ? ride.metadata : {};
+    const pricingSnapshot = isRecord(metadata.pricingSnapshot)
+      ? metadata.pricingSnapshot
+      : null;
+    const estimatedFareValue = metadata.estimatedFareMinor;
+
+    if (
+      !pricingSnapshot ||
+      pricingSnapshot.source !== "MARKA_SERVER_TARIFF" ||
+      pricingSnapshot.version !== 1 ||
+      pricingSnapshot.serviceType !== ride.serviceType ||
+      pricingSnapshot.currency !== ride.currency ||
+      typeof estimatedFareValue !== "string" ||
+      !/^[0-9]+$/.test(estimatedFareValue) ||
+      pricingSnapshot.totalMinor !== estimatedFareValue
+    ) {
+      return NextResponse.json(
+        {
+          message: "The ride does not contain a valid server-generated fare snapshot. Financial initialization is blocked.",
+          code: "MOBILITY_SERVER_FARE_SNAPSHOT_MISSING",
+        },
+        { status: 409 },
+      );
+    }
+
+    const estimatedFareMinor = BigInt(estimatedFareValue);
+    const policy = getMobilityCommissionPolicy(ride.serviceType);
+    const result = await mobilityFinancialOrchestratorService.initializeRideFinancials({
+      organizationId: authentication.session.organizationId,
+      rideId,
+      riderId: ride.riderId,
+      driverId: ride.driver?.id ?? undefined,
+      paymentMethod: "CASH",
+      currency: ride.currency,
+      estimatedFareMinor,
+      finalFareMinor: estimatedFareMinor,
+      commissionRateBps: policy.rateBps,
+      commissionPolicyKey: policy.key,
+      commissionPolicyVersion: policy.version,
+      pricingSnapshot,
+      metadata: {
+        source: "MARKA_SERVER_TARIFF",
+        pricingVersion: pricingSnapshot.version,
       },
-      { status: 503 },
+      idempotencyKey,
+      actorUserId: authentication.session.userId,
+      correlationId: requestContext.correlationId,
+      requestId: requestContext.requestId,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+    });
+
+    return NextResponse.json(
+      { financials: result, pricingSnapshot },
+      { status: 200 },
     );
   }
 
