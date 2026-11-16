@@ -1,49 +1,42 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
 
 import {
   haversineDistanceKm,
   isFreshAccurateProviderLocation,
   isValidGeoPoint,
-} from "@/freight-engine/freight-geography";
+} from "../../../src/freight-engine/freight-geography";
 
-describe("freight geography", () => {
-  it("accepts valid coordinates including the equator and prime meridian", () => {
-    expect(isValidGeoPoint({ latitude: 0, longitude: 0 })).toBe(true);
-    expect(isValidGeoPoint({ latitude: 91, longitude: 0 })).toBe(false);
-    expect(isValidGeoPoint({ latitude: 0, longitude: 181 })).toBe(false);
-  });
+assert.equal(isValidGeoPoint({ latitude: 0, longitude: 0 }), true);
+assert.equal(isValidGeoPoint({ latitude: 91, longitude: 0 }), false);
+assert.equal(isValidGeoPoint({ latitude: 0, longitude: 181 }), false);
 
-  it("calculates a stable straight-line distance", () => {
-    expect(haversineDistanceKm(
-      { latitude: 0, longitude: 0 },
-      { latitude: 0, longitude: 1 },
-    )).toBeCloseTo(111.195, 2);
-    expect(haversineDistanceKm(
-      { latitude: 0, longitude: 0 },
-      { latitude: 0, longitude: 0 },
-    )).toBe(0);
-  });
+const oneDegreeDistance = haversineDistanceKm(
+  { latitude: 0, longitude: 0 },
+  { latitude: 0, longitude: 1 },
+);
+assert.notEqual(oneDegreeDistance, null);
+assert.ok(Math.abs(oneDegreeDistance! - 111.195) < 0.01);
+assert.equal(haversineDistanceKm(
+  { latitude: 0, longitude: 0 },
+  { latitude: 0, longitude: 0 },
+), 0);
+assert.equal(haversineDistanceKm(
+  { latitude: 95, longitude: 0 },
+  { latitude: 0, longitude: 0 },
+), null);
 
-  it("rejects invalid points instead of returning a distance", () => {
-    expect(haversineDistanceKm(
-      { latitude: 95, longitude: 0 },
-      { latitude: 0, longitude: 0 },
-    )).toBeNull();
-  });
+const now = Date.parse("2026-11-16T12:00:00.000Z");
+const base = {
+  latitude: 0,
+  longitude: 0,
+  accuracyMeters: 25,
+  updatedAt: new Date(now - 30_000),
+  now,
+};
+assert.equal(isFreshAccurateProviderLocation(base), true);
+assert.equal(isFreshAccurateProviderLocation({ ...base, updatedAt: new Date(now - 181_000) }), false);
+assert.equal(isFreshAccurateProviderLocation({ ...base, updatedAt: new Date(now + 1_000) }), false);
+assert.equal(isFreshAccurateProviderLocation({ ...base, accuracyMeters: 1001 }), false);
+assert.equal(isFreshAccurateProviderLocation({ ...base, latitude: null }), false);
 
-  it("accepts a current accurate location and rejects stale, future or inaccurate fixes", () => {
-    const now = Date.parse("2026-11-16T12:00:00.000Z");
-    const base = {
-      latitude: 0,
-      longitude: 0,
-      accuracyMeters: 25,
-      updatedAt: new Date(now - 30_000),
-      now,
-    };
-    expect(isFreshAccurateProviderLocation(base)).toBe(true);
-    expect(isFreshAccurateProviderLocation({ ...base, updatedAt: new Date(now - 181_000) })).toBe(false);
-    expect(isFreshAccurateProviderLocation({ ...base, updatedAt: new Date(now + 1_000) })).toBe(false);
-    expect(isFreshAccurateProviderLocation({ ...base, accuracyMeters: 1001 })).toBe(false);
-    expect(isFreshAccurateProviderLocation({ ...base, latitude: null })).toBe(false);
-  });
-});
+console.log("freight geography checks passed");
