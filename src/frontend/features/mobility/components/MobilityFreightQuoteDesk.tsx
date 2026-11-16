@@ -105,6 +105,13 @@ export default function MobilityFreightQuoteDesk() {
     };
   }, [load]);
 
+  const operationalCounts = {
+    newRequests: requests.filter((item) => item.status === "REQUESTED").length,
+    awaitingPayment: requests.filter((item) => item.status === "AWAITING_PAYMENT").length,
+    activeServices: requests.filter((item) => ["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"].includes(item.status)).length,
+    completed: requests.filter((item) => item.status === "COMPLETED").length,
+  };
+
   const issueQuote = async (requestId: string) => {
     if (!organizationId) return;
     const amount = Number(amounts[requestId]);
@@ -149,6 +156,20 @@ export default function MobilityFreightQuoteDesk() {
 
       {error && <p role="alert" className="mt-4 rounded-xl border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text-muted)]">{error}</p>}
       {notice && <p role="status" className="mt-4 rounded-xl border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
+
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { label: "Novos pedidos", value: operationalCounts.newRequests },
+          { label: "A aguardar pagamento", value: operationalCounts.awaitingPayment },
+          { label: "Serviços activos", value: operationalCounts.activeServices },
+          { label: "Concluídos", value: operationalCounts.completed },
+        ].map((metric) => (
+          <div key={metric.label} className="rounded-xl border border-[var(--theme-border)] px-3 py-3">
+            <p className="text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">{metric.label}</p>
+            <p className="mt-2 text-xl font-semibold tabular-nums text-[var(--theme-text)]">{metric.value}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="mt-5 space-y-3">
         {loading ? (
