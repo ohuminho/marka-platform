@@ -58,6 +58,7 @@ export default function MobilityFreightRequestHistory() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number | null>(null);
@@ -135,6 +136,32 @@ export default function MobilityFreightRequestHistory() {
     }
   };
 
+  const cancelRequest = async (requestId: string) => {
+    if (!organizationId || !window.confirm("Pretende cancelar este pedido? O cancelamento automático só é permitido antes do pagamento e da atribuição do prestador.")) return;
+    setCancellingId(requestId);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/freight/requests/${requestId}/cancel`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Organization-Id": organizationId,
+        },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "Não foi possível cancelar o pedido.");
+      await refresh(true);
+      setNotice("Pedido cancelado com sucesso.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao cancelar o pedido.");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   return (
     <section className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -196,6 +223,16 @@ export default function MobilityFreightRequestHistory() {
                 {item.status === "AWAITING_PAYMENT" && <p className="mt-3 text-[11px] leading-5 text-amber-700 dark:text-amber-300">Cotação aceite. O pedido permanece pendente até a MARKA disponibilizar e confirmar um canal de pagamento. Não faça transferências para contas pessoais.</p>}
                 {item.status === "PAID" || item.status === "SEARCHING_PROVIDER" ? <p className="mt-3 text-[11px] text-[var(--theme-text-muted)]">O pagamento está registado. A atribuição do prestador está em preparação.</p> : null}
                 {item.status === "COMPLETED" && <p className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300">Serviço concluído.</p>}
+                {["REQUESTED", "QUOTED", "AWAITING_PAYMENT"].includes(item.status) && !item.paidAt && (
+                  <button
+                    type="button"
+                    disabled={cancellingId === item.id || busyId === item.id}
+                    onClick={() => void cancelRequest(item.id)}
+                    className="mt-4 min-h-10 rounded-full border border-rose-500/25 px-4 text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-700 disabled:opacity-50 dark:text-rose-300"
+                  >
+                    {cancellingId === item.id ? "A cancelar…" : "Cancelar pedido"}
+                  </button>
+                )}
               </article>
             );
           })}
