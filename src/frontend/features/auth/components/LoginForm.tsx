@@ -297,6 +297,7 @@ export default function LoginForm() {
         </div>
 
         {isRegistering && (
+          <>
           <label htmlFor="marka-auth-confirm-password" className="sr-only">Confirmar palavra-passe</label>
           <input
             id="marka-auth-confirm-password"
@@ -312,6 +313,7 @@ export default function LoginForm() {
             autoComplete="new-password"
             className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
           />
+          </>
         )}
 
         {isRegistering && (
