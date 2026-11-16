@@ -406,6 +406,22 @@ export class MobilityMatchingService {
     }
 
     if (
+      !Number.isFinite(input.dropoffLatitude) ||
+      input.dropoffLatitude < -90 ||
+      input.dropoffLatitude > 90
+    ) {
+      throw new Error("Invalid dropoff latitude.");
+    }
+
+    if (
+      !Number.isFinite(input.dropoffLongitude) ||
+      input.dropoffLongitude < -180 ||
+      input.dropoffLongitude > 180
+    ) {
+      throw new Error("Invalid dropoff longitude.");
+    }
+
+    if (
       input.radiusMeters !== undefined &&
       (!Number.isFinite(
         input.radiusMeters
