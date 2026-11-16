@@ -440,6 +440,9 @@ export default function MobilityLuxuryExperience() {
       const data = await response.json() as RideResponse;
       if (!response.ok || !data.ride) throw new Error(data.message || "Não foi possível registar o pedido.");
       setRide(data.ride);
+      setCommunicationThreadId(null);
+      setCallPanelOpen(false);
+      setCommunicationError(null);
       setRideMessage(data.orchestration?.recoveryRequired
         ? "Pedido registado; estamos a recuperar uma etapa operacional."
         : "Pedido enviado aos motoristas elegíveis.");
@@ -653,7 +656,16 @@ export default function MobilityLuxuryExperience() {
                   <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Destino</p>
                   <input
                     value={destinationText}
-                    onChange={(event) => setDestinationText(event.target.value)}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setDestinationText(value);
+                      if (destination && value !== destination.label) {
+                        setDestination(null);
+                        setRoute(null);
+                        setQuote(null);
+                        setFareByService({});
+                      }
+                    }}
                     placeholder="Para onde vamos?"
                     aria-label="Pesquisar destino em Angola"
                     autoComplete="off"
