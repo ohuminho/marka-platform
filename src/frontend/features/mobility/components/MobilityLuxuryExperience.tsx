@@ -130,6 +130,7 @@ export default function MobilityLuxuryExperience() {
   const active = Boolean(ride && !["COMPLETED", "CANCELLED", "REJECTED", "EXPIRED", "NO_DRIVER_FOUND", "FAILED"].includes(ride.status));
   const assigned = Boolean(ride?.driver);
   const list = choices[group];
+  const serviceTypes = list.map((item) => item.id).join(",");
   const name = user?.profile?.displayName || user?.name || "Utilizador MARKA";
   const etaInput = useRef<{ driver: typeof driver; origin: MobilityMapPoint | null; serviceType: string }>({
     driver: null,
@@ -140,11 +141,11 @@ export default function MobilityLuxuryExperience() {
 
   const onRoute = useCallback((value: MobilityRoute | null) => {
     setRoute(value);
-    setQuote(value?.fare ?? null);
-    setFareStatus(value?.fareStatus ?? "NO_ROUTE");
-    if (value?.fare) {
-      setFareByService((current) => ({ ...current, [serviceType]: value.fare as Quote }));
-    }
+    const fares = value?.fares ?? (value?.fare ? { [serviceType]: value.fare } : {});
+    setFareByService(fares);
+    const selectedFare = fares[serviceType] ?? value?.fare ?? null;
+    setQuote(selectedFare);
+    setFareStatus(selectedFare ? "AVAILABLE" : value?.fareStatus ?? "NO_ROUTE");
   }, [serviceType]);
 
   useEffect(() => {
@@ -309,7 +310,10 @@ export default function MobilityLuxuryExperience() {
     setDestination(place);
     setDestinationText(place.label);
     setSuggestions([]);
+    setRoute(null);
     setQuote(null);
+    setFareByService({});
+    setFareStatus("NO_ROUTE");
     setError(null);
   };
 
@@ -327,6 +331,10 @@ export default function MobilityLuxuryExperience() {
           lon: position.coords.longitude,
           label: "A minha localização GPS",
         });
+        setRoute(null);
+        setQuote(null);
+        setFareByService({});
+        setFareStatus("NO_ROUTE");
         setGpsBusy(false);
       },
       (geoError) => {
@@ -456,6 +464,7 @@ export default function MobilityLuxuryExperience() {
       <MobilityLiveMap
         onRouteChange={onRoute}
         serviceType={serviceType}
+        serviceTypes={serviceTypes}
         driverPoint={driver}
         originPoint={origin}
         destinationPoint={destination}
