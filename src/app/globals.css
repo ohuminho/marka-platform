@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
   --background: #070707;
@@ -92,3 +93,19 @@ html[dir="rtl"] { text-align: right; }
   height: 1px;
   background: var(--theme-border);
 }
+
+
+.marka-mobility-map .maplibregl-ctrl-group{overflow:hidden;border:1px solid rgba(229,184,75,.22);border-radius:14px;background:rgba(20,20,23,.88);box-shadow:0 12px 36px rgba(0,0,0,.32);backdrop-filter:blur(16px)}
+.marka-mobility-map .maplibregl-ctrl button{filter:invert(1) sepia(.2)}
+.marka-mobility-map .maplibregl-ctrl-attrib{color:rgba(255,255,255,.48);background:rgba(9,9,11,.72);font-size:9px}
+.marka-mobility-map .maplibregl-ctrl-attrib a{color:#E5B84B}
+.marka-map-marker{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid rgba(255,255,255,.9);box-shadow:0 5px 20px rgba(0,0,0,.55)}
+.marka-map-marker>span{transform:rotate(45deg);font-size:11px;font-weight:900;color:#09090B}
+.marka-map-marker--pickup{background:#5BD6A0}
+.marka-map-marker--dropoff{background:#E5B84B}
+.marka-map-marker--driver{width:36px;height:36px;border-radius:50%;background:#E5B84B;border:2px solid #fff}
+.marka-map-marker--driver>span{transform:none;font-size:15px}
+.marka-route-pulse{position:relative}
+.marka-route-pulse::before{content:"";position:absolute;inset:-8px;border:1px solid rgba(91,214,160,.65);border-radius:50%;animation:marka-pulse 1.8s ease-out infinite}
+@keyframes marka-pulse{0%{transform:scale(.55);opacity:.9}100%{transform:scale(1.65);opacity:0}}
+@media(prefers-reduced-motion:reduce){.marka-route-pulse::before{animation:none}}
