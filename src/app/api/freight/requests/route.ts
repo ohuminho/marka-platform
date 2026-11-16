@@ -42,6 +42,24 @@ const requestSchema = z.object({
     const cargoItems = value.details.cargoItems;
     if (!Array.isArray(cargoItems) || cargoItems.length === 0) {
       context.addIssue({ code: "custom", path: ["details", "cargoItems"], message: "Indique pelo menos um artigo ou material a transportar." });
+    } else {
+      const firstItem = cargoItems[0] && typeof cargoItems[0] === "object" && !Array.isArray(cargoItems[0])
+        ? cargoItems[0] as Record<string, unknown>
+        : null;
+      if (!firstItem || typeof firstItem.description !== "string" || !firstItem.description.trim()) {
+        context.addIssue({ code: "custom", path: ["details", "cargoItems"], message: "A descrição da carga é obrigatória." });
+      }
+      if (!firstItem || typeof firstItem.quantity !== "number" || !Number.isFinite(firstItem.quantity) || firstItem.quantity <= 0) {
+        context.addIssue({ code: "custom", path: ["details", "cargoItems"], message: "A quantidade do artigo deve ser superior a zero." });
+      }
+      if (!firstItem || firstItem.unit !== value.quantityUnit || firstItem.quantity !== value.quantity) {
+        context.addIssue({ code: "custom", path: ["details", "cargoItems"], message: "A quantidade e a unidade do artigo devem corresponder ao total do pedido." });
+      }
+    }
+    const allowedVehiclePreferences = ["ANY", "CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
+    const vehiclePreference = value.details.vehiclePreference;
+    if (vehiclePreference !== undefined && (typeof vehiclePreference !== "string" || !allowedVehiclePreferences.includes(vehiclePreference))) {
+      context.addIssue({ code: "custom", path: ["details", "vehiclePreference"], message: "A viatura preferida não é válida." });
     }
   }
 
