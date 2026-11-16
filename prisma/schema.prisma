@@ -2563,6 +2563,7 @@ model MobilityLandmark {
   updatedAt      DateTime @updatedAt
 
   @@unique([normalizedName, municipality])
+  @@unique([sourceRef])
   @@index([normalizedName])
   @@index([countryCode, province, municipality])
   @@index([isActive, category])
