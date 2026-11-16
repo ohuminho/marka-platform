@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
+import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { areMobilityRidesCompatible, isSharedRideSequenceWithinDetour } from "@/services/mobility/matching/mobility-ride-compatibility";
 import { mobilityRoutingService } from "@/services/mobility/pricing/mobility-routing.service";
 
@@ -290,6 +291,18 @@ export class MobilityMatchingService {
         sharedRouteChecks += 1;
         const activeRide = activeRides[0];
         try {
+          // Share the same provider-wide budget as the public route geometry API.
+          // Dispatch matrix checks otherwise bypass the browser-facing quota.
+          const providerQuota = await reserveApiRequest({
+            scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
+            anonymousIdentity: "marka:shared-osrm-geometry-provider",
+            windows: [
+              { limit: 60, windowMs: 60_000 },
+              { limit: 2_000, windowMs: 24 * 60 * 60 * 1_000 },
+            ],
+          });
+          if (!providerQuota.allowed) continue;
+
           const durationMatrix = await mobilityRoutingService.getDurationMatrix([
             {
               latitude: Number(location.latitude),
