@@ -145,7 +145,7 @@ export default function DriverOnboardingPanel() {
       const response = await fetch("/api/mobility/driver/accept-terms", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
-        body: JSON.stringify({ accepted: true }),
+        body: JSON.stringify({ accepted: true, countryCode }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || "Não foi possível registar a aceitação.");
@@ -267,6 +267,8 @@ export default function DriverOnboardingPanel() {
         <Link className="rounded-full border border-[var(--theme-border)] px-4 py-2 underline underline-offset-4" href="/app/compliance">Centro de Conformidade</Link>
       </div>
     </header>
+
+    <div className="max-w-xl">{<label className={labelClass}>País de operação (código ISO 3166-1 alpha-2)<input required value={countryCode} onChange={(event) => setCountryCode(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))} minLength={2} maxLength={2} pattern="[A-Z]{2}" placeholder="AO" className={inputClass} /><span className="mt-1 block text-xs">Ex.: AO, PT, FR, BR, US. A candidatura fora de Angola fica pendente de validação legal e operacional.</span></label>}</div>
 
     {error && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-[var(--theme-text)]">{error}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-[var(--theme-text)]">{notice}</p>}
