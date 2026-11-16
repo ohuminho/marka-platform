@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MobilityLiveMap, { type MobilityMapPoint, type MobilityRoute } from "@/frontend/features/mobility/components/MobilityLiveMap";
 import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
+import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
 import {
   BasculanteSVG,
   CanterDynaSVG,
@@ -113,6 +114,8 @@ export default function MobilityLuxuryExperience() {
   const [rideMessage, setRideMessage] = useState<string | null>(null);
   const [communicationLoading, setCommunicationLoading] = useState(false);
   const [communicationError, setCommunicationError] = useState<string | null>(null);
+  const [communicationThreadId, setCommunicationThreadId] = useState<string | null>(null);
+  const [callPanelOpen, setCallPanelOpen] = useState(false);
   const [driverEta, setDriverEta] = useState<number | null>(null);
 
   const driver = useMemo(() => {
@@ -127,7 +130,6 @@ export default function MobilityLuxuryExperience() {
   const active = Boolean(ride && !["COMPLETED", "CANCELLED", "REJECTED", "EXPIRED", "NO_DRIVER_FOUND", "FAILED"].includes(ride.status));
   const assigned = Boolean(ride?.driver);
   const list = choices[group];
-  const selected = useMemo(() => list.find((item) => item.id === serviceType) ?? list[0], [list, serviceType]);
   const name = user?.profile?.displayName || user?.name || "Utilizador MARKA";
   const etaInput = useRef<{ driver: typeof driver; origin: MobilityMapPoint | null; serviceType: string }>({
     driver: null,
@@ -345,23 +347,45 @@ export default function MobilityLuxuryExperience() {
     );
   };
 
+  async function ensureRideThread(): Promise<string> {
+    if (!ride) throw new Error("Não existe uma viagem ativa.");
+    if (communicationThreadId) return communicationThreadId;
+    const response = await fetch("/api/comms/threads", {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contextType: "MOBILITY", contextId: ride.id }),
+    });
+    const data = await response.json() as { thread?: { id: string }; message?: string };
+    if (!response.ok || !data.thread?.id) throw new Error(data.message || "A comunicação ainda não está disponível.");
+    setCommunicationThreadId(data.thread.id);
+    return data.thread.id;
+  }
+
   async function openRideConversation() {
     if (!ride || communicationLoading) return;
     setCommunicationLoading(true);
     setCommunicationError(null);
     try {
-      const response = await fetch("/api/comms/threads", {
-        method: "POST",
-        credentials: "include",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contextType: "MOBILITY", contextId: ride.id }),
-      });
-      const data = await response.json() as { thread?: { id: string }; message?: string };
-      if (!response.ok || !data.thread?.id) throw new Error(data.message || "A comunicação ainda não está disponível.");
-      router.push("/app/messages?conversationId=" + encodeURIComponent(data.thread.id));
+      const threadId = await ensureRideThread();
+      router.push("/app/messages?conversationId=" + encodeURIComponent(threadId));
     } catch (communicationFailure) {
       setCommunicationError(communicationFailure instanceof Error ? communicationFailure.message : "Não foi possível abrir a conversa.");
+    } finally {
+      setCommunicationLoading(false);
+    }
+  }
+
+  async function openRideCall() {
+    if (!ride || communicationLoading) return;
+    setCommunicationLoading(true);
+    setCommunicationError(null);
+    try {
+      await ensureRideThread();
+      setCallPanelOpen(true);
+    } catch (communicationFailure) {
+      setCommunicationError(communicationFailure instanceof Error ? communicationFailure.message : "Não foi possível preparar a chamada.");
     } finally {
       setCommunicationLoading(false);
     }
@@ -556,7 +580,7 @@ export default function MobilityLuxuryExperience() {
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => void openRideConversation()}
+                    onClick={() => void openRideCall()}
                     disabled={communicationLoading}
                     className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E5B84B]/35 bg-[#E5B84B]/[.08] text-xs font-semibold text-[#E5B84B] disabled:opacity-50"
                   >
@@ -571,6 +595,12 @@ export default function MobilityLuxuryExperience() {
                     <span aria-hidden="true">▤</span> Mensagem
                   </button>
                 </div>
+                {callPanelOpen && communicationThreadId && (
+                  <div className="mt-3 rounded-2xl border border-[#E5B84B]/20 bg-black/25 p-3">
+                    <div className="mb-3 flex items-center justify-between gap-3"><p className="text-[9px] font-semibold uppercase tracking-[.18em] text-[#E5B84B]">Chamada segura MARKA</p><button type="button" onClick={() => setCallPanelOpen(false)} className="text-xs text-white/50">Fechar</button></div>
+                    <MarketplaceCallPanel threadId={communicationThreadId} />
+                  </div>
+                )}
               </>
             )}
             {rideMessage && <p className="mt-3 text-[10px] text-white/45">{rideMessage}</p>}
