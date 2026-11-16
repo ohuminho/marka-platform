@@ -10,26 +10,26 @@ The Mobility backend now has a server-only OSRM adapter at
 - Requests only route distance and duration (no geometry or turn-by-turn payload).
 - Enforces a bounded timeout and rejects malformed, non-positive, or implausible measurements.
 - Does not trust distance/duration supplied by the browser.
-- Does not silently fall back to the public OSRM demo server.
+- Uses the public OSRM demo endpoint as a zero-cost pilot fallback when no server URL is configured.
+- Supports an operator-managed OSRM endpoint through `MOBILITY_ROUTING_BASE_URL`.
 
 ## Required deployment configuration
 
-Set `MOBILITY_ROUTING_BASE_URL` in the Vercel production environment to an OSRM-compatible endpoint operated by MARKA or an approved provider. The value is the service base URL, not the full `/route/v1/... ` path.
+For pilot traffic, the adapter defaults to `https://router.project-osrm.org/` and requires no API key. The public demo is community-operated, has no production SLA and must not receive sustained high-volume commercial traffic. Before scaling, deploy an open-source OSRM instance and set `MOBILITY_ROUTING_BASE_URL` in Vercel to its base URL (not the full `/route/v1/...` path).
 
-Do not use the public OSRM demo server as a production dependency: it is a community demo endpoint, not a production SLA.
+## Tariff and fare estimate
 
-## Still intentionally blocked
+The route endpoint now returns server-calculated distance/duration and, when a tariff is configured, a fare estimate. Ride creation independently recalculates the route and fare on the server; the browser's submitted amount is ignored. The server persists the authoritative `estimatedFareMinor` in ride metadata and excludes that server-derived amount from the idempotency request fingerprint so retries do not fail when OSRM measurements vary slightly.
 
-This adapter is not yet connected to fare authorization. The fare endpoint remains fail-closed until all of the following are implemented and validated:
+No fallback rates are invented. Configure all three required values per service class in Vercel Production (amounts are integer AOA minor units; 100 minor units = 1 Kz):
 
-1. Versioned server-owned tariff records for each service class.
-2. Immutable quote persistence linked to a ride, with expiry and idempotency.
-3. Server-side peak-period policy and promotion budget accounting.
-4. Quote-to-payment authorization binding.
-5. Migration applied to the production database and verified.
-6. A production routing endpoint configured and health-checked.
+- `MARKA_MOBILITY_TAXI_BASE_FARE_MINOR`, `MARKA_MOBILITY_TAXI_DISTANCE_RATE_MINOR_PER_KM`, `MARKA_MOBILITY_TAXI_DURATION_RATE_MINOR_PER_MINUTE`
+- Repeat the same suffixes for `EXECUTIVE`, `MOTO_TAXI`, `VAN`, `PICKUP`, `MEDIUM_TRUCK`, `TIPPER_TRUCK`, and `HEAVY_TRUCK`.
+- Optional per-class values: `BOOKING_FEE_MINOR` and `MINIMUM_FARE_MINOR`.
 
-No default fares are invented. Taxi, moto-taxi, cargo and roadside assistance require separate tariff schedules.
+Until the three required values exist for a category, the interface displays that the tariff is pending and the API refuses ride creation for that category. This is intentional: a real route does not justify inventing a fare.
+
+This is an estimated fare, not an immutable payment quote. Expiring quote IDs, tariff versioning, peak/surge policy, promotion-budget reservation and payment authorization binding remain separate activation gates. No discount is applied until those controls are integrated.
 
 
 ## Competitive passenger fare policy
