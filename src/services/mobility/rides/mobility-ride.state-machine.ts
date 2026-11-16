@@ -115,6 +115,34 @@ export function transitionRideStatus(
   return nextStatus;
 }
 
+
+export function resolveDriverAvailabilityForActiveRides(
+  activeRideStatuses: readonly MobilityRideStatus[],
+): "AVAILABLE" | "BUSY" | "ON_TRIP" {
+  if (
+    activeRideStatuses.some(
+      (status) =>
+        status === MobilityRideStatus.TRIP_STARTED ||
+        status === MobilityRideStatus.TRIP_IN_PROGRESS,
+    )
+  ) {
+    return "ON_TRIP";
+  }
+
+  if (
+    activeRideStatuses.some(
+      (status) =>
+        status === MobilityRideStatus.DRIVER_ASSIGNED ||
+        status === MobilityRideStatus.DRIVER_ARRIVING ||
+        status === MobilityRideStatus.DRIVER_ARRIVED,
+    )
+  ) {
+    return "BUSY";
+  }
+
+  return "AVAILABLE";
+}
+
 export function isTerminalRideStatus(
   status: MobilityRideStatus
 ): boolean {
