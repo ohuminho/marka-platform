@@ -107,9 +107,13 @@ export class InventoryService {
         where: {
           productId: item.productId,
           reserved: { gte: item.quantity },
+          quantityOnHand: { gte: item.quantity },
         },
         data: {
+          // quantityOnHand is physical stock (available + reserved).
+          // A successful sale consumes both the reservation and the units.
           reserved: { decrement: item.quantity },
+          quantityOnHand: { decrement: item.quantity },
           version: { increment: 1 },
         },
       });
