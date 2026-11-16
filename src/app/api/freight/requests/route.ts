@@ -36,6 +36,9 @@ const requestSchema = z.object({
     if (!value.destination) {
       context.addIssue({ code: "custom", path: ["destination"], message: "O destino é obrigatório." });
     }
+    if (!value.quantity || !value.quantityUnit) {
+      context.addIssue({ code: "custom", path: ["quantity"], message: "Indique a quantidade e a unidade da carga." });
+    }
     const cargoItems = value.details.cargoItems;
     if (!Array.isArray(cargoItems) || cargoItems.length === 0) {
       context.addIssue({ code: "custom", path: ["details", "cargoItems"], message: "Indique pelo menos um artigo ou material a transportar." });
