@@ -19,9 +19,23 @@ For pilot traffic, the adapter defaults to `https://router.project-osrm.org/` an
 
 ## Passenger map UI
 
-The passenger entry point at `/app/mobility` is a full-viewport MapLibre GL JS experience using OpenFreeMap's dark vector style and OpenStreetMap attribution. Destination autocomplete uses Photon with Angola-only result filtering. No mapping API key is required. Driver GPS markers are updated from the existing ride polling endpoint and rotate using the recorded GPS heading when available.
+The passenger entry point at `/app/mobility` is a full-viewport MapLibre GL JS experience using OpenFreeMap's dark vector style and OpenStreetMap attribution. Destination autocomplete uses Photon global search without an Angola-only filter. The MARKA landmark catalogue is also country-aware: searches can span all countries or optionally filter by a two-letter ISO 3166-1 alpha-2 country code. The map starts at a neutral world view and uses GPS only when the user grants permission. No mapping API key is required. Driver GPS markers are updated from the existing ride polling endpoint and rotate using the recorded GPS heading when available.
 
 The public OpenFreeMap/Photon services are suitable for a zero-cost pilot, not a guaranteed high-volume service. Preserve attribution and observe each service's fair-use policy.
+
+## International market readiness
+
+The geospatial layer is global-capable, subject to OpenStreetMap/Photon coverage and each public service's fair-use limits. This does not by itself activate paid mobility operations in every country.
+
+Before enabling a country for real trips, MARKA must configure and verify:
+- Country and market identity (ISO 3166-1 alpha-2), supported service classes and operating cities.
+- Local currency (ISO 4217), minor-unit precision, country-specific tariffs, commissions, taxes and settlement rules.
+- Local timezone, distance units, number/address formatting and language defaults.
+- Driver identity, driving licence, vehicle registration, insurance, inspection and transport permits required by that jurisdiction.
+- Payment provider availability, payout rails, consumer-protection rules, privacy/data residency and emergency escalation.
+- Routing coverage and service quality for the actual road network, including ferries, borders and restricted roads where relevant.
+
+Current production domain defaults still include Angola-specific driver onboarding and AOA fare calculation. Until those are replaced by verified per-market configuration and legal review, global search/map support must not be represented as worldwide ride-service activation. Angola remains the initial configured market.
 
 ## Tariff and fare estimate
 
