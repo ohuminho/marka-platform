@@ -99,7 +99,7 @@ export class MobilityRideService {
                 input.serviceType.trim(),
               currency:
                 input.currency ?? "AOA",
-              estimatedFareMinor: input.estimatedFareMinor ?? BigInt(0),
+              metadata: withEstimatedFare(input.metadata, input.estimatedFareMinor),
 
               pickupLatitude:
                 input.pickupLatitude,
@@ -249,7 +249,7 @@ export class MobilityRideService {
             reference,
             serviceType: input.serviceType.trim(),
             currency: input.currency ?? "AOA",
-            estimatedFareMinor: input.estimatedFareMinor ?? BigInt(0),
+            metadata: withEstimatedFare(input.metadata, input.estimatedFareMinor),
             pickupLatitude: input.pickupLatitude,
             pickupLongitude: input.pickupLongitude,
             pickupAddress: input.pickupAddress,
@@ -1233,6 +1233,17 @@ export class MobilityRideService {
 export const mobilityRideService =
   new MobilityRideService();
 
+
+function withEstimatedFare(
+  metadata: Prisma.InputJsonValue | undefined,
+  amountMinor: bigint | undefined,
+): Prisma.InputJsonValue | undefined {
+  if (amountMinor === undefined) return metadata;
+  const base = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? metadata as Prisma.InputJsonObject
+    : {};
+  return { ...base, estimatedFareMinor: amountMinor.toString() };
+}
 
 function normalizeIdempotencyValue(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
