@@ -60,6 +60,7 @@ export default function MobilityFreightRequestHistory() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
 
   const refresh = useCallback(async (quiet = false) => {
     if (!organizationId) {
@@ -88,11 +89,19 @@ export default function MobilityFreightRequestHistory() {
   }, [organizationId]);
 
   useEffect(() => {
-    void refresh();
+    const timer = window.setTimeout(() => { void refresh(); }, 0);
     const onCreated = () => { void refresh(true); };
     window.addEventListener("marka:freight-request-created", onCreated);
-    return () => window.removeEventListener("marka:freight-request-created", onCreated);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("marka:freight-request-created", onCreated);
+    };
   }, [refresh]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCurrentTime(Date.now()), 0);
+    return () => window.clearTimeout(timer);
+  }, [requests]);
 
   const decideQuote = async (item: FreightRequest, decision: "ACCEPT" | "REJECT") => {
     if (!organizationId) return;
@@ -144,7 +153,7 @@ export default function MobilityFreightRequestHistory() {
         <div className="mt-5 space-y-3">
           {requests.map((item) => {
             const expiresAt = item.quoteExpiresAt ? new Date(item.quoteExpiresAt) : null;
-            const quoteExpired = expiresAt ? expiresAt.getTime() <= Date.now() : false;
+            const quoteExpired = expiresAt && currentTime !== null ? expiresAt.getTime() <= currentTime : false;
             const canDecide = item.status === "QUOTED" && item.quotedAmount !== null && expiresAt !== null && Number.isFinite(expiresAt.getTime()) && !quoteExpired;
             const displayStatus = item.status === "QUOTED" && quoteExpired ? "Cotação expirada" : statusLabels[item.status] ?? item.status.replaceAll("_", " ");
             return (
