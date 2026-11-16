@@ -50,7 +50,8 @@ function label(value: string) {
     PROVIDER_ARRIVED: "Prestador chegou",
     PICKED_UP: "Recolha confirmada",
     IN_TRANSIT: "Em transporte",
-    COMPLETED: "Concluído",
+    PROVIDER_COMPLETED_PENDING_CONFIRMATION: "Aguarda confirmação do cliente",
+    COMPLETED: "Concluído e confirmado",
     CANCELLED: "Cancelado",
     EXCEPTION: "Requer intervenção",
   } as Record<string, string>)[value] ?? value.replaceAll("_", " ");
@@ -116,6 +117,7 @@ export default function MobilityFreightQuoteDesk() {
     newRequests: requests.filter((item) => item.status === "REQUESTED").length,
     awaitingPayment: requests.filter((item) => item.status === "AWAITING_PAYMENT").length,
     activeServices: requests.filter((item) => ["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"].includes(item.status)).length,
+    awaitingConfirmation: requests.filter((item) => item.status === "PROVIDER_COMPLETED_PENDING_CONFIRMATION").length,
     completed: requests.filter((item) => item.status === "COMPLETED").length,
   };
 
