@@ -236,6 +236,23 @@ export class CheckoutService {
 
     const order = await prisma.$transaction(
       async (database) => {
+        // Serialize checkout attempts against the same cart. A second request
+        // may have read ACTIVE before waiting, so re-check after taking the row lock.
+        await database.$queryRaw<Array<{ id: string }>>`
+          SELECT "id"
+          FROM "Cart"
+          WHERE "id" = ${cartId} AND "userId" = ${userId}
+          FOR UPDATE
+        `;
+
+        const lockedCart = await database.cart.findFirst({
+          where: { id: cartId, userId, status: "ACTIVE" },
+          select: { id: true },
+        });
+        if (!lockedCart) {
+          throw new Error("Active cart not found.");
+        }
+
         const createdOrder = await database.order.create({
           data: {
             userId,
