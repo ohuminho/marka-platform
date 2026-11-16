@@ -87,9 +87,32 @@ export async function GET() {
     take: 100,
   });
 
+  const exceptionEvents = requests.length > 0 ? await prisma.auditLog.findMany({
+    where: {
+      organizationId: auth.organizationId,
+      entityType: "FreightRequest",
+      entityId: { in: requests.map((item) => item.id) },
+      action: "FREIGHT_STATUS_EXCEPTION",
+    },
+    select: { entityId: true, metadata: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  }) : [];
+  const latestExceptionByRequest = new Map<string, { note: string | null; createdAt: string }>();
+  for (const event of exceptionEvents) {
+    if (!event.entityId || latestExceptionByRequest.has(event.entityId)) continue;
+    const metadata = event.metadata && typeof event.metadata === "object"
+      ? event.metadata as Record<string, unknown>
+      : {};
+    latestExceptionByRequest.set(event.entityId, {
+      note: typeof metadata.note === "string" ? metadata.note : null,
+      createdAt: event.createdAt.toISOString(),
+    });
+  }
+
   return NextResponse.json({
     requests: requests.map((item) => ({
       ...item,
+      latestException: latestExceptionByRequest.get(item.id) ?? null,
       quantity: item.quantity === null ? null : Number(item.quantity),
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
       quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
