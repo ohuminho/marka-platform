@@ -132,6 +132,19 @@ export async function POST(
       const exceptionMetadata = exceptionEvent?.metadata && typeof exceptionEvent.metadata === "object"
         ? exceptionEvent.metadata as Record<string, unknown>
         : {};
+      const reviewEvent = await tx.auditLog.findFirst({
+        where: {
+          organizationId,
+          entityType: "FreightRequest",
+          entityId: current.id,
+          action: "FREIGHT_EXCEPTION_REVIEWED",
+        },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      });
+      if (!exceptionEvent || !reviewEvent || reviewEvent.createdAt <= exceptionEvent.createdAt) {
+        throw new Error("FREIGHT_EXCEPTION_REVIEW_REQUIRED");
+      }
       const previousStatus = exceptionMetadata.previousStatus;
       if (!isResumableStatus(previousStatus)) {
         throw new Error("FREIGHT_EXCEPTION_ORIGIN_UNKNOWN");
@@ -199,6 +212,7 @@ export async function POST(
       "FREIGHT_VEHICLE_NOT_ACTIVE",
       "FREIGHT_EXCEPTION_ORIGIN_UNKNOWN",
       "FREIGHT_EXCEPTION_RESOLUTION_CONFLICT",
+      "FREIGHT_EXCEPTION_REVIEW_REQUIRED",
     ].includes(code);
 
     return NextResponse.json({
@@ -212,9 +226,11 @@ export async function POST(
               ? "O prestador não está verificado ou disponível para retomar o serviço."
               : code === "FREIGHT_VEHICLE_NOT_ACTIVE"
                 ? "A viatura atribuída já não está activa."
-                : code === "FREIGHT_EXCEPTION_ORIGIN_UNKNOWN"
-                  ? "Não foi possível determinar com segurança o estado anterior. É necessária análise manual."
-                  : conflict
+                : code === "FREIGHT_EXCEPTION_REVIEW_REQUIRED"
+                  ? "A ocorrência precisa de uma análise administrativa registada antes da aprovação da retoma."
+                  : code === "FREIGHT_EXCEPTION_ORIGIN_UNKNOWN"
+                    ? "Não foi possível determinar com segurança o estado anterior. É necessária análise manual."
+                    : conflict
                     ? "O estado do pedido mudou. Actualize a fila e tente novamente."
                     : "Não foi possível resolver a ocorrência.",
       code,
