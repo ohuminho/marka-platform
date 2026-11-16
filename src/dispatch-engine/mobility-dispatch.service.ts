@@ -67,6 +67,11 @@ const SERVICE_VEHICLE_TYPES: Record<string, string[]> = {
   MINIBUS: ["MINIBUS"],
   BUS: ["BUS"],
   COACH: ["COACH"],
+  PICKUP: ["TRUCK"],
+  LIGHT_TRUCK: ["TRUCK"],
+  MEDIUM_TRUCK: ["TRUCK"],
+  TIPPER_TRUCK: ["TRUCK"],
+  HEAVY_TRUCK: ["TRUCK"],
 };
 
 /**

@@ -36,16 +36,20 @@ async function main(): Promise<void> {
       error.code === "MOBILITY_COORDINATES_INVALID",
   );
 
-  await assert.rejects(
-    () => service.estimate(
-      { latitude: -8.8, longitude: 13.2 },
-      { latitude: -8.8, longitude: 4.9 },
-      { fetcher: validFetch },
-    ),
-    (error: unknown) =>
-      error instanceof MobilityRoutingError &&
-      error.code === "MOBILITY_ROUTING_NOT_CONFIGURED",
+  const originalRoutingUrl = process.env.MOBILITY_ROUTING_BASE_URL;
+  delete process.env.MOBILITY_ROUTING_BASE_URL;
+  const publicDemoFetch: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    assert.equal(url.hostname, "router.project-osrm.org");
+    return new Response(JSON.stringify({ code: "Ok", routes: [{ distance: 2500, duration: 420 }] }), { status: 200 });
+  };
+  const publicEstimate = await service.estimate(
+    { latitude: -8.8, longitude: 13.2 },
+    { latitude: -8.8, longitude: 4.9 },
+    { fetcher: publicDemoFetch },
   );
+  assert.equal(publicEstimate.distanceMeters, 2500);
+  if (originalRoutingUrl !== undefined) process.env.MOBILITY_ROUTING_BASE_URL = originalRoutingUrl;
 
   const malformedFetch: typeof fetch = async () =>
     new Response(JSON.stringify({

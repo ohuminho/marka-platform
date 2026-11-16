@@ -6,6 +6,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { mobilityPricingService } from "@/services/mobility/pricing/mobility-pricing.service";
 import {
   MobilityRoutingError,
   mobilityRoutingService,
@@ -19,7 +20,32 @@ const coordinatesSchema = z.object({
   originLng: z.coerce.number().finite().min(-180).max(180),
   destinationLat: z.coerce.number().finite().min(-90).max(90),
   destinationLng: z.coerce.number().finite().min(-180).max(180),
+  serviceType: z.enum(["TAXI","EXECUTIVE","MOTO_TAXI","VAN","MINIBUS","BUS","COACH","PICKUP","LIGHT_TRUCK","MEDIUM_TRUCK","TIPPER_TRUCK","HEAVY_TRUCK"]).optional(),
 }).strict();
+
+function readMinor(name: string): bigint | undefined {
+  const value = process.env[name];
+  if (!value || !/^\\d+$/.test(value)) return undefined;
+  try { return BigInt(value); } catch { return undefined; }
+}
+
+function quoteFare(serviceType: string | undefined, distanceMeters: number, durationSeconds: number) {
+  if (!serviceType) return null;
+  const prefix = "MARKA_MOBILITY_" + serviceType + "_";
+  const baseFareMinor = readMinor(prefix + "BASE_FARE_MINOR");
+  const distanceRateMinorPerKm = readMinor(prefix + "DISTANCE_RATE_MINOR_PER_KM");
+  const durationRateMinorPerMinute = readMinor(prefix + "DURATION_RATE_MINOR_PER_MINUTE");
+  if (baseFareMinor === undefined || distanceRateMinorPerKm === undefined || durationRateMinorPerMinute === undefined) return null;
+  const bookingFeeMinor = readMinor(prefix + "BOOKING_FEE_MINOR");
+  const minimumFareMinor = readMinor(prefix + "MINIMUM_FARE_MINOR");
+  const fare = mobilityPricingService.calculate({
+    currency: "AOA", baseFareMinor, distanceRateMinorPerKm, durationRateMinorPerMinute,
+    estimatedDistanceMeters: distanceMeters, estimatedDurationSeconds: durationSeconds,
+    ...(bookingFeeMinor === undefined ? {} : { bookingFeeMinor }),
+    ...(minimumFareMinor === undefined ? {} : { minimumFareMinor }),
+  });
+  return { currency: fare.currency, totalMinor: fare.totalMinor.toString(), totalAOA: Number(fare.totalMinor) / 100 };
+}
 
 export async function GET(request: Request) {
   try {

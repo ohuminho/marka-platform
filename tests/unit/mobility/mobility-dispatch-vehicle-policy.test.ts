@@ -8,6 +8,11 @@ assert.deepEqual(resolveServiceVehicleTypes("VAN"), ["VAN"]);
 assert.deepEqual(resolveServiceVehicleTypes("MINIBUS"), ["MINIBUS"]);
 assert.deepEqual(resolveServiceVehicleTypes("BUS"), ["BUS"]);
 assert.deepEqual(resolveServiceVehicleTypes("COACH"), ["COACH"]);
+assert.deepEqual(resolveServiceVehicleTypes("PICKUP"), ["TRUCK"]);
+assert.deepEqual(resolveServiceVehicleTypes("LIGHT_TRUCK"), ["TRUCK"]);
+assert.deepEqual(resolveServiceVehicleTypes("MEDIUM_TRUCK"), ["TRUCK"]);
+assert.deepEqual(resolveServiceVehicleTypes("TIPPER_TRUCK"), ["TRUCK"]);
+assert.deepEqual(resolveServiceVehicleTypes("HEAVY_TRUCK"), ["TRUCK"]);
 
 // A client may narrow an eligible class, but cannot widen or substitute it.
 assert.deepEqual(
