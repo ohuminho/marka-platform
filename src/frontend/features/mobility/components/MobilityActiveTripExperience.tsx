@@ -13,7 +13,7 @@ type Ride = {
   pickupAddress?: string | null; dropoffAddress?: string | null;
   pickupLatitude?: number | string | null; pickupLongitude?: number | string | null;
   dropoffLatitude?: number | string | null; dropoffLongitude?: number | string | null;
-  startedAt?: string | null; rider?: { name?: string | null } | null;
+  startedAt?: string | null; rider?: { name?: string | null; profile?: { avatarUrl?: string | null } | null } | null;
   driver?: { user?: { name?: string | null } | null; location?: { latitude?: number | string | null; longitude?: number | string | null; lat?: number | string | null; lng?: number | string | null; heading?: number | string | null } | null } | null;
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
 };
@@ -130,6 +130,15 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     if (targetLat === null || targetLng === null || currentLat === null || currentLng === null) return null;
     return distance(currentLat, currentLng, targetLat, targetLng);
   }, [ride]);
+
+  const pickupDistanceMeters = useMemo(() => {
+    if (audience !== "driver" || !ride) return null;
+    const targetLat = num(ride.pickupLatitude), targetLng = num(ride.pickupLongitude);
+    const loc = ride.driver?.location;
+    const currentLat = num(loc?.latitude ?? loc?.lat), currentLng = num(loc?.longitude ?? loc?.lng);
+    if (targetLat === null || targetLng === null || currentLat === null || currentLng === null) return null;
+    return distance(currentLat, currentLng, targetLat, targetLng);
+  }, [audience, ride]);
 
   const adContext: MobilityAdContext = {
     adsEnabled: adsPreferenceLoaded && adsEnabled, rideStatus: ride?.status, tripStartedAt: startedAt,
@@ -273,10 +282,20 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[9px] uppercase tracking-[.22em] text-white/35">Referência da viagem</p><p className="mt-1 text-lg font-semibold tracking-wide">{ride.reference || ride.id.slice(0, 8).toUpperCase()}</p></div><span className="rounded-full border border-[#e9bd58]/30 bg-[#e9bd58]/[.08] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[.12em] text-[#f0d58e]">{STATUS[ride.status] || ride.status.replaceAll("_", " ")}</span></div>
           <div className="mt-6 space-y-0"><div className="flex gap-3 pb-5"><div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-sky-300/60 text-[8px] text-sky-200">●</div><div className="min-w-0"><p className="text-[9px] uppercase tracking-[.18em] text-white/35">Recolha</p><p className="mt-1 break-words text-sm text-white/90">{ride.pickupAddress || "Ponto de recolha registado"}</p></div></div><div className="ml-[9px] h-5 border-l border-dashed border-white/20" /><div className="flex gap-3 pt-3"><div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#e9bd58]/70 text-[8px] text-[#e9bd58]">◆</div><div className="min-w-0"><p className="text-[9px] uppercase tracking-[.18em] text-white/35">Destino</p><p className="mt-1 break-words text-sm text-white/90">{ride.dropoffAddress || "Destino registado no pedido"}</p></div></div></div>
           <div className="mt-6 grid gap-3 border-t border-white/[.08] pt-5 sm:grid-cols-2">
-            <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">{audience === "driver" ? "Passageiro" : "Motorista"}</p><p className="mt-1 text-sm text-white/80">{audience === "driver" ? ride.rider?.name || "Passageiro MARKA" : ride.driver?.user?.name || "A aguardar atribuição"}</p></div>
+            {audience === "driver" ? (
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#e9bd58]/45 bg-white/[.05]">
+                  {ride.rider?.profile?.avatarUrl ? <img src={ride.rider.profile.avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-sm font-semibold text-[#e9bd58]">{(ride.rider?.name || "P").slice(0,1).toUpperCase()}</div>}
+                </div>
+                <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Passageiro</p><p className="mt-1 text-sm text-white/80">{ride.rider?.name || "Passageiro MARKA"}</p><p className="text-[9px] text-white/35">Avaliação não disponível</p></div>
+              </div>
+            ) : <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Motorista</p><p className="mt-1 text-sm text-white/80">{ride.driver?.user?.name || "A aguardar atribuição"}</p></div>}
             <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Serviço</p><p className="mt-1 text-sm text-white/80">{ride.serviceType || "MARKA Mobility"}</p></div>
             {ride.vehicle && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Veículo</p><p className="mt-1 text-sm text-white/80">{[ride.vehicle.make, ride.vehicle.model].filter(Boolean).join(" ") || "Veículo atribuído"}</p></div>}
             {ride.vehicle && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Matrícula</p><p className="mt-1 text-sm text-white/80">{ride.vehicle.plateNumber || ride.vehicle.registrationNumber || "Confirmada na viagem"}</p></div>}
+            {audience === "driver" && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Distância à recolha</p><p className="mt-1 text-sm text-white/80">{pickupDistanceMeters === null ? "A obter GPS" : pickupDistanceMeters < 1000 ? Math.round(pickupDistanceMeters) + " m" : (pickupDistanceMeters / 1000).toFixed(1) + " km"}</p></div>}
+            {audience === "driver" && <div><p className="text-[9px] uppercase tracking-[.16em] text-white/35">Valor líquido</p><p className="mt-1 text-sm text-white/55">A aguardar cálculo financeiro validado</p></div>}
+
           </div>
           {["DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"].includes(ride.status) && <div className="mt-5"><button type="button" disabled={communicationLoading} onClick={() => void openRideConversation()} className="flex min-h-11 w-full items-center justify-center rounded-full border border-[#e9bd58]/35 bg-[#e9bd58]/[.07] px-4 py-2.5 text-xs font-semibold text-[#f0d58e] transition hover:bg-[#e9bd58]/[.12] disabled:opacity-50">{communicationLoading ? "A abrir conversa…" : "Mensagem e chamada privadas ↗"}</button>{communicationError && <p role="alert" className="mt-2 text-xs text-rose-200">{communicationError}</p>}</div>}
           <p className="mt-5 rounded-xl border border-white/[.08] bg-black/20 px-4 py-3 text-[11px] leading-5 text-white/45">Segurança e atenção à estrada têm prioridade. A publicidade é ocultada se o estado da viagem, a localização ou a proximidade do destino não permitirem uma apresentação segura.</p>

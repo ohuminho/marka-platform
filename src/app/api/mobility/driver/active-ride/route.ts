@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       },
       orderBy: { requestedAt: "desc" },
       include: {
-        rider: { select: { id: true, name: true } },
+        rider: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
         driver: {
           include: {
             user: { select: { id: true, name: true } },
