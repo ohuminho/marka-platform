@@ -109,17 +109,6 @@ export async function GET(request: Request) {
       );
     }
 
-    const route = await mobilityRoutingService.getGeometry(
-      {
-        latitude: parsed.data.originLat,
-        longitude: parsed.data.originLng,
-      },
-      {
-        latitude: parsed.data.destinationLat,
-        longitude: parsed.data.destinationLng,
-      },
-    );
-
     const requestedServiceTypes = parsed.data.serviceTypes
       ? parsed.data.serviceTypes.split(",").map((value) => value.trim()).filter(Boolean)
       : parsed.data.serviceType
@@ -132,6 +121,17 @@ export async function GET(request: Request) {
         { status: 400 },
       );
     }
+
+    const route = await mobilityRoutingService.getGeometry(
+      {
+        latitude: parsed.data.originLat,
+        longitude: parsed.data.originLng,
+      },
+      {
+        latitude: parsed.data.destinationLat,
+        longitude: parsed.data.destinationLng,
+      },
+    );
 
     const fares = Object.fromEntries(
       validatedServiceTypes.data.map((type) => [
