@@ -237,6 +237,8 @@ export default function MobilityLiveMap({
     const map = mapRef.current;
     if (!map) return;
     if (!driverPoint) {
+      if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
+      driverAnimationRef.current = null;
       markersRef.current.driver?.remove();
       markersRef.current.driver = null;
       return;
