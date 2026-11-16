@@ -28,6 +28,30 @@ const createProductSchema = z.object({
     .trim()
     .max(5000, "Product description is too long.")
     .optional(),
+
+  stock: z
+    .number()
+    .int()
+    .min(0)
+    .max(1_000_000)
+    .optional()
+    .default(0),
+
+  currency: z
+    .string()
+    .trim()
+    .length(3)
+    .optional()
+    .default("AOA")
+    .transform((value) => value.toUpperCase())
+    .refine((value) => /^[A-Z]{3}$/.test(value), "Invalid currency code."),
+
+  image: z
+    .string()
+    .trim()
+    .url()
+    .max(2048)
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -179,7 +203,10 @@ export async function POST(request: Request) {
         parsed.data.storeId,
         parsed.data.name,
         parsed.data.price,
-        parsed.data.description
+        parsed.data.description,
+        parsed.data.stock,
+        parsed.data.currency,
+        parsed.data.image
       );
 
     return NextResponse.json(
