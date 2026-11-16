@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     select: { id: true },
   });
   if (!acceptedTerms) return NextResponse.json({ message: "Aceita primeiro os Termos de Adesão do Motorista.", code: "DRIVER_TERMS_NOT_ACCEPTED" }, { status: 422 });
-  const driver = await prisma.mobilityDriver.findFirst({ where: { userId: user.id, organizationId }, select: { id: true } });
+  const driver = await prisma.mobilityDriver.findFirst({ where: { userId: user.id, organizationId }, select: { id: true, countryCode: true } });
   if (!driver) return NextResponse.json({ message: "Inicia primeiro a candidatura de motorista.", code: "DRIVER_APPLICATION_REQUIRED" }, { status: 409 });
 
   const parsed = schema.safeParse(await request.json().catch(() => null));
@@ -107,10 +107,10 @@ export async function POST(request: Request) {
       const vehicle = currentLink
         ? await tx.mobilityVehicle.update({
             where: { id: currentLink.vehicleId },
-            data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ...previousMetadata, ...ownershipMetadata } },
+            data: { type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: driver.countryCode, status: "PENDING", metadata: { ...previousMetadata, ...ownershipMetadata } },
           })
         : await tx.mobilityVehicle.create({
-            data: { organizationId, type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: "AO", status: "PENDING", metadata: { ...ownershipMetadata } },
+            data: { organizationId, type: input.type, registrationNumber, make: input.make, model: input.model, year: input.year, color: input.color, capacity: input.capacity, countryCode: driver.countryCode, status: "PENDING", metadata: { ...ownershipMetadata } },
           });
 
       if (currentLink) {
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
               vehicleId: vehicle.id,
               documentType: requirement.documentType,
               status: "PENDING",
-              metadata: { requirementLabel: requirement.label, documentSubmitted: false, source: "ANGOLA_DRIVER_ONBOARDING" },
+              metadata: { requirementLabel: requirement.label, documentSubmitted: false, source: driver.countryCode === "AO" ? "AO_DRIVER_ONBOARDING" : "INTERNATIONAL_DRIVER_ONBOARDING" },
             },
           });
         }
