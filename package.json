@@ -1,6 +1,6 @@
 {
   "name":"marka-platform","version":"0.1.0","private":true,
-  "scripts":{"dev":"next dev","build":"prisma generate && next build","start":"next start","lint":"eslint","test:unit":"tsx tests/run-unit-tests.ts"},
+  "scripts":{"dev":"next dev","build":"prisma generate && next build","start":"next start","lint":"eslint","test:unit":"tsx tests/run-unit-tests.ts","mobility:landmarks:import":"tsx prisma/import-mobility-landmarks.ts"},
   "dependencies":{"@prisma/client":"^6.19.3","bcrypt":"^6.0.0","framer-motion":"^13.2.0","jose":"^6.2.12","jsonwebtoken":"^9.0.3","maplibre-gl":"^5.6.1","next":"16.3.4","prisma":"^6.19.3","react":"19.2.8","react-dom":"19.2.8","zod":"^4.5.4"},
   "devDependencies":{"@tailwindcss/postcss":"^4","@types/bcrypt":"^6.0.0","@types/jsonwebtoken":"^9.0.10","@types/node":"^20","@types/react":"^19","@types/react-dom":"^19","eslint":"^9","eslint-config-next":"16.3.4","tailwindcss":"^4","tsx":"^4.23.13","typescript":"^5"},
   "prisma":{"seed":"tsx prisma/seed.ts"}
