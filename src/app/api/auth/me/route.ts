@@ -193,6 +193,13 @@ export async function GET(
             profile: user.profile,
           },
 
+          session: {
+            id: session.id,
+            expiresAt: session.expiresAt,
+            createdAt: session.createdAt,
+            lastSeenAt: session.lastSeenAt,
+          },
+
           organizations:
             user.memberships.map(
               (membership) =>
@@ -203,6 +210,11 @@ export async function GET(
             organizationId: undefined,
             roles: [],
             permissions: [],
+          },
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, private",
           },
         }
       );
