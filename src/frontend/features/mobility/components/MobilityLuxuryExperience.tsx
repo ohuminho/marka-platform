@@ -138,16 +138,6 @@ export default function MobilityLuxuryExperience() {
   });
   etaInput.current = { driver, origin, serviceType: ride?.serviceType || serviceType };
 
-  const onPoints = useCallback((points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => {
-    setOrigin(points.origin);
-    setDestination(points.destination);
-    setRoute(null);
-    setQuote(null);
-    setFareStatus("NO_ROUTE");
-    setFareByService({});
-    setError(null);
-  }, []);
-
   const onRoute = useCallback((value: MobilityRoute | null) => {
     setRoute(value);
     setQuote(value?.fare ?? null);
@@ -464,7 +454,6 @@ export default function MobilityLuxuryExperience() {
   return (
     <main className="fixed inset-0 z-40 h-[100dvh] overflow-hidden bg-[#09090B] text-white">
       <MobilityLiveMap
-        onPointsChange={onPoints}
         onRouteChange={onRoute}
         serviceType={serviceType}
         driverPoint={driver}
