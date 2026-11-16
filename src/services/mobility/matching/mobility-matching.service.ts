@@ -221,6 +221,32 @@ export class MobilityMatchingService {
         continue;
       }
 
+      // Executive is a service class, not a separate vehicle type. Until
+      // dedicated executive verification is introduced, only vehicles
+      // explicitly registered as LUXURY_SEDAN may receive these requests.
+      const requestedService = input.serviceType.trim().toUpperCase();
+      const expectedTruckSubtype: Record<string, string> = {
+        PICKUP: "PICKUP",
+        LIGHT_TRUCK: "LIGHT_TRUCK",
+        MEDIUM_TRUCK: "MEDIUM_TRUCK",
+        TIPPER_TRUCK: "TIPPER_TRUCK",
+        HEAVY_TRUCK: "HEAVY_TRUCK",
+      };
+      const expectedSubtype = expectedTruckSubtype[requestedService];
+      if (expectedSubtype) {
+        const metadata = vehicle.metadata && typeof vehicle.metadata === "object" && !Array.isArray(vehicle.metadata)
+          ? vehicle.metadata as Record<string, unknown>
+          : {};
+        if (metadata.vehicleSubtype !== expectedSubtype) continue;
+      }
+
+      if (input.serviceType.trim().toUpperCase() === "EXECUTIVE") {
+        const vehicleMetadata = vehicle.metadata && typeof vehicle.metadata === "object" && !Array.isArray(vehicle.metadata)
+          ? vehicle.metadata as Record<string, unknown>
+          : {};
+        if (vehicleMetadata.vehicleSubtype !== "LUXURY_SEDAN") continue;
+      }
+
       if (activeRides.length > 0) {
         // Bound external routing calls during dispatch. If the OSRM matrix
         // cannot be verified, fail closed for shared assignments; ordinary
@@ -255,32 +281,6 @@ export class MobilityMatchingService {
         } catch {
           continue;
         }
-      }
-
-      // Executive is a service class, not a separate vehicle type. Until
-      // dedicated executive verification is introduced, only vehicles
-      // explicitly registered as LUXURY_SEDAN may receive these requests.
-      const requestedService = input.serviceType.trim().toUpperCase();
-      const expectedTruckSubtype: Record<string, string> = {
-        PICKUP: "PICKUP",
-        LIGHT_TRUCK: "LIGHT_TRUCK",
-        MEDIUM_TRUCK: "MEDIUM_TRUCK",
-        TIPPER_TRUCK: "TIPPER_TRUCK",
-        HEAVY_TRUCK: "HEAVY_TRUCK",
-      };
-      const expectedSubtype = expectedTruckSubtype[requestedService];
-      if (expectedSubtype) {
-        const metadata = vehicle.metadata && typeof vehicle.metadata === "object" && !Array.isArray(vehicle.metadata)
-          ? vehicle.metadata as Record<string, unknown>
-          : {};
-        if (metadata.vehicleSubtype !== expectedSubtype) continue;
-      }
-
-      if (input.serviceType.trim().toUpperCase() === "EXECUTIVE") {
-        const vehicleMetadata = vehicle.metadata && typeof vehicle.metadata === "object" && !Array.isArray(vehicle.metadata)
-          ? vehicle.metadata as Record<string, unknown>
-          : {};
-        if (vehicleMetadata.vehicleSubtype !== "LUXURY_SEDAN") continue;
       }
 
       const distanceMeters =
