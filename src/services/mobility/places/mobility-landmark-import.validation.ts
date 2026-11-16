@@ -2,7 +2,7 @@ export type NormalizedMobilityLandmark = {
   name: string;
   normalizedName: string;
   aliases: string[];
-  countryCode: "AO";
+  countryCode: string;
   province: string | null;
   municipality: string | null;
   category: string;
@@ -49,9 +49,9 @@ function parseLandmark(value: unknown, index: number): NormalizedMobilityLandmar
   if (typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
     throw new Error(`Record ${index + 1}: longitude must be a finite number between -180 and 180.`);
   }
-  // Broad Angola mainland + Cabinda envelope; not a substitute for national polygon validation.
-  if (latitude < -18.1 || latitude > -4.2 || longitude < 11.5 || longitude > 24.1) {
-    throw new Error(`Record ${index + 1}: coordinates fall outside the Angola validation envelope.`);
+  const countryCode = item.countryCode == null ? "AO" : requiredText(item.countryCode, "countryCode", 2).toUpperCase();
+  if (!/^[A-Z]{2}$/.test(countryCode)) {
+    throw new Error(`Record ${index + 1}: countryCode must be a two-letter ISO 3166-1 alpha-2 code.`);
   }
 
   const source = requiredText(item.source, "source", 32).toUpperCase();
@@ -98,7 +98,7 @@ function parseLandmark(value: unknown, index: number): NormalizedMobilityLandmar
     name,
     normalizedName,
     aliases,
-    countryCode: "AO",
+    countryCode,
     province,
     municipality,
     category,
@@ -119,7 +119,7 @@ export function parseMobilityLandmarkRecords(value: unknown): NormalizedMobility
   const uniqueSourceRefs = new Set<string>();
 
   for (const record of records) {
-    const key = `${record.normalizedName}::${record.municipality ?? ""}`;
+    const key = `${record.countryCode}::${record.normalizedName}::${record.municipality ?? ""}`;
     if (uniqueKeys.has(key)) throw new Error(`Duplicate landmark in import: ${key}`);
     if (uniqueSourceRefs.has(record.sourceRef)) throw new Error(`Duplicate sourceRef in import: ${record.sourceRef}`);
     uniqueKeys.add(key);
