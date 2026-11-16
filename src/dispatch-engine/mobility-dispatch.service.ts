@@ -497,9 +497,11 @@ export class MobilityDispatchService {
       );
     }
 
-    return mobilityRideService.markDriverArriving(
-      rideId
-    );
+    // Acceptance is an orchestration step only. The driver explicitly starts
+    // travelling in the next lifecycle action, which transitions the ride to
+    // DRIVER_ARRIVING. Changing the ride status here would make that next
+    // action attempt an invalid DRIVER_ARRIVING -> DRIVER_ARRIVING transition.
+    return ride;
   }
 
   async rejectAssignment(
