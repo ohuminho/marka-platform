@@ -32,6 +32,7 @@ async function main() {
       });
       const existing = existingBySource ?? await tx.mobilityLandmark.findFirst({
         where: {
+          countryCode: record.countryCode,
           normalizedName: record.normalizedName,
           municipality: record.municipality,
         },
