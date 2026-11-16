@@ -42,7 +42,7 @@ export default function MobilityFreightRequestForm() {
   const [vehiclePreference, setVehiclePreference] = useState("ANY");
   const [waterType, setWaterType] = useState<"POTABLE_WATER" | "NON_POTABLE_WATER">("POTABLE_WATER");
   const [quantity, setQuantity] = useState("");
-  const [quantityUnit, setQuantityUnit] = useState<"KG" | "TON" | "LITRE" | "M3">("LITRE");
+  const [quantityUnit, setQuantityUnit] = useState<"KG" | "TON" | "LITRE" | "M3">("KG");
   const [vehicleDescription, setVehicleDescription] = useState("");
   const [assistanceType, setAssistanceType] = useState<(typeof assistanceOptions)[number][0]>("TOW");
   const [notes, setNotes] = useState("");
@@ -207,7 +207,7 @@ export default function MobilityFreightRequestForm() {
           ["WATER_DELIVERY", "Pedir água", "Por litros ou m³"],
           ["ROADSIDE_ASSISTANCE", "Assistência", "Avaria, pneu ou reboque"],
         ] as const).map(([value, title, subtitle]) => (
-          <button key={value} type="button" aria-pressed={service === value} onClick={() => { setService(value); setError(null); setMessage(null); }} className={`min-h-[76px] rounded-2xl border px-4 py-3 text-left transition ${service === value ? "border-[var(--theme-text-muted)] bg-[var(--theme-background)]" : "border-[var(--theme-border)] hover:bg-[var(--theme-background)]"}`}>
+          <button key={value} type="button" aria-pressed={service === value} onClick={() => { setService(value); setQuantity(""); if (value === "WATER_DELIVERY") setQuantityUnit("LITRE"); else if (value === "CARGO_SHIPMENT") setQuantityUnit("KG"); setError(null); setMessage(null); }} className={`min-h-[76px] rounded-2xl border px-4 py-3 text-left transition ${service === value ? "border-[var(--theme-text-muted)] bg-[var(--theme-background)]" : "border-[var(--theme-border)] hover:bg-[var(--theme-background)]"}`}>
             <span className="block text-sm font-semibold text-[var(--theme-text)]">{title}</span>
             <span className="mt-1 block text-[11px] text-[var(--theme-text-muted)]">{subtitle}</span>
           </button>
