@@ -137,10 +137,36 @@ export async function GET() {
     });
   }
 
+  const reviewEvents = requests.length > 0 ? await prisma.auditLog.findMany({
+    where: {
+      organizationId: auth.organizationId,
+      entityType: "FreightRequest",
+      entityId: { in: requests.map((item) => item.id) },
+      action: "FREIGHT_EXCEPTION_REVIEWED",
+    },
+    select: { entityId: true, metadata: true, createdAt: true, actor: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+  }) : [];
+  const latestReviewByRequest = new Map<string, { note: string; reviewedAt: string; reviewedBy: string | null }>();
+  for (const event of reviewEvents) {
+    if (!event.entityId || latestReviewByRequest.has(event.entityId)) continue;
+    const exceptionAt = latestExceptionByRequest.get(event.entityId)?.createdAt;
+    if (!exceptionAt || event.createdAt.getTime() < new Date(exceptionAt).getTime()) continue;
+    const metadata = event.metadata && typeof event.metadata === "object"
+      ? event.metadata as Record<string, unknown>
+      : {};
+    latestReviewByRequest.set(event.entityId, {
+      note: typeof metadata.note === "string" ? metadata.note : "Análise administrativa registada.",
+      reviewedAt: event.createdAt.toISOString(),
+      reviewedBy: event.actor?.name ?? null,
+    });
+  }
+
   return NextResponse.json({
     requests: requests.map((item) => ({
       ...item,
       latestException: latestExceptionByRequest.get(item.id) ?? null,
+      latestExceptionReview: latestReviewByRequest.get(item.id) ?? null,
       latestExceptionReview: (() => {
         const exception = latestExceptionByRequest.get(item.id);
         const review = latestExceptionReviewByRequest.get(item.id);
