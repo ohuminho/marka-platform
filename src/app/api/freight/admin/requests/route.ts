@@ -53,7 +53,14 @@ export async function GET() {
   const requests = await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.organizationId,
-      status: { in: ["REQUESTED", "QUOTED", "AWAITING_PAYMENT"] },
+      status: {
+        in: [
+          "REQUESTED", "QUOTED", "AWAITING_PAYMENT", "PAID",
+          "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE",
+          "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT",
+          "COMPLETED", "CANCELLED", "EXCEPTION",
+        ],
+      },
     },
     select: {
       id: true,
@@ -67,7 +74,13 @@ export async function GET() {
       currency: true,
       quotedAmount: true,
       quoteExpiresAt: true,
+      paymentReference: true,
+      paidAt: true,
+      assignedProviderId: true,
+      assignedVehicleId: true,
+      assignedAt: true,
       createdAt: true,
+      updatedAt: true,
       requester: { select: { name: true } },
     },
     orderBy: { createdAt: "asc" },
@@ -81,7 +94,10 @@ export async function GET() {
       quotedAmount: item.quotedAmount === null ? null : Number(item.quotedAmount),
       quoteExpiresAt: item.quoteExpiresAt?.toISOString() ?? null,
       quoteExpired: item.quoteExpiresAt ? item.quoteExpiresAt <= now : false,
+      paidAt: item.paidAt?.toISOString() ?? null,
+      assignedAt: item.assignedAt?.toISOString() ?? null,
       createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
     })),
   }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
 }
