@@ -34,13 +34,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ ride: null, orchestration: null });
     }
 
-    const ride = await prisma.mobilityRide.findFirst({
+    const rides = await prisma.mobilityRide.findMany({
       where: {
         organizationId: authentication.session.organizationId,
         driverId: driver.id,
         status: { in: ACTIVE_STATUSES },
       },
-      orderBy: { requestedAt: "desc" },
+      orderBy: [
+        { requestedAt: "asc" },
+        { createdAt: "asc" },
+      ],
+      take: 10,
       include: {
         rider: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
         driver: {
@@ -55,12 +59,22 @@ export async function GET(request: Request) {
       },
     });
 
-    const orchestration = ride
-      ? await mobilityLifecycleService.get(authentication.session.organizationId, ride.id)
-      : null;
+    // Preserve the legacy singular fields for existing clients while exposing
+    // the complete active queue to clients that support multi-ride operations.
+    const ride = rides[0] ?? null;
+    const orchestrations = await Promise.all(
+      rides.map(async (activeRide) => ({
+        rideId: activeRide.id,
+        orchestration: await mobilityLifecycleService.get(
+          authentication.session.organizationId,
+          activeRide.id,
+        ),
+      })),
+    );
+    const orchestration = orchestrations[0]?.orchestration ?? null;
 
     return NextResponse.json(
-      { ride, orchestration },
+      { ride, rides, orchestration, orchestrations },
       { headers: { "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff" } },
     );
   } catch (error) {
