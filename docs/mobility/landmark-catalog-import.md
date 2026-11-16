@@ -42,7 +42,7 @@ The coordinates above are illustrative placeholders and must never be imported a
 After the `MobilityLandmark` migration has been applied to the target database:
 
 ```bash
-npm run mobility:landmarks:import -- ./path/to/verified-landmarks.json
+npm run mobility:landmarks:import -- ./path/to/verified-landmarks.json --dry-run\n\n# If validation succeeds and the migration is applied:\nnpm run mobility:landmarks:import -- ./path/to/verified-landmarks.json
 ```
 
 Do not run this against production until the migration is confirmed and the input file has been reviewed. OpenStreetMap-derived data must retain appropriate ODbL attribution and source references in MARKA's data and product documentation.
