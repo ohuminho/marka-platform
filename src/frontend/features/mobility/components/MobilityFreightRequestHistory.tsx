@@ -63,6 +63,7 @@ export default function MobilityFreightRequestHistory() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const [completionDisputeNotes, setCompletionDisputeNotes] = useState<Record<string, string>>({});
 
   const refresh = useCallback(async (quiet = false) => {
     if (!organizationId) {
@@ -156,6 +157,26 @@ export default function MobilityFreightRequestHistory() {
       setError(cause instanceof Error ? cause.message : "Falha ao confirmar a conclusão.");
     } finally { setBusyId(null); }
   };
+  const disputeCompletion = async (requestId: string) => {
+    if (!organizationId) return;
+    const note = (completionDisputeNotes[requestId] ?? "").trim();
+    if (note.length < 5) { setError("Descreva o problema com pelo menos 5 caracteres."); return; }
+    if (!window.confirm("Registar esta ocorrência? A equipa MARKA terá de analisar o caso antes de o pedido ser encerrado.")) return;
+    setBusyId(requestId); setError(null); setNotice(null);
+    try {
+      const response = await fetch(`/api/freight/requests/${requestId}/dispute-completion`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+        body: JSON.stringify({ note }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "Não foi possível registar a ocorrência.");
+      setCompletionDisputeNotes((current) => ({ ...current, [requestId]: "" }));
+      await refresh(true);
+      setNotice("Ocorrência registada. O pedido foi encaminhado para análise da equipa MARKA.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Falha ao registar a ocorrência."); }
+    finally { setBusyId(null); }
+  };
   const cancelRequest = async (requestId: string) => {
     if (!organizationId || !window.confirm("Pretende cancelar este pedido? O cancelamento automático só é permitido antes do pagamento e da atribuição do prestador.")) return;
     setCancellingId(requestId);
@@ -245,8 +266,11 @@ export default function MobilityFreightRequestHistory() {
                 {item.status === "PROVIDER_COMPLETED_PENDING_CONFIRMATION" && (
                   <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[.05] p-3">
                     <p className="text-xs font-semibold text-[var(--theme-text)]">O prestador declarou o serviço concluído.</p>
-                    <p className="mt-1 text-[11px] leading-5 text-[var(--theme-text-muted)]">Verifique a entrega ou assistência. O pedido só será encerrado depois da sua confirmação.</p>
+                    <p className="mt-1 text-[11px] leading-5 text-[var(--theme-text-muted)]">Verifique a entrega ou assistência. Se estiver correcta, confirme. Se houver um problema, registe uma ocorrência para análise antes de encerrar.</p>
                     <button type="button" disabled={busyId === item.id} onClick={() => void confirmCompletion(item.id)} className="mt-3 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === item.id ? "A confirmar…" : "Confirmar conclusão do serviço"}</button>
+                    <label htmlFor={`freight-dispute-${item.id}`} className="mt-4 block text-[10px] font-semibold text-[var(--theme-text-muted)]">Encontrou algum problema?</label>
+                    <textarea id={`freight-dispute-${item.id}`} rows={2} maxLength={2000} value={completionDisputeNotes[item.id] ?? ""} onChange={(event) => setCompletionDisputeNotes((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Descreva o que não foi concluído ou o problema encontrado…" className="mt-2 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text)] outline-none focus:border-[#b89a5b]" />
+                    <button type="button" disabled={busyId === item.id || (completionDisputeNotes[item.id] ?? "").trim().length < 5} onClick={() => void disputeCompletion(item.id)} className="mt-2 min-h-10 w-full rounded-xl border border-amber-500/40 px-4 text-xs font-semibold text-amber-700 disabled:opacity-50">{busyId === item.id ? "A registar…" : "Reportar problema à MARKA"}</button>
                   </div>
                 )}
                 {item.status === "COMPLETED" && <p className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300">Conclusão confirmada por si.</p>}
