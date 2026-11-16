@@ -32,7 +32,8 @@ const statusLabels: Record<string, string> = {
   PROVIDER_ARRIVED: "Prestador chegou",
   PICKED_UP: "Carga recolhida",
   IN_TRANSIT: "Em transporte",
-  COMPLETED: "Serviço concluído",
+  PROVIDER_COMPLETED_PENDING_CONFIRMATION: "Prestador concluiu · aguarda a sua confirmação",
+  COMPLETED: "Conclusão confirmada",
   CANCELLED: "Pedido cancelado",
   EXCEPTION: "A exigir intervenção",
 };
@@ -136,6 +137,25 @@ export default function MobilityFreightRequestHistory() {
     }
   };
 
+  const confirmCompletion = async (requestId: string) => {
+    if (!organizationId || !window.confirm("Confirma que o serviço foi efectivamente concluído? Esta confirmação encerra o pedido.")) return;
+    setBusyId(requestId);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/freight/requests/${requestId}/confirm-completion`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "Não foi possível confirmar a conclusão.");
+      await refresh(true);
+      setNotice("Conclusão confirmada. O pedido foi encerrado.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao confirmar a conclusão.");
+    } finally { setBusyId(null); }
+  };
   const cancelRequest = async (requestId: string) => {
     if (!organizationId || !window.confirm("Pretende cancelar este pedido? O cancelamento automático só é permitido antes do pagamento e da atribuição do prestador.")) return;
     setCancellingId(requestId);
@@ -222,7 +242,14 @@ export default function MobilityFreightRequestHistory() {
 
                 {item.status === "AWAITING_PAYMENT" && <p className="mt-3 text-[11px] leading-5 text-amber-700 dark:text-amber-300">Cotação aceite. O pedido permanece pendente até a MARKA disponibilizar e confirmar um canal de pagamento. Não faça transferências para contas pessoais.</p>}
                 {item.status === "PAID" || item.status === "SEARCHING_PROVIDER" ? <p className="mt-3 text-[11px] text-[var(--theme-text-muted)]">O pagamento está registado. A atribuição do prestador está em preparação.</p> : null}
-                {item.status === "COMPLETED" && <p className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300">Serviço concluído.</p>}
+                {item.status === "PROVIDER_COMPLETED_PENDING_CONFIRMATION" && (
+                  <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[.05] p-3">
+                    <p className="text-xs font-semibold text-[var(--theme-text)]">O prestador declarou o serviço concluído.</p>
+                    <p className="mt-1 text-[11px] leading-5 text-[var(--theme-text-muted)]">Verifique a entrega ou assistência. O pedido só será encerrado depois da sua confirmação.</p>
+                    <button type="button" disabled={busyId === item.id} onClick={() => void confirmCompletion(item.id)} className="mt-3 min-h-11 w-full rounded-xl bg-[#d8c18c] px-4 text-xs font-bold text-[#171814] disabled:opacity-50">{busyId === item.id ? "A confirmar…" : "Confirmar conclusão do serviço"}</button>
+                  </div>
+                )}
+                {item.status === "COMPLETED" && <p className="mt-3 text-[11px] text-emerald-700 dark:text-emerald-300">Conclusão confirmada por si.</p>
                 {["REQUESTED", "QUOTED", "AWAITING_PAYMENT"].includes(item.status) && !item.paidAt && (
                   <button
                     type="button"
