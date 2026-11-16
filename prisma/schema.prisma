@@ -1891,6 +1891,10 @@ model FreightProvider {
   coverageAreas  String[]                    @default([])
   ratingAverage  Decimal?                    @db.Decimal(3, 2)
   ratingCount    Int                         @default(0)
+  currentLatitude  Decimal?                  @db.Decimal(10, 7)
+  currentLongitude Decimal?                  @db.Decimal(10, 7)
+  locationAccuracyMeters Decimal?            @db.Decimal(10, 2)
+  locationUpdatedAt DateTime?
   metadata       Json?
 
   organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
