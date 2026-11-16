@@ -28,9 +28,21 @@ assert.equal(parsed.source, "OPENSTREETMAP");
 assert.equal(parsed.latitude, -8.91);
 assert.equal(parsed.longitude, 13.38);
 
+const [globalRecord] = parseMobilityLandmarkRecords([{
+  ...validRecord,
+  name: "Eiffel Tower",
+  countryCode: "FR",
+  municipality: "Paris",
+  latitude: 48.8584,
+  longitude: 2.2945,
+  sourceRef: "osm:node/123456790",
+}]);
+assert.equal(globalRecord.countryCode, "FR");
+assert.equal(globalRecord.latitude, 48.8584);
+
 assert.throws(
-  () => parseMobilityLandmarkRecords([{ ...validRecord, latitude: 0, longitude: 0 }]),
-  /outside the Angola validation envelope/,
+  () => parseMobilityLandmarkRecords([{ ...validRecord, countryCode: "ANG" }]),
+  /two-letter ISO 3166-1 alpha-2/,
 );
 
 assert.throws(
