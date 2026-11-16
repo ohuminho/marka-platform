@@ -71,7 +71,13 @@ export default function MobilityFreightQuoteDesk() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
+    const interval = window.setInterval(() => {
+      if (!document.hidden) void load();
+    }, 30000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
   }, [load]);
 
   const issueQuote = async (requestId: string) => {
