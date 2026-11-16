@@ -806,6 +806,34 @@ export class PaymentService {
           const completed =
             await prisma.$transaction(
               async (database) => {
+                // Use the same lock order as order cancellation and payment
+                // intent creation: Order first, then Payment. A delayed provider
+                // success must not capture funds after the order was cancelled.
+                if (payment.orderId) {
+                  await database.$queryRaw<Array<{ id: string }>>`
+                    SELECT "id"
+                    FROM "Order"
+                    WHERE "id" = ${payment.orderId}
+                    FOR UPDATE
+                  `;
+
+                  const currentOrder = await database.order.findUnique({
+                    where: { id: payment.orderId },
+                    select: { status: true, userId: true },
+                  });
+
+                  if (
+                    !currentOrder ||
+                    currentOrder.userId !== input.userId ||
+                    currentOrder.status === "CANCELLED" ||
+                    currentOrder.status === "REFUNDED"
+                  ) {
+                    throw new Error(
+                      "Payment can no longer be completed because its order is cancelled or unavailable."
+                    );
+                  }
+                }
+
                 const currentPayment =
                   await database.payment.findUnique({
                     where: {
