@@ -2542,3 +2542,29 @@ model CommercialLead {
   @@index([email])
   @@index([phone])
 }
+
+
+model MobilityLandmark {
+  id             String   @id @default(uuid())
+  name           String   @db.VarChar(180)
+  normalizedName String   @db.VarChar(180)
+  aliases        String[] @default([])
+  countryCode    String   @default("AO") @db.Char(2)
+  province       String?  @db.VarChar(100)
+  municipality   String?  @db.VarChar(120)
+  category       String   @default("PLACE") @db.VarChar(48)
+  latitude       Float
+  longitude      Float
+  source         String   @default("VERIFIED") @db.VarChar(32)
+  sourceRef      String?  @db.VarChar(255)
+  verifiedAt     DateTime?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([normalizedName, municipality])
+  @@index([normalizedName])
+  @@index([countryCode, province, municipality])
+  @@index([isActive, category])
+  @@index([aliases], type: Gin)
+}
