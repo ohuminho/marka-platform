@@ -237,6 +237,7 @@ export default function MobilityFreightProviderRegistration() {
       setProvider(data.provider ?? null);
       setVehicles([]);
       setNotice("Dados submetidos. As viaturas novas ficam pendentes até à validação da equipa MARKA.");
+      window.dispatchEvent(new Event("marka:freight-provider-updated"));
       const reload = await fetch("/api/freight/providers/me", {
         credentials: "include",
         cache: "no-store",
