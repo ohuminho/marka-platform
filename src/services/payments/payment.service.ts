@@ -16,6 +16,7 @@ import { financialAllocationService } from "@/services/finance/allocation/financ
 
 import { transactionService } from "@/services/transactions/transaction.service";
 import { fulfillmentAdapter } from "@/fulfillment-engine/fulfillment.adapter";
+import { inventoryService } from "@/services/inventory/inventory.service";
 
 import { getPaymentProviderConfig } from "@/config/payment-provider.config";
 
@@ -1148,39 +1149,107 @@ export class PaymentService {
       );
     }
 
-    const order = await prisma.order.findFirst({
-      where: {
-        id: input.orderId,
-        userId: input.userId,
-      },
-      select: {
-        id: true,
-        status: true,
-        deliveryAddress: true,
-        deliveryLatitude: true,
-        deliveryLongitude: true,
-        deliveryInstructions: true,
-        items: {
+    const order = await prisma.$transaction(
+      async (database) => {
+        // Serialize finalization with cancellation and payment-intent creation.
+        await database.$queryRaw<Array<{ id: string }>>`
+          SELECT "id"
+          FROM "Order"
+          WHERE "id" = ${input.orderId}
+          FOR UPDATE
+        `;
+
+        const completedPayment = await database.payment.findFirst({
+          where: {
+            id: input.paymentId,
+            orderId: input.orderId,
+            status: PaymentStatus.COMPLETED,
+          },
+          select: { id: true },
+        });
+
+        if (!completedPayment) {
+          throw new Error(
+            "Order cannot be finalized without a completed payment.",
+          );
+        }
+
+        const currentOrder = await database.order.findFirst({
+          where: {
+            id: input.orderId,
+            userId: input.userId,
+          },
           select: {
-            storeId: true,
-            product: {
+            id: true,
+            status: true,
+            inventoryReserved: true,
+            deliveryAddress: true,
+            deliveryLatitude: true,
+            deliveryLongitude: true,
+            deliveryInstructions: true,
+            items: {
               select: {
-                store: {
+                productId: true,
+                quantity: true,
+                storeId: true,
+                product: {
                   select: {
-                    id: true,
-                    location: true,
+                    store: {
+                      select: {
+                        id: true,
+                        location: true,
+                      },
+                    },
                   },
                 },
               },
             },
           },
-        },
-      },
-    });
+        });
 
-    if (!order) {
-      throw new Error("Order not found.");
-    }
+        if (!currentOrder) {
+          throw new Error("Order not found.");
+        }
+
+        if (
+          currentOrder.status === "CANCELLED" ||
+          currentOrder.status === "REFUNDED"
+        ) {
+          throw new Error(
+            "Cancelled or refunded orders cannot be finalized.",
+          );
+        }
+
+        if (currentOrder.inventoryReserved) {
+          await inventoryService.consumeWithinTransaction(
+            database,
+            currentOrder.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+            })),
+          );
+
+          await database.order.update({
+            where: { id: currentOrder.id },
+            data: { inventoryReserved: false },
+          });
+        }
+
+        if (currentOrder.status === "PENDING") {
+          await database.order.update({
+            where: { id: currentOrder.id },
+            data: { status: "CONFIRMED" },
+          });
+        }
+
+        return currentOrder;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        maxWait: 5000,
+        timeout: 10000,
+      },
+    );
 
     const storeIds = [
       ...new Set(
