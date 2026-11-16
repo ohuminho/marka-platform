@@ -861,95 +861,72 @@ export class MobilityRideService {
     );
   }
 
-  async getById(
-    rideId: string
-  ) {
-    return prisma.mobilityRide.findUnique(
-      {
-        where: {
-          id: rideId,
-        },
-
-        include: {
-          rider: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-
-          driver: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  profile: { select: { avatarUrl: true } },
-                },
-              },
-              availability: true,
-              location: true,
-            },
-          },
-
-          vehicle: true,
-
-          stops: {
-            orderBy: {
-              sequence: "asc",
-            },
+  async getById(rideId: string) {
+    const ride = await prisma.mobilityRide.findUnique({
+      where: { id: rideId },
+      include: {
+        rider: { select: { id: true, name: true, email: true } },
+        driver: {
+          include: {
+            user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+            availability: true,
+            location: true,
           },
         },
-      }
-    );
+        vehicle: true,
+        stops: { orderBy: { sequence: "asc" } },
+      },
+    });
+    if (!ride?.driver?.user) return ride;
+    const isIdentityVerified = await isMobilityDriverIdentityVerified(ride.driver.user.id);
+    return {
+      ...ride,
+      driver: {
+        ...ride.driver,
+        user: { ...ride.driver.user, isIdentityVerified },
+      },
+    };
   }
 
-  async getActiveRideForRider(
-    riderId: string,
-    organizationId: string
-  ) {
-    return prisma.mobilityRide.findFirst(
-      {
-        where: {
-          riderId,
-          organizationId,
-          status: {
-            in: [
-              MobilityRideStatus.REQUESTED,
-              MobilityRideStatus.SEARCHING,
-              MobilityRideStatus.MATCHED,
-              MobilityRideStatus.DRIVER_ASSIGNED,
-              MobilityRideStatus.DRIVER_ARRIVING,
-              MobilityRideStatus.DRIVER_ARRIVED,
-              MobilityRideStatus.TRIP_STARTED,
-              MobilityRideStatus.TRIP_IN_PROGRESS,
-            ],
+  async getActiveRideForRider(riderId: string, organizationId: string) {
+    const ride = await prisma.mobilityRide.findFirst({
+      where: {
+        riderId,
+        organizationId,
+        status: {
+          in: [
+            MobilityRideStatus.REQUESTED,
+            MobilityRideStatus.SEARCHING,
+            MobilityRideStatus.MATCHED,
+            MobilityRideStatus.DRIVER_ASSIGNED,
+            MobilityRideStatus.DRIVER_ARRIVING,
+            MobilityRideStatus.DRIVER_ARRIVED,
+            MobilityRideStatus.TRIP_STARTED,
+            MobilityRideStatus.TRIP_IN_PROGRESS,
+          ],
+        },
+      },
+      orderBy: { requestedAt: "desc" },
+      include: {
+        driver: {
+          include: {
+            user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+            location: true,
           },
         },
-
-        orderBy: {
-          requestedAt: "desc",
-        },
-
-        include: {
-          driver: {
-            include: {
-              user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
-              location: true,
-            },
-          },
-
-          vehicle: true,
-
-          stops: {
-            orderBy: {
-              sequence: "asc",
-            },
-          },
-        },
-      }
-    );
+        vehicle: true,
+        stops: { orderBy: { sequence: "asc" } },
+      },
+    });
+    if (!ride?.driver?.user) return ride;
+    const isIdentityVerified = await isMobilityDriverIdentityVerified(ride.driver.user.id);
+    return {
+      ...ride,
+      driver: {
+        ...ride.driver,
+        user: { ...ride.driver.user, isIdentityVerified },
+      },
+    };
   }
 
   private async requireRide(
@@ -1301,6 +1278,28 @@ export class MobilityRideService {
       );
     }
   }
+}
+
+async function isMobilityDriverIdentityVerified(userId: string): Promise<boolean> {
+  const profile = await prisma.complianceProfile.findFirst({
+    where: {
+      subjectType: "KYC",
+      subjectId: userId,
+      organizationId: null,
+      status: "VERIFIED",
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    },
+    include: { documents: { select: { status: true, expiresAt: true } } },
+    orderBy: { updatedAt: "desc" },
+  });
+  const now = new Date();
+  return Boolean(
+    profile &&
+    profile.documents.length > 0 &&
+    profile.documents.every((document) =>
+      document.status === "VERIFIED" && (!document.expiresAt || document.expiresAt > now),
+    ),
+  );
 }
 
 export const mobilityRideService =
