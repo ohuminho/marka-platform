@@ -36,10 +36,10 @@ const prisma = new PrismaClient();
 function normalize(value: string): string {
   return value
     .normalize("NFD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLocaleLowerCase("pt-AO")
     .replace(/[^a-z0-9 ]/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -76,7 +76,7 @@ function parseLandmark(value: unknown, index: number): NormalizedLandmark {
   const source = requiredText(item.source, "source", 32).toUpperCase();
   const sourceRef = requiredText(item.sourceRef, "sourceRef", 255);
   const verifiedAtRaw = requiredText(item.verifiedAt, "verifiedAt", 40);
-  if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$/.test(verifiedAtRaw)) {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(verifiedAtRaw)) {
     throw new Error(`Record ${index + 1}: verifiedAt must be an ISO 8601 timestamp with timezone.`);
   }
   const verifiedAt = new Date(verifiedAtRaw);
