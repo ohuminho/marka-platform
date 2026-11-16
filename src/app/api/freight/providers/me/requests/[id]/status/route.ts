@@ -79,6 +79,9 @@ export async function PATCH(
 
       const allowed = nextStatuses[current.status] ?? [];
       const requestedNext = parsed.data.status;
+      const persistedNextStatus = requestedNext === "COMPLETED"
+        ? "PROVIDER_COMPLETED_PENDING_CONFIRMATION"
+        : requestedNext;
       const isRoadsideDirectCompletion =
         current.requestType === "ROADSIDE_ASSISTANCE" &&
         current.status === "PROVIDER_ARRIVED" &&
@@ -96,7 +99,7 @@ export async function PATCH(
           status: current.status,
         },
         data: {
-          status: requestedNext,
+          status: persistedNextStatus,
         },
       });
       if (changed.count !== 1) throw new Error("FREIGHT_STATUS_CONFLICT");
@@ -106,7 +109,7 @@ export async function PATCH(
           actorUserId: auth.session.userId,
           actorType: "USER",
           organizationId: auth.session.organizationId,
-          action: `FREIGHT_STATUS_${requestedNext}`,
+          action: `FREIGHT_STATUS_${persistedNextStatus}`,
           entityType: "FreightRequest",
           entityId: current.id,
           ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0, 64) ?? null,
@@ -114,7 +117,8 @@ export async function PATCH(
           metadata: {
             reference: current.reference,
             previousStatus: current.status,
-            newStatus: requestedNext,
+            newStatus: persistedNextStatus,
+            providerDeclaredCompletion: requestedNext === "COMPLETED",
             note: parsed.data.note ?? null,
             changedAt: new Date().toISOString(),
           },
