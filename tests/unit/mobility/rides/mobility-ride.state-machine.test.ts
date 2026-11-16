@@ -2,6 +2,7 @@ import { MobilityRideStatus } from "@prisma/client";
 
 import {
   canTransitionRideStatus,
+  resolveDriverAvailabilityForActiveRides,
   transitionRideStatus,
 } from "@/services/mobility/rides/mobility-ride.state-machine";
 
@@ -120,6 +121,47 @@ assert(
     MobilityRideStatus.DRIVER_ASSIGNED,
   ),
   "A completed ride cannot be assigned again.",
+);
+
+
+assert.equal(
+  resolveDriverAvailabilityForActiveRides([]),
+  "AVAILABLE",
+  "A driver with no remaining active assignments must become available.",
+);
+
+assert.equal(
+  resolveDriverAvailabilityForActiveRides([
+    MobilityRideStatus.DRIVER_ASSIGNED,
+  ]),
+  "BUSY",
+  "A driver with an accepted assignment must remain busy.",
+);
+
+assert.equal(
+  resolveDriverAvailabilityForActiveRides([
+    MobilityRideStatus.TRIP_IN_PROGRESS,
+  ]),
+  "ON_TRIP",
+  "An in-progress ride must keep the driver on trip.",
+);
+
+assert.equal(
+  resolveDriverAvailabilityForActiveRides([
+    MobilityRideStatus.TRIP_IN_PROGRESS,
+    MobilityRideStatus.DRIVER_ASSIGNED,
+  ]),
+  "ON_TRIP",
+  "Completing a second queued ride must not mark a driver free while another trip is in progress.",
+);
+
+assert.equal(
+  resolveDriverAvailabilityForActiveRides([
+    MobilityRideStatus.DRIVER_ARRIVING,
+    MobilityRideStatus.DRIVER_ASSIGNED,
+  ]),
+  "BUSY",
+  "Releasing one assignment must preserve busy status when another assignment remains.",
 );
 
 console.log("Mobility ride state machine tests passed.");
