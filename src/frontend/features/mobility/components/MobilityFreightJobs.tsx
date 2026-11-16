@@ -61,12 +61,18 @@ export default function MobilityFreightJobs() {
   }, [organizationId]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    const load = () => {
+      setLoading(true);
       refresh()
         .catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao carregar pedidos."))
         .finally(() => setLoading(false));
-    }, 0);
-    return () => window.clearTimeout(timer);
+    };
+    const timer = window.setTimeout(load, 0);
+    window.addEventListener("marka:freight-provider-updated", load);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("marka:freight-provider-updated", load);
+    };
   }, [refresh]);
 
   function nextAction(job: FreightJob): { status: string; label: string } | null {
