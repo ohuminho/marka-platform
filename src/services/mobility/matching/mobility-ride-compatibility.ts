@@ -82,3 +82,60 @@ export function areMobilityRidesCompatible(
     );
   });
 }
+
+
+export const MAX_SHARED_RIDE_DETOUR_SECONDS = 15 * 60;
+export const MAX_SHARED_RIDE_DETOUR_RATIO = 0.5;
+export const MIN_SHARED_RIDE_DETOUR_BUDGET_SECONDS = 5 * 60;
+
+/**
+ * Duration matrix indexes:
+ * 0 = current driver location
+ * 1 = existing pickup, 2 = existing dropoff
+ * 3 = requested pickup, 4 = requested dropoff
+ *
+ * Finds the shortest valid two-rider stop order while preserving pickup-before-
+ * dropoff for each rider. The new assignment is rejected if it adds too much
+ * road-network time compared with completing the existing ride alone.
+ */
+export function isSharedRideSequenceWithinDetour(
+  durations: readonly (readonly number[])[],
+): boolean {
+  if (
+    durations.length !== 5 ||
+    durations.some((row) => row.length !== 5 || row.some((value) =>
+      !Number.isFinite(value) || value < 0
+    ))
+  ) return false;
+
+  const baselineSeconds = durations[0][1] + durations[1][2];
+  const validOrders = [
+    [1, 2, 3, 4],
+    [1, 3, 2, 4],
+    [1, 3, 4, 2],
+    [3, 1, 2, 4],
+    [3, 1, 4, 2],
+    [3, 4, 1, 2],
+  ] as const;
+
+  let bestSharedSeconds = Number.POSITIVE_INFINITY;
+  for (const order of validOrders) {
+    let previous = 0;
+    let total = 0;
+    for (const stop of order) {
+      total += durations[previous][stop];
+      previous = stop;
+    }
+    if (total < bestSharedSeconds) bestSharedSeconds = total;
+  }
+
+  const additionalSeconds = bestSharedSeconds - baselineSeconds;
+  const allowedDetour = Math.min(
+    MAX_SHARED_RIDE_DETOUR_SECONDS,
+    Math.max(
+      MIN_SHARED_RIDE_DETOUR_BUDGET_SECONDS,
+      baselineSeconds * MAX_SHARED_RIDE_DETOUR_RATIO,
+    ),
+  );
+  return additionalSeconds >= 0 && additionalSeconds <= allowedDetour;
+}
