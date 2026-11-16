@@ -109,3 +109,5 @@ html[dir="rtl"] { text-align: right; }
 .marka-route-pulse::before{content:"";position:absolute;inset:-8px;border:1px solid rgba(91,214,160,.65);border-radius:50%;animation:marka-pulse 1.8s ease-out infinite}
 @keyframes marka-pulse{0%{transform:scale(.55);opacity:.9}100%{transform:scale(1.65);opacity:0}}
 @media(prefers-reduced-motion:reduce){.marka-route-pulse::before{animation:none}}
+
+.marka-driver-marker{transition:transform .7s linear!important;}

@@ -25,7 +25,7 @@ const coordinatesSchema = z.object({
 
 function readMinor(name: string): bigint | undefined {
   const value = process.env[name];
-  if (!value || !/^\\d+$/.test(value)) return undefined;
+  if (!value || !/^[0-9]+$/.test(value)) return undefined;
   try { return BigInt(value); } catch { return undefined; }
 }
 
