@@ -61,15 +61,13 @@ export async function POST(request: Request) {
   }
 
   const updatedAt = new Date();
-  await prisma.$transaction(async (tx) => {
+  const locationUpdateResult = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
     const currentProvider = await tx.freightProvider.findUnique({
       where: { id: provider.id },
       select: { status: true, availability: true },
     });
-    if (!currentProvider || currentProvider.status !== "VERIFIED") {
-      throw new Error("FREIGHT_PROVIDER_NOT_VERIFIED");
-    }
+    if (!currentProvider || currentProvider.status !== "VERIFIED") return "NOT_VERIFIED";
     const currentAssignments = await tx.freightRequest.count({
       where: {
         organizationId: auth.session.organizationId,
@@ -82,7 +80,7 @@ export async function POST(request: Request) {
       currentProvider.availability !== "BUSY" &&
       currentAssignments === 0
     ) {
-      throw new Error("FREIGHT_PROVIDER_NOT_AVAILABLE");
+      return "NOT_AVAILABLE";
     }
     await tx.freightProvider.update({
       where: { id: provider.id },
@@ -93,7 +91,21 @@ export async function POST(request: Request) {
         locationAccuracyM: parsed.data.accuracyM ?? null,
       },
     });
+    return "UPDATED";
   });
+
+  if (locationUpdateResult === "NOT_VERIFIED") {
+    return NextResponse.json(
+      { message: "Apenas prestadores verificados podem partilhar localização.", code: "FREIGHT_PROVIDER_NOT_VERIFIED" },
+      { status: 403 },
+    );
+  }
+  if (locationUpdateResult === "NOT_AVAILABLE") {
+    return NextResponse.json(
+      { message: "Active a disponibilidade antes de partilhar a localização.", code: "FREIGHT_PROVIDER_NOT_AVAILABLE" },
+      { status: 409 },
+    );
+  }
 
   return NextResponse.json(
     { ok: true, updatedAt },
