@@ -146,6 +146,16 @@ export async function POST(request: Request) {
         ? error.message
         : "Checkout failed.";
 
+    if (message.startsWith("Marketplace payment provider is not configured.")) {
+      return NextResponse.json(
+        {
+          message,
+          code: "PAYMENT_PROVIDER_NOT_CONFIGURED",
+        },
+        { status: 409 },
+      );
+    }
+
     if (message === "Delivery destination is required.") {
       return NextResponse.json({ message, code: "DELIVERY_DESTINATION_REQUIRED" }, { status: 400 });
     }
