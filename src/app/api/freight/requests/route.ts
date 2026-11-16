@@ -40,6 +40,12 @@ const requestSchema = z.object({
     if (!Array.isArray(cargoItems) || cargoItems.length === 0) {
       context.addIssue({ code: "custom", path: ["details", "cargoItems"], message: "Indique pelo menos um artigo ou material a transportar." });
     }
+    if (
+      (value.quantity === undefined) !== (value.quantityUnit === undefined) ||
+      (value.quantityUnit !== undefined && !["KG", "TON", "M3"].includes(value.quantityUnit))
+    ) {
+      context.addIssue({ code: "custom", path: ["quantity"], message: "Para validar a capacidade da carga, indique uma quantidade e uma unidade compatível: kg, toneladas ou m³." });
+    }
   }
 
   if (value.requestType === "WATER_DELIVERY") {
