@@ -3,6 +3,7 @@ import { MobilityRideStatus } from "@prisma/client";
 
 import {
   areMobilityRidesCompatible,
+  isSharedRideSequenceWithinDetour,
   MAX_ACTIVE_RIDES_PER_DRIVER,
 } from "@/services/mobility/matching/mobility-ride-compatibility";
 
@@ -86,6 +87,37 @@ assert.equal(
   ),
   false,
   "Different mobility service classes must not be combined.",
+);
+
+const shortDetourMatrix = [
+  [0, 120, 600, 150, 700],
+  [120, 0, 300, 90, 420],
+  [300, 300, 0, 330, 120],
+  [150, 90, 330, 0, 300],
+  [700, 420, 120, 300, 0],
+];
+assert.equal(
+  isSharedRideSequenceWithinDetour(shortDetourMatrix),
+  true,
+  "A shared ride with a short road-network detour should be eligible.",
+);
+
+const longDetourMatrix = [
+  [0, 120, 300, 2_000, 2_500],
+  [120, 0, 300, 1_800, 2_200],
+  [300, 300, 0, 1_900, 2_300],
+  [2_000, 1_800, 1_900, 0, 300],
+  [2_500, 2_200, 2_300, 300, 0],
+];
+assert.equal(
+  isSharedRideSequenceWithinDetour(longDetourMatrix),
+  false,
+  "A route that adds excessive road-network time must be rejected.",
+);
+assert.equal(
+  isSharedRideSequenceWithinDetour([[0, 10], [10, 0]]),
+  false,
+  "Incomplete route matrices must fail closed.",
 );
 
 console.log("Mobility shared-ride compatibility tests passed.");
