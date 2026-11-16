@@ -202,10 +202,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ request: { id: assigned.id, reference: assigned.reference, status: assigned.status, assignedAt: assigned.assignedAt } });
   } catch (error) {
     const code = error instanceof Error ? error.message : "FREIGHT_ASSIGNMENT_FAILED";
-    const conflict = code === "PROVIDER_ALREADY_CLAIMED" || code === "REQUEST_ALREADY_ASSIGNED_OR_UNPAID" || code === "FREIGHT_MULTI_ASSIGNMENT_LIMIT_OR_CAPACITY";
-    const message = code === "FREIGHT_MULTI_ASSIGNMENT_LIMIT_OR_CAPACITY"
-      ? "Para agrupar serviços, a MARKA exige o mesmo tipo de serviço, a mesma viatura, destinos próximos e quantidade total declarada dentro da capacidade. Assistência rodoviária fica limitada a uma atribuição."
-      : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.";
+    const locationConflict = code === "FREIGHT_PROVIDER_LOCATION_STALE";
+    const conflict = locationConflict || code === "PROVIDER_ALREADY_CLAIMED" || code === "REQUEST_ALREADY_ASSIGNED_OR_UNPAID" || code === "FREIGHT_MULTI_ASSIGNMENT_LIMIT_OR_CAPACITY";
+    const message = locationConflict
+      ? "A partilha GPS foi desligada, expirou ou deixou de cumprir os critérios. Actualize a localização e tente novamente."
+      : code === "FREIGHT_MULTI_ASSIGNMENT_LIMIT_OR_CAPACITY"
+        ? "Para agrupar serviços, a MARKA exige o mesmo tipo de serviço, a mesma viatura, destinos próximos e quantidade total declarada dentro da capacidade. Assistência rodoviária fica limitada a uma atribuição."
+        : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.";
     return NextResponse.json({ message, code }, { status: conflict ? 409 : 500 });
   }
 }
