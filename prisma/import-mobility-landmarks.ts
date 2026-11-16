@@ -2,19 +2,6 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
-type LandmarkInput = {
-  name: string;
-  aliases?: string[];
-  province?: string | null;
-  municipality?: string | null;
-  category?: string;
-  latitude: number;
-  longitude: number;
-  source: string;
-  sourceRef: string;
-  verifiedAt: string;
-};
-
 type NormalizedLandmark = {
   name: string;
   normalizedName: string;
@@ -161,7 +148,11 @@ async function main() {
   let updated = 0;
   await prisma.$transaction(async (tx) => {
     for (const record of records) {
-      const existing = await tx.mobilityLandmark.findFirst({
+      const existingBySource = await tx.mobilityLandmark.findFirst({
+        where: { sourceRef: record.sourceRef },
+        select: { id: true },
+      });
+      const existing = existingBySource ?? await tx.mobilityLandmark.findFirst({
         where: {
           normalizedName: record.normalizedName,
           municipality: record.municipality,
