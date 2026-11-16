@@ -168,10 +168,10 @@ export default function MobilityLuxuryExperience() {
       .then((data: RideResponse | null) => {
         if (!mounted || !data?.ride) return;
         setRide(data.ride);
-        const ridePickupLat = Number(data.ride.pickupLatitude);
-        const ridePickupLon = Number(data.ride.pickupLongitude);
-        const rideDropoffLat = Number(data.ride.dropoffLatitude);
-        const rideDropoffLon = Number(data.ride.dropoffLongitude);
+        const ridePickupLat = data.ride.pickupLatitude == null ? Number.NaN : Number(data.ride.pickupLatitude);
+        const ridePickupLon = data.ride.pickupLongitude == null ? Number.NaN : Number(data.ride.pickupLongitude);
+        const rideDropoffLat = data.ride.dropoffLatitude == null ? Number.NaN : Number(data.ride.dropoffLatitude);
+        const rideDropoffLon = data.ride.dropoffLongitude == null ? Number.NaN : Number(data.ride.dropoffLongitude);
         if (Number.isFinite(ridePickupLat) && Number.isFinite(ridePickupLon)) {
           setOrigin({ lat: ridePickupLat, lon: ridePickupLon, label: data.ride.pickupAddress || "Local de recolha" });
         }
