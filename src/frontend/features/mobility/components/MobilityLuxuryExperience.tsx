@@ -209,6 +209,7 @@ export default function MobilityLuxuryExperience() {
     const value = destinationText.trim();
     if (value.length < 3 || active) {
       setSuggestions([]);
+      setSearchBusy(false);
       return;
     }
     const controller = new AbortController();
@@ -268,6 +269,7 @@ export default function MobilityLuxuryExperience() {
     return () => {
       window.clearTimeout(timer);
       controller.abort();
+      setSearchBusy(false);
     };
   }, [destinationText, active]);
 
