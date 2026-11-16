@@ -227,7 +227,10 @@ export default function MobilityLiveMap({
       : null;
 
     if (originPoint && destinationPoint) {
-      void calculateRoute(originPoint, destinationPoint);
+      const routeTimer = window.setTimeout(() => {
+        void calculateRoute(originPoint, destinationPoint);
+      }, 0);
+      return () => window.clearTimeout(routeTimer);
     } else {
       routeRef.current = null;
       (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
