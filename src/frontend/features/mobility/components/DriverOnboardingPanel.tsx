@@ -11,6 +11,7 @@ type DriverProfile = {
   status: string;
   displayName?: string | null;
   licenseNumber?: string | null;
+  countryCode?: string;
   verifications?: Verification[];
 };
 type OnboardingResponse = {
@@ -23,6 +24,7 @@ type OnboardingResponse = {
 };
 type Vehicle = {
   id: string;
+  countryCode?: string;
   status: string;
   type: string;
   registrationNumber: string | null;
@@ -68,6 +70,7 @@ export default function DriverOnboardingPanel() {
   const [requiredDocuments, setRequiredDocuments] = useState(DEFAULT_DRIVER_DOCUMENTS);
   const [vehicleDocuments, setVehicleDocuments] = useState(DEFAULT_VEHICLE_DOCUMENTS);
   const [licenseNumber, setLicenseNumber] = useState("");
+  const [countryCode, setCountryCode] = useState("AO");
   const [displayName, setDisplayName] = useState("");
   const [termsChecked, setTermsChecked] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -95,6 +98,8 @@ export default function DriverOnboardingPanel() {
       const vehicleData = await vehicleResponse.json() as VehicleResponse;
       if (!vehicleResponse.ok) throw new Error(vehicleData.message || "Não foi possível consultar os dados do veículo.");
       setProfile(driverData.driver);
+      if (driverData.driver?.countryCode) setCountryCode(driverData.driver.countryCode.toUpperCase());
+      else if (vehicleData.vehicle?.countryCode) setCountryCode(vehicleData.vehicle.countryCode.toUpperCase());
       setRequiredDocuments(driverData.requiredDriverDocuments ?? DEFAULT_DRIVER_DOCUMENTS);
       setVehicleDocuments(vehicleData.requiredVehicleDocuments ?? driverData.requiredVehicleDocuments?.map((document) => typeof document === "string" ? { documentType: document, label: document } : document) ?? DEFAULT_VEHICLE_DOCUMENTS);
       setVehicle(vehicleData.vehicle);
@@ -160,7 +165,7 @@ export default function DriverOnboardingPanel() {
       const response = await fetch("/api/mobility/driver/onboarding", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...(organizationId ? { "X-Organization-Id": organizationId } : {}) },
-        body: JSON.stringify({ displayName: displayName.trim() || undefined, licenseNumber: licenseNumber.trim() || undefined, countryCode: "AO" }),
+        body: JSON.stringify({ displayName: displayName.trim() || undefined, licenseNumber: licenseNumber.trim() || undefined, countryCode: countryCode.trim().toUpperCase() }),
       });
       const data = await response.json() as OnboardingResponse;
       if (!response.ok) throw new Error(data.message || "Não foi possível enviar a candidatura.");
@@ -211,7 +216,7 @@ export default function DriverOnboardingPanel() {
     form.set("file", file);
     form.set("subjectType", "KYD");
     form.set("documentType", documentType);
-    form.set("countryCode", "AO");
+    form.set("countryCode", countryCode.trim().toUpperCase());
     if (expiryDates[documentType]) form.set("expiresAt", new Date(expiryDates[documentType] + "T23:59:59.000Z").toISOString());
     setUploading(documentType);
     try {
@@ -295,6 +300,7 @@ export default function DriverOnboardingPanel() {
     {!loading && !profile && <form onSubmit={apply} className="space-y-4 rounded-2xl border border-[var(--theme-border)] p-4 sm:p-5">
       <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">Etapa 02 · Dados do candidato</p><h3 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">Iniciar candidatura</h3></div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <label className={labelClass}>País de operação (código ISO 3166-1 alpha-2)<input required value={countryCode} onChange={(event) => setCountryCode(event.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))} minLength={2} maxLength={2} pattern="[A-Z]{2}" placeholder="AO" className={inputClass} /><span className="mt-1 block text-xs">Ex.: AO, PT, FR, BR, US. A candidatura fora de Angola fica pendente de validação legal e operacional local.</span></label>
         <label className={labelClass}>Nome profissional (opcional)<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={120} className={inputClass} /></label>
         <label className={labelClass}>Número da carta de condução (opcional nesta etapa)<input value={licenseNumber} onChange={(event) => setLicenseNumber(event.target.value)} maxLength={80} className={inputClass} /></label>
       </div>
