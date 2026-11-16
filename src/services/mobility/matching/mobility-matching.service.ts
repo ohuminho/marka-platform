@@ -6,11 +6,14 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
+import { areMobilityRidesCompatible } from "@/services/mobility/matching/mobility-ride-compatibility";
 
 export interface MobilityMatchRequest {
   organizationId: string;
   pickupLatitude: number;
   pickupLongitude: number;
+  dropoffLatitude: number;
+  dropoffLongitude: number;
   serviceType: string;
   vehicleTypes?: string[];
   passengerCount?: number;
@@ -82,8 +85,12 @@ export class MobilityMatchingService {
           ],
 
           availability: {
-            status:
-              MobilityAvailabilityStatus.AVAILABLE,
+            status: {
+              in: [
+                MobilityAvailabilityStatus.AVAILABLE,
+                MobilityAvailabilityStatus.BUSY,
+              ],
+            },
           },
 
           vehicles: {
@@ -124,6 +131,29 @@ export class MobilityMatchingService {
 
           location: true,
 
+          ridesAsDriver: {
+            where: {
+              status: {
+                in: [
+                  "DRIVER_ASSIGNED",
+                  "DRIVER_ARRIVING",
+                  "DRIVER_ARRIVED",
+                  "TRIP_STARTED",
+                  "TRIP_IN_PROGRESS",
+                ],
+              },
+            },
+            select: {
+              pickupLatitude: true,
+              pickupLongitude: true,
+              dropoffLatitude: true,
+              dropoffLongitude: true,
+              serviceType: true,
+              status: true,
+              metadata: true,
+            },
+          },
+
           vehicles: {
             where: {
               isPrimary: true,
@@ -161,6 +191,32 @@ export class MobilityMatchingService {
 
       const vehicle =
         primaryAssignment.vehicle;
+
+      const activeRides = driver.ridesAsDriver ?? [];
+      if (
+        driver.availability?.status === MobilityAvailabilityStatus.BUSY &&
+        activeRides.length === 0
+      ) {
+        continue;
+      }
+      if (
+        activeRides.length > 0 &&
+        !areMobilityRidesCompatible(
+          {
+            pickupLatitude: input.pickupLatitude,
+            pickupLongitude: input.pickupLongitude,
+            dropoffLatitude: input.dropoffLatitude,
+            dropoffLongitude: input.dropoffLongitude,
+            serviceType: input.serviceType,
+            status: "SEARCHING" as never,
+            metadata: { passengerCount: input.passengerCount ?? 1 },
+          },
+          activeRides,
+          Number(vehicle.capacity ?? 1),
+        )
+      ) {
+        continue;
+      }
 
       // Executive is a service class, not a separate vehicle type. Until
       // dedicated executive verification is introduced, only vehicles
