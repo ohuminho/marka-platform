@@ -22,6 +22,10 @@ const vehicleSchema = z.object({
   cargoBody: z.enum(["OPEN", "BOX", "FLATBED", "TIPPER", "TANK"]).optional(),
   serviceAreas: z.array(z.string().trim().min(2).max(100)).max(30).default([]),
 }).superRefine((vehicle, context) => {
+  const cargoKinds = ["CARGO_TRICYCLE", "PICKUP", "CARGO_VAN", "LIGHT_TRUCK", "FLATBED_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK", "SPECIALIZED"];
+  if (cargoKinds.includes(vehicle.kind) && (!vehicle.capacity || !vehicle.capacityUnit)) {
+    context.addIssue({ code: "custom", path: ["capacity"], message: "Esta viatura de carga exige capacidade e unidade de medida registadas." });
+  }
   if (vehicle.kind === "WATER_TANKER" && (!vehicle.waterType || !vehicle.capacity || !["LITRE", "M3"].includes(vehicle.capacityUnit ?? ""))) {
     context.addIssue({ code: "custom", path: ["waterType"], message: "A cisterna exige tipo de água, capacidade e unidade em litros ou m³." });
   }
