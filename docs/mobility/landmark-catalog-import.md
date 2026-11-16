@@ -1,6 +1,6 @@
 # MARKA Mobility landmark catalogue import
 
-The catalogue is intentionally not pre-populated with guessed coordinates. Import only places whose position and source can be checked.
+The catalogue is global and intentionally not pre-populated with guessed coordinates. Import only places whose position and source can be checked. A country code narrows searches when requested; it does not restrict the platform to one country.
 
 ## Input format
 
@@ -11,6 +11,7 @@ Pass a UTF-8 JSON file containing an array of records:
   {
     "name": "Verified place name",
     "aliases": ["Common local spelling", "Alternative name"],
+    "countryCode": "AO",
     "province": "Luanda",
     "municipality": "Municipality name",
     "category": "SHOPPING_CENTRE",
@@ -23,18 +24,18 @@ Pass a UTF-8 JSON file containing an array of records:
 ]
 ```
 
-The coordinates above are illustrative placeholders and must never be imported as real place data.
+The coordinates and source reference above are illustrative placeholders and must never be imported as real place data. Set `countryCode` to the place country using its ISO 3166-1 alpha-2 code (for example `AO`, `PT`, `BR`, `US`, or `FR`).
 
 ## Validation and update behaviour
 
 - `name`, coordinates, source, source reference and verification timestamp are mandatory.
-- Coordinates must be numeric and fall inside a broad Angola mainland/Cabinda envelope. This is a guardrail, not exact border-polygon validation.
-- `source` must be `OPENSTREETMAP`, `OFFICIAL`, `FIELD_VERIFIED` or `PARTNER_VERIFIED`.
+- Coordinates must be numeric latitude/longitude values inside the global geographic ranges; country-specific polygon validation is not inferred from the country code.
+- `countryCode` is a two-letter ISO 3166-1 alpha-2 code. It defaults to `AO` only for backward compatibility; international records must set it explicitly.\n- `source` must be `OPENSTREETMAP`, `OFFICIAL`, `FIELD_VERIFIED` or `PARTNER_VERIFIED`.
 - `sourceRef` must be an HTTPS URL or an explicit `osm:node/ID`, `osm:way/ID` or `osm:relation/ID` reference, and is unique in the catalogue.
 - `verifiedAt` must be an ISO 8601 timestamp with timezone.
 - Up to 20 aliases are accepted; aliases and names are normalized for case and diacritics.
-- Duplicate normalized name + municipality records in one file are rejected before writing.
-- Existing records are matched first by stable `sourceRef`, then by normalized name + municipality. Unrelated records are never deleted.
+- Duplicate country + normalized name + municipality records in one file are rejected before writing.
+- Existing records are matched first by stable `sourceRef`, then by country + normalized name + municipality. Unrelated records are never deleted.
 - The import runs in a database transaction. A failed record rolls back the batch.
 
 ## Run
