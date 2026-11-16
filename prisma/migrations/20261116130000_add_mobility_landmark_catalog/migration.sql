@@ -22,6 +22,8 @@ CREATE TABLE "MobilityLandmark" (
 
 CREATE UNIQUE INDEX "MobilityLandmark_normalizedName_municipality_key"
   ON "MobilityLandmark"("normalizedName", "municipality");
+CREATE UNIQUE INDEX "MobilityLandmark_sourceRef_key"
+  ON "MobilityLandmark"("sourceRef");
 CREATE INDEX "MobilityLandmark_normalizedName_idx"
   ON "MobilityLandmark"("normalizedName");
 CREATE INDEX "MobilityLandmark_countryCode_province_municipality_idx"
