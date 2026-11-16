@@ -237,11 +237,13 @@ export default function MobilityLiveMap({
       onRouteChange?.(null);
       const focus = originPoint || destinationPoint;
       if (focus) map.flyTo({ center: [focus.lon, focus.lat], zoom: 15, duration: 650 });
-      const resetFrame = window.requestAnimationFrame(() => {
+      const resetStatus = () => {
         setBusy(false);
         setStatus("Defina a partida e o destino para calcular a rota.");
-      });
-      return () => window.cancelAnimationFrame(resetFrame);
+      };
+      map.once("idle", resetStatus);
+      map.triggerRepaint();
+      return () => { map.off("idle", resetStatus); };
     }
   }, [
     originPoint?.lat,
