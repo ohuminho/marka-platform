@@ -13,7 +13,7 @@ function normalizeSearch(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-AO")
+    .toLowerCase()
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -40,6 +40,11 @@ export async function GET(request: NextRequest) {
 
   const rawQuery = request.nextUrl.searchParams.get("q") ?? "";
   const query = normalizeSearch(rawQuery);
+  const rawCountryCode = request.nextUrl.searchParams.get("country")?.trim().toUpperCase() ?? "";
+  if (rawCountryCode && !/^[A-Z]{2}$/.test(rawCountryCode)) {
+    return NextResponse.json({ places: [], error: "INVALID_COUNTRY_CODE" }, { status: 400 });
+  }
+  const countryCode = rawCountryCode || null;
   if (query.length < 2 || query.length > 100) {
     return NextResponse.json({ places: [] }, { status: 200 });
   }
@@ -72,7 +77,7 @@ export async function GET(request: NextRequest) {
     }>>`
       SELECT "id", "name", "province", "municipality", "category", "latitude", "longitude"
       FROM "MobilityLandmark"
-      WHERE "countryCode" = 'AO'
+      WHERE (${countryCode}::char(2) IS NULL OR "countryCode" = ${countryCode})
         AND "isActive" = true
         AND (
           "normalizedName" ILIKE ${pattern}
