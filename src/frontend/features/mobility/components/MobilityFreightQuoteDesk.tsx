@@ -230,11 +230,12 @@ export default function MobilityFreightQuoteDesk() {
       {error && <p role="alert" className="mt-4 rounded-xl border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text-muted)]">{error}</p>}
       {notice && <p role="status" className="mt-4 rounded-xl border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
 
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
         {[
           { label: "Novos pedidos", value: operationalCounts.newRequests },
           { label: "A aguardar pagamento", value: operationalCounts.awaitingPayment },
           { label: "Serviços activos", value: operationalCounts.activeServices },
+          { label: "Aguarda confirmação", value: operationalCounts.awaitingConfirmation },
           { label: "Concluídos", value: operationalCounts.completed },
         ].map((metric) => (
           <div key={metric.label} className="rounded-xl border border-[var(--theme-border)] px-3 py-3">
