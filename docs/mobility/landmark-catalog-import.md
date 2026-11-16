@@ -34,7 +34,7 @@ The coordinates above are illustrative placeholders and must never be imported a
 - `verifiedAt` must be an ISO 8601 timestamp with timezone.
 - Up to 20 aliases are accepted; aliases and names are normalized for case and diacritics.
 - Duplicate normalized name + municipality records in one file are rejected before writing.
-- Existing matching records are updated; unrelated records are never deleted.
+- Existing records are matched first by stable `sourceRef`, then by normalized name + municipality. Unrelated records are never deleted.
 - The import runs in a database transaction. A failed record rolls back the batch.
 
 ## Run
