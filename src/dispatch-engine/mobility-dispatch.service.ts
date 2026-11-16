@@ -905,8 +905,8 @@ export class MobilityDispatchService {
       );
 
     if (
-      !driverId &&
-      !vehicleId
+      !ride.driverId &&
+      !ride.vehicleId
     ) {
       return;
     }
@@ -923,7 +923,7 @@ export class MobilityDispatchService {
       );
     }
 
-    if (!driverId || !vehicleId) {
+    if (!ride.driverId || !ride.vehicleId) {
       throw new DispatchDomainError(
         "Ride has an incomplete driver/vehicle assignment.",
         "RIDE_ASSIGNMENT_INCONSISTENT"
