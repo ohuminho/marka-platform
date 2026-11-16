@@ -126,6 +126,25 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       });
       if (requestClaim.count !== 1) throw new Error("REQUEST_ALREADY_ASSIGNED_OR_UNPAID");
 
+      await tx.auditLog.create({
+        data: {
+          actorUserId: auth.session.userId,
+          actorType: "USER",
+          organizationId: auth.session.organizationId,
+          action: "FREIGHT_PROVIDER_ASSIGNED",
+          entityType: "FreightRequest",
+          entityId: freight.id,
+          ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0, 64) ?? null,
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+          metadata: {
+            reference: freight.reference,
+            providerId: provider.id,
+            vehicleId: vehicle.id,
+            assignedAt: new Date().toISOString(),
+          },
+        },
+      });
+
       return tx.freightRequest.findUniqueOrThrow({ where: { id: freight.id } });
     });
     return NextResponse.json({ request: { id: assigned.id, reference: assigned.reference, status: assigned.status, assignedAt: assigned.assignedAt } });
