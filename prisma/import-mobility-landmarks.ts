@@ -74,7 +74,21 @@ function parseLandmark(value: unknown, index: number): NormalizedLandmark {
   }
 
   const source = requiredText(item.source, "source", 32).toUpperCase();
+  if (!["OPENSTREETMAP", "OFFICIAL", "FIELD_VERIFIED", "PARTNER_VERIFIED"].includes(source)) {
+    throw new Error(`Record ${index + 1}: source must be OPENSTREETMAP, OFFICIAL, FIELD_VERIFIED or PARTNER_VERIFIED.`);
+  }
   const sourceRef = requiredText(item.sourceRef, "sourceRef", 255);
+  const isOsmReference = /^osm:(node|way|relation)\\/\\d+$/.test(sourceRef);
+  let isHttpsReference = false;
+  try {
+    const referenceUrl = new URL(sourceRef);
+    isHttpsReference = referenceUrl.protocol === "https:" && Boolean(referenceUrl.hostname);
+  } catch {
+    isHttpsReference = false;
+  }
+  if (!isOsmReference && !isHttpsReference) {
+    throw new Error(`Record ${index + 1}: sourceRef must be an HTTPS URL or an osm:node/ID, osm:way/ID or osm:relation/ID reference.`);
+  }
   const verifiedAtRaw = requiredText(item.verifiedAt, "verifiedAt", 40);
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(verifiedAtRaw)) {
     throw new Error(`Record ${index + 1}: verifiedAt must be an ISO 8601 timestamp with timezone.`);
