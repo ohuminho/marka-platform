@@ -141,17 +141,6 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data;
-    if (vendor.store.isIndividualListing) {
-      const existingListingCount = await prisma.product.count({
-        where: { storeId: vendor.store.id, status: { not: "ARCHIVED" } },
-      });
-      if (existingListingCount > 0) {
-        return NextResponse.json({
-          message: "O perfil individual permite um anúncio ativo de cada vez. Arquive o anúncio atual antes de publicar outro.",
-          code: "SINGLE_LISTING_LIMIT_REACHED",
-        }, { status: 409 });
-      }
-    }
     const categoryName = input.categoryName.toLocaleLowerCase();
     if (["seguros e proteção", "eventos e bilhética"].includes(categoryName)) {
       return NextResponse.json({
@@ -212,7 +201,17 @@ export async function POST(request: Request) {
       categoryId = category.id;
     }
 
-    const product = await prisma.product.create({
+    const product = await prisma.$transaction(async (tx) => {
+      if (vendor.store!.isIndividualListing) {
+        // Serialize individual seller publication per store. The advisory lock
+        // closes the race where two concurrent requests both pass a count check.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(741920, hashtext(${vendor.store!.id}))`;
+        const existingListingCount = await tx.product.count({
+          where: { storeId: vendor.store!.id, status: { not: "ARCHIVED" } },
+        });
+        if (existingListingCount > 0) return null;
+      }
+      return tx.product.create({
       data: {
         name: input.name,
         description: completeDescription || null,
@@ -226,18 +225,25 @@ export async function POST(request: Request) {
         // Active stores may publish legal listings regardless of verification status.
         status:
           vendor.status === "ACTIVE" &&
-          vendor.store.status === "ACTIVE" &&
+          vendor.store!.status === "ACTIVE" &&
           input.stock > 0
             ? "ACTIVE"
             : "DRAFT",
-        storeId: vendor.store.id,
+        storeId: vendor.store!.id,
         categoryId,
         inventory: {
           create: { quantityOnHand: input.stock, reserved: 0, reorderLevel: 0 },
         },
       },
       include: { category: true },
+      });
     });
+    if (!product) {
+      return NextResponse.json({
+        message: "O perfil individual permite um anúncio ativo de cada vez. Arquive o anúncio atual antes de publicar outro.",
+        code: "SINGLE_LISTING_LIMIT_REACHED",
+      }, { status: 409 });
+    }
 
     return NextResponse.json({
       product: {
