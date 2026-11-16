@@ -39,3 +39,27 @@ export function canVehicleCarryQuantity(
   // Small decimal tolerance avoids rejecting equal capacities due to floating-point representation.
   return available.baseUnits + Math.max(1, requested.baseUnits) * 1e-9 >= requested.baseUnits;
 }
+
+
+/**
+ * Checks the combined quantity of active jobs reserved on one vehicle.
+ * All quantities must use compatible physical dimensions (mass or volume).
+ */
+export function canVehicleCarryCombinedQuantities(
+  vehicleCapacity: CapacityValue,
+  vehicleUnit: string | null | undefined,
+  quantities: Array<{ quantity: CapacityValue; unit: string | null | undefined }>,
+): boolean {
+  const available = normalizeCapacity(vehicleCapacity, vehicleUnit);
+  if (!available || quantities.length === 0) return false;
+
+  let totalBaseUnits = 0;
+  for (const item of quantities) {
+    const normalized = normalizeCapacity(item.quantity, item.unit);
+    if (!normalized || normalized.dimension !== available.dimension) return false;
+    totalBaseUnits += normalized.baseUnits;
+    if (!Number.isFinite(totalBaseUnits)) return false;
+  }
+
+  return available.baseUnits + Math.max(1, totalBaseUnits) * 1e-9 >= totalBaseUnits;
+}
