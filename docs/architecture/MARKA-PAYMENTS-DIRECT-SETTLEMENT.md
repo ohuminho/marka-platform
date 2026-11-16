@@ -96,3 +96,12 @@ Notas de diligência:
 - BitPay (bitpay.ao) declara publicamente que ainda não está em produção e aguarda certificação EMIS. Não tratar como gateway pronto para produção; pode ser contactado apenas para acompanhar a certificação e obter informação técnica/comercial.
 - Não foi possível identificar um fornecedor de pagamentos angolano verificável com o nome HappyPay e contacto oficial local. Não enviar dados comerciais para endereços homónimos estrangeiros sem confirmação da entidade pretendida.
 - Os contactos acima são canais institucionais publicados; não significam que o fornecedor tenha confirmado marketplace split settlement, liquidação directa multi-beneficiário ou elegibilidade regulatória para o caso MARKA.
+
+## 8. Carga e assistência — ligação de domínio preparada (16-11-2026)
+
+- O modelo `Payment` passa a aceitar uma referência opcional e única a `FreightRequest`, sem criar uma encomenda fictícia.
+- A relação usa `ON DELETE SET NULL` para preservar o registo financeiro se um pedido operacional for removido.
+- A migração `20261116190000_payment_freight_request_link` é aditiva e ainda não foi aplicada à base de dados.
+- Esta alteração **não cria uma cobrança, não confirma pagamentos e não desbloqueia o despacho**.
+- O fluxo de produção ainda exige um adapter PSP real, consulta server-to-server da cobrança, validação de referência/montante/moeda/beneficiário, idempotência, reconciliação e liquidação directa conforme o modelo contratual.
+- Até esses requisitos estarem satisfeitos, `FreightRequest` permanece em `AWAITING_PAYMENT` e fora da lista de prestadores.
