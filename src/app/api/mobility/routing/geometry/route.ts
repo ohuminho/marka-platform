@@ -15,12 +15,15 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const mobilityServiceTypeSchema = z.enum(["TAXI","EXECUTIVE","MOTO_TAXI","VAN","MINIBUS","BUS","COACH","PICKUP","LIGHT_TRUCK","MEDIUM_TRUCK","TIPPER_TRUCK","HEAVY_TRUCK"]);
+
 const coordinatesSchema = z.object({
   originLat: z.coerce.number().finite().min(-90).max(90),
   originLng: z.coerce.number().finite().min(-180).max(180),
   destinationLat: z.coerce.number().finite().min(-90).max(90),
   destinationLng: z.coerce.number().finite().min(-180).max(180),
-  serviceType: z.enum(["TAXI","EXECUTIVE","MOTO_TAXI","VAN","MINIBUS","BUS","COACH","PICKUP","LIGHT_TRUCK","MEDIUM_TRUCK","TIPPER_TRUCK","HEAVY_TRUCK"]).optional(),
+  serviceType: mobilityServiceTypeSchema.optional(),
+  serviceTypes: z.string().max(256).optional(),
 }).strict();
 
 export async function GET(request: Request) {
@@ -117,18 +120,32 @@ export async function GET(request: Request) {
       },
     );
 
-    const fare = parsed.data.serviceType
-      ? quoteMobilityFare(
-          parsed.data.serviceType,
-          route.distanceMeters,
-          route.durationSeconds,
-        )
-      : null;
+    const requestedServiceTypes = parsed.data.serviceTypes
+      ? parsed.data.serviceTypes.split(",").map((value) => value.trim()).filter(Boolean)
+      : parsed.data.serviceType
+        ? [parsed.data.serviceType]
+        : [];
+    const validatedServiceTypes = z.array(mobilityServiceTypeSchema).max(12).safeParse([...new Set(requestedServiceTypes)]);
+    if (!validatedServiceTypes.success) {
+      return NextResponse.json(
+        { message: "One or more Mobility service types are invalid.", code: "MOBILITY_SERVICE_TYPE_INVALID" },
+        { status: 400 },
+      );
+    }
+
+    const fares = Object.fromEntries(
+      validatedServiceTypes.data.map((type) => [
+        type,
+        quoteMobilityFare(type, route.distanceMeters, route.durationSeconds),
+      ]),
+    );
+    const fare = parsed.data.serviceType ? fares[parsed.data.serviceType] ?? null : null;
 
     return NextResponse.json(
       {
         route,
         fare,
+        fares,
         fareStatus: fare ? "AVAILABLE" : "TARIFF_NOT_CONFIGURED",
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
