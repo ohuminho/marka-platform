@@ -14,6 +14,15 @@ const bodySchema = z.object({
     "COMPLETED",
     "EXCEPTION",
   ]),
+  note: z.string().trim().max(1000).optional(),
+}).superRefine((value, context) => {
+  if (value.status === "EXCEPTION" && !value.note) {
+    context.addIssue({
+      code: "custom",
+      path: ["note"],
+      message: "Descreva a ocorrência antes de a registar.",
+    });
+  }
 });
 
 const nextStatuses: Record<string, string[]> = {
@@ -92,6 +101,26 @@ export async function PATCH(
         },
       });
       if (changed.count !== 1) throw new Error("FREIGHT_STATUS_CONFLICT");
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: auth.session.userId,
+          actorType: "USER",
+          organizationId: auth.session.organizationId,
+          action: `FREIGHT_STATUS_${requestedNext}`,
+          entityType: "FreightRequest",
+          entityId: current.id,
+          ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0, 64) ?? null,
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+          metadata: {
+            reference: current.reference,
+            previousStatus: current.status,
+            newStatus: requestedNext,
+            note: parsed.data.note ?? null,
+            changedAt: new Date().toISOString(),
+          },
+        },
+      });
 
       if (requestedNext === "COMPLETED") {
         const remainingActiveAssignments = await tx.freightRequest.count({
