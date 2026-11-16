@@ -20,8 +20,8 @@ CREATE TABLE "MobilityLandmark" (
   CONSTRAINT "MobilityLandmark_longitude_check" CHECK ("longitude" >= -180 AND "longitude" <= 180)
 );
 
-CREATE UNIQUE INDEX "MobilityLandmark_normalizedName_municipality_key"
-  ON "MobilityLandmark"("normalizedName", "municipality");
+CREATE UNIQUE INDEX "MobilityLandmark_countryCode_normalizedName_municipality_key"
+  ON "MobilityLandmark"("countryCode", "normalizedName", "municipality");
 CREATE UNIQUE INDEX "MobilityLandmark_sourceRef_key"
   ON "MobilityLandmark"("sourceRef");
 CREATE INDEX "MobilityLandmark_normalizedName_idx"
