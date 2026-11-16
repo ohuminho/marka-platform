@@ -75,11 +75,11 @@ export async function GET(request: NextRequest) {
       WHERE "countryCode" = 'AO'
         AND "isActive" = true
         AND (
-          "normalizedName" LIKE ${pattern}
+          "normalizedName" ILIKE ${pattern}
           OR EXISTS (
             SELECT 1
             FROM unnest("aliases") AS alias(value)
-            WHERE value LIKE ${pattern}
+            WHERE value ILIKE ${pattern}
           )
         )
       ORDER BY "verifiedAt" DESC NULLS LAST, "name" ASC
