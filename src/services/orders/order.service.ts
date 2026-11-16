@@ -22,6 +22,16 @@ export class OrderService {
     }
 
     return prisma.$transaction(async (database) => {
+      // Serialize cancellation with payment-intent creation and confirmation.
+      // Those flows also lock the Order row; without this lock, a payment can
+      // become active after this method checks payments but before stock release.
+      await database.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "Order"
+        WHERE "id" = ${orderId}
+        FOR UPDATE
+      `;
+
       const order = await database.order.findFirst({
         where: { id: orderId, ...(userId ? { userId } : {}), ...(vendorId ? { items: { some: { vendorId } } } : {}) },
         include: {
