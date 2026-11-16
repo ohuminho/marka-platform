@@ -3,6 +3,7 @@ import Link from "next/link";
 import DynamicBackground from "@/design-system/backgrounds/DynamicBackground";
 import AppShell from "@/frontend/shell/AppShell";
 import MobilityFreightRequestForm from "@/frontend/features/mobility/components/MobilityFreightRequestForm";
+import MobilityFreightRequestHistory from "@/frontend/features/mobility/components/MobilityFreightRequestHistory";
 
 export default function MobilityFreightPage() {
   return (
@@ -23,6 +24,7 @@ export default function MobilityFreightPage() {
             </div>
           </header>
           <MobilityFreightRequestForm />
+          <MobilityFreightRequestHistory />
           <p className="px-1 text-center text-[9px] text-[var(--theme-text-muted)]">Powered By Magestade Pura Digital</p>
         </main>
       </AppShell>
