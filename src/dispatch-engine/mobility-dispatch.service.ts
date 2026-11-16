@@ -626,6 +626,16 @@ export class MobilityDispatchService {
             ride.pickupLongitude
           ),
 
+        dropoffLatitude:
+          Number(
+            ride.dropoffLatitude
+          ),
+
+        dropoffLongitude:
+          Number(
+            ride.dropoffLongitude
+          ),
+
         serviceType:
           ride.serviceType,
 
@@ -770,11 +780,11 @@ export class MobilityDispatchService {
     }
 
     if (
-      driver.availability?.status !==
-      MobilityAvailabilityStatus.AVAILABLE
+      driver.availability?.status !== MobilityAvailabilityStatus.AVAILABLE &&
+      driver.availability?.status !== MobilityAvailabilityStatus.BUSY
     ) {
       throw new DispatchDomainError(
-        "Selected driver is not available.",
+        "Selected driver is not available for dispatch.",
         "DRIVER_NOT_AVAILABLE"
       );
     }
