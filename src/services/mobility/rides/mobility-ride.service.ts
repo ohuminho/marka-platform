@@ -364,8 +364,16 @@ export class MobilityRideService {
         pickupLongitude:
           Number(ride.pickupLongitude),
 
+        dropoffLatitude:
+          Number(ride.dropoffLatitude),
+
+        dropoffLongitude:
+          Number(ride.dropoffLongitude),
+
         serviceType:
           ride.serviceType,
+
+        passengerCount: readPassengerCount(ride.metadata),
 
         radiusMeters:
           options?.radiusMeters,
