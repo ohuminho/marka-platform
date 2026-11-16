@@ -146,6 +146,7 @@ export default function MobilityFreightRequestHistory() {
             const expiresAt = item.quoteExpiresAt ? new Date(item.quoteExpiresAt) : null;
             const quoteExpired = expiresAt ? expiresAt.getTime() <= Date.now() : false;
             const canDecide = item.status === "QUOTED" && item.quotedAmount !== null && expiresAt !== null && Number.isFinite(expiresAt.getTime()) && !quoteExpired;
+            const displayStatus = item.status === "QUOTED" && quoteExpired ? "Cotação expirada" : statusLabels[item.status] ?? item.status.replaceAll("_", " ");
             return (
               <article key={item.id} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -153,7 +154,7 @@ export default function MobilityFreightRequestHistory() {
                     <p className="text-[9px] font-semibold uppercase tracking-[.16em] text-[#b89a5b]">{requestLabels[item.requestType]}</p>
                     <h3 className="mt-1 text-sm font-semibold text-[var(--theme-text)]">{item.reference}</h3>
                   </div>
-                  <span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[10px] font-semibold text-[var(--theme-text)]">{statusLabels[item.status] ?? item.status.replaceAll("_", " ")}</span>
+                  <span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[10px] font-semibold text-[var(--theme-text)]">{displayStatus}</span>
                 </div>
                 <div className="mt-3 grid gap-2 text-xs text-[var(--theme-text-muted)] sm:grid-cols-2">
                   {item.origin?.address && <p><strong className="text-[var(--theme-text)]">Recolha:</strong> {item.origin.address}</p>}
@@ -169,6 +170,8 @@ export default function MobilityFreightRequestHistory() {
                     {expiresAt && <p className="mt-1 text-[10px] text-[var(--theme-text-muted)]">{quoteExpired ? "Cotação expirada" : `Válida até ${new Intl.DateTimeFormat("pt-AO", { dateStyle: "medium", timeStyle: "short" }).format(expiresAt)}`}</p>}
                   </div>
                 )}
+
+                {item.status === "QUOTED" && quoteExpired && <p className="mt-3 text-[11px] text-amber-700 dark:text-amber-300">Esta cotação expirou. Aguarde uma nova cotação da equipa MARKA.</p>}
 
                 {canDecide && (
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
