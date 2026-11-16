@@ -11,7 +11,10 @@ type CustomerFreightRequest = {
   currency: string;
   quotedAmount: number | null;
   quoteExpiresAt: string | null;
+  paymentReference: string | null;
+  paidAt: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 function money(value: number, currency: string) {
@@ -169,6 +172,11 @@ export default function MobilityFreightCustomerQuotes() {
               </div>
               {item.quotedAmount !== null && <p className="mt-4 text-lg font-semibold text-[var(--theme-text)]">{money(item.quotedAmount, item.currency)}</p>}
               {item.quoteExpiresAt && <p className="mt-1 text-[10px] text-[var(--theme-text-faint)]">Cotação válida até {formatDate(item.quoteExpiresAt)}</p>}
+              {item.paidAt && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pagamento confirmado em {formatDate(item.paidAt)}{item.paymentReference ? ` · Referência: ${item.paymentReference}` : ""}</p>}
+              {!item.paidAt && item.status === "AWAITING_PAYMENT" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Aguardamos a confirmação segura do pagamento. Não envie comprovativos por esta página.</p>}
+              {["ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT"].includes(item.status) && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Última actualização: {formatDate(item.updatedAt)}.</p>}
+              {item.status === "COMPLETED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Serviço concluído. Última actualização: {formatDate(item.updatedAt)}.</p>}
+              {item.status === "EXCEPTION" && <p role="alert" className="mt-3 text-[10px] text-[var(--theme-text-muted)]">O pedido requer apoio da equipa MARKA. A equipa deverá entrar em contacto.</p>}
               {actionable && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" disabled={busyId === item.id} onClick={() => void decide(item.id, "ACCEPT")} className="min-h-10 rounded-full bg-[var(--theme-text)] px-5 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--theme-background)] disabled:opacity-50">{busyId === item.id ? "A registar…" : "Aceitar cotação"}</button>
