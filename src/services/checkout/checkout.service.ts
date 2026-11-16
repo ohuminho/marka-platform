@@ -370,6 +370,14 @@ export class CheckoutService {
         ipAddress: input.ipAddress,
         userAgent: input.userAgent,
       });
+
+      // A provider may return a terminal failure as a normal response rather
+      // than throwing. Route it through the same compensation path.
+      if (payment.status === "FAILED" || payment.status === "CANCELLED") {
+        throw new Error(
+          `Payment provider returned terminal status ${payment.status}.`,
+        );
+      }
     } catch (error) {
       // A provider timeout can mean that the provider created the payment
       // intent but MARKA did not receive its response. Keep the order and
@@ -377,14 +385,40 @@ export class CheckoutService {
       // here could sell the same item twice after a successful external charge.
       const paymentAfterFailure = await prisma.payment.findUnique({
         where: { idempotencyKey: paymentIdempotencyKey },
-        select: { id: true, status: true },
+        select: {
+          id: true,
+          status: true,
+          order: {
+            select: {
+              status: true,
+              inventoryReserved: true,
+            },
+          },
+        },
       });
 
       const paymentOutcomeUnresolved =
         paymentAfterFailure !== null &&
-        ["CREATED", "PENDING", "PROCESSING", "COMPLETED"].includes(
+        ["CREATED", "PENDING", "PROCESSING"].includes(
           paymentAfterFailure.status,
         );
+
+      if (paymentAfterFailure?.status === "COMPLETED") {
+        console.error(
+          "[CHECKOUT_PAYMENT_COMPLETED_RECONCILIATION_REQUIRED]",
+          {
+            orderId: order.id,
+            paymentId: paymentAfterFailure.id,
+            orderStatus: paymentAfterFailure.order?.status ?? null,
+            inventoryReserved:
+              paymentAfterFailure.order?.inventoryReserved ?? null,
+          },
+        );
+
+        throw new Error(
+          `Payment for order ${order.id} was completed. The order is preserved and requires fulfillment reconciliation. Do not submit a replacement checkout.`,
+        );
+      }
 
       if (paymentOutcomeUnresolved) {
         console.error(
@@ -465,6 +499,20 @@ export class CheckoutService {
       );
     }
 
+    let finalOrderStatus = order.status;
+    try {
+      const persistedOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        select: { status: true },
+      });
+      if (persistedOrder) finalOrderStatus = persistedOrder.status;
+    } catch (statusReadError) {
+      console.error(
+        "[CHECKOUT_FINAL_ORDER_STATUS_READ_ERROR]",
+        { orderId: order.id, error: statusReadError },
+      );
+    }
+
     // Notifications are best-effort and never change checkout/payment outcome.
     try {
       await notificationService.send({
@@ -483,7 +531,7 @@ export class CheckoutService {
       currency: cart.currency,
       subtotal,
       total: Number(order.total),
-      status: order.status,
+      status: finalOrderStatus,
       payment,
       items: order.items.map((item) => ({
         productId: item.productId,
