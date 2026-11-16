@@ -797,7 +797,7 @@ export default function MobilityLuxuryExperience() {
               disabled={!route || !quote || creating}
               className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#F3D27A] via-[#E5B84B] to-[#C99632] px-4 text-xs font-extrabold text-[#09090B] shadow-[0_8px_26px_rgba(229,184,75,.18)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {creating ? "A enviar pedido…" : "Confirmar MARKA Black"}
+              {creating ? "A enviar pedido…" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar MARKA Black"}
             </button>
             <p className="mt-2 text-center text-[8px] text-white/30">A tarifa é calculada pela tabela MARKA e confirmada no servidor. Moeda: AOA (Kz).</p>
           </>
