@@ -1,4 +1,4 @@
-import { MobilityRideStatus } from "@prisma/client";
+import { MobilityAvailabilityStatus, MobilityRideStatus } from "@prisma/client";
 
 import { MobilityDomainError } from "@/services/mobility/errors/mobility-domain.error";
 
@@ -118,7 +118,7 @@ export function transitionRideStatus(
 
 export function resolveDriverAvailabilityForActiveRides(
   activeRideStatuses: readonly MobilityRideStatus[],
-): "AVAILABLE" | "BUSY" | "ON_TRIP" {
+): MobilityAvailabilityStatus {
   if (
     activeRideStatuses.some(
       (status) =>
@@ -126,7 +126,7 @@ export function resolveDriverAvailabilityForActiveRides(
         status === MobilityRideStatus.TRIP_IN_PROGRESS,
     )
   ) {
-    return "ON_TRIP";
+    return MobilityAvailabilityStatus.ON_TRIP;
   }
 
   if (
@@ -137,10 +137,10 @@ export function resolveDriverAvailabilityForActiveRides(
         status === MobilityRideStatus.DRIVER_ARRIVED,
     )
   ) {
-    return "BUSY";
+    return MobilityAvailabilityStatus.BUSY;
   }
 
-  return "AVAILABLE";
+  return MobilityAvailabilityStatus.AVAILABLE;
 }
 
 export function isTerminalRideStatus(
