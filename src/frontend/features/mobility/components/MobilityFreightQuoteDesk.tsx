@@ -21,6 +21,7 @@ interface FreightQuoteRequest {
   assignedAt: string | null;
   updatedAt: string;
   latestException: { note: string | null; createdAt: string } | null;
+  latestExceptionReview: { note: string; reviewedAt: string; reviewedBy: string | null } | null;
   requester: { name: string | null };
 }
 
@@ -70,6 +71,8 @@ export default function MobilityFreightQuoteDesk() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!organizationId) {
@@ -141,6 +144,38 @@ export default function MobilityFreightQuoteDesk() {
       setError(cause instanceof Error ? cause.message : "Falha ao emitir cotação.");
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const reviewException = async (requestId: string) => {
+    if (!organizationId) return;
+    const note = (reviewNotes[requestId] ?? "").trim();
+    if (note.length < 5) {
+      setError("Registe uma análise com pelo menos cinco caracteres.");
+      return;
+    }
+    setReviewingId(requestId);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/freight/admin/requests", {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Organization-Id": organizationId,
+        },
+        body: JSON.stringify({ action: "REVIEW_EXCEPTION", requestId, note }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível registar a análise.");
+      setReviewNotes((current) => ({ ...current, [requestId]: "" }));
+      setNotice("Análise da ocorrência registada no histórico.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao registar a análise.");
+    } finally {
+      setReviewingId(null);
     }
   };
 
@@ -236,6 +271,30 @@ export default function MobilityFreightQuoteDesk() {
                   {item.latestException?.note && <p className="mt-2 text-xs text-[var(--theme-text)]">{item.latestException.note}</p>}
                   {item.latestException?.createdAt && <p className="mt-2 text-[9px] text-[var(--theme-text-faint)]">{dateTime(item.latestException.createdAt)}</p>}
                   {!item.latestException?.note && <p className="mt-2 text-xs text-[var(--theme-text-muted)]">Este serviço requer intervenção operacional.</p>}
+                  {item.latestExceptionReview ? (
+                    <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-background)] p-3">
+                      <p className="text-[9px] font-semibold uppercase tracking-[.12em] text-[var(--theme-text-muted)]">Última análise administrativa</p>
+                      <p className="mt-2 text-xs text-[var(--theme-text)]">{item.latestExceptionReview.note}</p>
+                      <p className="mt-2 text-[9px] text-[var(--theme-text-faint)]">{dateTime(item.latestExceptionReview.reviewedAt)}{item.latestExceptionReview.reviewedBy ? ` · ${item.latestExceptionReview.reviewedBy}` : ""}</p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      <label htmlFor={`freight-review-${item.id}`} className="block text-[9px] font-semibold uppercase tracking-[.12em] text-[var(--theme-text-muted)]">Análise e instruções operacionais</label>
+                      <textarea
+                        id={`freight-review-${item.id}`}
+                        rows={3}
+                        maxLength={2000}
+                        value={reviewNotes[item.id] ?? ""}
+                        onChange={(event) => setReviewNotes((current) => ({ ...current, [item.id]: event.target.value }))}
+                        placeholder="Registe a avaliação e os próximos passos acordados…"
+                        className="w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text)] outline-none focus:border-[#b89a5b]"
+                      />
+                      <button type="button" disabled={reviewingId === item.id || (reviewNotes[item.id] ?? "").trim().length < 5} onClick={() => void reviewException(item.id)} className="min-h-10 rounded-lg bg-[#d8c18c] px-4 text-[10px] font-bold text-[#171814] disabled:opacity-50">
+                        {reviewingId === item.id ? "A registar…" : "Registar análise"}
+                      </button>
+                    </div>
+                  )}
+                  <p className="mt-3 text-[9px] text-[var(--theme-text-faint)]">A análise fica no histórico. A retoma ou o cancelamento exigem uma decisão operacional separada.</p>
                 </div>
               )}
               {item.status === "CANCELLED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pedido cancelado.</p>}
