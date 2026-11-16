@@ -78,7 +78,7 @@ function parseLandmark(value: unknown, index: number): NormalizedLandmark {
     throw new Error(`Record ${index + 1}: source must be OPENSTREETMAP, OFFICIAL, FIELD_VERIFIED or PARTNER_VERIFIED.`);
   }
   const sourceRef = requiredText(item.sourceRef, "sourceRef", 255);
-  const isOsmReference = /^osm:(node|way|relation)\\/\\d+$/.test(sourceRef);
+  const isOsmReference = /^osm:(node|way|relation)\/\d+$/.test(sourceRef);
   let isHttpsReference = false;
   try {
     const referenceUrl = new URL(sourceRef);
