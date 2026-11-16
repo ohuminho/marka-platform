@@ -68,6 +68,7 @@ export default function MobilityFreightCustomerQuotes() {
   const [requests, setRequests] = useState<CustomerFreightRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -140,6 +141,32 @@ export default function MobilityFreightCustomerQuotes() {
     }
   };
 
+  const cancelRequest = async (requestId: string) => {
+    if (!organizationId || !window.confirm("Pretende cancelar este pedido? Esta acção só está disponível antes do pagamento e da atribuição do prestador.")) return;
+    setCancellingId(requestId);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/freight/requests/${requestId}/cancel`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Organization-Id": organizationId,
+        },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível cancelar o pedido.");
+      setNotice("Pedido cancelado. O prestador não será notificado nem atribuído.");
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao cancelar o pedido.");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   return (
     <section className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -179,9 +206,19 @@ export default function MobilityFreightCustomerQuotes() {
               {item.status === "EXCEPTION" && <p role="alert" className="mt-3 text-[10px] text-[var(--theme-text-muted)]">O pedido requer apoio da equipa MARKA. A equipa deverá entrar em contacto.</p>}
               {actionable && (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" disabled={busyId === item.id} onClick={() => void decide(item.id, "ACCEPT")} className="min-h-10 rounded-full bg-[var(--theme-text)] px-5 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--theme-background)] disabled:opacity-50">{busyId === item.id ? "A registar…" : "Aceitar cotação"}</button>
-                  <button type="button" disabled={busyId === item.id} onClick={() => void decide(item.id, "REJECT")} className="min-h-10 rounded-full border border-[var(--theme-border)] px-5 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--theme-text-muted)] disabled:opacity-50">Rejeitar</button>
+                  <button type="button" disabled={busyId === item.id || cancellingId === item.id} onClick={() => void decide(item.id, "ACCEPT")} className="min-h-10 rounded-full bg-[var(--theme-text)] px-5 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--theme-background)] disabled:opacity-50">{busyId === item.id ? "A registar…" : "Aceitar cotação"}</button>
+                  <button type="button" disabled={busyId === item.id || cancellingId === item.id} onClick={() => void decide(item.id, "REJECT")} className="min-h-10 rounded-full border border-[var(--theme-border)] px-5 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--theme-text-muted)] disabled:opacity-50">Rejeitar</button>
                 </div>
+              )}
+              {["REQUESTED", "QUOTED", "AWAITING_PAYMENT"].includes(item.status) && !item.paidAt && (
+                <button
+                  type="button"
+                  disabled={cancellingId === item.id || busyId === item.id}
+                  onClick={() => void cancelRequest(item.id)}
+                  className="mt-3 min-h-10 rounded-full border border-rose-500/25 px-4 text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-700 disabled:opacity-50 dark:text-rose-300"
+                >
+                  {cancellingId === item.id ? "A cancelar…" : "Cancelar pedido"}
+                </button>
               )}
               {item.status === "REQUESTED" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Pedido recebido. A equipa está a preparar uma cotação; não precisa de fazer mais nada por agora.</p>}
               {item.status === "AWAITING_PAYMENT" && <p className="mt-4 text-xs leading-5 text-[var(--theme-text-muted)]">Cotação aceite. O pedido aguarda instruções e confirmação de pagamento. Ainda não foi enviado para os prestadores.</p>}
