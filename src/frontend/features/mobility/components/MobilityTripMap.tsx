@@ -109,6 +109,7 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
   const driverLayerRef = useRef<MarkerLayer | null>(null);
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [routeUnavailable, setRouteUnavailable] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -184,22 +185,45 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
     };
 
     if (pickup && dropoff) {
-      void fetch(`https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${dropoff.lng},${dropoff.lat}?overview=full&geometries=geojson&steps=false`)
+      setRouteUnavailable(false);
+      const query = new URLSearchParams({
+        originLat: String(pickup.lat),
+        originLng: String(pickup.lng),
+        destinationLat: String(dropoff.lat),
+        destinationLng: String(dropoff.lng),
+      });
+      void fetch("/api/mobility/routing/geometry?" + query.toString(), {
+        credentials: "include",
+        cache: "no-store",
+      })
         .then(async (response) => {
-          if (!response.ok) throw new Error("Rota indisponível");
-          return response.json() as Promise<{ routes?: Array<{ geometry?: unknown }> }>;
+          const payload = await response.json().catch(() => null) as
+            | { route?: { geometry?: unknown } }
+            | null;
+          if (!response.ok || !payload?.route?.geometry) {
+            throw new Error("Traçado da rota indisponível.");
+          }
+          return payload.route.geometry;
         })
-        .then((payload) => {
+        .then((geometry) => {
           if (cancelled) return;
-          const geometry = payload.routes?.[0]?.geometry;
-          if (!geometry) { fitKnownPoints(); return; }
-          const route = L.geoJSON(geometry, { style: { color: "#E9BD58", weight: 5, opacity: .9 } }).addTo(map);
+          const route = L.geoJSON(geometry, {
+            style: { color: "#E9BD58", weight: 5, opacity: .9 },
+          }).addTo(map);
           layersRef.current.push(route);
           if (route.getBounds) map.fitBounds(route.getBounds(), { padding: [44, 44] });
           else fitKnownPoints();
         })
-        .catch(() => { if (!cancelled) fitKnownPoints(); });
-    } else fitKnownPoints();
+        .catch(() => {
+          if (!cancelled) {
+            setRouteUnavailable(true);
+            fitKnownPoints();
+          }
+        });
+    } else {
+      setRouteUnavailable(false);
+      fitKnownPoints();
+    }
 
     return () => { cancelled = true; };
   }, [ready, pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng]);
@@ -228,11 +252,12 @@ export default function MobilityTripMap({ pickup, dropoff, driver }: { pickup: C
   return (
     <section className="relative mb-5 overflow-hidden rounded-2xl border border-white/[.09] bg-[#0B1017]">
       <div className="absolute left-3 top-3 z-[500] flex items-center gap-2 rounded-full border border-white/[.12] bg-[#0B1017]/90 px-3 py-2 text-[9px] font-bold uppercase tracking-[.16em] text-white/65 backdrop-blur-xl">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#E9BD58]"/> Mapa da viagem
+        <span className="h-1.5 w-1.5 rounded-full bg-[#E9BD58]"/> Mapa da rota
       </div>
       <div ref={hostRef} role="application" aria-label="Mapa do percurso da viagem" className="h-[240px] w-full bg-[#101820] sm:h-[320px]"/>
       {mapError && <div className="absolute inset-x-3 bottom-3 z-[500] rounded-xl border border-rose-300/20 bg-[#0B1017]/90 px-3 py-2 text-[10px] text-rose-100">{mapError}</div>}
-      {!mapError && !pickup && !dropoff && <div className="absolute inset-x-3 bottom-3 z-[500] rounded-xl border border-white/10 bg-[#0B1017]/85 px-3 py-2 text-[10px] text-white/55">A aguardar coordenadas do percurso.</div>}
+      {!mapError && routeUnavailable && <div className="absolute inset-x-3 bottom-3 z-[500] rounded-xl border border-white/10 bg-[#0B1017]/90 px-3 py-2 text-[10px] text-white/55">Traçado rodoviário indisponível. Os pontos continuam visíveis.</div>}
+      {!mapError && !routeUnavailable && !pickup && !dropoff && <div className="absolute inset-x-3 bottom-3 z-[500] rounded-xl border border-white/10 bg-[#0B1017]/85 px-3 py-2 text-[10px] text-white/55">A aguardar coordenadas do percurso.</div>}
     </section>
   );
 }

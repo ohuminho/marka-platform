@@ -64,6 +64,53 @@ async function main(): Promise<void> {
       error.code === "MOBILITY_ROUTE_MEASUREMENTS_INVALID",
   );
 
+  const geometryFetch: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    assert.equal(url.searchParams.get("overview"), "full");
+    assert.equal(url.searchParams.get("geometries"), "geojson");
+    return new Response(JSON.stringify({
+      code: "Ok",
+      routes: [{
+        distance: 12_500.5,
+        duration: 1_800,
+        geometry: {
+          type: "LineString",
+          coordinates: [[13.2, -8.8], [13.25, -8.85], [13.3, -8.9]],
+        },
+      }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  const route = await service.getGeometry(
+    { latitude: -8.8, longitude: 13.2 },
+    { latitude: -8.9, longitude: 13.3 },
+    { baseUrl: "https://routing.example.test", fetcher: geometryFetch },
+  );
+  assert.equal(route.geometry.type, "LineString");
+  assert.equal(route.geometry.coordinates.length, 3);
+  assert.deepEqual(route.geometry.coordinates[0], [13.2, -8.8]);
+
+  const malformedGeometryFetch: typeof fetch = async () =>
+    new Response(JSON.stringify({
+      code: "Ok",
+      routes: [{
+        distance: 100,
+        duration: 20,
+        geometry: { type: "LineString", coordinates: [[999, -8.8], [13.3, -8.9]] },
+      }],
+    }), { status: 200 });
+
+  await assert.rejects(
+    () => service.getGeometry(
+      { latitude: -8.8, longitude: 13.2 },
+      { latitude: -8.9, longitude: 13.3 },
+      { baseUrl: "https://routing.example.test", fetcher: malformedGeometryFetch },
+    ),
+    (error: unknown) =>
+      error instanceof MobilityRoutingError &&
+      error.code === "MOBILITY_ROUTE_GEOMETRY_INVALID",
+  );
+
   console.log("Mobility routing adapter tests passed.");
 }
 

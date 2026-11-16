@@ -10,6 +10,13 @@ export interface MobilityRouteEstimate {
   profile: "driving";
 }
 
+export interface MobilityRouteGeometry extends MobilityRouteEstimate {
+  geometry: {
+    type: "LineString";
+    coordinates: [number, number][];
+  };
+}
+
 export interface MobilityRoutingOptions {
   baseUrl?: string;
   timeoutMs?: number;
@@ -141,6 +148,158 @@ export class MobilityRoutingService {
       profile: "driving",
     };
   }
+
+  async getGeometry(
+    origin: MobilityRoutePoint,
+    destination: MobilityRoutePoint,
+    options: MobilityRoutingOptions = {},
+  ): Promise<MobilityRouteGeometry> {
+    validatePoint(origin, "origin");
+    validatePoint(destination, "destination");
+
+    const baseUrl = options.baseUrl ?? process.env.MOBILITY_ROUTING_BASE_URL;
+    if (!baseUrl) {
+      throw new MobilityRoutingError(
+        "Mobility routing provider is not configured.",
+        "MOBILITY_ROUTING_NOT_CONFIGURED",
+      );
+    }
+
+    let endpoint: URL;
+    try {
+      endpoint = new URL(
+        "route/v1/driving/" +
+          origin.longitude + "," + origin.latitude + ";" +
+          destination.longitude + "," + destination.latitude,
+        ensureTrailingSlash(baseUrl),
+      );
+    } catch {
+      throw new MobilityRoutingError(
+        "Mobility routing provider URL is invalid.",
+        "MOBILITY_ROUTING_CONFIGURATION_INVALID",
+      );
+    }
+
+    endpoint.searchParams.set("overview", "full");
+    endpoint.searchParams.set("geometries", "geojson");
+    endpoint.searchParams.set("steps", "false");
+    endpoint.searchParams.set("alternatives", "false");
+
+    const timeoutMs = options.timeoutMs ?? 5_000;
+    if (!Number.isInteger(timeoutMs) || timeoutMs < 500 || timeoutMs > 15_000) {
+      throw new MobilityRoutingError(
+        "Mobility routing timeout configuration is invalid.",
+        "MOBILITY_ROUTING_TIMEOUT_INVALID",
+      );
+    }
+
+    let response: Response;
+    try {
+      response = await (options.fetcher ?? fetch)(endpoint, {
+        method: "GET",
+        headers: { accept: "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch {
+      throw new MobilityRoutingError(
+        "Mobility routing provider is unavailable.",
+        "MOBILITY_ROUTING_PROVIDER_UNAVAILABLE",
+      );
+    }
+
+    if (!response.ok) {
+      throw new MobilityRoutingError(
+        "Mobility routing provider returned an unsuccessful response.",
+        "MOBILITY_ROUTING_PROVIDER_ERROR",
+      );
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new MobilityRoutingError(
+        "Mobility routing provider returned invalid JSON.",
+        "MOBILITY_ROUTING_INVALID_RESPONSE",
+      );
+    }
+
+    if (!isRecord(payload) || payload.code !== "Ok" || !Array.isArray(payload.routes)) {
+      throw new MobilityRoutingError(
+        "No drivable route was found for the selected locations.",
+        "MOBILITY_ROUTE_NOT_FOUND",
+      );
+    }
+
+    const route = payload.routes[0];
+    if (
+      !isRecord(route) ||
+      typeof route.distance !== "number" ||
+      !Number.isFinite(route.distance) ||
+      route.distance <= 0 ||
+      route.distance > 2_000_000 ||
+      typeof route.duration !== "number" ||
+      !Number.isFinite(route.duration) ||
+      route.duration <= 0 ||
+      route.duration > 7 * 24 * 60 * 60
+    ) {
+      throw new MobilityRoutingError(
+        "Mobility routing provider returned invalid route measurements.",
+        "MOBILITY_ROUTE_MEASUREMENTS_INVALID",
+      );
+    }
+
+    const geometry = route.geometry;
+    if (
+      !isRecord(geometry) ||
+      geometry.type !== "LineString" ||
+      !Array.isArray(geometry.coordinates) ||
+      geometry.coordinates.length < 2 ||
+      geometry.coordinates.length > 10_000
+    ) {
+      throw new MobilityRoutingError(
+        "Mobility routing provider returned invalid route geometry.",
+        "MOBILITY_ROUTE_GEOMETRY_INVALID",
+      );
+    }
+
+    const coordinates: [number, number][] = [];
+    for (const coordinate of geometry.coordinates) {
+      if (
+        !Array.isArray(coordinate) ||
+        coordinate.length < 2 ||
+        typeof coordinate[0] !== "number" ||
+        typeof coordinate[1] !== "number"
+      ) {
+        throw new MobilityRoutingError(
+          "Mobility routing provider returned invalid route geometry.",
+          "MOBILITY_ROUTE_GEOMETRY_INVALID",
+        );
+      }
+
+      const longitude = coordinate[0];
+      const latitude = coordinate[1];
+      try {
+        validatePoint({ latitude, longitude }, "route");
+      } catch {
+        throw new MobilityRoutingError(
+          "Mobility routing provider returned invalid route geometry.",
+          "MOBILITY_ROUTE_GEOMETRY_INVALID",
+        );
+      }
+      coordinates.push([longitude, latitude]);
+    }
+
+    return {
+      distanceMeters: route.distance,
+      durationSeconds: route.duration,
+      provider: "OSRM",
+      profile: "driving",
+      geometry: { type: "LineString", coordinates },
+    };
+  }
+
 }
 
 function validatePoint(point: MobilityRoutePoint, label: string): void {

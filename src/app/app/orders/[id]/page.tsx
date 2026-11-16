@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
+import MobilityTripMap from "@/frontend/features/mobility/components/MobilityTripMap";
 
 interface OrderItem {
   id: string;
@@ -664,6 +665,29 @@ export default function OrderDetailPage({
                     );
                   })}
                 </div>
+
+                {order.dispatch ? (
+                  <MobilityTripMap
+                    pickup={{
+                      lat: order.dispatch.origin.latitude,
+                      lng: order.dispatch.origin.longitude,
+                    }}
+                    dropoff={order.dispatch.destination ? {
+                      lat: order.dispatch.destination.latitude,
+                      lng: order.dispatch.destination.longitude,
+                    } : null}
+                    driver={
+                      tracking?.agent &&
+                      tracking.agent.latitude !== null &&
+                      tracking.agent.longitude !== null
+                        ? {
+                            lat: tracking.agent.latitude,
+                            lng: tracking.agent.longitude,
+                          }
+                        : null
+                    }
+                  />
+                ) : null}
 
                 {tracking?.agent ? (
                   <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-background)]/10 p-4">
