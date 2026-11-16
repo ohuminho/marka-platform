@@ -19,6 +19,7 @@ export default function LoginForm() {
     useState("");
   const [confirmPassword, setConfirmPassword] =
     useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] =
     useState(false);
@@ -255,8 +256,13 @@ export default function LoginForm() {
           />
         )}
 
+        <label htmlFor="marka-auth-email" className="sr-only">E-mail</label>
         <input
+          id="marka-auth-email"
           type="email"
+          inputMode="email"
+          autoCapitalize="none"
+          spellCheck={false}
           placeholder="E-mail"
           value={email}
           onChange={(event) =>
@@ -267,25 +273,34 @@ export default function LoginForm() {
           className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
         />
 
-        <input
-          type="password"
-          placeholder="Palavra-passe"
-          value={password}
-          onChange={(event) =>
-            setPassword(event.target.value)
-          }
-          required
-          autoComplete={
-            isRegistering
-              ? "new-password"
-              : "current-password"
-          }
-          className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
-        />
+        <label htmlFor="marka-auth-password" className="sr-only">Palavra-passe</label>
+        <div className="relative">
+          <input
+            id="marka-auth-password"
+            type={showPassword ? "text" : "password"}
+            placeholder="Palavra-passe"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            autoComplete={isRegistering ? "new-password" : "current-password"}
+            className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] py-4 pl-6 pr-20 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            aria-label={showPassword ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
+            aria-pressed={showPassword}
+            className="absolute inset-y-0 right-3 my-auto min-h-10 rounded-lg px-3 text-xs font-medium text-[var(--theme-text-muted)] transition hover:bg-[var(--theme-background)] hover:text-[var(--theme-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
+          >
+            {showPassword ? "Ocultar" : "Mostrar"}
+          </button>
+        </div>
 
         {isRegistering && (
+          <label htmlFor="marka-auth-confirm-password" className="sr-only">Confirmar palavra-passe</label>
           <input
-            type="password"
+            id="marka-auth-confirm-password"
+            type={showPassword ? "text" : "password"}
             placeholder="Confirmar palavra-passe"
             value={confirmPassword}
             onChange={(event) =>
