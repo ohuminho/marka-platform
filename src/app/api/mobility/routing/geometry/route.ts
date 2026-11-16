@@ -83,6 +83,29 @@ export async function GET(request: Request) {
       );
     }
 
+    // A per-user quota protects individual accounts; this shared quota also
+    // protects the public routing provider from aggregate traffic across users.
+    const globalQuota = await reserveApiRequest({
+      scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
+      anonymousIdentity: "marka:shared-osrm-geometry-provider",
+      windows: [
+        { limit: 60, windowMs: 60_000 },
+        { limit: 2_000, windowMs: 24 * 60 * 60 * 1000 },
+      ],
+    });
+    if (!globalQuota.allowed) {
+      return NextResponse.json(
+        { message: "O serviço de rotas está temporariamente ocupado. Tenta novamente dentro de instantes.", code: "ROUTING_PROVIDER_CAPACITY" },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(globalQuota.retryAfterSeconds),
+            "Cache-Control": "private, no-store, max-age=0",
+          },
+        },
+      );
+    }
+
     const route = await mobilityRoutingService.getGeometry(
       {
         latitude: parsed.data.originLat,
