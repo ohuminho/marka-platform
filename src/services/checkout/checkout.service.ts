@@ -1,4 +1,7 @@
 import { prisma } from "@/database/client/prisma";
+import { getPaymentProviderConfig } from "@/config/payment-provider.config";
+import { ensurePaymentProvidersRegistered } from "@/services/payments/providers/payment-provider.bootstrap";
+import { paymentProviderRegistry } from "@/services/payments/providers/payment-provider.registry";
 import { notificationService } from "@/automation/notifications/notification.service";
 
 import { inventoryService } from "@/services/inventory/inventory.service";
@@ -168,6 +171,18 @@ export class CheckoutService {
         })),
       };
     }
+
+    // Never reserve inventory or create an order that cannot be paid.
+    // Provider selection is server-owned; a client cannot switch the gateway.
+    const paymentProviderConfig = getPaymentProviderConfig();
+    if (!paymentProviderConfig.enabled || !paymentProviderConfig.name) {
+      throw new Error(
+        "Marketplace payment provider is not configured. Checkout is temporarily unavailable.",
+      );
+    }
+
+    ensurePaymentProvidersRegistered();
+    paymentProviderRegistry.get(paymentProviderConfig.name);
 
     const cart = await prisma.cart.findFirst({
       where: {
@@ -342,7 +357,7 @@ export class CheckoutService {
         userId,
         orderId: order.id,
         idempotencyKey: paymentIdempotencyKey,
-        provider: input.provider,
+        provider: paymentProviderConfig.name,
         metadata: {
           ...(input.metadata ?? {}),
           checkout: {
