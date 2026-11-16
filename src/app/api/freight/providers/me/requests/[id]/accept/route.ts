@@ -30,6 +30,24 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const vehicle = provider.vehicles[0];
   if (!vehicle) return NextResponse.json({ message: "A viatura não pertence ao prestador ou não está activa.", code: "FREIGHT_VEHICLE_NOT_ACTIVE" }, { status: 409 });
 
+  const locationFreshnessMs = 3 * 60 * 1000;
+  const locationUpdatedAt = provider.locationUpdatedAt?.getTime() ?? 0;
+  const locationAccuracy = provider.locationAccuracyMeters === null
+    ? Number.POSITIVE_INFINITY
+    : Number(provider.locationAccuracyMeters);
+  if (
+    !provider.currentLatitude ||
+    !provider.currentLongitude ||
+    !provider.locationUpdatedAt ||
+    Date.now() - locationUpdatedAt > locationFreshnessMs ||
+    locationAccuracy > 1000
+  ) {
+    return NextResponse.json({
+      message: "Actualize a sua localização GPS com precisão suficiente antes de aceitar um serviço.",
+      code: "FREIGHT_PROVIDER_LOCATION_STALE",
+    }, { status: 409 });
+  }
+
   const freight = await prisma.freightRequest.findFirst({ where: { id, organizationId: auth.session.organizationId } });
   if (!freight) return NextResponse.json({ message: "Pedido não encontrado.", code: "FREIGHT_REQUEST_NOT_FOUND" }, { status: 404 });
   const freightDetails = freight.details && typeof freight.details === "object" ? freight.details as Record<string, unknown> : {};
