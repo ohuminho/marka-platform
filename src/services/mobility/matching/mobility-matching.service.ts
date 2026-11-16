@@ -7,7 +7,8 @@ import {
 } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
-import { areMobilityRidesCompatible } from "@/services/mobility/matching/mobility-ride-compatibility";
+import { areMobilityRidesCompatible, isSharedRideSequenceWithinDetour } from "@/services/mobility/matching/mobility-ride-compatibility";
+import { mobilityRoutingService } from "@/services/mobility/pricing/mobility-routing.service";
 
 export interface MobilityMatchRequest {
   organizationId: string;
@@ -175,6 +176,7 @@ export class MobilityMatchingService {
 
     const candidates: MobilityMatchCandidate[] =
       [];
+    let sharedRouteChecks = 0;
 
     for (const driver of drivers) {
       const location = driver.location;
@@ -217,6 +219,42 @@ export class MobilityMatchingService {
         )
       ) {
         continue;
+      }
+
+      if (activeRides.length > 0) {
+        // Bound external routing calls during dispatch. If the OSRM matrix
+        // cannot be verified, fail closed for shared assignments; ordinary
+        // AVAILABLE drivers remain unaffected.
+        if (sharedRouteChecks >= 10) continue;
+        sharedRouteChecks += 1;
+        const activeRide = activeRides[0];
+        try {
+          const durationMatrix = await mobilityRoutingService.getDurationMatrix([
+            {
+              latitude: Number(location.latitude),
+              longitude: Number(location.longitude),
+            },
+            {
+              latitude: Number(activeRide.pickupLatitude),
+              longitude: Number(activeRide.pickupLongitude),
+            },
+            {
+              latitude: Number(activeRide.dropoffLatitude),
+              longitude: Number(activeRide.dropoffLongitude),
+            },
+            {
+              latitude: input.pickupLatitude,
+              longitude: input.pickupLongitude,
+            },
+            {
+              latitude: input.dropoffLatitude,
+              longitude: input.dropoffLongitude,
+            },
+          ]);
+          if (!isSharedRideSequenceWithinDetour(durationMatrix)) continue;
+        } catch {
+          continue;
+        }
       }
 
       // Executive is a service class, not a separate vehicle type. Until
