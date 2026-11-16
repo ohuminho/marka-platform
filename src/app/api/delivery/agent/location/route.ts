@@ -109,9 +109,10 @@ export async function PATCH(request: Request) {
         longitude: parsed.data.longitude,
       });
 
-    return NextResponse.json({
-      agent: updated,
-    });
+    return NextResponse.json(
+      { agent: updated },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } },
+    );
   } catch (error) {
     const code =
       error instanceof Error
@@ -123,15 +124,25 @@ export async function PATCH(request: Request) {
         ? 400
         : code === "DELIVERY_AGENT_NOT_ACTIVE"
           ? 409
-          : 500;
+          : code === "DELIVERY_AGENT_LOCATION_THROTTLED"
+            ? 429
+            : 500;
 
     return NextResponse.json(
       {
         message:
-          "Unable to update delivery agent location.",
+          code === "DELIVERY_AGENT_LOCATION_THROTTLED"
+            ? "Location updates are limited to one every five seconds."
+            : "Unable to update delivery agent location.",
         code,
       },
-      { status },
+      {
+        status,
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0",
+          ...(status === 429 ? { "Retry-After": "5" } : {}),
+        },
+      },
     );
   }
 }

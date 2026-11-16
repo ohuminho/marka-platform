@@ -1,5 +1,6 @@
 import { prisma } from "@/database/client/prisma";
 import { assertDeliveryAgentAvailabilityChange } from "@/services/delivery/agents/delivery-agent-availability.policy";
+import { getDeliveryLocationCutoff } from "@/services/delivery/agents/delivery-agent-location.policy";
 
 export interface RegisterDeliveryAgentInput {
   organizationId: string;
@@ -57,9 +58,35 @@ export class DeliveryAgentService {
     if (!agent) throw new Error("DELIVERY_AGENT_NOT_FOUND");
     if (agent.status !== "ACTIVE") throw new Error("DELIVERY_AGENT_NOT_ACTIVE");
 
-    return prisma.deliveryAgent.update({
+    const now = new Date();
+    const updated = await prisma.deliveryAgent.updateMany({
+      where: {
+        id: input.agentId,
+        status: "ACTIVE",
+        OR: [
+          { lastLocationAt: null },
+          { lastLocationAt: { lte: getDeliveryLocationCutoff(now) } },
+        ],
+      },
+      data: {
+        latitude: input.latitude,
+        longitude: input.longitude,
+        lastLocationAt: now,
+      },
+    });
+
+    if (updated.count !== 1) {
+      const current = await prisma.deliveryAgent.findUnique({
+        where: { id: input.agentId },
+        select: { id: true, status: true },
+      });
+      if (!current) throw new Error("DELIVERY_AGENT_NOT_FOUND");
+      if (current.status !== "ACTIVE") throw new Error("DELIVERY_AGENT_NOT_ACTIVE");
+      throw new Error("DELIVERY_AGENT_LOCATION_THROTTLED");
+    }
+
+    return prisma.deliveryAgent.findUniqueOrThrow({
       where: { id: input.agentId },
-      data: { latitude: input.latitude, longitude: input.longitude, lastLocationAt: new Date() },
     });
   }
 

@@ -38,7 +38,7 @@ export class CustomerDeliveryTrackingService {
 
     if (!dispatch || dispatch.serviceType !== "DELIVERY") return null;
 
-    const agent = dispatch.acceptedAgentId
+    const agent = dispatch.status === "ACCEPTED" && dispatch.acceptedAgentId
       ? await prisma.deliveryAgent.findUnique({
           where: { id: dispatch.acceptedAgentId },
           select: {

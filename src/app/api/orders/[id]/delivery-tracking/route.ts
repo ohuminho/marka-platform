@@ -33,7 +33,10 @@ export async function GET(
       session.userId,
     );
 
-    return NextResponse.json({ tracking });
+    return NextResponse.json(
+      { tracking },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } },
+    );
   } catch (error) {
     if (error instanceof Error && error.message === "ORDER_NOT_FOUND") {
       return NextResponse.json(
