@@ -20,7 +20,7 @@ interface FreightQuoteRequest {
   paidAt: string | null;
   assignedAt: string | null;
   updatedAt: string;
-  latestException: { note: string | null; createdAt: string } | null;
+  latestException: { note: string | null; createdAt: string; reportedBy: string | null } | null;
   latestExceptionReview: { note: string; reviewedAt: string; reviewedBy: string | null } | null;
   latestCancellation: { note: string | null; cancelledAt: string } | null;
   requester: { name: string | null };
@@ -305,7 +305,7 @@ export default function MobilityFreightQuoteDesk() {
               {item.status === "COMPLETED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Serviço concluído em {dateTime(item.updatedAt)}.</p>}
               {item.status === "EXCEPTION" && (
                 <div role="alert" className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[var(--theme-text-muted)]">Ocorrência reportada pelo prestador</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[var(--theme-text-muted)]">{item.latestException?.reportedBy === "REQUESTER" ? "Ocorrência reportada pelo cliente" : "Ocorrência reportada pelo prestador"}</p>
                   {item.latestException?.note && <p className="mt-2 text-xs text-[var(--theme-text)]">{item.latestException.note}</p>}
                   {item.latestException?.createdAt && <p className="mt-2 text-[9px] text-[var(--theme-text-faint)]">{dateTime(item.latestException.createdAt)}</p>}
                   {!item.latestException?.note && <p className="mt-2 text-xs text-[var(--theme-text-muted)]">Este serviço requer intervenção operacional.</p>}
