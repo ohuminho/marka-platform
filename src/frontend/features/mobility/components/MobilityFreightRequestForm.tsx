@@ -110,8 +110,8 @@ export default function MobilityFreightRequestForm() {
       setError("Seleccione primeiro a sua organização.");
       return;
     }
-    if (service === "CARGO_SHIPMENT" && (!origin.point || !destination.point || !cargoDescription.trim())) {
-      setError("Confirme a recolha, o destino e descreva a carga.");
+    if (service === "CARGO_SHIPMENT" && (!origin.point || !destination.point || !cargoDescription.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
+      setError("Confirme a recolha, o destino, descreva a carga e indique uma quantidade válida.");
       return;
     }
     if (service === "WATER_DELIVERY" && (!destination.point || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
@@ -145,7 +145,7 @@ export default function MobilityFreightRequestForm() {
       }
       const details: Record<string, unknown> = { notes: notes.trim() || undefined };
       if (service === "CARGO_SHIPMENT") {
-        details.cargoItems = [{ description: cargoDescription.trim(), quantity: 1, category: "GENERAL" }];
+        details.cargoItems = [{ description: cargoDescription.trim(), quantity: Number(quantity), unit: quantityUnit, category: "GENERAL" }];
         if (vehiclePreference !== "ANY") details.vehiclePreference = vehiclePreference;
       } else if (service === "WATER_DELIVERY") {
         details.waterType = waterType;
@@ -158,8 +158,8 @@ export default function MobilityFreightRequestForm() {
         idempotencyKey,
         origin: origin.point ?? undefined,
         destination: destination.point ?? undefined,
-        quantity: service === "WATER_DELIVERY" ? Number(quantity) : undefined,
-        quantityUnit: service === "WATER_DELIVERY" ? quantityUnit : undefined,
+        quantity: service === "WATER_DELIVERY" || service === "CARGO_SHIPMENT" ? Number(quantity) : undefined,
+        quantityUnit: service === "WATER_DELIVERY" || service === "CARGO_SHIPMENT" ? quantityUnit : undefined,
         currency: "AOA",
         details,
       };
@@ -180,6 +180,7 @@ export default function MobilityFreightRequestForm() {
         // O registo do servidor é a fonte de verdade.
       }
       setCargoDescription("");
+      setQuantity("");
       setVehicleDescription("");
       setNotes("");
       setOrigin({ address: "", point: null, searching: false });
@@ -218,6 +219,10 @@ export default function MobilityFreightRequestForm() {
           {pointInput("Local de recolha", origin, setOrigin)}
           {pointInput("Destino", destination, setDestination)}
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">O que pretende transportar?</span><input value={cargoDescription} onChange={(event) => setCargoDescription(event.target.value)} placeholder="Ex.: 20 sacos de cimento, mobiliário…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade da carga</span><input type="number" min="0.01" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="KG">Quilogramas (kg)</option><option value="TON">Toneladas (t)</option><option value="M3">Metros cúbicos (m³)</option><option value="LITRE">Litros</option></select></label>
+          </div>
           <fieldset className="space-y-3"><legend className="text-xs font-medium text-[var(--theme-text)]">Tipo de viatura preferida</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{([{value:"ANY",label:"Qualquer adequada",hint:"Mais opções",illustration:null},{value:"CARGO_TRICYCLE",label:"Carrinho tipo MyLads",hint:"Carga ligeira",illustration:"CARGO_TRICYCLE"},{value:"PICKUP",label:"Pick-up aberta",hint:"Caixa aberta",illustration:"PICKUP"},{value:"LIGHT_TRUCK",label:"Canter / Dyna",hint:"Caixa aberta",illustration:"LIGHT_TRUCK"},{value:"FLATBED_TRUCK",label:"Plataforma aberta",hint:"Carga volumosa",illustration:"FLATBED_TRUCK"},{value:"CARGO_VAN",label:"Carrinha fechada",hint:"Carga protegida",illustration:"CARGO_VAN"},{value:"TIPPER_TRUCK",label:"Basculante",hint:"Areia e inertes",illustration:"TIPPER_TRUCK"},{value:"HEAVY_TRUCK",label:"Camião pesado",hint:"Grande volume",illustration:"HEAVY_TRUCK"}] as const).map((option)=><button key={option.value} type="button" aria-pressed={vehiclePreference===option.value} onClick={()=>setVehiclePreference(option.value)} className={`min-w-0 rounded-xl border p-2 text-left transition ${vehiclePreference===option.value?"border-[var(--theme-text-muted)] bg-[var(--theme-background)] ring-1 ring-[var(--theme-text-muted)]":"border-[var(--theme-border)] hover:bg-[var(--theme-background)]"}`}>{option.illustration?<MarkaVehicleIllustration kind={option.illustration} className="h-14 w-full"/>:<div className="flex h-14 items-center justify-center text-[11px] font-semibold text-[var(--theme-text-muted)]">MARKA Mobility</div>}<span className="mt-1 block text-[11px] font-semibold text-[var(--theme-text)]">{option.label}</span><span className="block text-[10px] text-[var(--theme-text-muted)]">{option.hint}</span></button>)}</div><p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Caixa aberta e carrinha fechada são opções distintas. A preferência será usada para encontrar um prestador com a viatura correspondente.</p></fieldset>
         </>}
         {service === "WATER_DELIVERY" && <>
