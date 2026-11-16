@@ -905,8 +905,8 @@ export class MobilityDispatchService {
       );
 
     if (
-      !ride.driverId &&
-      !ride.vehicleId
+      !driverId &&
+      !vehicleId
     ) {
       return;
     }
@@ -923,19 +923,22 @@ export class MobilityDispatchService {
       );
     }
 
-    if (!ride.driverId || !ride.vehicleId) {
+    if (!driverId || !vehicleId) {
       throw new DispatchDomainError(
         "Ride has an incomplete driver/vehicle assignment.",
         "RIDE_ASSIGNMENT_INCONSISTENT"
       );
     }
 
+    const driverId = ride.driverId;
+    const vehicleId = ride.vehicleId;
+
     // Serialize release with all other assignment/lifecycle changes for this driver.
     await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
         SELECT "id"
         FROM "MobilityDriver"
-        WHERE "id" = ${ride.driverId}
+        WHERE "id" = ${driverId}
         FOR UPDATE
       `;
 
@@ -950,8 +953,8 @@ export class MobilityDispatchService {
               MobilityRideStatus.DRIVER_ARRIVING,
             ],
           },
-          driverId: ride.driverId,
-          vehicleId: ride.vehicleId,
+          driverId: driverId,
+          vehicleId: vehicleId,
         },
         data: {
           driverId: null,
@@ -969,7 +972,7 @@ export class MobilityDispatchService {
 
       const activeRides = await tx.mobilityRide.findMany({
         where: {
-          driverId: ride.driverId,
+          driverId: driverId,
           status: {
             in: [
               MobilityRideStatus.DRIVER_ASSIGNED,
@@ -989,7 +992,7 @@ export class MobilityDispatchService {
 
       await tx.mobilityDriverAvailability.updateMany({
         where: {
-          driverId: ride.driverId,
+          driverId: driverId,
           status: {
             in: [
               MobilityAvailabilityStatus.AVAILABLE,
