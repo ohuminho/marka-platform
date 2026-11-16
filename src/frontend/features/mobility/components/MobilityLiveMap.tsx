@@ -72,6 +72,7 @@ export default function MobilityLiveMap({
     driver: null,
   });
   const requestRef = useRef(0);
+  const driverAnimationRef = useRef<number | null>(null);
   const routeRef = useRef<MobilityRoute | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
@@ -125,6 +126,7 @@ export default function MobilityLiveMap({
     resize.observe(hostRef.current);
     return () => {
       resize.disconnect();
+      if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
       Object.values(markersRef.current).forEach((marker) => marker?.remove());
       map.remove();
       mapRef.current = null;
@@ -246,7 +248,24 @@ export default function MobilityLiveMap({
         rotationAlignment: "map",
       }).setLngLat([driverPoint.lon, driverPoint.lat]).addTo(map);
     } else {
-      markersRef.current.driver.setLngLat([driverPoint.lon, driverPoint.lat]);
+      if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
+      const marker = markersRef.current.driver;
+      const start = marker.getLngLat();
+      const target = { lng: driverPoint.lon, lat: driverPoint.lat };
+      const distance = Math.hypot(target.lng - start.lng, target.lat - start.lat);
+      const duration = Math.min(6500, Math.max(900, distance * 111_000 / 8 * 1000));
+      const startedAt = performance.now();
+      const animate = (now: number) => {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        marker.setLngLat([
+          start.lng + (target.lng - start.lng) * eased,
+          start.lat + (target.lat - start.lat) * eased,
+        ]);
+        if (progress < 1) driverAnimationRef.current = requestAnimationFrame(animate);
+        else driverAnimationRef.current = null;
+      };
+      driverAnimationRef.current = requestAnimationFrame(animate);
     }
     markersRef.current.driver.setRotation(Number.isFinite(driverPoint.bearing) ? Number(driverPoint.bearing) : 0);
   }, [driverPoint?.lat, driverPoint?.lon, driverPoint?.bearing]);
