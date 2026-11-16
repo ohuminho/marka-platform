@@ -22,6 +22,7 @@ interface FreightQuoteRequest {
   updatedAt: string;
   latestException: { note: string | null; createdAt: string } | null;
   latestExceptionReview: { note: string; reviewedAt: string; reviewedBy: string | null } | null;
+  latestCancellation: { note: string | null; cancelledAt: string } | null;
   requester: { name: string | null };
 }
 
@@ -352,7 +353,14 @@ export default function MobilityFreightQuoteDesk() {
                   <p className="mt-3 text-[9px] text-[var(--theme-text-faint)]">A análise fica no histórico. O cancelamento de serviços pagos permanece dependente do processo de reembolso do prestador de pagamentos.</p>
                 </div>
               )}
-              {item.status === "CANCELLED" && <p className="mt-3 text-[10px] text-[var(--theme-text-muted)]">Pedido cancelado.</p>}
+              {item.status === "CANCELLED" && (
+                <div className="mt-3 rounded-xl border border-[var(--theme-border)] p-3">
+                  <p className="text-[10px] font-semibold text-[var(--theme-text-muted)]">Pedido cancelado</p>
+                  {item.latestCancellation?.note && <p className="mt-1 text-xs text-[var(--theme-text)]">{item.latestCancellation.note}</p>}
+                  {item.latestCancellation?.cancelledAt && <p className="mt-1 text-[9px] text-[var(--theme-text-faint)]">{dateTime(item.latestCancellation.cancelledAt)}</p>}
+                  {!item.latestCancellation?.note && <p className="mt-1 text-[10px] text-[var(--theme-text-muted)]">Cancelamento registado no histórico.</p>}
+                </div>
+              )}
             </article>
           );
         })}
