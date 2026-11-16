@@ -42,7 +42,7 @@ export default function MobilityFreightRequestForm() {
   const [vehiclePreference, setVehiclePreference] = useState("ANY");
   const [waterType, setWaterType] = useState<"POTABLE_WATER" | "NON_POTABLE_WATER">("POTABLE_WATER");
   const [quantity, setQuantity] = useState("");
-  const [quantityUnit, setQuantityUnit] = useState<"LITRE" | "M3">("LITRE");
+  const [quantityUnit, setQuantityUnit] = useState<"KG" | "TON" | "LITRE" | "M3">("LITRE");
   const [vehicleDescription, setVehicleDescription] = useState("");
   const [assistanceType, setAssistanceType] = useState<(typeof assistanceOptions)[number][0]>("TOW");
   const [notes, setNotes] = useState("");
