@@ -93,6 +93,62 @@ export class CheckoutService {
       throw new Error("Delivery longitude is invalid.");
     }
 
+    // A checkout retry must resolve to the original order/payment before
+    // looking up the now-checked-out cart. Otherwise a network retry could
+    // create a second commercial order for the same payment idempotency key.
+    const existingPayment = await prisma.payment.findUnique({
+      where: { idempotencyKey: paymentIdempotencyKey },
+      include: {
+        order: {
+          include: { items: true },
+        },
+      },
+    });
+
+    if (existingPayment) {
+      const existingOrder = existingPayment.order;
+      const paymentMetadata = existingPayment.metadata as
+        | { checkout?: { cartId?: unknown } }
+        | null;
+      const sameCheckout =
+        existingOrder?.userId === userId &&
+        paymentMetadata?.checkout?.cartId === cartId;
+
+      if (!existingOrder || !sameCheckout) {
+        throw new Error(
+          "Idempotency key is already associated with another checkout.",
+        );
+      }
+
+      return {
+        orderId: existingOrder.id,
+        userId,
+        currency: existingOrder.currency,
+        subtotal: Number(existingOrder.total),
+        total: Number(existingOrder.total),
+        status: existingOrder.status,
+        payment: {
+          id: existingPayment.id,
+          orderId: existingPayment.orderId,
+          transactionId: existingPayment.transactionId,
+          amountMinor: existingPayment.amountMinor.toString(),
+          currency: existingPayment.currency,
+          status: existingPayment.status,
+          provider: existingPayment.provider,
+          providerPaymentId: existingPayment.providerPaymentId,
+          idempotencyKey: existingPayment.idempotencyKey,
+          createdAt: existingPayment.createdAt,
+          updatedAt: existingPayment.updatedAt,
+        },
+        items: existingOrder.items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice),
+          subtotal: Number(item.subtotal),
+        })),
+      };
+    }
+
     const cart = await prisma.cart.findFirst({
       where: {
         id: cartId,
