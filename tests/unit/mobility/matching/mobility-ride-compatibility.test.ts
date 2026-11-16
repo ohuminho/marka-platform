@@ -130,7 +130,7 @@ assert.equal(
   "Incomplete route matrices must fail closed.",
 );
 
-const newPickupFirstMatrix = Array.from({ length: 5 }, (_, row) =>
+const newPickupFirstMatrix: number[][] = Array.from({ length: 5 }, (_, row) =>
   Array.from({ length: 5 }, (_, column) => row === column ? 0 : 400),
 );
 newPickupFirstMatrix[0][1] = 100;
