@@ -105,6 +105,38 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const assigned = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
+
+      // Re-read consent, GPS freshness and availability under the same lock
+      // used by the location endpoint, closing the opt-out/accept race.
+      const lockedProvider = await tx.freightProvider.findUnique({
+        where: { id: provider.id },
+        select: {
+          status: true,
+          availability: true,
+          currentLatitude: true,
+          currentLongitude: true,
+          locationUpdatedAt: true,
+          locationAccuracyM: true,
+        },
+      });
+      if (
+        !lockedProvider ||
+        lockedProvider.status !== "VERIFIED" ||
+        !canAcceptAdditionalFreightAssignment(lockedProvider.availability) ||
+        lockedProvider.currentLatitude === null ||
+        lockedProvider.currentLongitude === null ||
+        lockedProvider.locationAccuracyM === null ||
+        lockedProvider.locationAccuracyM > 1000 ||
+        !isFreightProviderLocationFresh(lockedProvider.locationUpdatedAt) ||
+        pickupPoint === null ||
+        !isWithinFreightPickupRadius(
+          { latitude: Number(lockedProvider.currentLatitude), longitude: Number(lockedProvider.currentLongitude) },
+          { latitude: Number(pickupPoint.latitude), longitude: Number(pickupPoint.longitude) },
+        )
+      ) {
+        throw new Error("FREIGHT_PROVIDER_LOCATION_STALE");
+      }
+
       const activeAssignments = await tx.freightRequest.findMany({
         where: {
           organizationId: auth.session.organizationId,
