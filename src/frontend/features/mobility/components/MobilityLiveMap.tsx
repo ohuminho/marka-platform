@@ -76,8 +76,7 @@ export default function MobilityLiveMap({
   const requestRef = useRef(0);
   const driverAnimationRef = useRef<number | null>(null);
   const routeRef = useRef<MobilityRoute | null>(null);
-  const driverRouteRef = useRef<MobilityRoute["geometry"] | null>(driverRouteGeometry);
-  driverRouteRef.current = driverRouteGeometry;
+  const driverRouteRef = useRef<MobilityRoute["geometry"] | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
   const [mapError, setMapError] = useState<string | null>(null);
@@ -238,8 +237,11 @@ export default function MobilityLiveMap({
       onRouteChange?.(null);
       const focus = originPoint || destinationPoint;
       if (focus) map.flyTo({ center: [focus.lon, focus.lat], zoom: 15, duration: 650 });
-      setBusy(false);
-      setStatus("Defina a partida e o destino para calcular a rota.");
+      const resetFrame = window.requestAnimationFrame(() => {
+        setBusy(false);
+        setStatus("Defina a partida e o destino para calcular a rota.");
+      });
+      return () => window.cancelAnimationFrame(resetFrame);
     }
   }, [
     originPoint?.lat,
@@ -253,6 +255,7 @@ export default function MobilityLiveMap({
   ]);
 
   useEffect(() => {
+    driverRouteRef.current = driverRouteGeometry;
     const source = mapRef.current?.getSource("marka-driver-route") as GeoJSONSource | undefined;
     source?.setData(driverRouteGeometry
       ? { type: "Feature", properties: {}, geometry: driverRouteGeometry }
