@@ -10,6 +10,10 @@ import {
   authorizationService,
 } from "@/core/authorization/authorization.service";
 
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, private",
+};
+
 export async function GET(
   request: NextRequest
 ) {
@@ -25,7 +29,7 @@ export async function GET(
     if (!token) {
       return Response.json(
         { user: null },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -40,7 +44,7 @@ export async function GET(
     if (!session) {
       return Response.json(
         { user: null },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -104,7 +108,7 @@ export async function GET(
 
       return Response.json(
         { user: null },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -121,7 +125,7 @@ export async function GET(
 
       return Response.json(
         { user: null },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -213,9 +217,7 @@ export async function GET(
           },
         },
         {
-          headers: {
-            "Cache-Control": "no-store, private",
-          },
+          headers: NO_STORE_HEADERS,
         }
       );
     }
@@ -258,6 +260,8 @@ export async function GET(
         permissions:
           authorization.permissions,
       },
+    }, {
+      headers: NO_STORE_HEADERS,
     });
   } catch (error) {
     console.error(
@@ -267,7 +271,7 @@ export async function GET(
 
     return Response.json(
       { user: null },
-      { status: 401 }
+      { status: 401, headers: NO_STORE_HEADERS }
     );
   }
 }
