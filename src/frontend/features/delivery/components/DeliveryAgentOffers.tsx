@@ -187,8 +187,7 @@ export default function DeliveryAgentOffers() {
       });
       const body = await response.json() as { agent?: AgentProfile; message?: string };
       if (!response.ok) throw new Error(body.message ?? "Não foi possível actualizar a disponibilidade.");
-      if (body.agent) setAgent(body.agent);
-
+      // Do not activate the location watcher until the initial GPS write succeeds.
       if (nextAvailability === "AVAILABLE" && position) {
         const locationResponse = await fetch("/api/delivery/agent/location", {
           method: "PATCH",
