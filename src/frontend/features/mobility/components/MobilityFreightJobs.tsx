@@ -26,6 +26,7 @@ export default function MobilityFreightJobs() {
   const [vehicleIds, setVehicleIds] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [availabilityBusy, setAvailabilityBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [exceptionJobId, setExceptionJobId] = useState<string | null>(null);
@@ -61,6 +62,103 @@ export default function MobilityFreightJobs() {
     })));
     setNotice(jobsData.message ?? null);
   }, [organizationId]);
+
+  const updateAvailability = async () => {
+    if (!provider || !organizationId || availabilityBusy) return;
+
+    const nextAvailability = ["AVAILABLE", "BUSY"].includes(provider.availability)
+      ? "OFFLINE"
+      : "AVAILABLE";
+
+    setAvailabilityBusy(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      let position: GeolocationPosition | null = null;
+      if (nextAvailability === "AVAILABLE") {
+        if (!navigator.geolocation) {
+          throw new Error("Este dispositivo não disponibiliza localização GPS.");
+        }
+
+        setNotice("A confirmar a localização GPS antes de activar a disponibilidade…");
+        position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            (cause) => reject(new Error(
+              cause.code === cause.PERMISSION_DENIED
+                ? "Permita o acesso à localização GPS para ficar disponível."
+                : cause.code === cause.TIMEOUT
+                  ? "A localização GPS demorou demasiado tempo. Tente novamente num local com melhor sinal."
+                  : "Não foi possível obter a localização GPS."
+            )),
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
+          );
+        });
+
+        if (!Number.isFinite(position.coords.accuracy) || position.coords.accuracy <= 0 || position.coords.accuracy > 1000) {
+          throw new Error("A precisão GPS é insuficiente. Tente novamente num local com melhor sinal.");
+        }
+      }
+
+      const availabilityResponse = await fetch("/api/freight/providers/me/availability", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+        body: JSON.stringify({ availability: nextAvailability }),
+      });
+      const availabilityData = await availabilityResponse.json().catch(() => ({}));
+      if (!availabilityResponse.ok) {
+        throw new Error(availabilityData.message ?? "Não foi possível actualizar a disponibilidade.");
+      }
+
+      setProvider((current) => current
+        ? { ...current, availability: availabilityData.provider?.availability ?? nextAvailability }
+        : current);
+
+      if (nextAvailability === "AVAILABLE" && position) {
+        const locationResponse = await fetch("/api/freight/providers/me/location", {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+          body: JSON.stringify({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracyMeters: position.coords.accuracy,
+          }),
+        });
+        const locationData = await locationResponse.json().catch(() => ({}));
+
+        if (!locationResponse.ok) {
+          const rollback = await fetch("/api/freight/providers/me/availability", {
+            method: "PUT",
+            credentials: "include",
+            headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId },
+            body: JSON.stringify({ availability: "OFFLINE" }),
+          }).catch(() => null);
+          const rollbackSucceeded = Boolean(rollback?.ok);
+          if (rollbackSucceeded) {
+            setProvider((current) => current ? { ...current, availability: "OFFLINE" } : current);
+          }
+          throw new Error(
+            (locationData.message ?? "Não foi possível registar a localização GPS.") +
+            (rollbackSucceeded
+              ? " A disponibilidade foi desactivada em segurança."
+              : " Não foi possível confirmar a desactivação automática; actualize o estado antes de aceitar pedidos.")
+          );
+        }
+      }
+
+      await refresh();
+      setNotice(nextAvailability === "AVAILABLE"
+        ? "Está disponível para receber pedidos. A localização GPS será actualizada enquanto estiver online."
+        : "Ficou offline. Os serviços já atribuídos continuam disponíveis para acompanhamento e conclusão.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível alterar a disponibilidade.");
+    } finally {
+      setAvailabilityBusy(false);
+    }
+  };
 
   useEffect(() => {
     const load = () => {
@@ -204,7 +302,29 @@ export default function MobilityFreightJobs() {
         <div><p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[#b89a5b]">Despacho de carga e assistência</p><h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">Pedidos pagos disponíveis</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Só aparecem pedidos com pagamento confirmado e viaturas compatíveis. A aceitação é exclusiva: o primeiro prestador elegível a confirmar fica com o serviço.</p></div>
         <button type="button" onClick={() => { setLoading(true); refresh().catch((cause) => setError(cause instanceof Error ? cause.message : "Falha ao actualizar.")).finally(() => setLoading(false)); }} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]">Actualizar</button>
       </div>
-      {provider && <p className="mt-4 text-[11px] text-[var(--theme-text-muted)]">Estado do prestador: <strong>{provider.status}</strong> · Disponibilidade: <strong>{provider.availability}</strong></p>}
+      {provider && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3">
+          <p className="text-[11px] text-[var(--theme-text-muted)]">
+            Estado do prestador: <strong className="text-[var(--theme-text)]">{provider.status}</strong>
+            <span className="mx-1.5">·</span>
+            Disponibilidade: <strong className="text-[var(--theme-text)]">{provider.availability}</strong>
+          </p>
+          <button
+            type="button"
+            onClick={() => void updateAvailability()}
+            disabled={loading || availabilityBusy || provider.status !== "VERIFIED"}
+            className="min-h-10 rounded-full bg-[#d8c18c] px-4 text-[10px] font-bold text-[#171814] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {availabilityBusy
+              ? "A actualizar disponibilidade…"
+              : provider.status !== "VERIFIED"
+                ? "Disponibilidade após verificação"
+                : ["AVAILABLE", "BUSY"].includes(provider.availability)
+                  ? "Ficar offline"
+                  : "Ficar disponível"}
+          </button>
+        </div>
+      )}
       {notice && <p className="mt-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
       {error && <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-700">{error}</p>}
       {assignedJobs.length > 0 && (
