@@ -328,6 +328,32 @@ export class FulfillmentAdapter
 
       if (
         existingRequest &&
+        (existingRequest.status === "CANCELLED" ||
+          existingRequest.status === "EXPIRED")
+      ) {
+        // A completed-payment retry must also recover a terminal dispatch,
+        // but only while the fulfillment lifecycle still permits reassignment.
+        await dispatchAdapter.recoverTerminalDelivery(
+          existingDispatch.id,
+          "FULFILLMENT_REQUEST_RETRY",
+        );
+
+        const recoveredFulfillment =
+          await prisma.fulfillmentRequest.findUnique({
+            where: { id: request.id },
+          });
+
+        if (!recoveredFulfillment) {
+          throw new Error(
+            "Fulfillment disappeared during delivery dispatch recovery.",
+          );
+        }
+
+        return recoveredFulfillment;
+      }
+
+      if (
+        existingRequest &&
         (existingRequest.status === "CREATED" ||
           existingRequest.status === "REASSIGNING")
       ) {
