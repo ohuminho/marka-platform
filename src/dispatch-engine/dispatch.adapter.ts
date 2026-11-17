@@ -529,34 +529,37 @@ export class DispatchAdapter implements DispatchPort {
       throw new Error("Only terminal fulfillment delivery dispatches can be recovered.");
     }
 
+    const fulfillmentReference = await prisma.fulfillmentRequest.findUnique({
+      where: { id: request.subjectId },
+      select: { id: true, orderId: true },
+    });
+    if (!fulfillmentReference) {
+      throw new Error("Fulfillment not found for delivery dispatch.");
+    }
+
     const recovered = await prisma.$transaction(async (database) => {
+      // Match fulfillment lifecycle lock order: Order -> Fulfillment -> Courier -> Dispatch.
+      await database.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "Order"
+        WHERE "id" = ${fulfillmentReference.orderId}
+        FOR UPDATE
+      `;
       await database.$queryRaw<Array<{ id: string }>>`
         SELECT "id"
         FROM "FulfillmentRequest"
         WHERE "id" = ${request.subjectId}
         FOR UPDATE
       `;
-      await database.$queryRaw<Array<{ id: string }>>`
-        SELECT "id"
-        FROM "DispatchRequest"
-        WHERE "id" = ${requestId}
-        FOR UPDATE
-      `;
 
       const fulfillment = await database.fulfillmentRequest.findUnique({
         where: { id: request.subjectId },
-        select: { id: true, organizationId: true, status: true },
+        select: { id: true, organizationId: true, status: true, orderId: true },
       });
-      const current = await database.dispatchRequest.findUnique({
-        where: { id: requestId },
-      });
-
       if (
         !fulfillment ||
         fulfillment.organizationId !== request.organizationId ||
-        !current ||
-        current.subjectType !== "FULFILLMENT" ||
-        current.subjectId !== fulfillment.id
+        fulfillment.orderId !== fulfillmentReference.orderId
       ) {
         throw new Error("Fulfillment dispatch context is no longer valid.");
       }
@@ -569,7 +572,15 @@ export class DispatchAdapter implements DispatchPort {
         throw new Error("Delivery cannot be recovered after pickup or while in transit.");
       }
 
-      if (current.status !== "CANCELLED" && current.status !== "EXPIRED") {
+      const current = await database.dispatchRequest.findUnique({
+        where: { id: requestId },
+      });
+      if (
+        !current ||
+        current.subjectType !== "FULFILLMENT" ||
+        current.subjectId !== fulfillment.id ||
+        (current.status !== "CANCELLED" && current.status !== "EXPIRED")
+      ) {
         throw new Error("Dispatch state changed; retry recovery using the current state.");
       }
 
@@ -661,9 +672,7 @@ export class DispatchAdapter implements DispatchPort {
 
     const contract = this.toContract(recovered);
     await this.discoverCandidates(contract);
-    return this.toContract(
-      await this.requireRequest(requestId),
-    );
+    return this.toContract(await this.requireRequest(requestId));
   }
 
   async reassign(
