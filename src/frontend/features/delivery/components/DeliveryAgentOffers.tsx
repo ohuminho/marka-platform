@@ -3,6 +3,26 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
 type TransportMode = "WALK" | "BICYCLE" | "MOTORCYCLE" | "CAR" | "VAN";
+const TRANSPORT_MODE_LABELS: Record<TransportMode, string> = {
+  WALK: "A pé",
+  BICYCLE: "Bicicleta",
+  MOTORCYCLE: "Motorizada",
+  CAR: "Automóvel",
+  VAN: "Carrinha",
+};
+const AGENT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pendente",
+  ACTIVE: "Activo",
+  SUSPENDED: "Suspenso",
+  BLOCKED: "Bloqueado",
+  INACTIVE: "Inactivo",
+};
+const AVAILABILITY_LABELS: Record<string, string> = {
+  OFFLINE: "Offline",
+  AVAILABLE: "Disponível",
+  BUSY: "Ocupado",
+  SUSPENDED: "Suspenso",
+};
 type AgentProfile = {
   id: string;
   status: string;
@@ -286,7 +306,7 @@ export default function DeliveryAgentOffers() {
             <div>
               <p className="text-[9px] uppercase tracking-[0.2em] text-[color-mix(in_srgb,var(--theme-text)_35%,transparent)]">Perfil do estafeta</p>
               <h2 className="mt-2 text-lg font-medium text-[var(--theme-text)]">{agent.displayName ?? "Estafeta MARKA"}</h2>
-              <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--theme-text)_45%,transparent)]">{agent.transportMode} · Estado: {agent.status} · Disponibilidade: {agent.availability}</p>
+              <p className="mt-1 text-xs text-[color-mix(in_srgb,var(--theme-text)_45%,transparent)]">{TRANSPORT_MODE_LABELS[agent.transportMode]} · Estado: {AGENT_STATUS_LABELS[agent.status] ?? agent.status} · Disponibilidade: {AVAILABILITY_LABELS[agent.availability] ?? agent.availability}</p>
             </div>
             {agent.status === "ACTIVE" && (
               <button type="button" onClick={() => void updateAvailability()} disabled={availabilityBusy || agent.availability === "BUSY"} className="min-h-11 rounded-full bg-[#d8c18c] px-5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#171814] disabled:opacity-50">
