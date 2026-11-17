@@ -100,9 +100,17 @@ export async function POST(request: Request) {
       }
     }
 
-    const valid = user
-      ? await passwordService.compare(password, user.password)
-      : false;
+    if (!user) {
+      return NextResponse.json(
+        {
+          message: "Invalid credentials.",
+          code: "INVALID_CREDENTIALS",
+        },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const valid = await passwordService.compare(password, user.password);
 
     if (!valid) {
       // Only failed credentials consume login quota. Successful logins no
