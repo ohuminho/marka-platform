@@ -33,6 +33,7 @@ export type MobilityLifecycleAction =
   | "SEARCH"
   | "DISPATCH"
   | "ACCEPT"
+  | "REJECT_ASSIGNMENT"
   | "DRIVER_ARRIVING"
   | "DRIVER_ARRIVED"
   | "START_TRIP"
