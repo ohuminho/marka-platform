@@ -52,6 +52,7 @@ const transitions: Record<Step, readonly Step[]> = {
 
   DRIVER_ASSIGNED: [
     "DRIVER_ACCEPTED",
+    "SEARCHING",
     "PAYMENT_INITIALIZED",
     "CANCELLED",
     "FAILED",
@@ -60,6 +61,7 @@ const transitions: Record<Step, readonly Step[]> = {
 
   DRIVER_ACCEPTED: [
     "DRIVER_ARRIVING",
+    "SEARCHING",
     "PAYMENT_INITIALIZED",
     "CANCELLED",
     "FAILED",
@@ -68,6 +70,7 @@ const transitions: Record<Step, readonly Step[]> = {
 
   DRIVER_ARRIVING: [
     "DRIVER_ARRIVED",
+    "SEARCHING",
     "PAYMENT_INITIALIZED",
     "CANCELLED",
     "FAILED",
@@ -179,6 +182,10 @@ assertValidTransition(
   "DRIVER_ASSIGNED",
   "DRIVER_ACCEPTED",
 );
+
+assertValidTransition("DRIVER_ASSIGNED", "SEARCHING");
+assertValidTransition("DRIVER_ACCEPTED", "SEARCHING");
+assertValidTransition("DRIVER_ARRIVING", "SEARCHING");
 
 assertValidTransition(
   "DRIVER_ACCEPTED",
