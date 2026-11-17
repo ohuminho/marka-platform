@@ -143,6 +143,26 @@ export class CheckoutService {
         );
       }
 
+      // A completed payment may have been captured while the fulfillment
+      // handoff failed. Re-enter the idempotent finalization path on checkout
+      // retry; inventory consumption is guarded by inventoryReserved and the
+      // fulfillment request is unique per order.
+      if (existingPayment.status === "COMPLETED") {
+        await this.paymentService.confirmPayment({
+          userId,
+          paymentId: existingPayment.id,
+          idempotencyKey: `checkout-fulfillment-recovery:${existingPayment.id}`,
+          metadata: {
+            source: "CHECKOUT_RETRY_RECOVERY",
+            cartId,
+          },
+          correlationId: input.correlationId,
+          requestId: input.requestId,
+          ipAddress: input.ipAddress,
+          userAgent: input.userAgent,
+        });
+      }
+
       return {
         orderId: existingOrder.id,
         userId,
