@@ -850,12 +850,17 @@ export class MobilityLifecycleService {
           throw new Error("Only a no-driver result or a recoverable dispatch attempt can be retried.");
         }
 
+        const dispatchResultInput = {
+          ...input,
+          idempotencyKey: input.idempotencyKey + ":dispatch-result",
+        };
+
         try {
           const dispatch = await mobilityDispatchService.dispatch({ rideId: input.rideId, safetyMode });
 
           if (!dispatch.assignment) {
             return this.advance(
-              current, input, "FAILED",
+              current, dispatchResultInput, "FAILED",
               {
                 dispatchStatus: dispatch.status,
                 candidateCount: dispatch.candidates.length,
@@ -866,7 +871,7 @@ export class MobilityLifecycleService {
             );
           }
 
-          return this.advance(current, input, "DRIVER_ASSIGNED", dispatch.assignment, "ACTIVE");
+          return this.advance(current, dispatchResultInput, "DRIVER_ASSIGNED", dispatch.assignment, "ACTIVE");
         } catch (error) {
           const classified = this.classifyFailure(error);
           const recovering = await this.transitionPersisted(
