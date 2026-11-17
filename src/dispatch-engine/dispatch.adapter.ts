@@ -646,6 +646,10 @@ export class DispatchAdapter implements DispatchPort {
         throw new Error("Dispatch state changed during recovery.");
       }
 
+      await database.fulfillmentAssignment.deleteMany({
+        where: { fulfillmentId: fulfillment.id },
+      });
+
       await database.fulfillmentRequest.update({
         where: { id: fulfillment.id },
         data: {
