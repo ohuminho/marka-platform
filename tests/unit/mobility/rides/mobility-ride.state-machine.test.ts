@@ -65,6 +65,40 @@ assert(
 );
 
 assert(
+  canTransitionRideStatus(
+    MobilityRideStatus.DRIVER_ARRIVED,
+    MobilityRideStatus.CANCELLED,
+  ),
+  "A rider may cancel before the trip starts, including after driver arrival.",
+);
+
+assert(
+  !canTransitionRideStatus(
+    MobilityRideStatus.TRIP_STARTED,
+    MobilityRideStatus.CANCELLED,
+  ),
+  "Ordinary cancellation must not release a driver after the trip has started.",
+);
+
+assert(
+  !canTransitionRideStatus(
+    MobilityRideStatus.TRIP_IN_PROGRESS,
+    MobilityRideStatus.CANCELLED,
+  ),
+  "Ordinary cancellation must not make an in-progress driver available.",
+);
+
+assertThrows(
+  () =>
+    transitionRideStatus(
+      MobilityRideStatus.TRIP_IN_PROGRESS,
+      MobilityRideStatus.CANCELLED,
+    ),
+  "INVALID_RIDE_STATUS_TRANSITION",
+  "An in-progress trip must use completion or dispute handling, not ordinary cancellation.",
+);
+
+assert(
   transitionRideStatus(
     MobilityRideStatus.DRIVER_ARRIVING,
     MobilityRideStatus.SEARCHING
