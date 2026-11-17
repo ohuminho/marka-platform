@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Prisma } from "@prisma/client";
 
 import {
   readDispatchRejectedDriverIds,
@@ -46,14 +47,14 @@ assert.throws(
 
 console.log("Mobility dispatch vehicle policy tests passed.");
 
-const rejectedEvents = [
+const rejectedEvents: Array<{ metadata: Prisma.JsonValue | null }> = [
   {
     metadata: {
       result: {
         result: { rejectedDriverId: "driver-a" },
         reason: "Vehicle unavailable",
       },
-    } as import("@prisma/client").Prisma.JsonValue,
+    },
   },
   {
     metadata: {
@@ -61,12 +62,12 @@ const rejectedEvents = [
         rejectedDriverId: "driver-b",
         reason: "Outside service area",
       },
-    } as import("@prisma/client").Prisma.JsonValue,
+    },
   },
   {
     metadata: {
       rejectedDriverId: "driver-a",
-    } as import("@prisma/client").Prisma.JsonValue,
+    },
   },
   { metadata: null },
 ];
@@ -80,14 +81,14 @@ assert.deepEqual(
     {
       metadata: {
         result: { rejectedDriverId: "driver-current" },
-      } as import("@prisma/client").Prisma.JsonValue,
+      },
     },
     {
       metadata: {
         result: {
           result: { rejectedDriverId: "driver-legacy" },
         },
-      } as import("@prisma/client").Prisma.JsonValue,
+      },
     },
   ]),
   ["driver-current", "driver-legacy"],

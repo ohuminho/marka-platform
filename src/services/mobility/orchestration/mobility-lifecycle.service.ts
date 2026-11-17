@@ -991,6 +991,8 @@ export class MobilityLifecycleService {
         );
       }
     }
+
+    throw new Error("Unsupported Mobility lifecycle action.");
   }
 
   private async initializeFinancials(
