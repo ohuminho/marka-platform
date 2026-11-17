@@ -2,17 +2,12 @@ import { z } from "zod";
 
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { passwordResetService } from "@/core/authentication/password-reset.service";
+import { getTrustedClientIp } from "@/core/security/client-ip";
 
 const schema = z.object({
   token: z.string().min(20).max(256),
   password: z.string().min(12).max(128),
 });
-
-function clientIp(request: Request): string | undefined {
-  return request.headers.get("x-real-ip")?.trim()
-    || request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
-    || undefined;
-}
 
 export async function POST(request: Request) {
   try {
@@ -22,19 +17,22 @@ export async function POST(request: Request) {
       return Response.json({ message: "Link inválido ou expirado. Solicita uma nova recuperação." }, { status: 400 });
     }
 
-    const ipQuota = await reserveApiRequest({
-      scope: "AUTH_PASSWORD_RESET_CONFIRM_IP",
-      anonymousIdentity: clientIp(request) || "password-reset-confirm-unknown-ip",
-      windows: [
-        { limit: 20, windowMs: 15 * 60 * 1000 },
-        { limit: 100, windowMs: 60 * 60 * 1000 },
-      ],
-    });
-    if (!ipQuota.allowed) {
-      return Response.json(
-        { message: "Demasiadas tentativas. Solicita um novo link mais tarde.", code: "PASSWORD_RESET_RATE_LIMITED" },
-        { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
-      );
+    const trustedIp = getTrustedClientIp(request);
+    if (trustedIp) {
+      const ipQuota = await reserveApiRequest({
+        scope: "AUTH_PASSWORD_RESET_CONFIRM_IP",
+        anonymousIdentity: trustedIp,
+        windows: [
+          { limit: 20, windowMs: 15 * 60 * 1000 },
+          { limit: 100, windowMs: 60 * 60 * 1000 },
+        ],
+      });
+      if (!ipQuota.allowed) {
+        return Response.json(
+          { message: "Demasiadas tentativas. Solicita um novo link mais tarde.", code: "PASSWORD_RESET_RATE_LIMITED" },
+          { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     const tokenQuota = await reserveApiRequest({
