@@ -332,8 +332,41 @@ export async function PATCH(request: Request) {
 
     const data = parsed.data;
     const updated = await prisma.$transaction(async (tx) => {
+      // Serialize vendor stock edits with checkout reservations and payment
+      // finalization. Checkout takes the same Product row lock before pricing
+      // and reserving stock.
+      await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "Product"
+        WHERE "id" = ${product.id}
+        FOR UPDATE
+      `;
+
+      const currentProduct = await tx.product.findFirst({
+        where: { id: product.id, storeId: vendor.store!.id },
+        select: { id: true, stock: true },
+      });
+      if (!currentProduct) {
+        throw new Error("PRODUCT_NOT_FOUND");
+      }
+
+      let inventory = null;
+      if (data.stock !== undefined) {
+        inventory = await tx.inventory.findUnique({
+          where: { productId: product.id },
+          select: { reserved: true },
+        });
+        const reserved = inventory?.reserved ?? 0;
+        if (data.stock < reserved) {
+          throw new Error("STOCK_BELOW_RESERVED");
+        }
+        if (data.stock + reserved > 1_000_000) {
+          throw new Error("PHYSICAL_STOCK_LIMIT_EXCEEDED");
+        }
+      }
+
       const saved = await tx.product.update({
-        where: { id: product.id },
+        where: { id: currentProduct.id },
         data: {
           name: data.name ?? undefined,
           description: data.description ?? undefined,
@@ -344,15 +377,20 @@ export async function PATCH(request: Request) {
           attributes: data.attributes === undefined ? undefined : data.attributes,
         },
       });
+
       if (data.stock !== undefined) {
-        const inventory = await tx.inventory.findUnique({ where: { productId: product.id } });
-        if (inventory && data.stock < inventory.reserved) {
-          throw new Error("STOCK_BELOW_RESERVED");
-        }
         await tx.inventory.upsert({
           where: { productId: product.id },
-          create: { productId: product.id, quantityOnHand: data.stock, reserved: 0, reorderLevel: 0 },
-          update: { quantityOnHand: data.stock + (inventory?.reserved ?? 0) },
+          create: {
+            productId: product.id,
+            quantityOnHand: data.stock,
+            reserved: 0,
+            reorderLevel: 0,
+          },
+          update: {
+            quantityOnHand: data.stock + (inventory?.reserved ?? 0),
+            version: { increment: 1 },
+          },
         });
       }
       return saved;
@@ -365,6 +403,12 @@ export async function PATCH(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "STOCK_BELOW_RESERVED") {
       return NextResponse.json({ message: "O stock não pode ficar abaixo das unidades já reservadas em encomendas.", code: "STOCK_BELOW_RESERVED" }, { status: 409 });
+    }
+    if (error instanceof Error && error.message === "PHYSICAL_STOCK_LIMIT_EXCEEDED") {
+      return NextResponse.json({ message: "O stock físico ultrapassa o limite permitido.", code: "PHYSICAL_STOCK_LIMIT_EXCEEDED" }, { status: 422 });
+    }
+    if (error instanceof Error && error.message === "PRODUCT_NOT_FOUND") {
+      return NextResponse.json({ message: "Produto não encontrado nesta loja.", code: "PRODUCT_NOT_FOUND" }, { status: 404 });
     }
     console.error("[VENDOR_PRODUCTS_PATCH]", error);
     return NextResponse.json({ message: "Não foi possível atualizar o produto." }, { status: 500 });
