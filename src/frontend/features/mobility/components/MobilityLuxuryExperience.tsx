@@ -160,6 +160,9 @@ export default function MobilityLuxuryExperience() {
       .then((data: RideResponse | null) => {
         if (!mounted || !data?.ride) return;
         setRide(data.ride);
+        if (data.ride.status === "NO_DRIVER_FOUND") {
+          setRideMessage("Não encontrámos motoristas disponíveis para esta solicitação. Pode ajustar o pedido ou tentar novamente mais tarde.");
+        }
         const ridePickupLat = data.ride.pickupLatitude == null ? Number.NaN : Number(data.ride.pickupLatitude);
         const ridePickupLon = data.ride.pickupLongitude == null ? Number.NaN : Number(data.ride.pickupLongitude);
         const rideDropoffLat = data.ride.dropoffLatitude == null ? Number.NaN : Number(data.ride.dropoffLatitude);
@@ -452,9 +455,11 @@ export default function MobilityLuxuryExperience() {
       setCommunicationThreadId(null);
       setCallPanelOpen(false);
       setCommunicationError(null);
-      setRideMessage(data.orchestration?.recoveryRequired
-        ? "Pedido registado; estamos a recuperar uma etapa operacional."
-        : "Pedido enviado aos motoristas elegíveis.");
+      setRideMessage(data.ride.status === "NO_DRIVER_FOUND"
+        ? "Não encontrámos motoristas disponíveis para esta solicitação. Pode ajustar o pedido ou tentar novamente mais tarde."
+        : data.orchestration?.recoveryRequired
+          ? "Pedido registado; estamos a recuperar uma etapa operacional."
+          : "Pedido enviado aos motoristas elegíveis.");
     } catch (requestFailure) {
       setError(requestFailure instanceof Error ? requestFailure.message : "Falha ao criar o pedido.");
     } finally {
@@ -622,6 +627,25 @@ export default function MobilityLuxuryExperience() {
           </section>
         ) : (
           <>
+            {ride?.status === "NO_DRIVER_FOUND" && (
+              <div role="status" aria-live="polite" className="mb-4 rounded-2xl border border-amber-400/30 bg-amber-400/[.08] p-4">
+                <p className="text-sm font-semibold text-amber-200">Sem motoristas disponíveis neste momento</p>
+                <p className="mt-1 text-xs leading-5 text-white/65">
+                  O pedido anterior foi registado, mas nenhum motorista elegível foi encontrado. Pode alterar o destino ou a categoria e enviar um novo pedido.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRide(null);
+                    setRideMessage(null);
+                    setError(null);
+                  }}
+                  className="mt-3 min-h-10 rounded-xl border border-amber-300/30 px-3 text-xs font-semibold text-amber-100"
+                >
+                  Fazer novo pedido
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[.22em] text-[#E5B84B]">Reserve a sua deslocação</p>
