@@ -17,6 +17,12 @@ type ReserveApiRequestInput = {
   anonymousIdentity?: string;
   windows: ApiRateLimitWindow[];
   bypass?: boolean;
+  /**
+   * When false, atomically checks existing usage without consuming a slot.
+   * Useful for authentication flows that should count failed credentials,
+   * not successful sign-ins.
+   */
+  record?: boolean;
 };
 
 /**
@@ -86,17 +92,19 @@ export async function reserveApiRequest(
       return { allowed: false, retryAfterSeconds };
     }
 
-    await tx.securityEvent.create({
-      data: {
-        type: eventType,
-        severity: "INFO",
-        ...(actorUserId ? { actorUserId } : { ipAddress: ipFingerprint }),
-        metadata: {
-          scope: input.scope,
-          windows: input.windows.map(({ limit, windowMs }) => ({ limit, windowMs })),
+    if (input.record !== false) {
+      await tx.securityEvent.create({
+        data: {
+          type: eventType,
+          severity: "INFO",
+          ...(actorUserId ? { actorUserId } : { ipAddress: ipFingerprint }),
+          metadata: {
+            scope: input.scope,
+            windows: input.windows.map(({ limit, windowMs }) => ({ limit, windowMs })),
+          },
         },
-      },
-    });
+      });
+    }
 
     return { allowed: true, retryAfterSeconds: 0 };
   });
