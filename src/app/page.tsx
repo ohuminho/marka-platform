@@ -265,7 +265,7 @@ export default function Home() {
           <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
             <div>
               <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#bda575]">
-                Porque existe a MARKA
+                A nossa missão
               </p>
               <h2
                 id="purpose-title"
@@ -279,9 +279,10 @@ export default function Home() {
               <p className="text-[15px] leading-8 text-white/70 sm:text-[17px]">
                 Encontrar o que precisa, chegar a novos clientes ou organizar
                 uma deslocação ainda pode significar procurar em vários lugares.
-                A MARKA aproxima estas experiências numa plataforma digital,
-                para tornar o acesso a produtos, negócios, serviços e mobilidade
-                mais simples.
+                A MARKA aproxima estas experiências numa única plataforma digital.
+                A nossa missão é reduzir a distância entre quem procura e quem
+                oferece, dando mais visibilidade aos negócios e tornando o acesso
+                a produtos, serviços e mobilidade mais simples.
               </p>
               <div className="mt-9 grid gap-6 sm:grid-cols-2">
                 <div className="border-l border-[#d8bd83]/60 pl-5">
@@ -314,6 +315,37 @@ export default function Home() {
                 de soluções digitais relevantes em África.
               </p>
             </div>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="partners-title"
+          className="border-y border-white/[0.08] bg-[#10100f]"
+        >
+          <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-5 py-16 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12 lg:py-20">
+            <div className="max-w-[700px]">
+              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#bda575]">
+                Crescemos através de boas ligações
+              </p>
+              <h2
+                id="partners-title"
+                className="mt-3 text-[30px] font-medium leading-tight tracking-[-0.055em] text-white sm:text-[40px]"
+              >
+                Vamos criar novas oportunidades juntos?
+              </h2>
+              <p className="mt-4 max-w-[620px] text-[14px] leading-7 text-white/60">
+                Procuramos comerciantes, prestadores de serviços, operadores de
+                mobilidade e organizações interessadas em construir relações
+                comerciais e parcerias com impacto. Se representa uma empresa
+                ou instituição, queremos conhecer a sua proposta.
+              </p>
+            </div>
+            <Link
+              href="/advertise"
+              className="inline-flex min-h-12 w-fit shrink-0 items-center justify-center rounded-full bg-[#d8bd83] px-7 text-[12px] font-semibold text-[#17130c] transition hover:bg-[#ead5a6]"
+            >
+              Explorar parcerias <span aria-hidden="true" className="ml-3">→</span>
+            </Link>
           </div>
         </section>
 
