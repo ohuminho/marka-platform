@@ -48,7 +48,7 @@ export async function reserveApiRequest(
     : identity.slice("anonymous:".length);
 
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-api-rate:${input.scope}:${identity}`}))`;
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-api-rate:${input.scope}:${identity}`})) IS NULL AS locked`;
 
     const now = new Date();
     let retryAfterSeconds = 0;
