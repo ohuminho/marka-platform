@@ -334,29 +334,50 @@ export class MobilityRideService {
   async startSearch(
     rideId: string
   ) {
-    const ride =
-      await this.requireRide(rideId);
+    return prisma.$transaction(async (tx) => {
+      const ride = await tx.mobilityRide.findUnique({
+        where: { id: rideId },
+      });
 
-    transitionRideStatus(
-      ride.status,
-      MobilityRideStatus.SEARCHING
-    );
+      if (!ride) {
+        throw new MobilityDomainError(
+          `Mobility ride ${rideId} was not found.`,
+          "RIDE_NOT_FOUND",
+        );
+      }
 
-    return prisma.mobilityRide.update({
-      where: {
-        id: rideId,
-      },
-      data: {
-        status:
-          MobilityRideStatus.SEARCHING,
-      },
-      include: {
-        stops: {
-          orderBy: {
-            sequence: "asc",
+      transitionRideStatus(
+        ride.status,
+        MobilityRideStatus.SEARCHING,
+      );
+
+      // Compare-and-set prevents a delayed search request from reviving a
+      // ride that was cancelled, expired, or claimed after this read.
+      const updated = await tx.mobilityRide.updateMany({
+        where: {
+          id: rideId,
+          status: ride.status,
+        },
+        data: {
+          status: MobilityRideStatus.SEARCHING,
+        },
+      });
+
+      if (updated.count !== 1) {
+        throw new MobilityDomainError(
+          "Ride state changed before driver search could start. Reload the ride and retry.",
+          "RIDE_STATE_CONFLICT",
+        );
+      }
+
+      return tx.mobilityRide.findUniqueOrThrow({
+        where: { id: rideId },
+        include: {
+          stops: {
+            orderBy: { sequence: "asc" },
           },
         },
-      },
+      });
     });
   }
 
