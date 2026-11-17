@@ -751,7 +751,7 @@ export class MobilityLifecycleService {
                 "attemptCount" = "attemptCount" + 1,
                 "lastErrorCode" = NULL,
                 "lastError" = NULL,
-                "nextRetryAt" = NULL,
+                "nextRetryAt" = NOW() + INTERVAL '120 seconds',
                 "updatedAt" = NOW()
               WHERE
                 "id" = ${current.id}
@@ -778,6 +778,48 @@ export class MobilityLifecycleService {
                 ${input.correlationId ?? null}, ${input.requestId ?? null},
                 ${input.actorUserId ?? null},
                 ${this.jsonValue({ reason: "NO_DRIVER_FOUND", ...(input.metadata ?? {}) })}::jsonb,
+                NOW()
+              )
+            `;
+            return rows[0];
+          });
+        } else if (current.currentStep === "SEARCHING" && current.status === "ACTIVE" && ride.status === MobilityRideStatus.SEARCHING) {
+          // A short lease makes a crash between reopening and dispatch recoverable
+          // without allowing two passenger requests to dispatch concurrently.
+          current = await prisma.$transaction(async (tx) => {
+            const rows = await tx.$queryRaw<OrchestrationRow[]>`
+              UPDATE "MobilityRideOrchestration"
+              SET
+                "version" = "version" + 1,
+                "attemptCount" = "attemptCount" + 1,
+                "nextRetryAt" = NOW() + INTERVAL '120 seconds',
+                "updatedAt" = NOW()
+              WHERE
+                "id" = ${current.id}
+                AND "version" = ${current.version}
+                AND "status" = 'ACTIVE'::"MobilityOrchestrationStatus"
+                AND "currentStep" = 'SEARCHING'::"MobilityOrchestrationStep"
+                AND ("nextRetryAt" IS NULL OR "nextRetryAt" <= NOW())
+              RETURNING *
+            `;
+
+            if (rows.length !== 1) {
+              throw new Error("Dispatch retry is already running. Wait briefly and refresh the ride.");
+            }
+
+            await tx.$executeRaw`
+              INSERT INTO "MobilityRideOrchestrationEvent" (
+                "id", "orchestrationId", "organizationId", "rideId",
+                "action", "fromStep", "toStep", "status", "idempotencyKey",
+                "correlationId", "requestId", "actorUserId", "metadata", "createdAt"
+              ) VALUES (
+                ${randomUUID()}, ${current.id}, ${input.organizationId}, ${input.rideId},
+                'RETRY_DISPATCH', 'SEARCHING'::"MobilityOrchestrationStep",
+                'SEARCHING'::"MobilityOrchestrationStep",
+                'ACTIVE'::"MobilityOrchestrationStatus", ${input.idempotencyKey},
+                ${input.correlationId ?? null}, ${input.requestId ?? null},
+                ${input.actorUserId ?? null},
+                ${this.jsonValue({ resumedAfterLeaseExpiry: true })}::jsonb,
                 NOW()
               )
             `;
@@ -1692,7 +1734,9 @@ export class MobilityLifecycleService {
                   NULL,
 
                 "nextRetryAt" =
-                  NULL,
+                  ${nextStep === "SEARCHING" && nextStatus === "ACTIVE"
+                    ? new Date(now.getTime() + 120_000)
+                    : null},
 
                 "completedAt" =
                   CASE
