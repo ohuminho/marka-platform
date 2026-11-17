@@ -21,20 +21,13 @@ function normalizeEmail(
 function getClientIp(
   request: Request
 ): string | undefined {
-  // Vercel sanitizes these platform headers. Prefer its dedicated header,
-  // then use the equivalent forwarded headers as compatible fallbacks.
-  const candidates = [
-    request.headers.get("x-vercel-forwarded-for"),
-    request.headers.get("x-forwarded-for"),
-    request.headers.get("x-real-ip"),
-  ];
+  // Use Vercel's dedicated client-IP header. A generic x-forwarded-for
+  // header may be rewritten by an upstream proxy, and x-real-ip is not
+  // part of the documented Vercel client-IP contract.
+  const candidate = request.headers.get("x-vercel-forwarded-for");
+  const ip = candidate?.split(",")[0]?.trim();
 
-  for (const candidate of candidates) {
-    const ip = candidate?.split(",")[0]?.trim();
-    if (ip && isIP(ip)) return ip;
-  }
-
-  return undefined;
+  return ip && isIP(ip) ? ip : undefined;
 }
 
 export async function POST(
@@ -184,7 +177,7 @@ export async function POST(
       await sessionService.create({
         userId: user.id,
         ipAddress:
-          getClientIp(request),
+          clientIp,
         userAgent:
           request.headers.get(
             "user-agent"
