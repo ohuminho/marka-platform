@@ -102,6 +102,7 @@ export default function MobilityLuxuryExperience() {
   const [searchBusy, setSearchBusy] = useState(false);
   const [gpsBusy, setGpsBusy] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [retryingRide, setRetryingRide] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ride, setRide] = useState<Ride | null>(null);
   const [rideMessage, setRideMessage] = useState<string | null>(null);
@@ -467,6 +468,38 @@ export default function MobilityLuxuryExperience() {
     }
   }
 
+  async function retryNoDriverRide() {
+    if (!ride || ride.status !== "NO_DRIVER_FOUND" || !organizationId || retryingRide) return;
+    setRetryingRide(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/mobility/rides/" + encodeURIComponent(ride.id), {
+        method: "PATCH",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "marka-ride-retry-" + crypto.randomUUID(),
+          "X-Organization-Id": organizationId,
+        },
+        body: JSON.stringify({ action: "RETRY_DISPATCH", safetyMode: safety }),
+      });
+      const data = await response.json() as RideResponse;
+      if (!response.ok || !data.ride) {
+        throw new Error(data.message || "Não foi possível repetir a procura de motorista.");
+      }
+      setRide(data.ride);
+      setRideMessage(data.ride.status === "NO_DRIVER_FOUND"
+        ? "Continuamos sem motoristas elegíveis. Pode tentar novamente mais tarde ou criar um novo pedido."
+        : data.orchestration?.recoveryRequired
+          ? "A procura foi retomada; estamos a recuperar uma etapa operacional."
+          : "A procura foi retomada para a mesma viagem.");
+    } catch (retryFailure) {
+      setError(retryFailure instanceof Error ? retryFailure.message : "Falha ao repetir a procura.");
+    } finally {
+      setRetryingRide(false);
+    }
+  }
   const driverRating = Number(ride?.driver?.user?.rating);
   const driverName = ride?.driver?.user?.name || "Motorista MARKA";
   const driverAvatar = ride?.driver?.user?.profile?.avatarUrl;
@@ -633,17 +666,27 @@ export default function MobilityLuxuryExperience() {
                 <p className="mt-1 text-xs leading-5 text-white/65">
                   O pedido anterior foi registado, mas nenhum motorista elegível foi encontrado. Pode alterar o destino ou a categoria e enviar um novo pedido.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRide(null);
-                    setRideMessage(null);
-                    setError(null);
-                  }}
-                  className="mt-3 min-h-10 rounded-xl border border-amber-300/30 px-3 text-xs font-semibold text-amber-100"
-                >
-                  Fazer novo pedido
-                </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={retryNoDriverRide}
+                    disabled={retryingRide}
+                    className="min-h-10 rounded-xl bg-[#E5B84B] px-4 text-xs font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {retryingRide ? "A procurar..." : "Tentar novamente"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRide(null);
+                      setRideMessage(null);
+                      setError(null);
+                    }}
+                    className="min-h-10 rounded-xl border border-amber-300/30 px-3 text-xs font-semibold text-amber-100"
+                  >
+                    Fazer novo pedido
+                  </button>
+                </div>
               </div>
             )}
             <div className="flex items-center justify-between gap-3">
