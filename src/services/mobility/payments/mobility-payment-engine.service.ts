@@ -375,6 +375,30 @@ export class MobilityPaymentEngineService {
     const payment =
       await prisma.$transaction(
         async (database) => {
+          // Serialize collection against ride cancellation. Both paths lock
+          // the ride first, then the payment, to avoid contradictory outcomes.
+          const rides = await database.$queryRaw<
+            Array<{ id: string; organizationId: string; status: string }>
+          >`
+            SELECT "id", "organizationId", "status"::text AS "status"
+            FROM "MobilityRide"
+            WHERE "id" = ${input.rideId}
+            FOR UPDATE
+          `;
+          const ride = rides[0];
+
+          if (!ride || ride.organizationId !== input.organizationId) {
+            throw new Error(
+              "Mobility ride does not belong to the organization.",
+            );
+          }
+
+          if (ride.status !== "TRIP_COMPLETED") {
+            throw new Error(
+              `Mobility payment cannot be collected while the ride is in status ${ride.status}.`,
+            );
+          }
+
           const existing =
             await this.findByRide(
               database,
