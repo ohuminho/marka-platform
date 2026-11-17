@@ -1014,15 +1014,6 @@ export class MobilityRideService {
   ) {
     return prisma.$transaction(
       async (tx) => {
-        // Keep ride and payment transitions serialized in the same lock order.
-        // Payment completion also locks the ride before touching its payment.
-        await tx.$queryRaw`
-          SELECT "id"
-          FROM "MobilityRide"
-          WHERE "id" = ${rideId}
-          FOR UPDATE
-        `;
-
         const ride =
           await tx.mobilityRide.findUnique({
             where: {
@@ -1054,47 +1045,6 @@ export class MobilityRideService {
           ride.status,
           nextStatus
         );
-
-        if (nextStatus === MobilityRideStatus.CANCELLED) {
-          const payments = await tx.$queryRaw<
-            Array<{ id: string; status: string }>
-          >`
-            SELECT "id", "status"::text AS "status"
-            FROM "MobilityRidePayment"
-            WHERE "rideId" = ${rideId}
-            FOR UPDATE
-          `;
-
-          const payment = payments[0];
-          if (
-            payment?.status === "COLLECTED" ||
-            payment?.status === "SETTLED"
-          ) {
-            throw new MobilityDomainError(
-              "This ride has a collected or settled payment. A separate refund or financial reversal is required before cancellation.",
-              "RIDE_PAYMENT_ALREADY_COLLECTED"
-            );
-          }
-
-          if (
-            payment?.status === "PENDING" ||
-            payment?.status === "AUTHORIZED"
-          ) {
-            await tx.$executeRaw`
-              UPDATE "MobilityRidePayment"
-              SET
-                "status" = 'CANCELLED'::"MobilityPaymentStatus",
-                "cancelledAt" = COALESCE("cancelledAt", CURRENT_TIMESTAMP),
-                "updatedAt" = CURRENT_TIMESTAMP
-              WHERE
-                "id" = ${payment.id}
-                AND "status" IN (
-                  'PENDING'::"MobilityPaymentStatus",
-                  'AUTHORIZED'::"MobilityPaymentStatus"
-                )
-            `;
-          }
-        }
 
         if (ride.driverId) {
           // Serialize lifecycle updates for this driver with assignment claims.
@@ -1169,6 +1119,58 @@ export class MobilityRideService {
               status: nextDriverAvailability,
             },
           });
+        }
+
+        // Match payment completion's ride-then-payment lock order, while
+        // preserving the existing driver-then-ride order used by dispatch.
+        if (nextStatus === MobilityRideStatus.CANCELLED) {
+          await tx.$queryRaw`
+            SELECT "id"
+            FROM "MobilityRide"
+            WHERE "id" = ${rideId}
+            FOR UPDATE
+          `;
+        }
+
+        if (nextStatus === MobilityRideStatus.CANCELLED) {
+          const payments = await tx.$queryRaw<
+            Array<{ id: string; status: string }>
+          >`
+            SELECT "id", "status"::text AS "status"
+            FROM "MobilityRidePayment"
+            WHERE "rideId" = ${rideId}
+            FOR UPDATE
+          `;
+
+          const payment = payments[0];
+          if (
+            payment?.status === "COLLECTED" ||
+            payment?.status === "SETTLED"
+          ) {
+            throw new MobilityDomainError(
+              "This ride has a collected or settled payment. A separate refund or financial reversal is required before cancellation.",
+              "RIDE_PAYMENT_ALREADY_COLLECTED"
+            );
+          }
+
+          if (
+            payment?.status === "PENDING" ||
+            payment?.status === "AUTHORIZED"
+          ) {
+            await tx.$executeRaw`
+              UPDATE "MobilityRidePayment"
+              SET
+                "status" = 'CANCELLED'::"MobilityPaymentStatus",
+                "cancelledAt" = COALESCE("cancelledAt", CURRENT_TIMESTAMP),
+                "updatedAt" = CURRENT_TIMESTAMP
+              WHERE
+                "id" = ${payment.id}
+                AND "status" IN (
+                  'PENDING'::"MobilityPaymentStatus",
+                  'AUTHORIZED'::"MobilityPaymentStatus"
+                )
+            `;
+          }
         }
 
         // Compare-and-set prevents concurrent transitions from both
