@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 
 import {
-  buildDispatchRejectionMetadata,
   readDispatchRejectedDriverIds,
   resolveServiceVehicleTypes,
 } from "../../../src/dispatch-engine/mobility-dispatch.service";
@@ -47,35 +46,30 @@ assert.throws(
 
 console.log("Mobility dispatch vehicle policy tests passed.");
 
-const originalMetadata = {
-  passengerCount: 2,
-  safetyMode: "STANDARD",
-};
-const afterFirstRejection = buildDispatchRejectionMetadata(
-  originalMetadata,
+const rejectedEvents = [
   {
-    driverId: "driver-a",
-    reason: "Vehicle unavailable",
-    rejectedAt: new Date("2026-11-17T10:00:00.000Z"),
+    metadata: {
+      rejectedDriverId: "driver-a",
+      reason: "Vehicle unavailable",
+    } as import("@prisma/client").Prisma.JsonValue,
   },
-);
-const afterSecondRejection = buildDispatchRejectionMetadata(
-  afterFirstRejection as import("@prisma/client").Prisma.JsonValue,
   {
-    driverId: "driver-b",
-    reason: "Outside service area",
-    rejectedAt: new Date("2026-11-17T10:01:00.000Z"),
+    metadata: {
+      rejectedDriverId: "driver-b",
+      reason: "Outside service area",
+    } as import("@prisma/client").Prisma.JsonValue,
   },
-);
-assert.deepEqual(readDispatchRejectedDriverIds(afterSecondRejection), [
+  {
+    metadata: {
+      rejectedDriverId: "driver-a",
+    } as import("@prisma/client").Prisma.JsonValue,
+  },
+  { metadata: null },
+];
+assert.deepEqual(readDispatchRejectedDriverIds(rejectedEvents), [
   "driver-a",
   "driver-b",
 ]);
-assert.equal((afterSecondRejection as Record<string, unknown>).passengerCount, 2);
-assert.equal(
-  ((afterSecondRejection as Record<string, unknown>).dispatchRejections as unknown[]).length,
-  2,
-);
-assert.deepEqual(readDispatchRejectedDriverIds(null), []);
-assert.deepEqual(readDispatchRejectedDriverIds({ passengerCount: 1 }), []);
+assert.deepEqual(readDispatchRejectedDriverIds([]), []);
 
+console.log("Mobility rejection exclusion tests passed.");
