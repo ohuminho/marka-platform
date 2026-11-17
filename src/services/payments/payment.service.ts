@@ -28,7 +28,6 @@ export interface CreatePaymentInput {
   userId: string;
   orderId: string;
   idempotencyKey: string;
-  provider?: string;
   metadata?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
@@ -537,9 +536,10 @@ export class PaymentService {
       );
     }
 
+    // Provider identity and external payment reference are server-owned.
+    // Never allow a browser request to select a different gateway or payment.
     const providerName =
-      input.provider?.trim().toUpperCase() ??
-      payment.provider;
+      payment.provider?.trim().toUpperCase();
 
     if (!providerName) {
       throw new Error(
@@ -555,8 +555,7 @@ export class PaymentService {
       );
 
     const providerPaymentId =
-      input.providerPaymentId?.trim() ??
-      payment.providerPaymentId;
+      payment.providerPaymentId?.trim();
 
     if (!providerPaymentId) {
       throw new Error(
