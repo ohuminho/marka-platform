@@ -357,7 +357,6 @@ export class CheckoutService {
         userId,
         orderId: order.id,
         idempotencyKey: paymentIdempotencyKey,
-        provider: paymentProviderConfig.name,
         metadata: {
           ...(input.metadata ?? {}),
           checkout: {
