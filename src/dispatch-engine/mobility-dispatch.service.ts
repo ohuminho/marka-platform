@@ -964,6 +964,12 @@ export class MobilityDispatchService {
       !ride.driverId &&
       !ride.vehicleId
     ) {
+      if (rejection) {
+        throw new DispatchDomainError(
+          "The ride assignment was already released before rejection was recorded.",
+          "RIDE_ASSIGNMENT_CHANGED",
+        );
+      }
       return;
     }
 
