@@ -14,15 +14,6 @@ const noStore = { headers: { "Cache-Control": "no-store" } };
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json().catch(() => ({}));
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
-      return Response.json(
-        { message: "Link inválido ou expirado. Solicita uma nova recuperação." },
-        { status: 400, ...noStore },
-      );
-    }
-
     const trustedIp = getTrustedClientIp(request);
     if (trustedIp) {
       const ipQuota = await reserveApiRequest({
@@ -45,6 +36,15 @@ export async function POST(request: Request) {
           },
         );
       }
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      return Response.json(
+        { message: "Link inválido ou expirado. Solicita uma nova recuperação." },
+        { status: 400, ...noStore },
+      );
     }
 
     const tokenQuota = await reserveApiRequest({
