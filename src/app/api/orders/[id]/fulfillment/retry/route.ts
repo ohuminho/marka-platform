@@ -118,19 +118,41 @@ export async function POST(
       select: { id: true, status: true, exceptionCode: true },
     });
 
-    const dispatch = fulfillment
-      ? await prisma.dispatchRequest.findFirst({
-          where: {
-            subjectType: "FULFILLMENT",
-            subjectId: fulfillment.id,
-          },
-          select: { id: true, status: true },
-        })
-      : null;
+    if (!fulfillment) {
+      return NextResponse.json(
+        {
+          message: "Payment is confirmed, but the delivery request was not created. You can safely retry recovery without paying again.",
+          code: "FULFILLMENT_NOT_CREATED",
+          paymentStatus: payment.status,
+        },
+        { status: 409, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const dispatch = await prisma.dispatchRequest.findFirst({
+      where: {
+        subjectType: "FULFILLMENT",
+        subjectId: fulfillment.id,
+      },
+      select: { id: true, status: true },
+    });
+
+    if (!dispatch || dispatch.status === "CANCELLED" || dispatch.status === "EXPIRED") {
+      return NextResponse.json(
+        {
+          message: "The delivery request exists, but dispatch has not restarted. The payment remains confirmed; retry recovery or contact support.",
+          code: "DELIVERY_DISPATCH_NOT_ACTIVE",
+          paymentStatus: payment.status,
+          fulfillment,
+          dispatch,
+        },
+        { status: 409, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     return NextResponse.json(
       {
-        message: "Delivery recovery processed.",
+        message: "Delivery recovery processed and dispatch is active.",
         paymentStatus: payment.status,
         fulfillment,
         dispatch,
