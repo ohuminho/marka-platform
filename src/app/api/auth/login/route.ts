@@ -20,14 +20,17 @@ function normalizeEmail(
 function getClientIp(
   request: Request
 ): string | undefined {
+  // Prefer the platform-provided client IP. X-Forwarded-For can contain
+  // caller-supplied values and must not take precedence for security logs.
   return (
     request.headers
-      .get("x-forwarded-for")
-      ?.split(",")[0]
-      ?.trim() ??
-    request.headers
       .get("x-real-ip")
-      ?.trim() ??
+      ?.trim() ||
+    request.headers
+      .get("x-forwarded-for")
+      ?.split(",")
+      .at(-1)
+      ?.trim() ||
     undefined
   );
 }
