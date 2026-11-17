@@ -253,7 +253,7 @@ export class CheckoutService {
       );
     }
 
-    const preparedItems = cart.items.map((item) => {
+    let preparedItems = cart.items.map((item) => {
       if (item.quantity <= 0) {
         throw new Error(
           "Cart contains an invalid quantity.",
@@ -292,7 +292,7 @@ export class CheckoutService {
       };
     });
 
-    const subtotal = preparedItems.reduce(
+    let subtotal = preparedItems.reduce(
       (sum, item) => sum + item.subtotal,
       0,
     );
@@ -310,11 +310,96 @@ export class CheckoutService {
 
         const lockedCart = await database.cart.findFirst({
           where: { id: cartId, userId, status: "ACTIVE" },
-          select: { id: true },
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    store: {
+                      select: { id: true, vendorId: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
         });
         if (!lockedCart) {
           throw new Error("Active cart not found.");
         }
+        if (lockedCart.items.length === 0) {
+          throw new Error("Cart is empty.");
+        }
+
+        const lockedStoreIds = new Set(
+          lockedCart.items.map((item) => item.product.storeId),
+        );
+        if (lockedStoreIds.size > 1) {
+          throw new Error(
+            "Cart contains products from multiple stores. Multi-store checkout is not yet supported.",
+          );
+        }
+
+        // Lock the current cart products in a stable order, then price from
+        // those locked rows. This prevents a concurrent price/availability
+        // update from changing the item between validation and order creation.
+        const lockedProductIds = [
+          ...new Set(lockedCart.items.map((item) => item.productId)),
+        ].sort();
+        for (const productId of lockedProductIds) {
+          await database.$queryRaw<Array<{ id: string }>>`
+            SELECT "id"
+            FROM "Product"
+            WHERE "id" = ${productId}
+            FOR UPDATE
+          `;
+        }
+
+        const currentProducts = await database.product.findMany({
+          where: {
+            id: { in: lockedProductIds },
+            status: "ACTIVE",
+          },
+          include: {
+            store: {
+              select: { id: true, vendorId: true },
+            },
+          },
+        });
+        const currentProductsById = new Map(
+          currentProducts.map((product) => [product.id, product]),
+        );
+
+        preparedItems = lockedCart.items.map((item) => {
+          const product = currentProductsById.get(item.productId);
+          if (!product) {
+            throw new Error(`Product "${item.productId}" is not available.`);
+          }
+          if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+            throw new Error("Cart contains an invalid quantity.");
+          }
+          if (product.stock < item.quantity) {
+            throw new Error(`Insufficient stock for product "${product.name}".`);
+          }
+
+          const unitPrice = Number(product.price);
+          if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+            throw new Error(`Product "${product.name}" has an invalid price.`);
+          }
+
+          return {
+            productId: product.id,
+            storeId: product.storeId,
+            vendorId: product.store.vendorId,
+            quantity: item.quantity,
+            unitPrice,
+            subtotal: unitPrice * item.quantity,
+          };
+        });
+        subtotal = preparedItems.reduce(
+          (sum, item) => sum + item.subtotal,
+          0,
+        );
 
         const createdOrder = await database.order.create({
           data: {
