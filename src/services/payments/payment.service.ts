@@ -28,6 +28,7 @@ export interface CreatePaymentInput {
   userId: string;
   orderId: string;
   idempotencyKey: string;
+  provider?: string;
   metadata?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
@@ -39,8 +40,6 @@ export interface ConfirmPaymentInput {
   userId: string;
   paymentId: string;
   idempotencyKey: string;
-  providerPaymentId?: string;
-  provider?: string;
   metadata?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
