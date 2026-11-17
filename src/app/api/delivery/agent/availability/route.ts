@@ -169,10 +169,13 @@ export async function PATCH(request: Request) {
         code,
       },
       {
-        status:
-          code === "DELIVERY_AGENT_NOT_ACTIVE"
-            ? 409
-            : 500,
+        status: [
+          "DELIVERY_AGENT_NOT_ACTIVE",
+          "DELIVERY_AGENT_HAS_ACTIVE_DELIVERY",
+          "DELIVERY_AGENT_AVAILABILITY_CHANGED_RETRY",
+        ].includes(code)
+          ? 409
+          : 500,
       },
     );
   }
