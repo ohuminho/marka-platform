@@ -38,6 +38,9 @@ export interface MobilityDispatchSearchInput {
   vehicleTypes?: string[];
 
   safetyMode?: MobilitySafetyMode;
+
+  /** Internal exclusion list used when a driver rejects this ride. */
+  excludedDriverIds?: string[];
 }
 
 export interface MobilityDispatchAssignment {
@@ -122,46 +125,18 @@ function readPassengerCount(metadata: unknown): number {
 }
 
 export function readDispatchRejectedDriverIds(
-  metadata: Prisma.JsonValue | null | undefined,
+  events: Array<{ metadata: Prisma.JsonValue | null }>,
 ): string[] {
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return [];
-  }
+  return [...new Set(events.flatMap(({ metadata }) => {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return [];
+    }
 
-  const rejections = (metadata as Prisma.JsonObject).dispatchRejections;
-  if (!Array.isArray(rejections)) return [];
-
-  return [...new Set(rejections.flatMap((entry) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
-    const driverId = (entry as Prisma.JsonObject).driverId;
+    const driverId = (metadata as Prisma.JsonObject).rejectedDriverId;
     return typeof driverId === "string" && driverId.trim()
       ? [driverId]
       : [];
   }))];
-}
-
-export function buildDispatchRejectionMetadata(
-  metadata: Prisma.JsonValue | null,
-  rejection: { driverId: string; reason: string; rejectedAt: Date },
-): Prisma.InputJsonValue {
-  const current = metadata && typeof metadata === "object" && !Array.isArray(metadata)
-    ? metadata as Prisma.JsonObject
-    : {};
-  const previous = Array.isArray(current.dispatchRejections)
-    ? current.dispatchRejections
-    : [];
-
-  return {
-    ...current,
-    dispatchRejections: [
-      ...previous,
-      {
-        driverId: rejection.driverId,
-        reason: rejection.reason,
-        rejectedAt: rejection.rejectedAt.toISOString(),
-      },
-    ],
-  } as Prisma.InputJsonValue;
 }
 
 export class MobilityDispatchService {
@@ -223,7 +198,10 @@ export class MobilityDispatchService {
 
         passengerCount: readPassengerCount(ride.metadata),
 
-        excludedDriverIds: readDispatchRejectedDriverIds(ride.metadata),
+        excludedDriverIds: [...new Set([
+          ...await this.getRejectedDriverIds(ride.id, ride.organizationId),
+          ...(input.excludedDriverIds ?? []),
+        ])],
 
         vehicleTypes:
           resolveServiceVehicleTypes(
@@ -602,7 +580,6 @@ export class MobilityDispatchService {
       ride.id,
       {
         expectedDriverId: driverId,
-        reason: normalizedReason,
       },
     );
 
@@ -635,10 +612,9 @@ export class MobilityDispatchService {
     }
 
     return this.dispatch({
-      rideId:
-        refreshed.id,
-
+      rideId: refreshed.id,
       safetyMode,
+      excludedDriverIds: [driverId],
     });
   }
 
@@ -694,7 +670,7 @@ export class MobilityDispatchService {
 
         passengerCount: readPassengerCount(ride.metadata),
 
-        excludedDriverIds: readDispatchRejectedDriverIds(ride.metadata),
+        excludedDriverIds: await this.getRejectedDriverIds(ride.id, ride.organizationId),
 
         radiusMeters:
           input.radiusMeters,
@@ -933,6 +909,22 @@ export class MobilityDispatchService {
     };
   }
 
+  private async getRejectedDriverIds(
+    rideId: string,
+    organizationId: string,
+  ): Promise<string[]> {
+    const events = await prisma.mobilityRideOrchestrationEvent.findMany({
+      where: {
+        rideId,
+        organizationId,
+        action: "REJECT_ASSIGNMENT",
+      },
+      select: { metadata: true },
+    });
+
+    return readDispatchRejectedDriverIds(events);
+  }
+
   private async ensureSearching(
     rideId: string
   ): Promise<void> {
@@ -953,7 +945,7 @@ export class MobilityDispatchService {
 
   private async releaseCurrentAssignment(
     rideId: string,
-    rejection?: { expectedDriverId: string; reason: string },
+    rejection?: { expectedDriverId: string },
   ): Promise<void> {
     const ride =
       await this.requireRide(
@@ -1060,13 +1052,6 @@ export class MobilityDispatchService {
           vehicleId: null,
           driverAssignedAt: null,
           status: rejection ? MobilityRideStatus.SEARCHING : undefined,
-          metadata: rejection
-            ? buildDispatchRejectionMetadata(lockedRide.metadata, {
-                driverId,
-                reason: rejection.reason,
-                rejectedAt: new Date(),
-              })
-            : undefined,
         },
       });
 
