@@ -12,7 +12,6 @@ import {
   isTerminalRideStatus,
   resolveDriverAvailabilityForActiveRides,
   transitionRideStatus,
-  transitionNoDriverFoundToSearching,
 } from "@/services/mobility/rides/mobility-ride.state-machine";
 
 import { MobilityDomainError } from "@/services/mobility/errors/mobility-domain.error";
@@ -377,51 +376,6 @@ export class MobilityRideService {
           stops: {
             orderBy: { sequence: "asc" },
           },
-        },
-      });
-    });
-  }
-
-  // Reopens the same ride only after an explicit retry action. The status
-  // predicate is a compare-and-set guard against concurrent retries.
-  async retryNoDriverSearch(rideId: string) {
-    return prisma.$transaction(async (tx) => {
-      const ride = await tx.mobilityRide.findUnique({
-        where: { id: rideId },
-      });
-
-      if (!ride) {
-        throw new MobilityDomainError(
-          `Mobility ride ${rideId} was not found.`,
-          "RIDE_NOT_FOUND",
-        );
-      }
-
-      const nextStatus = transitionNoDriverFoundToSearching(ride.status);
-      const updated = await tx.mobilityRide.updateMany({
-        where: {
-          id: rideId,
-          status: MobilityRideStatus.NO_DRIVER_FOUND,
-          driverId: null,
-          vehicleId: null,
-        },
-        data: {
-          status: nextStatus,
-          updatedAt: new Date(),
-        },
-      });
-
-      if (updated.count !== 1) {
-        throw new MobilityDomainError(
-          "Ride retry was already claimed or its state changed. Refresh before trying again.",
-          "RIDE_STATE_CONFLICT",
-        );
-      }
-
-      return tx.mobilityRide.findUniqueOrThrow({
-        where: { id: rideId },
-        include: {
-          stops: { orderBy: { sequence: "asc" } },
         },
       });
     });
