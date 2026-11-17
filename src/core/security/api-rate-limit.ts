@@ -48,7 +48,12 @@ export async function reserveApiRequest(
     : identity.slice("anonymous:".length);
 
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-api-rate:${input.scope}:${identity}`}))`;
+    // pg_advisory_xact_lock returns PostgreSQL's VOID type. Selecting that
+    // value directly makes Prisma attempt to deserialize VOID and fail with
+    // P2010. Keep the lock call in a subquery and return a supported scalar.
+    await tx.$queryRaw`SELECT 1::int AS locked FROM (
+      SELECT pg_advisory_xact_lock(hashtext(${`marka-api-rate:${input.scope}:${identity}`}))
+    ) AS lock_guard`;
 
     const now = new Date();
     let retryAfterSeconds = 0;
