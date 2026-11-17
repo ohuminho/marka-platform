@@ -361,6 +361,7 @@ export async function PATCH(
       "ACCEPT",
       "DRIVER_ACCEPT",
       "REJECT_ASSIGNMENT",
+      "REJECT",
       "DRIVER_ARRIVING",
       "DRIVER_ARRIVED",
       "START_TRIP",
