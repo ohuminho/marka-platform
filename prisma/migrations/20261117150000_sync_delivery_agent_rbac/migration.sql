@@ -25,13 +25,7 @@ VALUES
   (gen_random_uuid()::text, 'SYSTEM_ADMIN', CURRENT_TIMESTAMP)
 ON CONFLICT ("action") DO NOTHING;
 
-WITH target_organizations AS (
-  SELECT id FROM "Organization"
-  WHERE slug = 'marka-platform' AND type = 'PLATFORM' AND status = 'ACTIVE'
-  UNION
-  SELECT DISTINCT "organizationId" FROM "DeliveryAgent"
-),
-platform_roles(name, description) AS (
+WITH platform_roles(name, description) AS (
   VALUES
     ('CUSTOMER', 'Standard MARKA customer'),
     ('VENDOR', 'MARKA vendor operator'),
@@ -81,7 +75,7 @@ ON CONFLICT ("userId", "roleId", "organizationId") DO NOTHING;
 
 -- Active delivery agents receive only the DELIVERY_AGENT operating role.
 INSERT INTO "UserRole" ("id", "userId", "roleId", "organizationId", "createdAt")
-SELECT gen_random_uuid()::text, da."userId", da.id, da."organizationId", CURRENT_TIMESTAMP
+SELECT gen_random_uuid()::text, da."userId", r.id, da."organizationId", CURRENT_TIMESTAMP
 FROM "DeliveryAgent" da
 JOIN "Role" r ON r."organizationId" = da."organizationId" AND r.name = 'DELIVERY_AGENT' AND r.status = 'ACTIVE'
 WHERE da.status = 'ACTIVE'
