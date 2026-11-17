@@ -947,7 +947,21 @@ export class MobilityRideService {
   }
 
   async getActiveRideForRider(riderId: string, organizationId: string) {
-    const ride = await prisma.mobilityRide.findFirst({
+    const include = {
+      driver: {
+        include: {
+          user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+          location: true,
+        },
+      },
+      vehicle: true,
+      stops: { orderBy: { sequence: "asc" as const } },
+    };
+
+    // Prefer a genuinely active ride. If none exists, return the latest
+    // NO_DRIVER_FOUND result so the passenger can see what happened after
+    // navigating away or refreshing the app.
+    const activeRide = await prisma.mobilityRide.findFirst({
       where: {
         riderId,
         organizationId,
@@ -965,17 +979,19 @@ export class MobilityRideService {
         },
       },
       orderBy: { requestedAt: "desc" },
-      include: {
-        driver: {
-          include: {
-            user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
-            location: true,
-          },
-        },
-        vehicle: true,
-        stops: { orderBy: { sequence: "asc" } },
-      },
+      include,
     });
+
+    const ride = activeRide ?? await prisma.mobilityRide.findFirst({
+      where: {
+        riderId,
+        organizationId,
+        status: MobilityRideStatus.NO_DRIVER_FOUND,
+      },
+      orderBy: { requestedAt: "desc" },
+      include,
+    });
+
     if (!ride?.driver?.user) return ride;
     const isIdentityVerified = await isMobilityDriverIdentityVerified(ride.driver.user.id);
     return {
