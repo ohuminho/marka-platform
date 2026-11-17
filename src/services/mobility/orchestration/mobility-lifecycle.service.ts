@@ -792,6 +792,13 @@ export class MobilityLifecycleService {
           rejectingDriverId,
           reason,
           safetyMode,
+          {
+            organizationId: input.organizationId,
+            actorUserId: input.actorUserId,
+            correlationId: input.correlationId,
+            requestId: input.requestId,
+            idempotencyKey: input.idempotencyKey,
+          },
         );
 
         const searching = await this.transitionPersisted(
