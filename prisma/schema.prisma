@@ -1080,6 +1080,7 @@ model StoreClaimRequest {
   @@unique([storeId, claimantUserId])
   @@index([status, createdAt])
   @@index([claimantUserId, createdAt])
+  @@index([reviewedBy])
 }
 
 model Category {
