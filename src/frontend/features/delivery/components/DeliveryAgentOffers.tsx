@@ -296,7 +296,7 @@ export default function DeliveryAgentOffers() {
             )}
           </div>
           {agent.status === "PENDING" && <p className="mt-4 rounded-xl border border-[var(--theme-border)] p-4 text-xs leading-6 text-[color-mix(in_srgb,var(--theme-text)_55%,transparent)]">A tua candidatura foi recebida e aguarda aprovação. Poderás activar a localização e receber pedidos depois da validação.</p>}
-          {agent.status === "ACTIVE" && agent.availability === "BUSY" && <p className="mt-4 rounded-xl border border-[var(--theme-border)] p-4 text-xs leading-6 text-[color-mix(in_srgb,var(--theme-text)_55%,transparent)]">Tens entregas atribuídas. Conclui-as antes de ficares offline. Podes continuar a receber e acompanhar as entregas já aceites.</p>}
+          {agent.status === "ACTIVE" && agent.availability === "BUSY" && <p className="mt-4 rounded-xl border border-[var(--theme-border)] p-4 text-xs leading-6 text-[color-mix(in_srgb,var(--theme-text)_55%,transparent)]">Tens entregas atribuídas. Podes aceitar outras ofertas próximas que apareçam na tua lista. Ficarás offline depois de concluíres todas as entregas.</p>}
           {agent.status !== "PENDING" && agent.status !== "ACTIVE" && <p className="mt-4 rounded-xl border border-[var(--theme-border)] p-4 text-xs leading-6 text-[color-mix(in_srgb,var(--theme-text)_55%,transparent)]">O teu perfil não está activo. Contacta a equipa MARKA para obter esclarecimentos.</p>}
           {agent.status === "ACTIVE" && <div className="mt-4 flex flex-wrap gap-3">
             <a href="/app/delivery-agent/deliveries" className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--theme-text)]">As minhas entregas</a>
@@ -322,7 +322,7 @@ export default function DeliveryAgentOffers() {
                 </div>
                 <div className="text-left sm:text-right">
                   <p className="text-lg font-medium text-[var(--theme-text)]">{offer.order.total} {offer.order.currency}</p>
-                  <button type="button" onClick={() => void accept(offer.dispatchId)} disabled={actionId !== null || agent.availability !== "AVAILABLE"} className="mt-3 rounded-full border border-[var(--theme-border)] bg-[var(--theme-text)]/[0.04] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)] disabled:opacity-40">
+                  <button type="button" onClick={() => void accept(offer.dispatchId)} disabled={actionId !== null || (agent.availability !== "AVAILABLE" && agent.availability !== "BUSY")} className="mt-3 rounded-full border border-[var(--theme-border)] bg-[var(--theme-text)]/[0.04] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)] disabled:opacity-40">
                     {actionId === offer.dispatchId ? "A aceitar…" : "Aceitar entrega"}
                   </button>
                 </div>
