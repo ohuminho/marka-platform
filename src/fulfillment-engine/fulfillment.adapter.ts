@@ -48,6 +48,20 @@ export class FulfillmentAdapter
       });
 
     if (existing) {
+      // An order has exactly one fulfillment. Never silently reuse a request
+      // from another organization or with different pickup/destination data.
+      if (
+        existing.organizationId !== input.organizationId ||
+        existing.pickupType !== input.pickup.type ||
+        existing.pickupId !== input.pickup.id ||
+        existing.destinationType !== input.destination.type ||
+        existing.destinationId !== input.destination.id
+      ) {
+        throw new Error(
+          "Existing fulfillment does not match the confirmed order context.",
+        );
+      }
+
       const ensured =
         await this.ensureDeliveryDispatch(
           existing,
@@ -218,7 +232,19 @@ export class FulfillmentAdapter
         longitude,
       )
     ) {
-      return request;
+      await this.recordEvent(
+        "fulfillment.dispatch.blocked",
+        request.id,
+        request.organizationId,
+        {
+          orderId: request.orderId,
+          reason: "CUSTOMER_DESTINATION_COORDINATES_MISSING",
+        },
+      );
+
+      throw new Error(
+        "Delivery dispatch is blocked: customer destination coordinates are missing.",
+      );
     }
 
     if (
@@ -239,7 +265,9 @@ export class FulfillmentAdapter
         },
       );
 
-      return request;
+      throw new Error(
+        "Delivery dispatch is blocked: customer destination coordinates are invalid.",
+      );
     }
 
     const store =
@@ -259,7 +287,23 @@ export class FulfillmentAdapter
       store.latitude === null ||
       store.longitude === null
     ) {
-      return request;
+      await this.recordEvent(
+        "fulfillment.dispatch.blocked",
+        request.id,
+        request.organizationId,
+        {
+          orderId: request.orderId,
+          reason: !store
+            ? "PICKUP_STORE_NOT_FOUND"
+            : "PICKUP_STORE_COORDINATES_MISSING",
+        },
+      );
+
+      throw new Error(
+        !store
+          ? "Delivery dispatch is blocked: pickup store was not found."
+          : "Delivery dispatch is blocked: pickup store coordinates are missing.",
+      );
     }
 
     const existingDispatch =
@@ -406,7 +450,9 @@ export class FulfillmentAdapter
         },
       );
 
-      return request;
+      throw new Error(
+        "Delivery dispatch could not be created. The confirmed payment and order are preserved; retry fulfillment recovery.",
+      );
     }
   }
 
