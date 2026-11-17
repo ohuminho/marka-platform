@@ -63,9 +63,7 @@ export async function POST(
       );
     }
 
-    const clientIp =
-      request.headers.get("x-real-ip")?.trim() ||
-      request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+    const clientIp = getClientIp(request);
 
     const ipQuota = await reserveApiRequest({
       scope: "AUTH_LOGIN_IP",
