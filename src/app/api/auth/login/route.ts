@@ -3,6 +3,7 @@ import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { getTrustedClientIp } from "@/core/security/client-ip";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
+import { isPrivilegedLoginAccount } from "@/core/authentication/login-policy";
 import { passwordService } from "@/core/authentication/password.service";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
@@ -66,11 +67,7 @@ export async function POST(request: Request) {
       where: { emailNormalized: email },
     });
 
-    const isPrivilegedAccount = Boolean(
-      user &&
-      user.status === "ACTIVE" &&
-      (user.isFounder || user.role === "ADMIN" || user.role === "SUPER_ADMIN"),
-    );
+    const isPrivilegedAccount = isPrivilegedLoginAccount(user);
     const clientIp = getTrustedClientIp(request);
 
     if (!isPrivilegedAccount) {
