@@ -511,6 +511,161 @@ export class DispatchAdapter implements DispatchPort {
     );
   }
 
+  async recoverTerminalDelivery(
+    requestId: string,
+    reason: string,
+  ): Promise<DispatchRequest> {
+    const normalizedReason = reason.trim();
+    if (!requestId.trim() || !normalizedReason) {
+      throw new Error("Dispatch request and recovery reason are required.");
+    }
+
+    const request = await this.requireRequest(requestId);
+    if (
+      request.serviceType !== "DELIVERY" ||
+      request.subjectType !== "FULFILLMENT" ||
+      (request.status !== "CANCELLED" && request.status !== "EXPIRED")
+    ) {
+      throw new Error("Only terminal fulfillment delivery dispatches can be recovered.");
+    }
+
+    const recovered = await prisma.$transaction(async (database) => {
+      await database.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "FulfillmentRequest"
+        WHERE "id" = ${request.subjectId}
+        FOR UPDATE
+      `;
+      await database.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "DispatchRequest"
+        WHERE "id" = ${requestId}
+        FOR UPDATE
+      `;
+
+      const fulfillment = await database.fulfillmentRequest.findUnique({
+        where: { id: request.subjectId },
+        select: { id: true, organizationId: true, status: true },
+      });
+      const current = await database.dispatchRequest.findUnique({
+        where: { id: requestId },
+      });
+
+      if (
+        !fulfillment ||
+        fulfillment.organizationId !== request.organizationId ||
+        !current ||
+        current.subjectType !== "FULFILLMENT" ||
+        current.subjectId !== fulfillment.id
+      ) {
+        throw new Error("Fulfillment dispatch context is no longer valid.");
+      }
+
+      if (
+        fulfillment.status !== "REQUESTED" &&
+        fulfillment.status !== "ASSIGNED" &&
+        fulfillment.status !== "EXCEPTION"
+      ) {
+        throw new Error("Delivery cannot be recovered after pickup or while in transit.");
+      }
+
+      if (current.status !== "CANCELLED" && current.status !== "EXPIRED") {
+        throw new Error("Dispatch state changed; retry recovery using the current state.");
+      }
+
+      if (current.acceptedAgentId) {
+        const agentLock = await database.deliveryAgent.updateMany({
+          where: {
+            id: current.acceptedAgentId,
+            organizationId: current.organizationId,
+            status: "ACTIVE",
+            availability: "BUSY",
+          },
+          data: { availability: "BUSY" },
+        });
+
+        if (agentLock.count === 1) {
+          const otherActiveDeliveries = await database.dispatchRequest.count({
+            where: {
+              id: { not: requestId },
+              organizationId: current.organizationId,
+              serviceType: "DELIVERY",
+              acceptedAgentId: current.acceptedAgentId,
+              status: "ACCEPTED",
+            },
+          });
+
+          if (otherActiveDeliveries === 0) {
+            await database.deliveryAgent.updateMany({
+              where: {
+                id: current.acceptedAgentId,
+                organizationId: current.organizationId,
+                status: "ACTIVE",
+                availability: "BUSY",
+              },
+              data: { availability: "AVAILABLE" },
+            });
+          }
+        }
+      }
+
+      await database.dispatchCandidate.deleteMany({
+        where: { dispatchRequestId: requestId },
+      });
+
+      const reset = await database.dispatchRequest.updateMany({
+        where: {
+          id: requestId,
+          status: current.status,
+          acceptedAgentId: current.acceptedAgentId,
+        },
+        data: {
+          status: "REASSIGNING",
+          assignedAgentId: null,
+          acceptedAgentId: null,
+          metadata: {
+            ...this.jsonRecord(current.metadata),
+            recoveryReason: normalizedReason,
+            recoveredAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      if (reset.count !== 1) {
+        throw new Error("Dispatch state changed during recovery.");
+      }
+
+      await database.fulfillmentRequest.update({
+        where: { id: fulfillment.id },
+        data: {
+          status: "REQUESTED",
+          assignedAgentId: null,
+          exceptionCode: null,
+        },
+      });
+
+      return database.dispatchRequest.findUniqueOrThrow({
+        where: { id: requestId },
+      });
+    }, {
+      isolationLevel: "Serializable",
+      maxWait: 5000,
+      timeout: 10000,
+    });
+
+    await this.recordEvent("dispatch.recovered", requestId, {
+      reason: normalizedReason,
+      previousStatus: request.status,
+      fulfillmentId: request.subjectId,
+    });
+
+    const contract = this.toContract(recovered);
+    await this.discoverCandidates(contract);
+    return this.toContract(
+      await this.requireRequest(requestId),
+    );
+  }
+
   async reassign(
     requestId: string,
     reason: string,
