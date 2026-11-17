@@ -132,7 +132,12 @@ export function readDispatchRejectedDriverIds(
       return [];
     }
 
-    const driverId = (metadata as Prisma.JsonObject).rejectedDriverId;
+    const result = (metadata as Prisma.JsonObject).result;
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      return [];
+    }
+
+    const driverId = (result as Prisma.JsonObject).rejectedDriverId;
     return typeof driverId === "string" && driverId.trim()
       ? [driverId]
       : [];
