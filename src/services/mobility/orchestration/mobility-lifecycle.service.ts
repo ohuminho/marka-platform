@@ -828,10 +828,55 @@ export class MobilityLifecycleService {
           );
         }
 
+        const paymentBefore =
+          await mobilityPaymentEngineService.getByRide(
+            input.rideId,
+          );
+
         await mobilityRideService.cancel(
           input.rideId,
           reason,
         );
+
+        if (
+          paymentBefore &&
+          (
+            paymentBefore.status === "PENDING" ||
+            paymentBefore.status === "AUTHORIZED"
+          )
+        ) {
+          await financialAuditService.record({
+            organizationId:
+              input.organizationId,
+            actorUserId:
+              input.actorUserId,
+            action:
+              "MOBILITY_PAYMENT_CANCELLED_WITH_RIDE",
+            entityType:
+              "MOBILITY_RIDE_PAYMENT",
+            entityId:
+              paymentBefore.id,
+            correlationId:
+              input.correlationId,
+            requestId:
+              input.requestId,
+            ipAddress:
+              input.ipAddress,
+            userAgent:
+              input.userAgent,
+            metadata: {
+              rideId:
+                input.rideId,
+              previousStatus:
+                paymentBefore.status,
+              nextStatus:
+                "CANCELLED",
+              reason,
+              source:
+                "MOBILITY_LIFECYCLE",
+            },
+          });
+        }
 
         return this.advance(
           orchestration,
