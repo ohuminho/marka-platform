@@ -240,6 +240,43 @@ export class MobilityRideService {
           },
         });
 
+        // Serialize trip creation per passenger. Without this lock, two
+        // simultaneous requests can both pass the active-trip check and
+        // create separate rides before either transaction commits.
+        await tx.$queryRaw`
+          SELECT "id"
+          FROM "User"
+          WHERE "id" = ${input.riderId}
+          FOR UPDATE
+        `;
+
+        const activeRide = await tx.mobilityRide.findFirst({
+          where: {
+            organizationId: input.organizationId,
+            riderId: input.riderId,
+            status: {
+              in: [
+                MobilityRideStatus.REQUESTED,
+                MobilityRideStatus.SEARCHING,
+                MobilityRideStatus.MATCHED,
+                MobilityRideStatus.DRIVER_ASSIGNED,
+                MobilityRideStatus.DRIVER_ARRIVING,
+                MobilityRideStatus.DRIVER_ARRIVED,
+                MobilityRideStatus.TRIP_STARTED,
+                MobilityRideStatus.TRIP_IN_PROGRESS,
+              ],
+            },
+          },
+          select: { id: true, reference: true },
+        });
+
+        if (activeRide) {
+          throw new MobilityDomainError(
+            "Já existe uma viagem ativa. Termine ou cancele essa viagem antes de solicitar outra.",
+            "RIDER_HAS_ACTIVE_RIDE",
+          );
+        }
+
         const created = await tx.mobilityRide.create({
           data: {
             organizationId: input.organizationId,
