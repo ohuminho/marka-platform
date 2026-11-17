@@ -21,7 +21,7 @@ export class PasswordResetService {
     const issued = await prisma.$transaction(async (tx) => {
       // Serialize requests for the same account so concurrent requests cannot
       // bypass the one-minute cooldown or leave multiple usable reset tokens.
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-password-reset:${userId}`}))`;
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-password-reset:${userId}`})) IS NULL AS locked`;
 
       const recent = await tx.passwordResetToken.findFirst({
         where: {
