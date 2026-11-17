@@ -4,15 +4,10 @@ import { prisma } from "@/database/client/prisma";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { passwordResetService } from "@/core/authentication/password-reset.service";
 import { sendPasswordResetEmail } from "@/core/authentication/password-reset-delivery.service";
+import { getTrustedClientIp } from "@/core/security/client-ip";
 
 const schema = z.object({ email: z.string().trim().toLowerCase().email().max(254) });
 const genericMessage = "Se existir uma conta elegível para esse endereço, receberás instruções de recuperação.";
-
-function clientIp(request: Request): string | undefined {
-  return request.headers.get("x-real-ip")?.trim()
-    || request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
-    || undefined;
-}
 
 export async function POST(request: Request) {
   try {
@@ -21,16 +16,19 @@ export async function POST(request: Request) {
     if (!parsed.success) return Response.json({ message: genericMessage });
 
     const email = parsed.data.email;
-    const ipQuota = await reserveApiRequest({
-      scope: "AUTH_PASSWORD_RESET_REQUEST_IP",
-      anonymousIdentity: clientIp(request) || `password-reset-email:${email}`,
-      windows: [{ limit: 10, windowMs: 60 * 60 * 1000 }],
-    });
-    if (!ipQuota.allowed) {
-      return Response.json(
-        { message: genericMessage, code: "PASSWORD_RESET_RATE_LIMITED" },
-        { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
-      );
+    const trustedIp = getTrustedClientIp(request);
+    if (trustedIp) {
+      const ipQuota = await reserveApiRequest({
+        scope: "AUTH_PASSWORD_RESET_REQUEST_IP",
+        anonymousIdentity: trustedIp,
+        windows: [{ limit: 10, windowMs: 60 * 60 * 1000 }],
+      });
+      if (!ipQuota.allowed) {
+        return Response.json(
+          { message: genericMessage, code: "PASSWORD_RESET_RATE_LIMITED" },
+          { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     const emailQuota = await reserveApiRequest({
