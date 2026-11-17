@@ -233,6 +233,11 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "DRIVER_ARRIVING"].includes(selectedOrchestration?.currentStep ?? "") &&
     ["DRIVER_ASSIGNED", "DRIVER_ARRIVING"].includes(ride?.status ?? "");
 
+  useEffect(() => {
+    setRejectionReason("");
+    setActionError(null);
+  }, [ride?.id]);
+
   const toggleDriverAvailability = async () => {
     if (!organizationId || availabilityLoading || active) return;
     setAvailabilityLoading(true); setAvailabilityError(null);
