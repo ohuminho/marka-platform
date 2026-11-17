@@ -1,74 +1,69 @@
-# MARKA Marketplace Delivery Batching, Notifications and Live Tracking
+# MARKA Marketplace Delivery: Simple Dispatch, Tracking and Notifications
 
-Status: Accepted architecture decision
-Date: 2026-10-30
-Scope: Marketplace, Fulfillment, Dispatch, Mobility and customer order tracking
+Status: Current product decision
+Updated: 2026-11-04
+Scope: Marketplace fulfillment and delivery dispatch
 
 ## Product decisions
 
-1. A customer checkout spanning multiple sellers remains one customer-facing purchase, but is fulfilled through seller-specific child orders/fulfillment legs. Each leg retains its seller, items, pickup point, price allocation, status, cancellation/refund boundary and proof of delivery.
-2. A delivery provider may accept a delivery batch containing multiple seller pickups when the route is operationally compatible. Example: three shops in Cidade da China, one customer destination, one motorcycle and one courier.
-3. A batch is not restricted to identical pickup coordinates. It can contain nearby pickup stops and one destination or a small compatible destination cluster, subject to route detour, vehicle capacity, parcel constraints, food-safety constraints and promised delivery windows.
-4. The customer sees one consolidated delivery journey where appropriate, while retaining item/package-level status and proof for each seller leg.
-5. Seller-owned delivery remains supported. A seller can fulfil its own leg; other legs in the same parent purchase may use MARKA dispatch. Mixed delivery modes must not corrupt the aggregate order status.
-6. Marketplace commission is calculated on the global customer-facing amount according to configured commercial policy, with product, seller delivery, platform delivery and tax/fee components recorded separately. Never infer or silently change the financial ledger calculation; commission rules must be explicit and auditable.
-7. Driver acceptance is atomic. Two providers must never claim the same leg, and a batch acceptance must either claim every included eligible leg or none.
-8. A provider may only be offered a batch when all included legs remain eligible and the provider's transport mode, capacity, verification, availability and route are compatible.
+1. Keep the customer checkout and fulfillment boundaries already implemented. Each seller fulfillment has its own delivery request, status, assignment and proof of delivery.
+2. A nearby eligible courier may accept a delivery even when already handling another delivery. The courier does not need to finish the first delivery before accepting a second nearby request.
+3. Do not require delivery batching, route clustering, multi-pickup optimization or a consolidated delivery journey for the initial product. Each accepted delivery follows its own independent lifecycle.
+4. A courier may accept requests sequentially as they appear nearby. Matching must consider both AVAILABLE and BUSY couriers, subject to ACTIVE status, valid recent location, service area and applicable verification/vehicle requirements.
+5. Acceptance of each individual request must be atomic: only one courier can win a given request. Accepting a second request must not overwrite or detach the first assignment.
+6. A courier returns to AVAILABLE only when no other active accepted delivery remains. Completing, cancelling, expiring or reassigning one request must not make the courier available while another accepted delivery is still active.
+7. Seller-owned delivery remains supported. Seller delivery and MARKA-dispatched fulfillment must not corrupt the parent order or other fulfillment states.
+8. Preserve existing financial boundaries: do not hold seller funds in MARKA wallets; payment settlement and platform revenue remain governed by the financial architecture and auditable ledger.
 
-## Batch discovery and acceptance
+## Dispatch lifecycle and courier availability
 
-- Group eligible unassigned delivery legs by destination geofence and compatible delivery window.
-- Cluster pickup points by route distance, not merely straight-line distance. A batch candidate must have one final destination (or a narrowly bounded destination cluster), acceptable added detour and an allowed pickup sequence.
-- Calculate a transparent offer: pickup count and locations, destination, total route distance/time, parcel/vehicle requirements, expected payout and expiry.
-- Send an offer to nearby eligible providers, progressively widening the search radius when needed.
-- On acceptance, execute one database transaction: lock/claim the batch and all legs, verify each leg is still eligible, claim the provider, persist assignments, and reject the whole operation if any leg has already been claimed. Use idempotency keys for retries.
-- A batch can be partially re-planned only through an explicit audited operation; never silently detach a seller leg after a provider has accepted.
-- Track arrival at each pickup, each package's pickup confirmation, departure, customer approach and final handover. Each package has its own proof/OTP even when one courier completes the consolidated route.
+- Create one dispatch request per fulfillment/delivery leg.
+- Discover nearby ACTIVE couriers with a valid, recent location. BUSY is not an exclusion: a courier with active work can receive and accept another suitable request.
+- On acceptance, use a database transaction and conditional update so concurrent couriers cannot claim the same dispatch request.
+- Mark the courier BUSY after acceptance. BUSY means the courier has active work; it does not mean unavailable for additional nearby offers.
+- On completion, cancellation, expiry or reassignment, count the courier's other active accepted delivery requests, excluding the request being closed or reassigned. Set AVAILABLE only when that count is zero.
+- Keep each delivery's pickup, handover, cancellation and completion states independent. Do not introduce mandatory batching or route planning into this flow.
+- If no eligible courier is found, keep the request in a retryable/searching state and show an honest status. Never fabricate an assignment or tracking position.
 
-## Live customer tracking
+## Location and customer tracking
 
-- Driver app/PWA sends GPS updates only during an active accepted delivery, with explicit location permission and clear foreground/background status.
-- Store a throttled latest-location snapshot and append operational milestones; do not persist every GPS sample indefinitely. Retention and access are purpose-limited.
-- Stream current position and status changes to the authorized customer order channel using Supabase Realtime (existing Supabase project), with authenticated channel authorization. Never broadcast a driver's location globally.
-- Customer view shows courier position, route, pickup stops, current milestone, ETA range, last update time and a stale-location warning. It must distinguish live GPS from an ETA estimate.
-- If connectivity drops, retain the last known location and timestamp, then resume streaming. Do not fabricate movement or claim live tracking while stale.
-- Use OpenStreetMap-compatible map tiles and an open routing engine (OSRM or Valhalla) behind a provider abstraction. Respect tile/service usage policies; free public endpoints are not a production SLA. Self-hosting removes per-request licensing fees but still requires compute and operations.
+- Use location only for dispatch and active delivery tracking, with explicit permission and clear purpose.
+- Require a recent location timestamp for proximity matching; stale coordinates must not be treated as live.
+- Customer tracking must be scoped to the customer's own order/fulfillment and its assigned courier.
+- Show last update time and stale-location state. Never fabricate movement or claim live tracking when updates have stopped.
+- Use OpenStreetMap-compatible mapping and an open routing engine behind an abstraction. Public free endpoints are not a production SLA; self-hosting still has compute and operational costs.
 
-## Notifications: zero licence-cost baseline
+## Notifications
 
-- Use standards-based Web Push (VAPID) with a service worker for installed PWA/browser push; store subscriptions per user/device, support expiry/revocation and rotate credentials securely.
-- Use Supabase Realtime for in-app foreground updates and Web Push for background/offline alerts. Notification records remain durable in the application database; push delivery is an alert channel, not the source of truth.
-- Use an outbox/event pattern so order, dispatch, pickup, delay, cancellation and completion events are committed before delivery attempts. Retry transient failures with backoff and deduplicate by event/device.
-- Notification preferences cover sound, vibration, quiet hours and critical operational alerts. Short non-looping sounds only.
-- No paid push vendor is required for the baseline. Web Push browser delivery itself is provided by browser push services; free quotas and platform policies apply. Zero licence cost is not a promise of unlimited hosting, bandwidth, maps or database usage. Self-hosting ntfy is a possible optional transport, but it still needs a server and operational maintenance.
+- In-app state and durable application records remain the source of truth.
+- Web Push (VAPID) can provide a zero-licence-cost browser/PWA baseline, subject to browser policies and hosting/operations costs.
+- Push subscriptions, expiry, revocation, retries, deduplication and user preferences must be implemented before claiming background push is production-ready.
+- Do not claim push notifications are active merely because realtime events exist.
 
-## Existing implementation facts to preserve
+## Verified implementation facts to preserve
 
-- Prisma already has DeliveryAgent with transport mode, availability and last-known latitude/longitude.
-- FulfillmentRequest is currently one-to-one with Order.
-- DispatchRequest currently has one subjectType/subjectId, one accepted agent, and candidates; it is unique per subject.
-- DispatchAdapter.accept() already uses a transaction and atomically claims an available delivery agent and dispatch request.
-- FulfillmentAdapter creates a dispatch request for each individual fulfillment and persists the destination in fulfillment metadata.
-- The current schema therefore does not yet represent one dispatch batch containing multiple fulfillment legs. Do not remove the single-store checkout guard or simply attach several orders to one existing dispatch row; that would bypass per-leg assignment, payment allocation, status and refund invariants.
-- No durable push-subscription/notification implementation was found during this audit. Do not claim push notifications are active merely because realtime events exist.
+- Prisma has DeliveryAgent with transport mode, availability and last-known latitude/longitude.
+- DispatchRequest represents one subject/delivery request and one accepted agent.
+- DispatchAdapter.accept() permits ACTIVE delivery agents whose availability is AVAILABLE or BUSY, and uses a transaction plus conditional dispatch update to prevent two couriers accepting the same request.
+- Delivery matching considers BUSY and AVAILABLE agents, subject to active status, recent location and proximity.
+- DispatchAdapter.complete(), cancel(), expire() and reassign() count other ACCEPTED delivery requests while excluding the request being closed/reassigned. Do not reintroduce a BUSY lockout or count the current request as another active delivery.
+- Fulfillment completion has its own lifecycle. Keep dispatch and fulfillment states consistent.
+- The current schema does not implement multi-request batches or consolidated multi-seller routing. That is intentional for the current product scope, not a reason to block sequential acceptance.
 
-## Required implementation sequence
+## Deferred enhancements (not required to launch the simple flow)
 
-1. Multi-seller commercial aggregate: parent checkout/order, seller child orders, line-level allocations, one customer payment intent/capture, idempotent payment confirmation, commission allocation and per-child refund/cancellation. Preserve the existing ledger and inventory reservation invariants.
-2. Delivery batch schema: batch, batch legs (one leg per seller fulfillment), provider offer/claim, pickup stop sequence, package proof and lifecycle event records. Add uniqueness/locking constraints for active assignments.
-3. Dispatch matching: nearby providers, transport/capacity/verification filters, route-based batching, progressive offer fan-out, atomic whole-batch acceptance and recovery/reassignment.
-4. Durable notifications: event outbox, notification inbox, Web Push subscriptions, VAPID configuration, service worker, retries, deduplication and preferences.
-5. Live tracking: authenticated Realtime channels, location update endpoint, throttling, retention, route/ETA, stale-state handling and customer UI.
-6. Marketplace media: product/listing gallery accepts photos and vertical videos up to 60 seconds, with server-side duration validation, poster/thumbnail, moderation and storage lifecycle. This is a separate media pipeline but shares the listing and order context.
-7. Verification: unit/integration tests for concurrent accept, mixed seller delivery modes, batch capacity, duplicate events, push expiry, lost connectivity, location privacy, partial seller cancellation/refund, inventory release, and customer-visible aggregate state; then production smoke tests.
+- Optional route suggestions for couriers handling several nearby deliveries, without preventing independent acceptance.
+- Optional multi-pickup batch offers only after operational evidence justifies the complexity and only with explicit per-fulfillment accounting and lifecycle.
+- Durable Web Push inbox/subscriptions and authenticated realtime tracking.
+- Advanced ETA, route optimization, proof-of-delivery and offline synchronization.
 
 ## Acceptance scenarios
 
-- Three sellers at the same market, same buyer destination: one compatible courier can receive and accept one three-pickup batch; only one courier can win.
-- Three sellers at nearby points, same destination: batch allowed only if route detour, time window and capacity rules pass.
-- Same destination but incompatible food/temperature or parcel size: separate batches.
-- One seller uses own delivery and two use MARKA: aggregate checkout remains one purchase; two dispatchable legs can be batched; seller-owned leg remains independent.
-- A courier loses connectivity mid-route: customer sees last update time and stale state; milestones sync when online.
-- Customer tracks only their own order and cannot query unrelated driver coordinates.
-- Push is disabled/expired: durable inbox still records events and in-app state remains correct.
-- Two couriers accept concurrently: exactly one atomic batch claim succeeds.
+- A courier with no active delivery can accept a nearby request and becomes BUSY.
+- The same courier, while BUSY with the first request, can accept a second eligible nearby request.
+- Two couriers attempting the same request concurrently: exactly one acceptance succeeds.
+- Completing one of two active requests leaves the courier BUSY.
+- Cancelling, expiring or reassigning one of two active requests leaves the courier BUSY.
+- Completing/cancelling/expiring/reassigning the final active request returns the courier to AVAILABLE.
+- A stale or missing courier location excludes that courier from proximity offers.
+- A customer cannot access another customer's delivery location or tracking channel.
