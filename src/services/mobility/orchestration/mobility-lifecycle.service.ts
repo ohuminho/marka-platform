@@ -86,6 +86,7 @@ const TRANSITIONS: Record<
     "CANCELLED",
     "FAILED",
     "RECOVERY_REQUIRED",
+    "SEARCHING",
   ],
 
   DRIVER_ACCEPTED: [
@@ -94,6 +95,7 @@ const TRANSITIONS: Record<
     "CANCELLED",
     "FAILED",
     "RECOVERY_REQUIRED",
+    "SEARCHING",
   ],
 
   DRIVER_ARRIVING: [
@@ -102,6 +104,7 @@ const TRANSITIONS: Record<
     "CANCELLED",
     "FAILED",
     "RECOVERY_REQUIRED",
+    "SEARCHING",
   ],
 
   DRIVER_ARRIVED: [
@@ -757,6 +760,74 @@ export class MobilityLifecycleService {
           orchestration,
           input,
           "DRIVER_ACCEPTED",
+        );
+      }
+
+      case "REJECT_ASSIGNMENT": {
+        const reason = input.reason?.trim();
+        if (!reason) {
+          throw new Error("Assignment rejection reason is required.");
+        }
+
+        const ride = await this.requireRide(
+          input.organizationId,
+          input.rideId,
+        );
+        if (!ride.driverId) {
+          throw new Error("Ride has no assigned driver.");
+        }
+
+        const rejectingDriverId = ride.driverId;
+        const driver = await prisma.mobilityDriver.findUnique({
+          where: { id: rejectingDriverId },
+          select: { id: true, userId: true },
+        });
+
+        if (!driver || driver.userId !== input.actorUserId) {
+          throw new Error("Only the assigned driver may reject this ride.");
+        }
+
+        const dispatch = await mobilityDispatchService.rejectAssignment(
+          input.rideId,
+          rejectingDriverId,
+          reason,
+          safetyMode,
+        );
+
+        const searching = await this.transitionPersisted(
+          orchestration,
+          {
+            ...input,
+            idempotencyKey: `${input.idempotencyKey}:rejection-searching`,
+          },
+          "SEARCHING",
+          {
+            rejectedDriverId: rejectingDriverId,
+            reason,
+            candidateCount: dispatch.candidates.length,
+          },
+        );
+
+        if (!dispatch.assignment) {
+          return this.advance(
+            searching,
+            input,
+            "FAILED",
+            {
+              dispatchStatus: dispatch.status,
+              candidateCount: dispatch.candidates.length,
+              rejectedDriverId: rejectingDriverId,
+              reason: "NO_ELIGIBLE_DRIVER_AFTER_REJECTION",
+            },
+            "FAILED",
+          );
+        }
+
+        return this.advance(
+          searching,
+          input,
+          "DRIVER_ASSIGNED",
+          dispatch.assignment,
         );
       }
 
