@@ -20,6 +20,7 @@ export interface MobilityMatchRequest {
   serviceType: string;
   vehicleTypes?: string[];
   passengerCount?: number;
+  excludedDriverIds?: string[];
   radiusMeters?: number;
   limit?: number;
 }
@@ -69,6 +70,9 @@ export class MobilityMatchingService {
       await prisma.mobilityDriver.findMany({
         where: {
           organizationId: input.organizationId,
+          id: input.excludedDriverIds?.length
+            ? { notIn: input.excludedDriverIds }
+            : undefined,
           status: MobilityDriverStatus.ACTIVE,
           AND: [
             ...requiredDriverDocuments.map(currentVerifiedDocument),
