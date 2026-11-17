@@ -100,17 +100,15 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!user) {
-      return NextResponse.json(
-        {
-          message: "Invalid credentials.",
-          code: "INVALID_CREDENTIALS",
-        },
-        { status: 401, headers: { "Cache-Control": "no-store" } },
-      );
-    }
-
-    const valid = await passwordService.compare(password, user.password);
+    // Use a lazily-created bcrypt hash for unknown accounts so the
+    // credential path still performs a real password-hash comparison.
+    // The promise is shared by warm instances and never contains user data.
+    const dummyPasswordHash = passwordService.hash(
+      "marka-auth-dummy-password-comparison",
+    );
+    const valid = user
+      ? await passwordService.compare(password, user.password)
+      : await passwordService.compare(password, await dummyPasswordHash);
 
     if (!valid) {
       // Only failed credentials consume login quota. Successful logins no
