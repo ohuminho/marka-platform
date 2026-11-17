@@ -360,6 +360,7 @@ export async function PATCH(
     new Set([
       "ACCEPT",
       "DRIVER_ACCEPT",
+      "REJECT_ASSIGNMENT",
       "DRIVER_ARRIVING",
       "DRIVER_ARRIVED",
       "START_TRIP",
@@ -430,8 +431,8 @@ export async function PATCH(
     }
 
     if (
-      lifecycleAction ===
-      "CANCEL"
+      lifecycleAction === "REJECT_ASSIGNMENT" ||
+      lifecycleAction === "CANCEL"
     ) {
       const reason =
         typeof body.reason ===
@@ -443,9 +444,13 @@ export async function PATCH(
         return NextResponse.json(
           {
             message:
-              "Cancellation reason is required.",
+              lifecycleAction === "REJECT_ASSIGNMENT"
+                ? "Assignment rejection reason is required."
+                : "Cancellation reason is required.",
             code:
-              "RIDE_CANCELLATION_REASON_REQUIRED",
+              lifecycleAction === "REJECT_ASSIGNMENT"
+                ? "DISPATCH_REJECTION_REASON_REQUIRED"
+                : "RIDE_CANCELLATION_REASON_REQUIRED",
           },
           {
             status: 400,
@@ -781,6 +786,10 @@ function normalizeLifecycleAction(
     case "ACCEPT":
     case "DRIVER_ACCEPT":
       return "ACCEPT";
+
+    case "REJECT_ASSIGNMENT":
+    case "REJECT":
+      return "REJECT_ASSIGNMENT";
 
     case "DRIVER_ARRIVING":
       return "DRIVER_ARRIVING";
