@@ -105,7 +105,7 @@ export class AuthorizationService {
       ? await prisma.role.findMany({
           where: {
             organizationId: { in: organizationIds },
-            organization: { type: "PLATFORM" },
+            organization: { is: { type: "PLATFORM" } },
             name: legacyRoleName,
             status: "ACTIVE",
           },
