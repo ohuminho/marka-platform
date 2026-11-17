@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
 type TransportMode = "WALK" | "BICYCLE" | "MOTORCYCLE" | "CAR" | "VAN";
 type AgentProfile = {
@@ -108,8 +108,11 @@ export default function DeliveryAgentOffers() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  const agentId = agent?.id;
+  const shouldTrackLocation = agent?.status === "ACTIVE" && ["AVAILABLE", "BUSY"].includes(agent.availability);
+
   useEffect(() => {
-    if (!agent || agent.status !== "ACTIVE" || !["AVAILABLE", "BUSY"].includes(agent.availability) || !navigator.geolocation) {
+    if (!agentId || !shouldTrackLocation || !navigator.geolocation) {
       return;
     }
 
@@ -137,9 +140,9 @@ export default function DeliveryAgentOffers() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [agent?.id, agent?.status, agent?.availability]);
+  }, [agentId, shouldTrackLocation]);
 
-  async function register(event: React.FormEvent<HTMLFormElement>) {
+  async function register(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setRegistrationBusy(true);
     setError(null);
