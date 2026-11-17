@@ -167,12 +167,6 @@ export async function POST(
         ? body.orderId.trim()
         : "";
 
-    const provider =
-      typeof body?.provider ===
-      "string"
-        ? body.provider.trim()
-        : undefined;
-
     const idempotencyKey =
       typeof body?.idempotencyKey ===
       "string"
@@ -212,7 +206,6 @@ export async function POST(
             session.userId,
           orderId,
           idempotencyKey,
-          provider,
         }
       );
 
