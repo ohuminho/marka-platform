@@ -60,18 +60,6 @@ export async function POST(
         ? body.paymentId.trim()
         : "";
 
-    const provider =
-      typeof body?.provider ===
-      "string"
-        ? body.provider.trim()
-        : undefined;
-
-    const providerPaymentId =
-      typeof body?.providerPaymentId ===
-      "string"
-        ? body.providerPaymentId.trim()
-        : undefined;
-
     const idempotencyKey =
       typeof body?.idempotencyKey ===
       "string"
@@ -114,8 +102,6 @@ export async function POST(
             session.userId,
           paymentId,
           idempotencyKey,
-          provider,
-          providerPaymentId,
         }
       );
 
