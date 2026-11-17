@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { NextResponse } from "next/server";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
 
@@ -20,19 +21,20 @@ function normalizeEmail(
 function getClientIp(
   request: Request
 ): string | undefined {
-  // Prefer the platform-provided client IP. X-Forwarded-For can contain
-  // caller-supplied values and must not take precedence for security logs.
-  return (
-    request.headers
-      .get("x-real-ip")
-      ?.trim() ||
-    request.headers
-      .get("x-forwarded-for")
-      ?.split(",")
-      .at(-1)
-      ?.trim() ||
-    undefined
-  );
+  // Vercel sanitizes these platform headers. Prefer its dedicated header,
+  // then use the equivalent forwarded headers as compatible fallbacks.
+  const candidates = [
+    request.headers.get("x-vercel-forwarded-for"),
+    request.headers.get("x-forwarded-for"),
+    request.headers.get("x-real-ip"),
+  ];
+
+  for (const candidate of candidates) {
+    const ip = candidate?.split(",")[0]?.trim();
+    if (ip && isIP(ip)) return ip;
+  }
+
+  return undefined;
 }
 
 export async function POST(
@@ -65,19 +67,24 @@ export async function POST(
 
     const clientIp = getClientIp(request);
 
-    const ipQuota = await reserveApiRequest({
-      scope: "AUTH_LOGIN_IP",
-      anonymousIdentity: clientIp || `login-email:${email}`,
-      windows: [
-        { limit: 10, windowMs: 60_000 },
-        { limit: 40, windowMs: 60 * 60 * 1000 },
-      ],
-    });
-    if (!ipQuota.allowed) {
-      return NextResponse.json(
-        { message: "Demasiadas tentativas. Aguarda antes de tentar novamente.", code: "LOGIN_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
-        { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
-      );
+    // An email is not an IP identity. If the trusted platform IP is absent
+    // (for example in local development), do not misclassify this quota.
+    // Non-privileged accounts remain protected by AUTH_LOGIN_ACCOUNT below.
+    if (clientIp) {
+      const ipQuota = await reserveApiRequest({
+        scope: "AUTH_LOGIN_IP",
+        anonymousIdentity: clientIp,
+        windows: [
+          { limit: 10, windowMs: 60_000 },
+          { limit: 40, windowMs: 60 * 60 * 1000 },
+        ],
+      });
+      if (!ipQuota.allowed) {
+        return NextResponse.json(
+          { message: "Demasiadas tentativas. Aguarda antes de tentar novamente.", code: "LOGIN_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
+          { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     const user =
