@@ -1114,116 +1114,94 @@ export class FulfillmentAdapter
     fulfillmentId: string,
   ): Promise<FulfillmentRequest> {
     if (!fulfillmentId.trim()) {
-      throw new Error(
-        "Fulfillment is required.",
-      );
+      throw new Error("Fulfillment is required.");
     }
 
-    const request =
-      await prisma.fulfillmentRequest.findUnique(
-        {
-          where: {
-            id: fulfillmentId,
-          },
-        },
-      );
+    const request = await prisma.fulfillmentRequest.findUnique({
+      where: { id: fulfillmentId },
+    });
 
     if (!request) {
-      throw new Error(
-        "Fulfillment not found.",
-      );
+      throw new Error("Fulfillment not found.");
+    }
+
+    if (request.status === "COMPLETED" || request.status === "CANCELLED") {
+      throw new Error("Fulfillment cannot recover in its current state.");
+    }
+
+    const existingDispatch = await prisma.dispatchRequest.findUnique({
+      where: {
+        subjectType_subjectId: {
+          subjectType: "FULFILLMENT",
+          subjectId: fulfillmentId,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        serviceType: true,
+      },
+    });
+
+    if (
+      existingDispatch?.serviceType === "DELIVERY" &&
+      (existingDispatch.status === "ACCEPTED" ||
+        existingDispatch.status === "ASSIGNED")
+    ) {
+      return this.toContract(request);
     }
 
     if (
-      request.status ===
-        "COMPLETED" ||
-      request.status ===
-        "CANCELLED"
+      existingDispatch?.serviceType === "DELIVERY" &&
+      (existingDispatch.status === "CANCELLED" ||
+        existingDispatch.status === "EXPIRED")
     ) {
-      throw new Error(
-        "Fulfillment cannot recover in its current state.",
+      await dispatchAdapter.recoverTerminalDelivery(
+        existingDispatch.id,
+        "FULFILLMENT_RECOVERY",
       );
-    }
 
-    const existingDispatch =
-      await prisma.dispatchRequest.findUnique(
+      const refreshed = await prisma.fulfillmentRequest.findUnique({
+        where: { id: fulfillmentId },
+      });
+      if (!refreshed) {
+        throw new Error("Fulfillment not found.");
+      }
+
+      await this.recordEvent(
+        "fulfillment.dispatch.retry_requested",
+        refreshed.id,
+        refreshed.organizationId,
         {
-          where: {
-            subjectType_subjectId: {
-              subjectType:
-                "FULFILLMENT",
-              subjectId:
-                fulfillmentId,
-            },
-          },
-          select: {
-            id: true,
-            status: true,
-            serviceType:
-              true,
-          },
+          orderId: refreshed.orderId,
+          existingDispatchId: existingDispatch.id,
+          recoveredTerminalDispatch: true,
         },
       );
 
-    if (
-      existingDispatch &&
-      existingDispatch.serviceType ===
-        "DELIVERY" &&
-      (
-        existingDispatch.status ===
-          "ACCEPTED" ||
-        existingDispatch.status ===
-          "ASSIGNED"
-      )
-    ) {
-      return this.toContract(
-        request,
+      return this.toContract(refreshed);
+    }
+
+    if (existingDispatch?.serviceType === "DELIVERY") {
+      await dispatchAdapter.reassign(
+        existingDispatch.id,
+        "FULFILLMENT_RECOVERY",
       );
     }
 
-    if (
-      existingDispatch &&
-      existingDispatch.serviceType ===
-        "DELIVERY"
-    ) {
-      try {
-        await dispatchAdapter.reassign(
-          existingDispatch.id,
-          "FULFILLMENT_RECOVERY",
-        );
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          !error.message.includes(
-            "cannot be reassigned",
-          )
-        ) {
-          throw error;
-        }
-      }
-    }
-
-    const fulfilled =
-      await this.ensureDeliveryDispatch(
-        request,
-      );
+    const fulfilled = await this.ensureDeliveryDispatch(request);
 
     await this.recordEvent(
       "fulfillment.dispatch.retry_requested",
       request.id,
       request.organizationId,
       {
-        orderId:
-          request.orderId,
-        existingDispatchId:
-          existingDispatch?.id ??
-          null,
+        orderId: request.orderId,
+        existingDispatchId: existingDispatch?.id ?? null,
       },
     );
 
-    return this.toContract(
-      fulfilled,
-    );
+    return this.toContract(fulfilled);
   }
 
   async get(
