@@ -80,21 +80,6 @@ export async function POST(
       );
     }
 
-    const accountQuota = await reserveApiRequest({
-      scope: "AUTH_LOGIN_ACCOUNT",
-      anonymousIdentity: `email:${email}`,
-      windows: [
-        { limit: 6, windowMs: 15 * 60 * 1000 },
-        { limit: 15, windowMs: 24 * 60 * 60 * 1000 },
-      ],
-    });
-    if (!accountQuota.allowed) {
-      return NextResponse.json(
-        { message: "Demasiadas tentativas para esta conta. Aguarda antes de tentar novamente.", code: "LOGIN_ACCOUNT_RATE_LIMITED", retryAfterSeconds: accountQuota.retryAfterSeconds },
-        { status: 429, headers: { "Retry-After": String(accountQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
-      );
-    }
-
     const user =
       await prisma.user.findUnique({
         where: {
@@ -111,6 +96,30 @@ export async function POST(
         },
         { status: 401 }
       );
+    }
+
+    // Founder and global administrators must not be locked out by the
+    // per-account quota. The IP quota above remains active as an abuse guard.
+    const isPrivilegedAccount =
+      user.isFounder ||
+      user.role === "ADMIN" ||
+      user.role === "SUPER_ADMIN";
+
+    if (!isPrivilegedAccount) {
+      const accountQuota = await reserveApiRequest({
+        scope: "AUTH_LOGIN_ACCOUNT",
+        anonymousIdentity: `email:${email}`,
+        windows: [
+          { limit: 6, windowMs: 15 * 60 * 1000 },
+          { limit: 15, windowMs: 24 * 60 * 60 * 1000 },
+        ],
+      });
+      if (!accountQuota.allowed) {
+        return NextResponse.json(
+          { message: "Demasiadas tentativas para esta conta. Aguarda antes de tentar novamente.", code: "LOGIN_ACCOUNT_RATE_LIMITED", retryAfterSeconds: accountQuota.retryAfterSeconds },
+          { status: 429, headers: { "Retry-After": String(accountQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     const valid =
