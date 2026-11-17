@@ -147,6 +147,8 @@ export class CheckoutService {
       // handoff failed. Re-enter the idempotent finalization path on checkout
       // retry; inventory consumption is guarded by inventoryReserved and the
       // fulfillment request is unique per order.
+      let recoveredOrderStatus = existingOrder.status;
+
       if (existingPayment.status === "COMPLETED") {
         await this.paymentService.confirmPayment({
           userId,
@@ -161,6 +163,12 @@ export class CheckoutService {
           ipAddress: input.ipAddress,
           userAgent: input.userAgent,
         });
+
+        const refreshedOrder = await prisma.order.findUnique({
+          where: { id: existingOrder.id },
+          select: { status: true },
+        });
+        recoveredOrderStatus = refreshedOrder?.status ?? recoveredOrderStatus;
       }
 
       return {
@@ -169,7 +177,7 @@ export class CheckoutService {
         currency: existingOrder.currency,
         subtotal: Number(existingOrder.total),
         total: Number(existingOrder.total),
-        status: existingOrder.status,
+        status: recoveredOrderStatus,
         payment: {
           id: existingPayment.id,
           orderId: existingPayment.orderId,
