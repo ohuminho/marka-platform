@@ -107,9 +107,11 @@ export async function POST(request: Request) {
 
     // Unknown accounts still execute a real bcrypt comparison to reduce
     // account-enumeration timing differences.
-    const valid = user
+    const passwordMatches = user
       ? await passwordService.compare(password, user.password)
       : await passwordService.compare(password, await DUMMY_PASSWORD_HASH);
+    // A dummy-hash match must never authenticate an unknown account.
+    const valid = Boolean(user) && passwordMatches;
 
     if (!valid) {
       // Only failed credentials consume login quota. Successful logins no
