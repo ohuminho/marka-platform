@@ -3,6 +3,7 @@ import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { getTrustedClientIp } from "@/core/security/client-ip";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
+import { isLoginRequestBody } from "@/core/authentication/login-input";
 import { isPrivilegedLoginAccount } from "@/core/authentication/login-policy";
 import { passwordService } from "@/core/authentication/password.service";
 import { SessionService } from "@/core/auth/sessions/session.service";
@@ -41,13 +42,21 @@ function rateLimited(message: string, code: string, retryAfterSeconds: number) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json().catch(() => null);
+    if (!isLoginRequestBody(body)) {
+      return NextResponse.json(
+        { message: "Invalid request body.", code: "INVALID_REQUEST_BODY" },
+        { status: 400, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
     const email =
       typeof body.email === "string" && body.email.length <= 320
         ? normalizeEmail(body.email)
         : "";
     const password =
-      typeof body.password === "string" && body.password.length <= AuthConfig.password.maximumLength
+      typeof body.password === "string" &&
+      body.password.length <= AuthConfig.password.maximumLength
         ? body.password
         : "";
 
