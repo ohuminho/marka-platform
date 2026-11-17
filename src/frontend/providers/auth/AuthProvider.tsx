@@ -420,6 +420,79 @@ export function AuthProvider({
     };
   }, []);
 
+  // Keep an active browser session alive. The server only extends it
+  // inside the configured refresh window, so this lightweight check does
+  // not write to the database on every request.
+  useEffect(() => {
+    if (!session?.expiresAt) {
+      return;
+    }
+
+    let refreshing = false;
+
+    const refreshSession = async () => {
+      if (refreshing) {
+        return;
+      }
+
+      refreshing = true;
+      try {
+        const response = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        if (response.status === 401) {
+          setUser(undefined);
+          setSession(undefined);
+          setOrganizations([]);
+          setAuthorization(emptyAuthorization);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Session refresh request failed.");
+        }
+
+        const data = await response.json();
+        const nextExpiresAt = data.session?.expiresAt;
+        if (
+          typeof nextExpiresAt === "string" &&
+          nextExpiresAt !== session.expiresAt
+        ) {
+          setSession((current) =>
+            current
+              ? { ...current, expiresAt: nextExpiresAt }
+              : current
+          );
+        }
+      } catch (error) {
+        console.error("[AUTH_SESSION_REFRESH_ERROR]", error);
+      } finally {
+        refreshing = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshSession();
+    }, 30 * 60 * 1000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshSession();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    void refreshSession();
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [session?.expiresAt]);
+
   const activeOrganization =
     useMemo(
       () =>
