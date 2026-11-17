@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { prisma } from "@/database/client/prisma";
 
 export class ProductService {
@@ -192,7 +194,7 @@ export class ProductService {
         include: { inventory: true },
       });
     }, {
-      isolationLevel: "Serializable",
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
       maxWait: 5000,
       timeout: 10000,
     });
