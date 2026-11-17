@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { AuthorizationService } from "@/core/authorization/authorization.service";
+import { Permissions } from "@/core/authorization/permissions.catalog";
+
 import {
   authenticateMobilityRequest,
   getIdempotencyKey,
@@ -80,6 +83,24 @@ export async function GET(
       {
         status: 403,
       },
+    );
+  }
+
+
+  const authorized =
+    await new AuthorizationService().hasPermission(
+      authentication.session.userId,
+      Permissions.SETTLEMENT_RECONCILIATION_EXECUTE,
+      authentication.session.organizationId,
+    );
+
+  if (!authorized) {
+    return NextResponse.json(
+      {
+        message: "You are not authorized to inspect or recover Mobility financials.",
+        code: "MOBILITY_FINANCIAL_RECOVERY_FORBIDDEN",
+      },
+      { status: 403 },
     );
   }
 
@@ -199,6 +220,24 @@ export async function POST(
       {
         status: 403,
       },
+    );
+  }
+
+
+  const authorized =
+    await new AuthorizationService().hasPermission(
+      authentication.session.userId,
+      Permissions.SETTLEMENT_RECONCILIATION_EXECUTE,
+      authentication.session.organizationId,
+    );
+
+  if (!authorized) {
+    return NextResponse.json(
+      {
+        message: "You are not authorized to inspect or recover Mobility financials.",
+        code: "MOBILITY_FINANCIAL_RECOVERY_FORBIDDEN",
+      },
+      { status: 403 },
     );
   }
 
