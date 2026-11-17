@@ -870,6 +870,7 @@ model User {
 
   @@index([status])
   @@index([createdAt])
+  pushSubscriptions PushSubscription[]
 }
 
 model Profile {
@@ -2576,4 +2577,23 @@ model MobilityLandmark {
   @@index([countryCode, province, municipality])
   @@index([isActive, category])
   @@index([aliases], type: Gin)
+}
+
+
+model PushSubscription {
+  id             String   @id @default(uuid())
+  userId         String
+  endpoint       String   @unique @db.Text
+  p256dh         String
+  auth           String
+  expirationTime DateTime?
+  userAgent      String?  @db.Text
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, updatedAt])
 }
