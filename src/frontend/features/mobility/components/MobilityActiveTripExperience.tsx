@@ -19,7 +19,7 @@ type Ride = {
   metadata?: Record<string, unknown> | null;
 };
 type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP" | "BEGIN_TRIP_PROGRESS" | "COMPLETE";
-type RideOrchestration = { currentStep?: string | null } | null;
+type RideOrchestration = { currentStep?: string | null; version?: number } | null;
 type RidePayload = { ride?: Ride | null; rides?: Ride[]; orchestration?: RideOrchestration; orchestrations?: Array<{ rideId: string; orchestration: RideOrchestration }>; message?: string };
 type AvailabilityPayload = { driver?: { status?: string; displayName?: string | null } | null; availability?: { status?: string } | null; status?: string; message?: string };
 const ACTIVE = ["REQUESTED", "SEARCHING", "MATCHED", "DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"];
@@ -39,7 +39,7 @@ function distance(a: number, b: number, c: number, d: number) {
 }
 
 export default function MobilityActiveTripExperience({ audience }: { audience: Audience }) {
-  const { activeOrganization, loading: authLoading } = useAuth();
+  const { activeOrganization, loading: authLoading, user } = useAuth();
   const router = useRouter();
   const [payload, setPayload] = useState<RidePayload | null>(null);
   const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
@@ -332,7 +332,11 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
 
     setActionLoading(true);
     setActionError(null);
-    const actionKey = "marka-driver-" + ride.id + "-REJECT_ASSIGNMENT-v1";
+    // A ride can be offered to several drivers in sequence. The orchestration
+    // version and authenticated driver scope the key to this assignment while
+    // keeping retries of the same request idempotent.
+    const actionKey = "marka-driver-" + ride.id + "-" + (user?.id ?? "unknown-driver") +
+      "-v" + (selectedOrchestration?.version ?? 0) + "-REJECT_ASSIGNMENT-v1";
     try {
       const response = await fetch("/api/mobility/rides/" + encodeURIComponent(ride.id), {
         method: "PATCH",
