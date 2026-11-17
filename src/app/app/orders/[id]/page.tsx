@@ -866,9 +866,37 @@ export default function OrderDetailPage({
               </div>
             </div>
             ) : (
-              <p className="mt-4 text-sm text-[var(--theme-text)]/40">
-                Delivery fulfillment has not been created yet.
-              </p>
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-[var(--theme-text)]/40">
+                  Delivery fulfillment has not been created yet.
+                </p>
+                {["PENDING", "CONFIRMED"].includes(order.status) &&
+                  order.payments.some((payment) => payment.status === "COMPLETED") ? (
+                    <div className="space-y-2 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4">
+                      <p className="text-sm text-[var(--theme-text)]/70">
+                        O pagamento está confirmado, mas a entrega ainda não foi iniciada. Pode pedir uma tentativa de recuperação sem pagar novamente.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={retryingDelivery}
+                        onClick={() => void retryDeliveryRecovery()}
+                        className="w-full rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-[var(--theme-text)] transition hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {retryingDelivery ? "A recuperar entrega…" : "Tentar recuperar entrega"}
+                      </button>
+                      {deliveryRecoveryMessage ? (
+                        <p role="status" className="text-xs text-emerald-300">
+                          {deliveryRecoveryMessage}
+                        </p>
+                      ) : null}
+                      {deliveryRecoveryError ? (
+                        <p role="alert" className="text-xs text-red-300">
+                          {deliveryRecoveryError}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+              </div>
             )}
           </div>
 
