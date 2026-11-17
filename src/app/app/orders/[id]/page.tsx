@@ -408,7 +408,9 @@ export default function OrderDetailPage({
       }
 
       setDeliveryRecoveryMessage(
-        "Pedido de recuperação processado. O estado da entrega foi atualizado.",
+        typeof data?.message === "string"
+          ? data.message
+          : "Recuperação processada e distribuição da entrega ativa.",
       );
       await loadOrder(true);
     } catch (error) {
