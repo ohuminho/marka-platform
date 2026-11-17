@@ -1,4 +1,5 @@
 import {
+  Prisma,
   MobilityAvailabilityStatus,
   MobilityDriverStatus,
   MobilityRideStatus,
@@ -117,6 +118,49 @@ function readPassengerCount(metadata: unknown): number {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 100 ? value : 1;
 }
 
+export function readDispatchRejectedDriverIds(
+  metadata: Prisma.JsonValue | null | undefined,
+): string[] {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return [];
+  }
+
+  const rejections = (metadata as Prisma.JsonObject).dispatchRejections;
+  if (!Array.isArray(rejections)) return [];
+
+  return [...new Set(rejections.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const driverId = (entry as Prisma.JsonObject).driverId;
+    return typeof driverId === "string" && driverId.trim()
+      ? [driverId]
+      : [];
+  }))];
+}
+
+export function buildDispatchRejectionMetadata(
+  metadata: Prisma.JsonValue | null,
+  rejection: { driverId: string; reason: string; rejectedAt: Date },
+): Prisma.InputJsonValue {
+  const current = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? metadata as Prisma.JsonObject
+    : {};
+  const previous = Array.isArray(current.dispatchRejections)
+    ? current.dispatchRejections
+    : [];
+
+  return {
+    ...current,
+    dispatchRejections: [
+      ...previous,
+      {
+        driverId: rejection.driverId,
+        reason: rejection.reason,
+        rejectedAt: rejection.rejectedAt.toISOString(),
+      },
+    ],
+  } as Prisma.InputJsonValue;
+}
+
 export class MobilityDispatchService {
   async dispatch(
     input: MobilityDispatchSearchInput
@@ -175,6 +219,8 @@ export class MobilityDispatchService {
           ride.serviceType,
 
         passengerCount: readPassengerCount(ride.metadata),
+
+        excludedDriverIds: readDispatchRejectedDriverIds(ride.metadata),
 
         vehicleTypes:
           resolveServiceVehicleTypes(
@@ -550,7 +596,11 @@ export class MobilityDispatchService {
     }
 
     await this.releaseCurrentAssignment(
-      ride.id
+      ride.id,
+      {
+        expectedDriverId: driverId,
+        reason: normalizedReason,
+      },
     );
 
     const refreshed =
@@ -640,6 +690,8 @@ export class MobilityDispatchService {
           ride.serviceType,
 
         passengerCount: readPassengerCount(ride.metadata),
+
+        excludedDriverIds: readDispatchRejectedDriverIds(ride.metadata),
 
         radiusMeters:
           input.radiusMeters,
@@ -897,7 +949,8 @@ export class MobilityDispatchService {
   }
 
   private async releaseCurrentAssignment(
-    rideId: string
+    rideId: string,
+    rejection?: { expectedDriverId: string; reason: string },
   ): Promise<void> {
     const ride =
       await this.requireRide(
@@ -933,6 +986,13 @@ export class MobilityDispatchService {
     const driverId = ride.driverId;
     const vehicleId = ride.vehicleId;
 
+    if (rejection && rejection.expectedDriverId !== driverId) {
+      throw new DispatchDomainError(
+        "The rejecting driver is no longer assigned to this ride.",
+        "RIDE_ASSIGNMENT_CHANGED",
+      );
+    }
+
     // Serialize release with all other assignment/lifecycle changes for this driver.
     await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -941,6 +1001,29 @@ export class MobilityDispatchService {
         WHERE "id" = ${driverId}
         FOR UPDATE
       `;
+
+      await tx.$queryRaw`
+        SELECT "id"
+        FROM "MobilityRide"
+        WHERE "id" = ${ride.id}
+        FOR UPDATE
+      `;
+
+      const lockedRide = await tx.mobilityRide.findUnique({
+        where: { id: ride.id },
+      });
+
+      if (
+        !lockedRide ||
+        lockedRide.driverId !== driverId ||
+        lockedRide.vehicleId !== vehicleId ||
+        (rejection && lockedRide.driverId !== rejection.expectedDriverId)
+      ) {
+        throw new DispatchDomainError(
+          "Ride assignment changed before rejection could be recorded.",
+          "RIDE_ASSIGNMENT_CHANGED",
+        );
+      }
 
       // Compare-and-set prevents a stale rejection/redispatch request from
       // clearing an assignment that another request has already changed.
@@ -960,6 +1043,13 @@ export class MobilityDispatchService {
           driverId: null,
           vehicleId: null,
           driverAssignedAt: null,
+          metadata: rejection
+            ? buildDispatchRejectionMetadata(lockedRide.metadata, {
+                driverId,
+                reason: rejection.reason,
+                rejectedAt: new Date(),
+              })
+            : undefined,
         },
       });
 
