@@ -41,7 +41,8 @@ export type MobilityLifecycleAction =
   | "INITIALIZE_FINANCIALS"
   | "COMPLETE"
   | "CANCEL"
-  | "RETRY_RECOVERY";
+  | "RETRY_RECOVERY"
+  | "RETRY_DISPATCH";
 
 export type MobilityLifecycleFailureClass =
   | "BUSINESS"

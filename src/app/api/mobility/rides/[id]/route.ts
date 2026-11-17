@@ -334,6 +334,7 @@ export async function PATCH(
       "SEARCH",
       "SAFETY_PRECHECK",
       "DISPATCH",
+      "RETRY_DISPATCH",
       "CANCEL",
     ]);
 
@@ -783,6 +784,9 @@ function normalizeLifecycleAction(
 
     case "DISPATCH":
       return "DISPATCH";
+
+    case "RETRY_DISPATCH":
+      return "RETRY_DISPATCH";
 
     case "ACCEPT":
     case "DRIVER_ACCEPT":

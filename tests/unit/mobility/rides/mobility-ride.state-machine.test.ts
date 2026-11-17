@@ -4,6 +4,7 @@ import {
   canTransitionRideStatus,
   resolveDriverAvailabilityForActiveRides,
   transitionRideStatus,
+  transitionNoDriverFoundToSearching,
 } from "@/services/mobility/rides/mobility-ride.state-machine";
 
 function assert(
@@ -63,6 +64,27 @@ assert(
   ),
   "A ride in progress must never be redispatched."
 );
+
+assert(
+  transitionNoDriverFoundToSearching(MobilityRideStatus.NO_DRIVER_FOUND) === MobilityRideStatus.SEARCHING,
+  "An explicit retry may reopen only a ride whose previous search found no driver.",
+);
+
+for (const terminalStatus of [
+  MobilityRideStatus.CANCELLED,
+  MobilityRideStatus.EXPIRED,
+  MobilityRideStatus.FAILED,
+  MobilityRideStatus.TRIP_STARTED,
+  MobilityRideStatus.TRIP_IN_PROGRESS,
+  MobilityRideStatus.TRIP_COMPLETED,
+] as const) {
+  assertThrows(
+    () => transitionNoDriverFoundToSearching(terminalStatus),
+    "RIDE_NOT_RETRYABLE",
+    `An explicit no-driver retry must not reopen ${terminalStatus}.`,
+  );
+}
+
 
 assert(
   canTransitionRideStatus(

@@ -18,6 +18,7 @@ import { mobilityFinancialOrchestratorService } from "@/services/mobility/financ
 import { mobilitySafetyService } from "@/services/mobility/safety/mobility-safety.service";
 
 import { mobilityRideService } from "@/services/mobility/rides/mobility-ride.service";
+import { transitionNoDriverFoundToSearching } from "@/services/mobility/rides/mobility-ride.state-machine";
 import { mobilityPaymentEngineService } from "@/services/mobility/payments/mobility-payment-engine.service";
 
 import type {
@@ -149,6 +150,7 @@ const TRANSITIONS: Record<
 
   FAILED: [
     "RECOVERY_REQUIRED",
+    "SEARCHING",
   ],
 
   RECOVERY_REQUIRED: [
@@ -156,6 +158,8 @@ const TRANSITIONS: Record<
     "FINANCIAL_FINALIZED",
     "FAILED",
     "CANCELLED",
+    "SEARCHING",
+    "DRIVER_ASSIGNED",
   ],
 };
 
@@ -714,6 +718,178 @@ export class MobilityLifecycleService {
         );
       }
 
+      case "RETRY_DISPATCH": {
+        const ride = await this.requireRide(input.organizationId, input.rideId);
+        let current = orchestration;
+
+        if (current.currentStep === "FAILED" && current.status === "FAILED") {
+          // Only an explicit passenger retry may reopen NO_DRIVER_FOUND.
+          transitionNoDriverFoundToSearching(ride.status);
+
+          current = await prisma.$transaction(async (tx) => {
+            const reopened = await tx.mobilityRide.updateMany({
+              where: {
+                id: input.rideId,
+                organizationId: input.organizationId,
+                status: MobilityRideStatus.NO_DRIVER_FOUND,
+                driverId: null,
+                vehicleId: null,
+              },
+              data: { status: MobilityRideStatus.SEARCHING },
+            });
+
+            if (reopened.count !== 1) {
+              throw new Error("Ride retry was already claimed or its state changed. Refresh before trying again.");
+            }
+
+            const rows = await tx.$queryRaw<OrchestrationRow[]>`
+              UPDATE "MobilityRideOrchestration"
+              SET
+                "currentStep" = 'SEARCHING'::"MobilityOrchestrationStep",
+                "status" = 'ACTIVE'::"MobilityOrchestrationStatus",
+                "version" = "version" + 1,
+                "attemptCount" = "attemptCount" + 1,
+                "lastErrorCode" = NULL,
+                "lastError" = NULL,
+                "nextRetryAt" = NOW() + INTERVAL '120 seconds',
+                "updatedAt" = NOW()
+              WHERE
+                "id" = ${current.id}
+                AND "version" = ${current.version}
+                AND "status" = 'FAILED'::"MobilityOrchestrationStatus"
+                AND "currentStep" = 'FAILED'::"MobilityOrchestrationStep"
+              RETURNING *
+            `;
+
+            if (rows.length !== 1) {
+              throw new Error("Mobility retry concurrency conflict.");
+            }
+
+            await tx.$executeRaw`
+              INSERT INTO "MobilityRideOrchestrationEvent" (
+                "id", "orchestrationId", "organizationId", "rideId",
+                "action", "fromStep", "toStep", "status", "idempotencyKey",
+                "correlationId", "requestId", "actorUserId", "metadata", "createdAt"
+              ) VALUES (
+                ${randomUUID()}, ${current.id}, ${input.organizationId}, ${input.rideId},
+                'RETRY_DISPATCH', 'FAILED'::"MobilityOrchestrationStep",
+                'SEARCHING'::"MobilityOrchestrationStep",
+                'ACTIVE'::"MobilityOrchestrationStatus", ${input.idempotencyKey},
+                ${input.correlationId ?? null}, ${input.requestId ?? null},
+                ${input.actorUserId ?? null},
+                ${this.jsonValue({ reason: "NO_DRIVER_FOUND", ...(input.metadata ?? {}) })}::jsonb,
+                NOW()
+              )
+            `;
+            return rows[0];
+          });
+        } else if (current.currentStep === "SEARCHING" && current.status === "ACTIVE" && ride.status === MobilityRideStatus.SEARCHING) {
+          // A short lease makes a crash between reopening and dispatch recoverable
+          // without allowing two passenger requests to dispatch concurrently.
+          current = await prisma.$transaction(async (tx) => {
+            const rows = await tx.$queryRaw<OrchestrationRow[]>`
+              UPDATE "MobilityRideOrchestration"
+              SET
+                "version" = "version" + 1,
+                "attemptCount" = "attemptCount" + 1,
+                "nextRetryAt" = NOW() + INTERVAL '120 seconds',
+                "updatedAt" = NOW()
+              WHERE
+                "id" = ${current.id}
+                AND "version" = ${current.version}
+                AND "status" = 'ACTIVE'::"MobilityOrchestrationStatus"
+                AND "currentStep" = 'SEARCHING'::"MobilityOrchestrationStep"
+                AND ("nextRetryAt" IS NULL OR "nextRetryAt" <= NOW())
+              RETURNING *
+            `;
+
+            if (rows.length !== 1) {
+              throw new Error("Dispatch retry is already running. Wait briefly and refresh the ride.");
+            }
+
+            await tx.$executeRaw`
+              INSERT INTO "MobilityRideOrchestrationEvent" (
+                "id", "orchestrationId", "organizationId", "rideId",
+                "action", "fromStep", "toStep", "status", "idempotencyKey",
+                "correlationId", "requestId", "actorUserId", "metadata", "createdAt"
+              ) VALUES (
+                ${randomUUID()}, ${current.id}, ${input.organizationId}, ${input.rideId},
+                'RETRY_DISPATCH', 'SEARCHING'::"MobilityOrchestrationStep",
+                'SEARCHING'::"MobilityOrchestrationStep",
+                'ACTIVE'::"MobilityOrchestrationStatus", ${input.idempotencyKey},
+                ${input.correlationId ?? null}, ${input.requestId ?? null},
+                ${input.actorUserId ?? null},
+                ${this.jsonValue({ resumedAfterLeaseExpiry: true })}::jsonb,
+                NOW()
+              )
+            `;
+            return rows[0];
+          });
+        } else if (current.currentStep === "RECOVERY_REQUIRED" && current.status === "RECOVERY_REQUIRED") {
+          // Reconcile an assignment that committed before the previous process failed.
+          if (ride.status === MobilityRideStatus.DRIVER_ASSIGNED && ride.driverId && ride.vehicleId) {
+            return this.advance(
+              current, input, "DRIVER_ASSIGNED",
+              { driverId: ride.driverId, vehicleId: ride.vehicleId, recovered: true },
+              "ACTIVE",
+            );
+          }
+
+          if (ride.status !== MobilityRideStatus.SEARCHING) {
+            throw new Error("This ride is not in a recoverable dispatch state.");
+          }
+
+          current = await this.transitionPersisted(
+            current,
+            { ...input, idempotencyKey: input.idempotencyKey + ":resume-search" },
+            "SEARCHING",
+            { resumedAfterDispatchFailure: true },
+            "ACTIVE",
+          );
+        } else {
+          throw new Error("Only a no-driver result or a recoverable dispatch attempt can be retried.");
+        }
+
+        const dispatchResultInput = {
+          ...input,
+          idempotencyKey: input.idempotencyKey + ":dispatch-result",
+        };
+
+        try {
+          const dispatch = await mobilityDispatchService.dispatch({ rideId: input.rideId, safetyMode });
+
+          if (!dispatch.assignment) {
+            return this.advance(
+              current, dispatchResultInput, "FAILED",
+              {
+                dispatchStatus: dispatch.status,
+                candidateCount: dispatch.candidates.length,
+                reason: "NO_ELIGIBLE_DRIVER",
+                retryAttempt: current.attemptCount,
+              },
+              "FAILED",
+            );
+          }
+
+          return this.advance(current, dispatchResultInput, "DRIVER_ASSIGNED", dispatch.assignment, "ACTIVE");
+        } catch (error) {
+          const classified = this.classifyFailure(error);
+          const recovering = await this.transitionPersisted(
+            current,
+            { ...input, idempotencyKey: input.idempotencyKey + ":dispatch-recovery" },
+            "RECOVERY_REQUIRED",
+            { code: classified.code, message: classified.message },
+            "RECOVERY_REQUIRED",
+          );
+
+          return {
+            ...this.result(recovering, input.action),
+            ride: await mobilityRideService.getById(input.rideId),
+            recoveryRequired: true,
+            error: { code: classified.code, message: classified.message, retryable: true },
+          };
+        }
+      }
       case "ACCEPT": {
         const ride =
           await this.requireRide(
@@ -1563,7 +1739,9 @@ export class MobilityLifecycleService {
                   NULL,
 
                 "nextRetryAt" =
-                  NULL,
+                  ${nextStep === "SEARCHING" && nextStatus === "ACTIVE"
+                    ? new Date(now.getTime() + 120_000)
+                    : null},
 
                 "completedAt" =
                   CASE
