@@ -20,6 +20,11 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// One bcrypt hash per server instance; reused for unknown-account comparisons.
+const DUMMY_PASSWORD_HASH = passwordService.hash(
+  "marka-auth-dummy-password-comparison",
+);
+
 function rateLimited(message: string, code: string, retryAfterSeconds: number) {
   return NextResponse.json(
     { message, code, retryAfterSeconds },
@@ -100,15 +105,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Use a lazily-created bcrypt hash for unknown accounts so the
-    // credential path still performs a real password-hash comparison.
-    // The promise is shared by warm instances and never contains user data.
-    const dummyPasswordHash = passwordService.hash(
-      "marka-auth-dummy-password-comparison",
-    );
+    // Unknown accounts still execute a real bcrypt comparison to reduce
+    // account-enumeration timing differences.
     const valid = user
       ? await passwordService.compare(password, user.password)
-      : await passwordService.compare(password, await dummyPasswordHash);
+      : await passwordService.compare(password, await DUMMY_PASSWORD_HASH);
 
     if (!valid) {
       // Only failed credentials consume login quota. Successful logins no
