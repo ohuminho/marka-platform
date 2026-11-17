@@ -185,15 +185,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const session = await new SessionService().create({
-      userId: user.id,
-      ipAddress: clientIp,
-      userAgent: request.headers.get("user-agent") ?? undefined,
-    });
+    // Session creation and last-login bookkeeping must commit or roll back
+    // together; never return a token for a partially recorded login.
+    const session = await prisma.$transaction(async (transaction) => {
+      const createdSession = await new SessionService().create({
+        userId: user.id,
+        ipAddress: clientIp,
+        userAgent: request.headers.get("user-agent") ?? undefined,
+      }, transaction);
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      await transaction.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+
+      return createdSession;
     });
 
     const response = NextResponse.json(
