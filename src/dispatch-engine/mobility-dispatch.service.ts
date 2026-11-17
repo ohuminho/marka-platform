@@ -134,15 +134,32 @@ export function readDispatchRejectedDriverIds(
       return [];
     }
 
-    const result = (metadata as Prisma.JsonObject).result;
-    if (!result || typeof result !== "object" || Array.isArray(result)) {
-      return [];
-    }
+    const root = metadata as Prisma.JsonObject;
+    const result = root.result;
+    const resultRecord =
+      result && typeof result === "object" && !Array.isArray(result)
+        ? result as Prisma.JsonObject
+        : null;
+    const nestedResult = resultRecord?.result;
+    const nestedRecord =
+      nestedResult && typeof nestedResult === "object" && !Array.isArray(nestedResult)
+        ? nestedResult as Prisma.JsonObject
+        : null;
 
-    const driverId = (result as Prisma.JsonObject).rejectedDriverId;
-    return typeof driverId === "string" && driverId.trim()
-      ? [driverId]
-      : [];
+    // Support the current event shape and the two historical wrappers used
+    // by earlier lifecycle writers. Rejection history must remain effective
+    // across deployments; otherwise a previously rejecting driver can be
+    // selected again for the same ride.
+    const rejectedDriverIds = [
+      resultRecord?.rejectedDriverId,
+      nestedRecord?.rejectedDriverId,
+      root.rejectedDriverId,
+    ];
+
+    return rejectedDriverIds.filter(
+      (driverId): driverId is string =>
+        typeof driverId === "string" && Boolean(driverId.trim()),
+    );
   }))];
 }
 
