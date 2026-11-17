@@ -111,9 +111,9 @@ export async function POST(request: Request) {
       ? await passwordService.compare(password, user.password)
       : await passwordService.compare(password, await DUMMY_PASSWORD_HASH);
     // A dummy-hash match must never authenticate an unknown account.
-    const valid = Boolean(user) && passwordMatches;
-
-    if (!valid) {
+    // Keep the null check in the branch condition so TypeScript narrows `user`
+    // before the authenticated-account path below.
+    if (!user || !passwordMatches) {
       // Only failed credentials consume login quota. Successful logins no
       // longer lock out legitimate users who sign in repeatedly.
       if (!isPrivilegedAccount) {
