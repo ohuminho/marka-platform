@@ -63,6 +63,7 @@ export async function POST(request: Request) {
 
     const isPrivilegedAccount = Boolean(
       user &&
+      user.status === "ACTIVE" &&
       (user.isFounder || user.role === "ADMIN" || user.role === "SUPER_ADMIN"),
     );
     const clientIp = getTrustedClientIp(request);
