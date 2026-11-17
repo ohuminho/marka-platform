@@ -792,10 +792,12 @@ export default function OrderDetailPage({
                   order.payments.some((payment) => payment.status === "COMPLETED") &&
                   (
                     !order.fulfillment ||
-                    !order.dispatch ||
-                    order.fulfillment.status === "EXCEPTION" ||
-                    order.dispatch.status === "CANCELLED" ||
-                    order.dispatch.status === "EXPIRED"
+                    (
+                      ["REQUESTED", "ASSIGNED", "EXCEPTION"].includes(order.fulfillment.status) &&
+                      (!order.dispatch ||
+                        order.dispatch.status === "CANCELLED" ||
+                        order.dispatch.status === "EXPIRED")
+                    )
                   ) ? (
                     <div className="space-y-2 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4">
                       <p className="text-sm text-[var(--theme-text)]/70">
