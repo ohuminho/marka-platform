@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
+import { getTrustedClientIp } from "@/core/security/client-ip";
 
 import { VerificationService } from "@/core/auth/verification/verification.service";
 
@@ -31,23 +32,23 @@ export async function POST(
       );
     }
 
-    const clientIp =
-      request.headers.get("x-real-ip")?.trim() ||
-      request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+    const clientIp = getTrustedClientIp(request);
 
-    const ipQuota = await reserveApiRequest({
-      scope: "AUTH_VERIFY_EMAIL_IP",
-      anonymousIdentity: clientIp || "email-verification-unknown-ip",
-      windows: [
-        { limit: 20, windowMs: 60_000 },
-        { limit: 100, windowMs: 60 * 60 * 1000 },
-      ],
-    });
-    if (!ipQuota.allowed) {
-      return Response.json(
-        { message: "Demasiadas tentativas de confirmação. Tenta novamente mais tarde.", code: "EMAIL_VERIFY_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
-        { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
-      );
+    if (clientIp) {
+      const ipQuota = await reserveApiRequest({
+        scope: "AUTH_VERIFY_EMAIL_IP",
+        anonymousIdentity: clientIp,
+        windows: [
+          { limit: 20, windowMs: 60_000 },
+          { limit: 100, windowMs: 60 * 60 * 1000 },
+        ],
+      });
+      if (!ipQuota.allowed) {
+        return Response.json(
+          { message: "Demasiadas tentativas de confirmação. Tenta novamente mais tarde.", code: "EMAIL_VERIFY_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
+          { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     const tokenQuota = await reserveApiRequest({
