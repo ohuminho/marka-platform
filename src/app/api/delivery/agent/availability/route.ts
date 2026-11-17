@@ -19,6 +19,58 @@ function getToken(request: Request): string | null {
   );
 }
 
+export async function GET(request: Request) {
+  try {
+    const token = getToken(request);
+    if (!token) {
+      return NextResponse.json(
+        { message: "Authentication required.", code: "AUTHENTICATION_REQUIRED" },
+        { status: 401 },
+      );
+    }
+
+    const session = await new SessionService().validate(token);
+    if (!session) {
+      return NextResponse.json(
+        { message: "Invalid or expired session.", code: "INVALID_SESSION" },
+        { status: 401 },
+      );
+    }
+
+    const agent = await prisma.deliveryAgent.findUnique({
+      where: { userId: session.userId },
+      select: {
+        id: true,
+        status: true,
+        availability: true,
+        transportMode: true,
+        displayName: true,
+        phone: true,
+        latitude: true,
+        longitude: true,
+        lastLocationAt: true,
+      },
+    });
+
+    if (!agent) {
+      return NextResponse.json(
+        { message: "Delivery agent not found.", code: "DELIVERY_AGENT_NOT_FOUND" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(
+      { agent },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } },
+    );
+  } catch {
+    return NextResponse.json(
+      { message: "Unable to load delivery agent profile.", code: "DELIVERY_AGENT_PROFILE_FAILED" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function PATCH(request: Request) {
   try {
     const token = getToken(request);

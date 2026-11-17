@@ -4,19 +4,14 @@ import { z } from "zod";
 import { AuthorizationService } from "@/core/authorization/authorization.service";
 import { Permissions } from "@/core/authorization/permissions.catalog";
 import { SessionService } from "@/core/auth/sessions/session.service";
+import { prisma } from "@/database/client/prisma";
 import { deliveryAgentService } from "@/services/delivery/agents/delivery-agent.service";
 
 const schema = z.object({
-  organizationId: z.string().uuid(),
-  userId: z.string().uuid(),
-  transportMode: z.enum([
-    "WALK",
-    "BICYCLE",
-    "MOTORCYCLE",
-    "CAR",
-    "VAN",
-  ]),
-  displayName: z.string().trim().max(160).optional(),
+  organizationId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  transportMode: z.enum(["WALK", "BICYCLE", "MOTORCYCLE", "CAR", "VAN"]),
+  displayName: z.string().trim().min(2).max(160).optional(),
   phone: z.string().trim().max(40).optional(),
 });
 
@@ -75,30 +70,80 @@ export async function POST(request: Request) {
       );
     }
 
-    const authorization =
-      new AuthorizationService();
+    const isSelfRegistration =
+      !parsed.data.userId || parsed.data.userId === session.userId;
 
-    if (
-      !(await authorization.hasPermission(
-        session.userId,
-        Permissions.DELIVERY_AGENT_MANAGE,
-        parsed.data.organizationId,
-      ))
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "You do not have permission to manage delivery agents.",
-          code: "DELIVERY_AGENT_MANAGE_FORBIDDEN",
+    let organizationId = parsed.data.organizationId;
+    let userId = parsed.data.userId ?? session.userId;
+
+    if (isSelfRegistration) {
+      const platformOrganization = await prisma.organization.findFirst({
+        where: {
+          slug: "marka-platform",
+          type: "PLATFORM",
+          status: "ACTIVE",
         },
-        { status: 403 },
-      );
+        select: { id: true },
+      });
+
+      if (!platformOrganization) {
+        return NextResponse.json(
+          { message: "MARKA platform organization is not configured.", code: "PLATFORM_ORGANIZATION_NOT_CONFIGURED" },
+          { status: 503 },
+        );
+      }
+
+      const membership = await prisma.organizationMembership.findFirst({
+        where: {
+          userId: session.userId,
+          organizationId: platformOrganization.id,
+          status: "ACTIVE",
+        },
+        select: { id: true },
+      });
+
+      if (!membership) {
+        return NextResponse.json(
+          { message: "Active MARKA platform membership is required.", code: "PLATFORM_MEMBERSHIP_REQUIRED" },
+          { status: 403 },
+        );
+      }
+
+      organizationId = platformOrganization.id;
+      userId = session.userId;
+    } else {
+      if (!organizationId || !userId) {
+        return NextResponse.json(
+          { message: "Organization and user are required for administrator registration.", code: "INVALID_ADMIN_REGISTRATION_TARGET" },
+          { status: 400 },
+        );
+      }
+
+      const authorization = new AuthorizationService();
+      if (
+        !(await authorization.hasPermission(
+          session.userId,
+          Permissions.DELIVERY_AGENT_MANAGE,
+          organizationId,
+        ))
+      ) {
+        return NextResponse.json(
+          {
+            message: "You do not have permission to manage delivery agents.",
+            code: "DELIVERY_AGENT_MANAGE_FORBIDDEN",
+          },
+          { status: 403 },
+        );
+      }
     }
 
-    const agent =
-      await deliveryAgentService.register(
-        parsed.data,
-      );
+    const agent = await deliveryAgentService.register({
+      organizationId: organizationId!,
+      userId: userId!,
+      transportMode: parsed.data.transportMode,
+      displayName: parsed.data.displayName,
+      phone: parsed.data.phone,
+    });
 
     return NextResponse.json(
       { agent },
