@@ -1084,6 +1084,7 @@ export class MobilityRideService {
               UPDATE "MobilityRidePayment"
               SET
                 "status" = 'CANCELLED'::"MobilityPaymentStatus",
+                "cancelledAt" = COALESCE("cancelledAt", CURRENT_TIMESTAMP),
                 "updatedAt" = CURRENT_TIMESTAMP
               WHERE
                 "id" = ${payment.id}
