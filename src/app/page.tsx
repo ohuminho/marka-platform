@@ -4,12 +4,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "MARKA — Descubra mais. Num só lugar.",
   description:
-    "Explore o Marketplace e a Mobility da MARKA. Comércio, serviços, negócios e mobilidade numa experiência simples.",
+    "Conheça a MARKA: uma plataforma digital que aproxima pessoas, comércio, serviços e mobilidade em Angola.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "MARKA — Descubra mais. Num só lugar.",
     description:
-      "Comércio, serviços, negócios e mobilidade numa experiência simples.",
+      "Uma plataforma digital que aproxima pessoas, negócios, serviços e mobilidade em Angola.",
     url: "https://markaao.com",
     siteName: "MARKA",
     locale: "pt_AO",
@@ -255,6 +255,65 @@ export default function Home() {
                 </div>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="purpose-title"
+          className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-28"
+        >
+          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#bda575]">
+                Porque existe a MARKA
+              </p>
+              <h2
+                id="purpose-title"
+                className="mt-4 max-w-[560px] text-[34px] font-medium leading-[1.08] tracking-[-0.06em] text-white sm:text-[48px]"
+              >
+                Mais oportunidades.
+                <span className="block text-[#d8bd83]">Menos distância.</span>
+              </h2>
+            </div>
+            <div className="max-w-[680px]">
+              <p className="text-[15px] leading-8 text-white/70 sm:text-[17px]">
+                Encontrar o que precisa, chegar a novos clientes ou organizar
+                uma deslocação ainda pode significar procurar em vários lugares.
+                A MARKA aproxima estas experiências numa plataforma digital,
+                para tornar o acesso a produtos, negócios, serviços e mobilidade
+                mais simples.
+              </p>
+              <div className="mt-9 grid gap-6 sm:grid-cols-2">
+                <div className="border-l border-[#d8bd83]/60 pl-5">
+                  <h3 className="text-[14px] font-semibold text-white">Para pessoas</h3>
+                  <p className="mt-2 text-[12px] leading-6 text-white/55">
+                    Descobrir produtos, encontrar serviços e aceder a opções de mobilidade.
+                  </p>
+                </div>
+                <div className="border-l border-[#d8bd83]/60 pl-5">
+                  <h3 className="text-[14px] font-semibold text-white">Para negócios</h3>
+                  <p className="mt-2 text-[12px] leading-6 text-white/55">
+                    Apresentar lojas, divulgar produtos e aproximar-se de novos clientes.
+                  </p>
+                </div>
+                <div className="border-l border-[#d8bd83]/60 pl-5">
+                  <h3 className="text-[14px] font-semibold text-white">Para prestadores</h3>
+                  <p className="mt-2 text-[12px] leading-6 text-white/55">
+                    Dar visibilidade aos seus serviços e encontrar novas oportunidades.
+                  </p>
+                </div>
+                <div className="border-l border-[#d8bd83]/60 pl-5">
+                  <h3 className="text-[14px] font-semibold text-white">Para operadores de mobilidade</h3>
+                  <p className="mt-2 text-[12px] leading-6 text-white/55">
+                    Ligar motoristas e proprietários de veículos a pedidos de transporte.
+                  </p>
+                </div>
+              </div>
+              <p className="mt-9 border-t border-white/10 pt-6 text-[12px] leading-6 text-white/45">
+                Construída em Angola, com uma visão de longo prazo para o desenvolvimento
+                de soluções digitais relevantes em África.
+              </p>
+            </div>
           </div>
         </section>
 
