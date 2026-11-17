@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reserveApiRequest } from "@/core/security/api-rate-limit";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import {
@@ -56,6 +57,40 @@ export async function POST(
           code: "INVALID_CREDENTIALS",
         },
         { status: 401 }
+      );
+    }
+
+    const clientIp =
+      request.headers.get("x-real-ip")?.trim() ||
+      request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+
+    const ipQuota = await reserveApiRequest({
+      scope: "AUTH_LOGIN_IP",
+      anonymousIdentity: clientIp || `login-email:${email}`,
+      windows: [
+        { limit: 10, windowMs: 60_000 },
+        { limit: 40, windowMs: 60 * 60 * 1000 },
+      ],
+    });
+    if (!ipQuota.allowed) {
+      return NextResponse.json(
+        { message: "Demasiadas tentativas. Aguarda antes de tentar novamente.", code: "LOGIN_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
+        { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+      );
+    }
+
+    const accountQuota = await reserveApiRequest({
+      scope: "AUTH_LOGIN_ACCOUNT",
+      anonymousIdentity: `email:${email}`,
+      windows: [
+        { limit: 6, windowMs: 15 * 60 * 1000 },
+        { limit: 15, windowMs: 24 * 60 * 60 * 1000 },
+      ],
+    });
+    if (!accountQuota.allowed) {
+      return NextResponse.json(
+        { message: "Demasiadas tentativas para esta conta. Aguarda antes de tentar novamente.", code: "LOGIN_ACCOUNT_RATE_LIMITED", retryAfterSeconds: accountQuota.retryAfterSeconds },
+        { status: 429, headers: { "Retry-After": String(accountQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
       );
     }
 
