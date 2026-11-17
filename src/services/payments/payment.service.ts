@@ -28,7 +28,6 @@ export interface CreatePaymentInput {
   userId: string;
   orderId: string;
   idempotencyKey: string;
-  provider?: string;
   metadata?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
@@ -105,10 +104,9 @@ export class PaymentService {
       getPaymentProviderConfig();
 
     const normalizedProvider =
-      input.provider?.trim().toUpperCase() ||
-      (configuredProvider.enabled
+      configuredProvider.enabled
         ? configuredProvider.name
-        : undefined);
+        : undefined;
 
     const requestBody = {
       userId: input.userId,
