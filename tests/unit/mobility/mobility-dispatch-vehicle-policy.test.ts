@@ -74,6 +74,24 @@ assert.deepEqual(readDispatchRejectedDriverIds(rejectedEvents), [
   "driver-a",
   "driver-b",
 ]);
+
+assert.deepEqual(
+  readDispatchRejectedDriverIds([
+    {
+      metadata: {
+        result: { rejectedDriverId: "driver-current" },
+      } as import("@prisma/client").Prisma.JsonValue,
+    },
+    {
+      metadata: {
+        result: {
+          result: { rejectedDriverId: "driver-legacy" },
+        },
+      } as import("@prisma/client").Prisma.JsonValue,
+    },
+  ]),
+  ["driver-current", "driver-legacy"],
+);
 assert.deepEqual(readDispatchRejectedDriverIds([]), []);
 
 console.log("Mobility rejection exclusion tests passed.");
