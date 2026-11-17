@@ -92,6 +92,21 @@ export function canTransitionRideStatus(
   return false;
 }
 
+// This exceptional transition is deliberately separate from the ordinary
+// state machine: only an explicit passenger retry may reopen a no-driver result.
+export function transitionNoDriverFoundToSearching(
+  currentStatus: MobilityRideStatus,
+): MobilityRideStatus {
+  if (currentStatus !== MobilityRideStatus.NO_DRIVER_FOUND) {
+    throw new MobilityDomainError(
+      `Only a ride with no eligible driver can be retried (received ${currentStatus}).`,
+      "RIDE_NOT_RETRYABLE",
+    );
+  }
+
+  return MobilityRideStatus.SEARCHING;
+}
+
 export function transitionRideStatus(
   currentStatus: MobilityRideStatus,
   nextStatus: MobilityRideStatus
