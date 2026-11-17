@@ -418,11 +418,6 @@ export default function OrderDetailPage({
             body: JSON.stringify({
               paymentId:
                 payment.id,
-              provider:
-                payment.provider ??
-                undefined,
-              providerPaymentId:
-                payment.providerPaymentId,
               idempotencyKey,
             }),
           }
