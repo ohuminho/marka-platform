@@ -36,23 +36,38 @@ type ResponseData = {
   };
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  ASSIGNED: "Atribuída",
+  ACCEPTED: "Aceite",
+  PREPARING: "A preparar",
+  READY_FOR_PICKUP: "Pronta para recolha",
+  PICKED_UP: "Recolhida",
+  IN_TRANSIT: "Em trânsito",
+  COMPLETED: "Concluída",
+  DELIVERED: "Entregue",
+  EXCEPTION: "Excepção",
+  CANCELLED: "Cancelada",
+  PENDING: "Pendente",
+  CONFIRMED: "Confirmada",
+  PROCESSING: "Em processamento",
+  PAID: "Paga",
+  FAILED: "Falhada",
+};
+
 function label(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return STATUS_LABELS[value] ?? value.replaceAll("_", " ");
 }
 
 type TransitionStatus = "PREPARING" | "READY_FOR_PICKUP" | "PICKED_UP" | "IN_TRANSIT" | "COMPLETED" | "EXCEPTION";
 
 function nextActions(status: string): Array<{ status: TransitionStatus; label: string }> {
   switch (status) {
-    case "ASSIGNED": return [{ status: "PREPARING", label: "Start preparing" }];
-    case "PREPARING": return [{ status: "READY_FOR_PICKUP", label: "Ready for pickup" }];
-    case "READY_FOR_PICKUP": return [{ status: "PICKED_UP", label: "Picked up" }];
-    case "PICKED_UP": return [{ status: "IN_TRANSIT", label: "Start delivery" }];
-    case "IN_TRANSIT": return [{ status: "COMPLETED", label: "Complete delivery" }, { status: "EXCEPTION", label: "Report exception" }];
-    case "EXCEPTION": return [{ status: "IN_TRANSIT", label: "Resume delivery" }];
+    case "ASSIGNED": return [{ status: "PREPARING", label: "Começar preparação" }];
+    case "PREPARING": return [{ status: "READY_FOR_PICKUP", label: "Pronta para recolha" }];
+    case "READY_FOR_PICKUP": return [{ status: "PICKED_UP", label: "Confirmar recolha" }];
+    case "PICKED_UP": return [{ status: "IN_TRANSIT", label: "Iniciar entrega" }];
+    case "IN_TRANSIT": return [{ status: "COMPLETED", label: "Concluir entrega" }, { status: "EXCEPTION", label: "Reportar problema" }];
+    case "EXCEPTION": return [{ status: "IN_TRANSIT", label: "Retomar entrega" }];
     default: return [];
   }
 }
@@ -92,7 +107,7 @@ export default function DeliveryAgentDeliveries() {
       };
 
       if (!response.ok) {
-        throw new Error(body.message ?? "Unable to load deliveries.");
+        throw new Error(body.message ?? "Não foi possível carregar as entregas.");
       }
 
       setData(body);
@@ -101,7 +116,7 @@ export default function DeliveryAgentDeliveries() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Unable to load deliveries.",
+          : "Não foi possível carregar as entregas.",
       );
     } finally {
       setLoading(false);
@@ -122,7 +137,7 @@ export default function DeliveryAgentDeliveries() {
     async (delivery: Delivery, status: TransitionStatus) => {
       let reason: string | undefined;
       if (status === "EXCEPTION") {
-        reason = window.prompt("Describe the delivery exception:")?.trim();
+        reason = window.prompt("Descreve o problema com esta entrega:")?.trim();
         if (!reason) return;
       }
       setActionId(delivery.dispatchId);
@@ -134,10 +149,10 @@ export default function DeliveryAgentDeliveries() {
           body: JSON.stringify({ status, reason }),
         });
         const body = (await response.json()) as { message?: string };
-        if (!response.ok) throw new Error(body.message ?? "Unable to transition delivery.");
+        if (!response.ok) throw new Error(body.message ?? "Não foi possível actualizar o estado da entrega.");
         await load();
       } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : "Unable to transition delivery.");
+        setError(requestError instanceof Error ? requestError.message : "Não foi possível actualizar o estado da entrega.");
       } finally {
         setActionId(null);
       }
@@ -163,10 +178,10 @@ export default function DeliveryAgentDeliveries() {
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[9px] font-semibold uppercase tracking-[0.32em] text-[var(--theme-text)]/30">
-              Delivery Operations
+              Operações de entrega
             </p>
             <h1 className="mt-5 marka-editorial text-4xl text-[var(--theme-text)] sm:text-5xl">
-              My Deliveries
+              As minhas entregas
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--theme-text)]/40">
               Entregas atribuídas a este agente, com estado operacional e contexto do pedido.
@@ -179,7 +194,7 @@ export default function DeliveryAgentDeliveries() {
             disabled={loading}
             className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text)]/50 transition hover:border-[var(--theme-border)] hover:text-[var(--theme-text)] disabled:opacity-40"
           >
-            {loading ? "Loading..." : "Refresh"}
+            {loading ? "A carregar…" : "Actualizar"}
           </button>
         </div>
       </section>
@@ -196,11 +211,11 @@ export default function DeliveryAgentDeliveries() {
           <p className="mt-3 text-3xl font-medium text-[var(--theme-text)]/90">{summary.total}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.07] bg-[var(--theme-surface-strong)]/[0.025] p-5">
-          <p className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text)]/25">Visible exceptions</p>
+          <p className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text)]/25">Excepções visíveis</p>
           <p className="mt-3 text-3xl font-medium text-[var(--theme-text)]/90">{summary.exceptions}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.07] bg-[var(--theme-surface-strong)]/[0.025] p-5">
-          <p className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text)]/25">Completed shown</p>
+          <p className="text-[9px] uppercase tracking-[0.25em] text-[var(--theme-text)]/25">Concluídas nesta lista</p>
           <p className="mt-3 text-3xl font-medium text-[var(--theme-text)]/90">{summary.completed}</p>
         </div>
       </section>
@@ -218,7 +233,7 @@ export default function DeliveryAgentDeliveries() {
                   : "border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] text-[var(--theme-text)]/45 hover:text-[var(--theme-text)]"
               }`}
             >
-              {value === "ACTIVE" ? "Active" : "History"}
+              {value === "ACTIVE" ? "Em curso" : "Histórico"}
             </button>
           ))}
         </div>
@@ -226,15 +241,15 @@ export default function DeliveryAgentDeliveries() {
         <div className="mt-6 space-y-3">
           {loading && (
             <div className="rounded-xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] px-4 py-8 text-center text-xs text-[var(--theme-text)]/25">
-              Loading deliveries...
+              A carregar entregas…
             </div>
           )}
 
           {!loading && data?.deliveries.length === 0 && (
-            <div className="rounded-xl border border-[var(--theme-border)] bg-[color-mix(in_srgb,var(--theme-background)_15%,transparent)] px-4 rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-12 text-center text-xs text-[var(--theme-text)]/45">
+            <div className="rounded-[1.25rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] px-6 py-12 text-center text-xs text-[var(--theme-text)]/45">
               {scope === "ACTIVE"
-                ? "No active deliveries assigned."
-                : "No delivery history available."}
+                ? "Não tens entregas em curso atribuídas."
+                : "Ainda não existe histórico de entregas."}
             </div>
           )}
 
@@ -257,10 +272,10 @@ export default function DeliveryAgentDeliveries() {
                       )}
                     </div>
                     <h2 className="mt-3 text-sm font-medium text-[var(--theme-text)]/75">
-                      {delivery.store?.name ?? "Store"} · Order {delivery.orderId.slice(0, 8)}
+                      {delivery.store?.name ?? "Loja"} · Encomenda {delivery.orderId.slice(0, 8)}
                     </h2>
                     <p className="mt-1 text-[10px] text-[var(--theme-text)]/25">
-                      Accepted {formatDate(delivery.acceptedAt)} · Updated {formatDate(delivery.updatedAt)}
+                      Aceite {formatDate(delivery.acceptedAt)} · Actualizada {formatDate(delivery.updatedAt)}
                     </p>
                   </div>
 
@@ -269,16 +284,16 @@ export default function DeliveryAgentDeliveries() {
                       {delivery.order.total} {delivery.order.currency}
                     </p>
                     <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-[var(--theme-text)]/20">
-                      Order {label(delivery.order.status)}
+                      Encomenda {label(delivery.order.status)}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.02] p-4">
-                    <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">Destination</p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">Destino</p>
                     <p className="mt-2 text-xs leading-5 text-[var(--theme-text)]/55">
-                      {delivery.order.deliveryAddress ?? "Address unavailable"}
+                      {delivery.order.deliveryAddress ?? "Morada indisponível"}
                     </p>
                     {delivery.order.deliveryInstructions && (
                       <p className="mt-2 text-[10px] text-[var(--theme-text)]/25">
@@ -288,9 +303,9 @@ export default function DeliveryAgentDeliveries() {
                   </div>
 
                   <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.02] p-4">
-                    <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">References</p>
-                    <p className="mt-2 text-[10px] text-[var(--theme-text)]/30">Dispatch: {delivery.dispatchId}</p>
-                    <p className="mt-1 text-[10px] text-[var(--theme-text)]/30">Fulfillment: {delivery.fulfillmentId}</p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text)]/20">Referências</p>
+                    <p className="mt-2 text-[10px] text-[var(--theme-text)]/30">Distribuição: {delivery.dispatchId}</p>
+                    <p className="mt-1 text-[10px] text-[var(--theme-text)]/30">Preparação: {delivery.fulfillmentId}</p>
                   </div>
                 </div>
                 {actions.length > 0 && (
@@ -303,7 +318,7 @@ export default function DeliveryAgentDeliveries() {
                         disabled={actionId !== null}
                         className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.04] px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]/55 transition hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface-strong)]/[0.07] hover:text-[var(--theme-text)] disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {actionId === delivery.dispatchId ? "Processing..." : action.label}
+                        {actionId === delivery.dispatchId ? "A processar…" : action.label}
                       </button>
                     ))}
                   </div>
