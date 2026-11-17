@@ -9,7 +9,10 @@ import {
 import { prisma } from "@/database/client/prisma";
 
 import { DispatchDomainError } from "@/dispatch-engine/dispatch.errors";
-import { resolveDriverAvailabilityForActiveRides } from "@/services/mobility/rides/mobility-ride.state-machine";
+import {
+  resolveDriverAvailabilityForActiveRides,
+  transitionRideStatus,
+} from "@/services/mobility/rides/mobility-ride.state-machine";
 
 import {
   mobilityMatchingService,
@@ -1025,6 +1028,13 @@ export class MobilityDispatchService {
         );
       }
 
+      if (rejection) {
+        transitionRideStatus(
+          lockedRide.status,
+          MobilityRideStatus.SEARCHING,
+        );
+      }
+
       // Compare-and-set prevents a stale rejection/redispatch request from
       // clearing an assignment that another request has already changed.
       const released = await tx.mobilityRide.updateMany({
@@ -1043,6 +1053,7 @@ export class MobilityDispatchService {
           driverId: null,
           vehicleId: null,
           driverAssignedAt: null,
+          status: rejection ? MobilityRideStatus.SEARCHING : undefined,
           metadata: rejection
             ? buildDispatchRejectionMetadata(lockedRide.metadata, {
                 driverId,
