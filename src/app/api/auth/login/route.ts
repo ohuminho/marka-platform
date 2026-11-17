@@ -1,6 +1,6 @@
-import { isIP } from "node:net";
 import { NextResponse } from "next/server";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
+import { getTrustedClientIp } from "@/core/security/client-ip";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import {
@@ -16,18 +16,6 @@ function normalizeEmail(
   email: string
 ): string {
   return email.trim().toLowerCase();
-}
-
-function getClientIp(
-  request: Request
-): string | undefined {
-  // Use Vercel's dedicated client-IP header. A generic x-forwarded-for
-  // header may be rewritten by an upstream proxy, and x-real-ip is not
-  // part of the documented Vercel client-IP contract.
-  const candidate = request.headers.get("x-vercel-forwarded-for");
-  const ip = candidate?.split(",")[0]?.trim();
-
-  return ip && isIP(ip) ? ip : undefined;
 }
 
 export async function POST(
@@ -58,7 +46,7 @@ export async function POST(
       );
     }
 
-    const clientIp = getClientIp(request);
+    const clientIp = getTrustedClientIp(request);
 
     // An email is not an IP identity. If the trusted platform IP is absent
     // (for example in local development), do not misclassify this quota.
