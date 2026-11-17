@@ -233,11 +233,6 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "DRIVER_ARRIVING"].includes(selectedOrchestration?.currentStep ?? "") &&
     ["DRIVER_ASSIGNED", "DRIVER_ARRIVING"].includes(ride?.status ?? "");
 
-  useEffect(() => {
-    setRejectionReason("");
-    setActionError(null);
-  }, [ride?.id]);
-
   const toggleDriverAvailability = async () => {
     if (!organizationId || availabilityLoading || active) return;
     setAvailabilityLoading(true); setAvailabilityError(null);
@@ -430,7 +425,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
             <span className="rounded-full border border-white/10 px-2 py-1 text-[9px] text-white/55">{driverRides.length} ativa{driverRides.length === 1 ? "" : "s"}</span>
           </div>
           <div className="mt-3 space-y-2">
-            {driverRides.map((item, index) => <button key={item.id} type="button" onClick={() => setSelectedRideId(item.id)} aria-pressed={ride?.id === item.id} className={`w-full rounded-xl border p-3 text-left transition ${ride?.id === item.id ? "border-[#e9bd58]/45 bg-[#e9bd58]/[.08]" : "border-white/[.08] bg-black/10 hover:border-white/20"}`}>
+            {driverRides.map((item, index) => <button key={item.id} type="button" onClick={() => { setSelectedRideId(item.id); setRejectionReason(""); setActionError(null); }} aria-pressed={ride?.id === item.id} className={`w-full rounded-xl border p-3 text-left transition ${ride?.id === item.id ? "border-[#e9bd58]/45 bg-[#e9bd58]/[.08]" : "border-white/[.08] bg-black/10 hover:border-white/20"}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-semibold text-white/85">Viagem {index + 1} · {(item.reference || item.id.slice(0, 8)).toUpperCase()}</span>
                 <span className="text-[9px] text-[#e9bd58]">{STATUS[item.status] || item.status.replaceAll("_", " ")}</span>
