@@ -52,14 +52,12 @@ const allowedTransitions: Record<
   TRIP_STARTED: [
     MobilityRideStatus.TRIP_IN_PROGRESS,
     MobilityRideStatus.TRIP_COMPLETED,
-    MobilityRideStatus.CANCELLED,
     MobilityRideStatus.DISPUTED,
     MobilityRideStatus.FAILED,
   ],
 
   TRIP_IN_PROGRESS: [
     MobilityRideStatus.TRIP_COMPLETED,
-    MobilityRideStatus.CANCELLED,
     MobilityRideStatus.DISPUTED,
     MobilityRideStatus.FAILED,
   ],
