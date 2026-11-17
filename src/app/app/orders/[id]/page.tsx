@@ -184,6 +184,9 @@ export default function OrderDetailPage({
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
   const [deliveryConfirmationError, setDeliveryConfirmationError] = useState<string | null>(null);
   const [deliveryConfirmationSent, setDeliveryConfirmationSent] = useState(false);
+  const [retryingDelivery, setRetryingDelivery] = useState(false);
+  const [deliveryRecoveryError, setDeliveryRecoveryError] = useState<string | null>(null);
+  const [deliveryRecoveryMessage, setDeliveryRecoveryMessage] = useState<string | null>(null);
 
   const [tracking, setTracking] =
     useState<DeliveryTracking | null>(null);
@@ -379,6 +382,43 @@ export default function OrderDetailPage({
       );
     } finally {
       setCancellingOrder(false);
+    }
+  };
+
+  const retryDeliveryRecovery = async () => {
+    if (!order || retryingDelivery) return;
+
+    setRetryingDelivery(true);
+    setDeliveryRecoveryError(null);
+    setDeliveryRecoveryMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/orders/${encodeURIComponent(order.id)}/fulfillment/retry`,
+        {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        },
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message ?? "Não foi possível recuperar a entrega.");
+      }
+
+      setDeliveryRecoveryMessage(
+        "Pedido de recuperação processado. O estado da entrega foi atualizado.",
+      );
+      await loadOrder(true);
+    } catch (error) {
+      setDeliveryRecoveryError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível recuperar a entrega.",
+      );
+    } finally {
+      setRetryingDelivery(false);
     }
   };
 
@@ -747,6 +787,40 @@ export default function OrderDetailPage({
                     Delivery exception: {order.fulfillment.exceptionCode}
                   </div>
                 ) : null}
+
+                {order.status === "CONFIRMED" &&
+                  order.payments.some((payment) => payment.status === "COMPLETED") &&
+                  (
+                    !order.fulfillment ||
+                    !order.dispatch ||
+                    order.fulfillment.status === "EXCEPTION" ||
+                    order.dispatch.status === "CANCELLED" ||
+                    order.dispatch.status === "EXPIRED"
+                  ) ? (
+                    <div className="space-y-2 rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4">
+                      <p className="text-sm text-[var(--theme-text)]/70">
+                        O pagamento está confirmado, mas a distribuição da entrega precisa de recuperação. Pode pedir uma nova tentativa sem pagar novamente.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={retryingDelivery}
+                        onClick={() => void retryDeliveryRecovery()}
+                        className="w-full rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-[var(--theme-text)] transition hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {retryingDelivery ? "A recuperar entrega…" : "Tentar recuperar entrega"}
+                      </button>
+                      {deliveryRecoveryMessage ? (
+                        <p role="status" className="text-xs text-emerald-300">
+                          {deliveryRecoveryMessage}
+                        </p>
+                      ) : null}
+                      {deliveryRecoveryError ? (
+                        <p role="alert" className="text-xs text-red-300">
+                          {deliveryRecoveryError}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                 <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4">
