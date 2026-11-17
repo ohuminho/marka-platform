@@ -49,14 +49,18 @@ console.log("Mobility dispatch vehicle policy tests passed.");
 const rejectedEvents = [
   {
     metadata: {
-      rejectedDriverId: "driver-a",
-      reason: "Vehicle unavailable",
+      result: {
+        result: { rejectedDriverId: "driver-a" },
+        reason: "Vehicle unavailable",
+      },
     } as import("@prisma/client").Prisma.JsonValue,
   },
   {
     metadata: {
-      rejectedDriverId: "driver-b",
-      reason: "Outside service area",
+      result: {
+        rejectedDriverId: "driver-b",
+        reason: "Outside service area",
+      },
     } as import("@prisma/client").Prisma.JsonValue,
   },
   {
