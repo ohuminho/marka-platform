@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   Prisma,
   MobilityAvailabilityStatus,
@@ -554,7 +556,14 @@ export class MobilityDispatchService {
     driverId: string,
     reason: string,
     safetyMode: MobilitySafetyMode =
-      "STANDARD"
+      "STANDARD",
+    rejectionContext: {
+      organizationId: string;
+      actorUserId?: string;
+      correlationId?: string;
+      requestId?: string;
+      idempotencyKey: string;
+    },
   ): Promise<MobilityDispatchResult> {
     const normalizedReason =
       reason.trim();
@@ -585,6 +594,8 @@ export class MobilityDispatchService {
       ride.id,
       {
         expectedDriverId: driverId,
+        reason: normalizedReason,
+        context: rejectionContext,
       },
     );
 
@@ -950,7 +961,17 @@ export class MobilityDispatchService {
 
   private async releaseCurrentAssignment(
     rideId: string,
-    rejection?: { expectedDriverId: string },
+    rejection?: {
+      expectedDriverId: string;
+      reason: string;
+      context: {
+        organizationId: string;
+        actorUserId?: string;
+        correlationId?: string;
+        requestId?: string;
+        idempotencyKey: string;
+      };
+    },
   ): Promise<void> {
     const ride =
       await this.requireRide(
@@ -1100,6 +1121,50 @@ export class MobilityDispatchService {
         },
         data: { status: nextAvailability },
       });
+
+      if (rejection) {
+        const orchestration = await tx.mobilityRideOrchestration.findFirst({
+          where: {
+            rideId: ride.id,
+            organizationId: rejection.context.organizationId,
+          },
+          select: {
+            id: true,
+            status: true,
+            currentStep: true,
+          },
+        });
+
+        if (!orchestration) {
+          throw new DispatchDomainError(
+            "Ride orchestration is required to record a driver rejection.",
+            "MOBILITY_ORCHESTRATION_REQUIRED",
+          );
+        }
+
+        await tx.mobilityRideOrchestrationEvent.create({
+          data: {
+            id: randomUUID(),
+            orchestrationId: orchestration.id,
+            organizationId: rejection.context.organizationId,
+            rideId: ride.id,
+            action: "REJECT_ASSIGNMENT",
+            fromStep: orchestration.currentStep,
+            toStep: orchestration.currentStep,
+            status: orchestration.status,
+            idempotencyKey: `${rejection.context.idempotencyKey}:rejection-recorded`,
+            correlationId: rejection.context.correlationId ?? null,
+            requestId: rejection.context.requestId ?? null,
+            actorUserId: rejection.context.actorUserId ?? null,
+            metadata: {
+              result: {
+                rejectedDriverId: driverId,
+                reason: rejection.reason,
+              },
+            },
+          },
+        });
+      }
     });
   }
 
