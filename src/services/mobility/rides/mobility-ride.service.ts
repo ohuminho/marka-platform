@@ -1184,6 +1184,13 @@ export class MobilityRideService {
           data: {
             status: nextStatus,
             ...additionalData,
+            ...(nextStatus === MobilityRideStatus.CANCELLED
+              ? {
+                  driverId: null,
+                  vehicleId: null,
+                  driverAssignedAt: null,
+                }
+              : {}),
           },
         });
 
