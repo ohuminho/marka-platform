@@ -788,7 +788,7 @@ export default function OrderDetailPage({
                   </div>
                 ) : null}
 
-                {order.status === "CONFIRMED" &&
+                {["PENDING", "CONFIRMED"].includes(order.status) &&
                   order.payments.some((payment) => payment.status === "COMPLETED") &&
                   (
                     !order.fulfillment ||
