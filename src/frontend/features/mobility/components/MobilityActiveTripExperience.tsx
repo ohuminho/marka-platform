@@ -50,6 +50,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [lastAdDismissedAt, setLastAdDismissedAt] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [communicationLoading, setCommunicationLoading] = useState(false);
   const [communicationError, setCommunicationError] = useState<string | null>(null);
   const [driverProfileStatus, setDriverProfileStatus] = useState<string | null>(null);
@@ -228,6 +229,10 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     return step ? actions[step] ?? null : null;
   }, [audience, selectedOrchestration?.currentStep]);
 
+  const canRejectAssignment = audience === "driver" &&
+    ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "DRIVER_ARRIVING"].includes(selectedOrchestration?.currentStep ?? "") &&
+    ["DRIVER_ASSIGNED", "DRIVER_ARRIVING"].includes(ride?.status ?? "");
+
   const toggleDriverAvailability = async () => {
     if (!organizationId || availabilityLoading || active) return;
     setAvailabilityLoading(true); setAvailabilityError(null);
@@ -317,6 +322,44 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
     finally { setActionLoading(false); }
   };
 
+  const performDriverRejection = async () => {
+    if (!ride || !organizationId || actionLoading) return;
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      setActionError("Indique o motivo da rejeição.");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError(null);
+    const actionKey = "marka-driver-" + ride.id + "-REJECT_ASSIGNMENT-v1";
+    try {
+      const response = await fetch("/api/mobility/rides/" + encodeURIComponent(ride.id), {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Organization-Id": organizationId,
+          "Idempotency-Key": actionKey,
+        },
+        body: JSON.stringify({
+          action: "REJECT_ASSIGNMENT",
+          reason,
+          safetyMode: "STANDARD",
+        }),
+      });
+      const data = (await response.json()) as RidePayload;
+      if (!response.ok) throw new Error(data.message || "Não foi possível rejeitar a viagem.");
+      setPayload(data);
+      setRejectionReason("");
+      await refresh();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Falha ao rejeitar a viagem.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (audience === "rider" && !authLoading && !loading && !error && !active) return null;
 
   return <section className="overflow-hidden rounded-[28px] border border-white/[.09] bg-[#080B10] text-white shadow-[0_30px_100px_-52px_rgba(0,0,0,.9)]">
@@ -364,7 +407,15 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
             {financialSetupMessage && <p role="status" className="mt-2 text-xs text-emerald-200">{financialSetupMessage}</p>}
             {financialSetupError && <p role="alert" className="mt-2 text-xs text-rose-200">{financialSetupError}</p>}
           </div>}
-          {audience === "driver" && driverAction && <div className="mt-5 border-t border-white/[.08] pt-5"><button type="button" disabled={actionLoading} onClick={() => void performDriverAction()} className="flex min-h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] px-5 py-3 text-center text-xs font-bold text-[#17130a] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-60">{actionLoading ? "A atualizar viagem…" : driverAction.label + " →"}</button>{actionError && <p role="alert" className="mt-3 rounded-xl border border-rose-300/20 bg-rose-300/[.05] p-3 text-xs text-rose-100">{actionError}</p>}</div>}
+          {audience === "driver" && (driverAction || canRejectAssignment) && <div className="mt-5 space-y-3 border-t border-white/[.08] pt-5">
+            {driverAction && <button type="button" disabled={actionLoading} onClick={() => void performDriverAction()} className="flex min-h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#f5d47c] to-[#dca83d] px-5 py-3 text-center text-xs font-bold text-[#17130a] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-60">{actionLoading ? "A atualizar viagem…" : driverAction.label + " →"}</button>}
+            {canRejectAssignment && <div className="rounded-2xl border border-white/[.08] bg-black/15 p-3">
+              <label htmlFor="mobility-rejection-reason" className="mb-2 block text-[10px] font-medium text-white/65">Não pode aceitar esta viagem?</label>
+              <input id="mobility-rejection-reason" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} maxLength={240} placeholder="Indique o motivo da rejeição" disabled={actionLoading} className="min-h-11 w-full rounded-xl border border-white/10 bg-white/[.04] px-3 text-xs text-white outline-none placeholder:text-white/30 focus:border-[#e9bd58]/45 disabled:opacity-50" />
+              <button type="button" disabled={actionLoading || !rejectionReason.trim()} onClick={() => void performDriverRejection()} className="mt-2 min-h-10 w-full rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/70 transition hover:border-rose-300/35 hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-40">{actionLoading ? "A processar…" : "Rejeitar e devolver à procura de motorista"}</button>
+            </div>}
+            {actionError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/[.05] p-3 text-xs text-rose-100">{actionError}</p>}
+          </div>}
         </div>}
       </div>
       <aside className="space-y-3">
