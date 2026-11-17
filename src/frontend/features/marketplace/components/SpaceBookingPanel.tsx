@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { weekdayInTimeZone } from "@/frontend/features/marketplace/utils/booking-time";
 
 type Availability = {
   space?: { timezone?: string | null; capacity?: string | number | null };
@@ -49,7 +50,7 @@ export default function SpaceBookingPanel({ productId }: { productId: string }) 
     if (!availability || !interval) return "unknown";
     const { from, to } = interval;
     if (from <= new Date()) return "past";
-    const weekday = from.getDay();
+    const weekday = weekdayInTimeZone(from, timezone);
     const day = date;
     const openException = availability.exceptions?.some((item) => item.type === "OPEN" && new Date(item.startAt) <= from && new Date(item.endAt) >= to);
     const closed = availability.exceptions?.some((item) => item.type === "CLOSED" && new Date(item.startAt) < to && new Date(item.endAt) > from);
