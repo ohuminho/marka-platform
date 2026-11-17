@@ -118,6 +118,67 @@ export class SessionService {
     };
   }
 
+  async refresh(token: string): Promise<SessionResult | null> {
+    if (!token.trim()) {
+      return null;
+    }
+
+    const tokenHash = this.hashToken(token);
+    const now = new Date();
+    const session = await prisma.session.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        revokedAt: true,
+        user: { select: { status: true } },
+      },
+    });
+
+    if (
+      !session ||
+      session.revokedAt ||
+      session.expiresAt <= now ||
+      session.user.status !== "ACTIVE"
+    ) {
+      return null;
+    }
+
+    const refreshWindowMs =
+      AuthConfig.session.refreshWindowHours * 60 * 60 * 1000;
+    if (session.expiresAt.getTime() - now.getTime() > refreshWindowMs) {
+      return {
+        id: session.id,
+        token,
+        expiresAt: session.expiresAt,
+      };
+    }
+
+    const expiresAt = new Date(now.getTime() + this.sessionDurationMs);
+    const updated = await prisma.session.updateMany({
+      where: {
+        id: session.id,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      data: {
+        expiresAt,
+        lastSeenAt: now,
+      },
+    });
+
+    if (updated.count !== 1) {
+      return null;
+    }
+
+    return {
+      id: session.id,
+      token,
+      expiresAt,
+    };
+  }
+
   async revoke(token: string): Promise<void> {
     if (!token.trim()) {
       return;
