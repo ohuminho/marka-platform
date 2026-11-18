@@ -66,6 +66,12 @@ export default function MobilityFreightRequestForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const locationSearching = service === "CARGO_SHIPMENT"
+    ? origin.searching || destination.searching
+    : service === "WATER_DELIVERY"
+      ? destination.searching
+      : origin.searching;
+
   const updatePoint = (setter: typeof setOrigin, _field: PointField, address: string) => {
     setter((previous) => ({ ...previous, address, point: null, searching: false }));
   };
@@ -129,6 +135,10 @@ export default function MobilityFreightRequestForm() {
     event.preventDefault();
     setError(null);
     setMessage(null);
+    if (locationSearching) {
+      setError("Aguarde a confirmação da localização antes de enviar o pedido.");
+      return;
+    }
     if (!organizationId) {
       setError("Seleccione primeiro a sua organização.");
       return;
@@ -303,7 +313,7 @@ export default function MobilityFreightRequestForm() {
         {message && <p role="status" className="rounded-xl border border-emerald-500/20 px-4 py-3 text-xs text-emerald-700 dark:text-emerald-300">{message}</p>}
         <div className="flex flex-col gap-3 border-t border-[var(--theme-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">{service === "ROADSIDE_ASSISTANCE" ? "Receberá a cotação e as condições antes de autorizar o despacho. O envio do pedido não activa automaticamente um reboque." : "Receberá uma proposta antes de confirmar. O envio do pedido não implica pagamento nem despacho."}</p>
-          <button type="submit" disabled={submitting || !organizationId} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "A enviar pedido…" : service === "CARGO_SHIPMENT" ? "Solicitar transporte" : service === "WATER_DELIVERY" ? "Solicitar entrega" : "Pedir assistência"}</button>
+          <button type="submit" disabled={submitting || !organizationId || locationSearching} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "A enviar pedido…" : locationSearching ? "A confirmar localização…" : service === "CARGO_SHIPMENT" ? "Solicitar transporte" : service === "WATER_DELIVERY" ? "Solicitar entrega" : "Pedir assistência"}</button>
         </div>
       </form>
     </section>
