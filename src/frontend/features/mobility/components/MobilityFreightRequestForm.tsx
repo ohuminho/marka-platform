@@ -6,7 +6,8 @@ import MarkaVehicleIllustration from "./MarkaVehicleIllustration";
 
 type ServiceType = "CARGO_SHIPMENT" | "WATER_DELIVERY" | "ROADSIDE_ASSISTANCE";
 type Point = { latitude: number; longitude: number; address: string };
-type PointField = { address: string; point: Point | null; searching: boolean };
+type PointCandidate = Point & { label: string };
+type PointField = { address: string; point: Point | null; searching: boolean; candidates: PointCandidate[] };
 
 const assistanceOptions = [
   ["TOW", "Reboque"],
@@ -17,7 +18,7 @@ const assistanceOptions = [
   ["ON_SITE_MECHANIC", "Mecânico no local"],
 ] as const;
 
-async function locateAddress(address: string): Promise<Point> {
+async function locateAddress(address: string): Promise<PointCandidate[]> {
   const query = address.trim();
   if (query.length < 3) throw new Error("Escreva pelo menos 3 caracteres: bairro, rua ou município.");
   const url = new URL("https://photon.komoot.io/api/");
@@ -32,27 +33,31 @@ async function locateAddress(address: string): Promise<Point> {
   const data = await response.json() as {
     features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
   };
-  const match = (data.features ?? []).find((feature) => {
-    const country = feature.properties?.country;
-    return !country || (typeof country === "string" && /angola/i.test(country));
+  const candidates = (data.features ?? []).flatMap((feature): PointCandidate[] => {
+    const properties = feature.properties ?? {};
+    const country = properties.country;
+    if (typeof country !== "string" || !/angola/i.test(country)) return [];
+    const coordinates = feature.geometry?.coordinates;
+    if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
+    const parts = [properties.name, properties.street, properties.district, properties.city, properties.state, properties.country]
+      .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+      .filter((part, index, all) => all.indexOf(part) === index);
+    const label = parts.join(", ");
+    if (!label) return [];
+    return [{ latitude: coordinates[1], longitude: coordinates[0], address: label, label }];
   });
-  const coordinates = match?.geometry?.coordinates;
-  const properties = match?.properties ?? {};
-  if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) {
-    throw new Error("Não encontrámos esse local em Angola. Experimente indicar bairro, rua ou município.");
-  }
-  const label = [properties.name, properties.street, properties.district, properties.city, properties.state, properties.country]
-    .filter((part): part is string => typeof part === "string" && part.length > 0)
-    .filter((part, index, all) => all.indexOf(part) === index)
-    .join(", ");
-  return { latitude: coordinates[1], longitude: coordinates[0], address: label || query };
+  const unique = candidates.filter((candidate, index, all) =>
+    all.findIndex((item) => item.latitude === candidate.latitude && item.longitude === candidate.longitude) === index
+  );
+  if (!unique.length) throw new Error("Não encontrámos resultados confirmados em Angola. Experimente indicar bairro, rua ou município, ou use o GPS.");
+  return unique.slice(0, 6);
 }
 
 export default function MobilityFreightRequestForm() {
   const { activeOrganization } = useAuth();
   const organizationId = activeOrganization?.id;
   const [service, setService] = useState<ServiceType>("CARGO_SHIPMENT");
-  const [origin, setOrigin] = useState<PointField>({ address: "", point: null, searching: false });
+  const [origin, setOrigin] = useState<PointField>({ address: "", point: null, searching: false, candidates: [] });
   const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false });
   const [cargoDescription, setCargoDescription] = useState("");
   const [vehiclePreference, setVehiclePreference] = useState("ANY");
@@ -73,17 +78,17 @@ export default function MobilityFreightRequestForm() {
       : origin.searching;
 
   const updatePoint = (setter: typeof setOrigin, _field: PointField, address: string) => {
-    setter((previous) => ({ ...previous, address, point: null, searching: false }));
+    setter((previous) => ({ ...previous, address, point: null, searching: false, candidates: [] }));
   };
 
   const findPoint = async (field: PointField, setter: typeof setOrigin) => {
     const query = field.address.trim();
-    setter((previous) => ({ ...previous, searching: true }));
+    setter((previous) => ({ ...previous, searching: true, candidates: [], point: null }));
     setError(null);
     try {
-      const point = await locateAddress(query);
+      const candidates = await locateAddress(query);
       setter((previous) => previous.address.trim() === query
-        ? { address: point.address, point, searching: false }
+        ? { ...previous, point: null, candidates, searching: false }
         : { ...previous, searching: false });
     } catch (cause) {
       setter((previous) => ({ ...previous, searching: false }));
@@ -108,7 +113,7 @@ export default function MobilityFreightRequestForm() {
             longitude: position.coords.longitude,
             address: previous.address.trim() || "Localização GPS atual",
           };
-          return { address: point.address, point, searching: false };
+          return { address: point.address, point, searching: false, candidates: [] };
         });
       },
       () => {
@@ -127,6 +132,20 @@ export default function MobilityFreightRequestForm() {
         <button type="button" disabled={field.searching || !field.address.trim()} onClick={() => void findPoint(field, setter)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text)] disabled:opacity-40">{field.searching ? "A localizar…" : "Localizar"}</button>
         <button type="button" disabled={field.searching} onClick={() => requestGpsLocation(setter, field)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text-muted)] disabled:opacity-40">Usar GPS</button>
       </div>
+      {field.candidates.length > 0 && !field.point && (
+        <div className="space-y-1 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-2" role="group" aria-label={`Escolher localização para ${label}`}>
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--theme-text-muted)]">Escolha o local correcto</p>
+          {field.candidates.map((candidate, index) => (
+            <button key={`${candidate.latitude}:${candidate.longitude}:${index}`} type="button"
+              onClick={() => setter((previous) => previous.address === field.address
+                ? { address: candidate.address, point: candidate, searching: false, candidates: [] }
+                : previous)}
+              className="min-h-10 w-full rounded-lg px-3 py-2 text-left text-xs text-[var(--theme-text)] hover:bg-[var(--theme-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-text-muted)]">
+              {candidate.label}
+            </button>
+          ))}
+        </div>
+      )}
       {field.point && <p className="text-[11px] text-emerald-700 dark:text-emerald-300">Local confirmado: {field.point.address}</p>}
     </div>
   );
@@ -232,8 +251,8 @@ export default function MobilityFreightRequestForm() {
       setQuantity("");
       setVehicleDescription("");
       setNotes("");
-      setOrigin({ address: "", point: null, searching: false });
-      setDestination({ address: "", point: null, searching: false });
+      setOrigin({ address: "", point: null, searching: false, candidates: [] });
+      setDestination({ address: "", point: null, searching: false, candidates: [] });
       window.dispatchEvent(new Event("marka:freight-request-created"));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "O pedido não foi concluído. Tente novamente.");
