@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
+import { getTrustedClientIp } from "@/core/security/client-ip";
 import { z } from "zod";
 
 import { prisma } from "@/database/client/prisma";
@@ -48,23 +49,23 @@ export async function POST(request: Request) {
     const name = parsed.data.name.trim();
     const email = normalizeEmail(parsed.data.email);
     const password = parsed.data.password;
-    const clientIp =
-      request.headers.get("x-real-ip")?.trim() ||
-      request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+    const clientIp = getTrustedClientIp(request);
 
-    const ipQuota = await reserveApiRequest({
-      scope: "AUTH_REGISTER_IP",
-      anonymousIdentity: clientIp || `register-email:${email}`,
-      windows: [
-        { limit: 5, windowMs: 60 * 60 * 1000 },
-        { limit: 15, windowMs: 24 * 60 * 60 * 1000 },
-      ],
-    });
-    if (!ipQuota.allowed) {
-      return NextResponse.json(
-        { message: "Atingiste o limite temporário de registos. Tenta novamente mais tarde.", code: "REGISTER_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
-        { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
-      );
+    if (clientIp) {
+      const ipQuota = await reserveApiRequest({
+        scope: "AUTH_REGISTER_IP",
+        anonymousIdentity: clientIp,
+        windows: [
+          { limit: 5, windowMs: 60 * 60 * 1000 },
+          { limit: 15, windowMs: 24 * 60 * 60 * 1000 },
+        ],
+      });
+      if (!ipQuota.allowed) {
+        return NextResponse.json(
+          { message: "Atingiste o limite temporário de registos. Tenta novamente mais tarde.", code: "REGISTER_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
+          { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     const emailQuota = await reserveApiRequest({
