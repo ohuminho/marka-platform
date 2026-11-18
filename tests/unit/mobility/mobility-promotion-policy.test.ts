@@ -174,3 +174,50 @@ assert.throws(
 );
 
 console.log("Mobility pricing precision tests passed.");
+
+const distanceTierBoundaries = [
+  { distance: 10_000, rate: 0 },
+  { distance: 10_001, rate: 500 },
+  { distance: 15_000, rate: 500 },
+  { distance: 15_001, rate: 800 },
+  { distance: 25_000, rate: 800 },
+  { distance: 25_001, rate: 1_200 },
+  { distance: 40_000, rate: 1_200 },
+  { distance: 40_001, rate: 1_500 },
+];
+for (const boundary of distanceTierBoundaries) {
+  const result = evaluateMobilityPromotion({
+    ...common,
+    vehicle: "TAXI",
+    estimatedDistanceMeters: boundary.distance,
+    distanceFareMinor: BigInt(1_000_000),
+  });
+  assert.equal(result.discountRateBps, boundary.rate, `Unexpected tier at ${boundary.distance}m`);
+}
+
+const taxiDiscountCap = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(2_000_000),
+});
+assert.equal(taxiDiscountCap.discountMinor, BigInt(100_000)); // máximo 1.000 Kz
+
+const motoTaxiDiscountCap = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "MOTO_TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(2_000_000),
+});
+assert.equal(motoTaxiDiscountCap.discountMinor, BigInt(50_000)); // máximo 500 Kz
+
+const customThreshold = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 15_000,
+  longDistanceThresholdMeters: 20_000,
+});
+assert.equal(customThreshold.eligible, false);
+assert.equal(customThreshold.discountMinor, BigInt(0));
+
+console.log("Mobility promotion boundary and cap tests passed.");
