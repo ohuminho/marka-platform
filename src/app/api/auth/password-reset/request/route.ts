@@ -64,7 +64,10 @@ export async function POST(request: Request) {
       where: { emailNormalized: email },
       select: { id: true, email: true, name: true, status: true },
     });
-    if (!user || !["ACTIVE", "PENDING_VERIFICATION"].includes(user.status)) {
+    // Password reset only applies to accounts that can sign in. Pending
+    // accounts must complete email verification instead of receiving a
+    // reset link that cannot make the account eligible for login.
+    if (!user || user.status !== "ACTIVE") {
       return Response.json({ message: genericMessage }, noStore);
     }
 
