@@ -252,3 +252,37 @@ assert.throws(
 );
 
 console.log("Mobility promotion non-stacking and disabled-campaign tests passed.");
+
+
+for (const invalidDistance of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+  assert.throws(
+    () => evaluateMobilityPromotion({
+      ...common,
+      vehicle: "TAXI",
+      estimatedDistanceMeters: invalidDistance,
+    }),
+    /Promotion distance must be non-negative/,
+  );
+}
+
+for (const invalidThreshold of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+  assert.throws(
+    () => evaluateMobilityPromotion({
+      ...common,
+      vehicle: "TAXI",
+      longDistanceThresholdMeters: invalidThreshold,
+    }),
+    /long-distance threshold must be positive/,
+  );
+}
+
+const longDistanceWithoutDistanceFare = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(0),
+});
+assert.equal(longDistanceWithoutDistanceFare.eligible, false);
+assert.equal(longDistanceWithoutDistanceFare.discountMinor, BigInt(0));
+
+console.log("Mobility promotion invalid-distance and zero-distance-fare tests passed.");
