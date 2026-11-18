@@ -58,7 +58,7 @@ export default function MobilityFreightRequestForm() {
   const organizationId = activeOrganization?.id;
   const [service, setService] = useState<ServiceType>("CARGO_SHIPMENT");
   const [origin, setOrigin] = useState<PointField>({ address: "", point: null, searching: false, candidates: [] });
-  const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false });
+  const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false, candidates: [] });
   const [cargoDescription, setCargoDescription] = useState("");
   const [vehiclePreference, setVehiclePreference] = useState("ANY");
   const [waterType, setWaterType] = useState<"POTABLE_WATER" | "NON_POTABLE_WATER">("POTABLE_WATER");
