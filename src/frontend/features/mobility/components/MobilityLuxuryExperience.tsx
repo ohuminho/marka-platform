@@ -206,7 +206,7 @@ export default function MobilityLuxuryExperience() {
 
   useEffect(() => {
     const value = originText.trim();
-    if (value.length < 3 || value === "A minha localização GPS" || active) return;
+    if (value.length < 3 || value === "A minha localização GPS" || (origin && value === origin.label) || active) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setOriginSearchBusy(true);
@@ -246,7 +246,7 @@ export default function MobilityLuxuryExperience() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [originText, active]);
+  }, [originText, origin, active]);
 
   useEffect(() => {
     const value = destinationText.trim();
