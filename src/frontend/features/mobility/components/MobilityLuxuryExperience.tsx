@@ -90,6 +90,9 @@ export default function MobilityLuxuryExperience() {
   const [group, setGroup] = useState<Group>("EXECUTIVE");
   const [serviceType, setServiceType] = useState("TAXI");
   const [origin, setOrigin] = useState<MobilityMapPoint | null>(null);
+  const [originText, setOriginText] = useState("");
+  const [originSuggestions, setOriginSuggestions] = useState<Place[]>([]);
+  const [originSearchBusy, setOriginSearchBusy] = useState(false);
   const [destination, setDestination] = useState<MobilityMapPoint | null>(null);
   const [route, setRoute] = useState<MobilityRoute | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -200,6 +203,50 @@ export default function MobilityLuxuryExperience() {
     const timer = window.setInterval(() => void poll(), 7000);
     return () => { mounted = false; window.clearInterval(timer); };
   }, [ride?.id, ride?.status, organizationId]);
+
+  useEffect(() => {
+    const value = originText.trim();
+    if (value.length < 3 || value === "A minha localização GPS" || active) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setOriginSearchBusy(true);
+      try {
+        const url = new URL("https://photon.komoot.io/api/");
+        url.searchParams.set("q", value);
+        url.searchParams.set("limit", "6");
+        url.searchParams.set("lang", "pt");
+        url.searchParams.set("lat", "-8.83");
+        url.searchParams.set("lon", "13.23");
+        url.searchParams.set("zoom", "7");
+        const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error("Pesquisa indisponível");
+        const data = await response.json() as {
+          features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
+        };
+        const places = (data.features ?? []).flatMap((feature) => {
+          const coordinates = feature.geometry?.coordinates;
+          const properties = feature.properties ?? {};
+          if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
+          const country = typeof properties.country === "string" ? properties.country : "";
+          if (country && !/angola/i.test(country)) return [];
+          const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
+            .filter((part): part is string => typeof part === "string" && part.length > 0)
+            .filter((part, index, all) => all.indexOf(part) === index)
+            .join(", ");
+          return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
+        });
+        if (!controller.signal.aborted) setOriginSuggestions(places);
+      } catch {
+        if (!controller.signal.aborted) setOriginSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setOriginSearchBusy(false);
+      }
+    }, 320);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [originText, active]);
 
   useEffect(() => {
     const value = destinationText.trim();
@@ -319,6 +366,17 @@ export default function MobilityLuxuryExperience() {
     setError(null);
   };
 
+  const chooseOrigin = (place: Place) => {
+    setOrigin(place);
+    setOriginText(place.label);
+    setOriginSuggestions([]);
+    setRoute(null);
+    setQuote(null);
+    setFareByService({});
+    setFareStatus("NO_ROUTE");
+    setError(null);
+  };
+
   const chooseDestination = (place: Place) => {
     setDestination(place);
     setDestinationText(place.label);
@@ -344,6 +402,8 @@ export default function MobilityLuxuryExperience() {
           lon: position.coords.longitude,
           label: "A minha localização GPS",
         });
+        setOriginText("A minha localização GPS");
+        setOriginSuggestions([]);
         setRoute(null);
         setQuote(null);
         setFareByService({});
@@ -415,6 +475,10 @@ export default function MobilityLuxuryExperience() {
       setError("Defina a partida e o destino e aguarde o cálculo da rota.");
       return;
     }
+    if (origin.lat === destination.lat && origin.lon === destination.lon) {
+      setError("A partida e o destino não podem ser o mesmo local.");
+      return;
+    }
     if (!quote) {
       setError("A tarifa desta categoria ainda não está configurada. Não vamos apresentar um preço inventado.");
       return;
@@ -438,6 +502,19 @@ export default function MobilityLuxuryExperience() {
         estimatedDurationSeconds: route.durationSeconds,
       },
     };
+    const requestFingerprint = JSON.stringify(payload);
+    const storageKey = "marka:mobility:pending-ride:" + organizationId;
+    let idempotencyKey: string;
+    try {
+      const pendingRaw = window.sessionStorage.getItem(storageKey);
+      const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string; fingerprint?: string } : null;
+      idempotencyKey = pending?.fingerprint === requestFingerprint && typeof pending.key === "string"
+        ? pending.key
+        : "marka-ride-" + crypto.randomUUID();
+      window.sessionStorage.setItem(storageKey, JSON.stringify({ key: idempotencyKey, fingerprint: requestFingerprint }));
+    } catch {
+      idempotencyKey = "marka-ride-" + crypto.randomUUID();
+    }
     try {
       const response = await fetch("/api/mobility/rides", {
         method: "POST",
@@ -445,13 +522,25 @@ export default function MobilityLuxuryExperience() {
         cache: "no-store",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": "marka-ride-" + crypto.randomUUID(),
+          "Idempotency-Key": idempotencyKey,
           "X-Organization-Id": organizationId,
         },
         body: JSON.stringify(payload),
       });
       const data = await response.json() as RideResponse;
-      if (!response.ok || !data.ride) throw new Error(data.message || "Não foi possível registar o pedido.");
+      if (!response.ok || !data.ride) {
+        const message = response.status === 409 && data.message
+          ? data.message
+          : data.message || "Não foi possível registar o pedido. A mesma tentativa pode ser repetida sem criar uma viagem duplicada.";
+        throw new Error(message);
+      }
+      try {
+        const pendingRaw = window.sessionStorage.getItem(storageKey);
+        const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
+        if (pending?.key === idempotencyKey) window.sessionStorage.removeItem(storageKey);
+      } catch {
+        // A chave de idempotência é apenas um apoio local; o servidor mantém a autoridade.
+      }
       setRide(data.ride);
       setCommunicationThreadId(null);
       setCallPanelOpen(false);
@@ -727,17 +816,53 @@ export default function MobilityLuxuryExperience() {
               })}
             </div>
 
-            <div className="mt-3 rounded-2xl border border-white/[.09] bg-black/25 p-2">
+            <div className="mt-3 space-y-2 rounded-2xl border border-white/[.09] bg-black/25 p-2">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={locateMe}
                   disabled={gpsBusy}
-                  aria-label="Definir partida pela localização GPS"
+                  aria-label="Usar a minha localização como partida"
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-lg text-[#E5B84B] disabled:opacity-50"
                 >
                   {gpsBusy ? "…" : "⌖"}
                 </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Partida</p>
+                  <input
+                    value={originText}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setOriginText(value);
+                      setOriginSuggestions([]);
+                      if (origin && value !== origin.label) {
+                        setOrigin(null);
+                        setRoute(null);
+                        setQuote(null);
+                        setFareByService({});
+                        setFareStatus("NO_ROUTE");
+                      }
+                    }}
+                    placeholder="GPS ou pesquisar bairro/rua"
+                    aria-label="Pesquisar local de partida em Angola"
+                    autoComplete="off"
+                    className="h-8 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                  />
+                </div>
+                {originSearchBusy && originText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
+              </div>
+              {originSuggestions.length > 0 && !active && (
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
+                  {originSuggestions.map((place, index) => (
+                    <button key={place.label + index} type="button" onClick={() => chooseOrigin(place)} className="flex min-h-11 w-full items-center gap-3 border-b border-white/[.06] px-3 text-left text-xs text-white/80 last:border-0 hover:bg-white/[.05]">
+                      <span className="text-[#E5B84B]">A</span>
+                      <span className="line-clamp-2">{place.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2 border-t border-white/[.07] pt-2">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[.04] text-xs text-[#E5B84B]">B</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Destino</p>
                   <input
@@ -752,6 +877,7 @@ export default function MobilityLuxuryExperience() {
                         setRoute(null);
                         setQuote(null);
                         setFareByService({});
+                        setFareStatus("NO_ROUTE");
                       }
                     }}
                     placeholder="Para onde vamos?"
@@ -763,15 +889,10 @@ export default function MobilityLuxuryExperience() {
                 {searchBusy && destinationText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
               </div>
               {suggestions.length > 0 && destinationText.trim().length >= 3 && !active && (
-                <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
                   {suggestions.map((place, index) => (
-                    <button
-                      key={place.label + index}
-                      type="button"
-                      onClick={() => chooseDestination(place)}
-                      className="flex min-h-11 w-full items-center gap-3 border-b border-white/[.06] px-3 text-left text-xs text-white/80 last:border-0 hover:bg-white/[.05]"
-                    >
-                      <span className="text-[#E5B84B]">⌖</span>
+                    <button key={place.label + index} type="button" onClick={() => chooseDestination(place)} className="flex min-h-11 w-full items-center gap-3 border-b border-white/[.06] px-3 text-left text-xs text-white/80 last:border-0 hover:bg-white/[.05]">
+                      <span className="text-[#E5B84B]">B</span>
                       <span className="line-clamp-2">{place.label}</span>
                     </button>
                   ))}
@@ -865,13 +986,19 @@ export default function MobilityLuxuryExperience() {
             </div>
 
             {error && <p role="alert" className="mt-3 rounded-lg border border-rose-300/20 bg-rose-300/[.05] p-3 text-[10px] text-rose-100">{error}</p>}
+            {route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" && (
+              <div role="status" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-3 text-[10px] leading-5 text-amber-100/90">
+                <strong className="block text-amber-100">Tarifa ainda não disponível</strong>
+                A rota foi calculada, mas a tabela oficial desta categoria ainda não está configurada pela MARKA. O pedido fica temporariamente bloqueado para não apresentar um preço inventado. Tente outra categoria ou volte mais tarde.
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={!route || !quote || creating}
               className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#F3D27A] via-[#E5B84B] to-[#C99632] px-4 text-xs font-extrabold text-[#09090B] shadow-[0_8px_26px_rgba(229,184,75,.18)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {creating ? "A enviar pedido…" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar MARKA Black"}
+              {creating ? "A enviar pedido…" : route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa indisponível" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar MARKA Black"}
             </button>
             <p className="mt-2 text-center text-[8px] text-white/30">A tarifa é calculada pela tabela MARKA e confirmada no servidor. Moeda: AOA (Kz).</p>
           </>
