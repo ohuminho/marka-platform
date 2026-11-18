@@ -15,6 +15,7 @@ export interface MobilityPromotionInput {
   longDistanceThresholdMeters: number;
   isPeakHour: boolean;
   quotedFareMinor: bigint;
+  distanceFareMinor: bigint;
   minimumPayableFareMinor: bigint;
   availablePromotionBudgetMinor: bigint;
   enabled?: boolean;
@@ -27,6 +28,7 @@ export interface MobilityPromotionResult {
   finalFareMinor: bigint;
   maximumDiscountMinor: bigint;
   fundingRequiredMinor: bigint;
+  discountRateBps: number;
 }
 
 const AOA_MINOR_UNITS_PER_KWANZA = BigInt(100);
@@ -48,7 +50,8 @@ export function evaluateMobilityPromotion(
   if (
     input.quotedFareMinor < BigInt(0) ||
     input.minimumPayableFareMinor < BigInt(0) ||
-    input.availablePromotionBudgetMinor < BigInt(0)
+    input.availablePromotionBudgetMinor < BigInt(0) ||
+    input.distanceFareMinor < BigInt(0)
   ) {
     throw new Error("Promotion money values cannot be negative.");
   }
@@ -59,9 +62,14 @@ export function evaluateMobilityPromotion(
       : MOTO_TAXI_DISCOUNT_KWANZAS) *
     AOA_MINOR_UNITS_PER_KWANZA;
 
-  const longDistance =
-    input.estimatedDistanceMeters >= input.longDistanceThresholdMeters;
-  const eligible = longDistance || input.isPeakHour;
+  const distanceMeters = input.estimatedDistanceMeters;
+  const longDistance = distanceMeters > input.longDistanceThresholdMeters;
+  const distanceDiscountRateBps =
+    distanceMeters > 40_000 ? 1_500 :
+    distanceMeters > 25_000 ? 1_200 :
+    distanceMeters > 15_000 ? 800 :
+    distanceMeters > 10_000 ? 500 : 0;
+  const eligible = distanceDiscountRateBps > 0 || input.isPeakHour;
 
   if (input.enabled === false) {
     return {
@@ -71,6 +79,7 @@ export function evaluateMobilityPromotion(
       finalFareMinor: input.quotedFareMinor,
       maximumDiscountMinor,
       fundingRequiredMinor: BigInt(0),
+      discountRateBps: 0,
     };
   }
 
@@ -85,10 +94,21 @@ export function evaluateMobilityPromotion(
     };
   }
 
-  // MARKA's published saving is a fixed minimum, not a variable partial
-  // discount. If the platform cannot fund the full amount or the fare floor
-  // would be breached, do not advertise/apply the promotion on this quote.
-  if (input.quotedFareMinor - maximumDiscountMinor < input.minimumPayableFareMinor) {
+  // Long-distance savings apply only to the distance component. Peak-hour
+  // campaigns retain the fixed category cap; driver earnings are unchanged.
+  const calculatedDistanceDiscount =
+    (input.distanceFareMinor * BigInt(distanceDiscountRateBps)) / BigInt(10_000);
+  const requestedDiscountMinor = longDistance
+    ? (calculatedDistanceDiscount < maximumDiscountMinor ? calculatedDistanceDiscount : maximumDiscountMinor)
+    : maximumDiscountMinor;
+  if (requestedDiscountMinor <= BigInt(0)) {
+    return {
+      eligible: false, reason: "SHORT_OFF_PEAK", discountMinor: BigInt(0),
+      finalFareMinor: input.quotedFareMinor, maximumDiscountMinor,
+      fundingRequiredMinor: BigInt(0), discountRateBps: 0,
+    };
+  }
+  if (input.quotedFareMinor - requestedDiscountMinor < input.minimumPayableFareMinor) {
     return {
       eligible: false,
       reason: "MINIMUM_FARE_PROTECTED",
@@ -99,7 +119,7 @@ export function evaluateMobilityPromotion(
     };
   }
 
-  if (input.availablePromotionBudgetMinor < maximumDiscountMinor) {
+  if (input.availablePromotionBudgetMinor < requestedDiscountMinor) {
     return {
       eligible: false,
       reason: "BUDGET_INSUFFICIENT",
@@ -113,9 +133,10 @@ export function evaluateMobilityPromotion(
   return {
     eligible: true,
     reason: "ELIGIBLE",
-    discountMinor: maximumDiscountMinor,
-    finalFareMinor: input.quotedFareMinor - maximumDiscountMinor,
+    discountMinor: requestedDiscountMinor,
+    finalFareMinor: input.quotedFareMinor - requestedDiscountMinor,
     maximumDiscountMinor,
-    fundingRequiredMinor: maximumDiscountMinor,
+    fundingRequiredMinor: requestedDiscountMinor,
+    discountRateBps: longDistance ? distanceDiscountRateBps : 0,
   };
 }
