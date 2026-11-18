@@ -63,13 +63,13 @@ export function evaluateMobilityPromotion(
     AOA_MINOR_UNITS_PER_KWANZA;
 
   const distanceMeters = input.estimatedDistanceMeters;
-  const longDistance = distanceMeters > input.longDistanceThresholdMeters;
+  const longDistance = distanceMeters > input.longDistanceThresholdMeters && distanceDiscountRateBps > 0;
   const distanceDiscountRateBps =
     distanceMeters > 40_000 ? 1_500 :
     distanceMeters > 25_000 ? 1_200 :
     distanceMeters > 15_000 ? 800 :
     distanceMeters > 10_000 ? 500 : 0;
-  const eligible = distanceDiscountRateBps > 0 || input.isPeakHour;
+  const eligible = longDistance || input.isPeakHour;
 
   if (input.enabled === false) {
     return {
