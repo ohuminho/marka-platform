@@ -91,6 +91,7 @@ export function evaluateMobilityPromotion(
       finalFareMinor: input.quotedFareMinor,
       maximumDiscountMinor,
       fundingRequiredMinor: BigInt(0),
+      discountRateBps: 0,
     };
   }
 
@@ -116,6 +117,7 @@ export function evaluateMobilityPromotion(
       finalFareMinor: input.quotedFareMinor,
       maximumDiscountMinor,
       fundingRequiredMinor: BigInt(0),
+      discountRateBps: 0,
     };
   }
 
@@ -127,6 +129,7 @@ export function evaluateMobilityPromotion(
       finalFareMinor: input.quotedFareMinor,
       maximumDiscountMinor,
       fundingRequiredMinor: BigInt(0),
+      discountRateBps: 0,
     };
   }
 
