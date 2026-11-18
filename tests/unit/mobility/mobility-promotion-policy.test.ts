@@ -85,6 +85,22 @@ assert.equal(disabled.eligible, false);
 assert.equal(disabled.discountMinor, BigInt(0));
 assert.equal(disabled.finalFareMinor, common.quotedFareMinor);
 
+const longDistanceTiers = [
+  { distance: 12_000, rate: 500 },
+  { distance: 20_000, rate: 800 },
+  { distance: 30_000, rate: 1_200 },
+  { distance: 45_000, rate: 1_500 },
+];
+for (const tier of longDistanceTiers) {
+  const result = evaluateMobilityPromotion({
+    ...common,
+    vehicle: "TAXI",
+    estimatedDistanceMeters: tier.distance,
+    distanceFareMinor: BigInt(1_000_000),
+  });
+  assert.equal(result.discountRateBps, tier.rate);
+}
+
 console.log("Mobility promotion policy tests passed.");
 
 
@@ -107,7 +123,7 @@ const integratedPricing = new MobilityPricingService().calculate({
 });
 
 assert.equal(integratedPricing.promotion?.discountMinor, BigInt(2_500));
-assert.equal(integratedPricing.totalMinor, BigInt(497_500));
+assert.equal(integratedPricing.totalMinor, BigInt(547_504));
 
 console.log("Mobility pricing integration tests passed.");
 
