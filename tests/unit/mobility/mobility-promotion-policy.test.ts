@@ -221,3 +221,34 @@ assert.equal(customThreshold.eligible, false);
 assert.equal(customThreshold.discountMinor, BigInt(0));
 
 console.log("Mobility promotion boundary and cap tests passed.");
+
+const peakAndLongDistanceDoesNotStack = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(1_000_000),
+  isPeakHour: true,
+});
+assert.equal(peakAndLongDistanceDoesNotStack.discountRateBps, 1_500);
+assert.equal(peakAndLongDistanceDoesNotStack.discountMinor, BigInt(100_000));
+
+const disabledPeakCampaign = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "MOTO_TAXI",
+  isPeakHour: true,
+  enabled: false,
+});
+assert.equal(disabledPeakCampaign.eligible, false);
+assert.equal(disabledPeakCampaign.reason, "DISABLED");
+assert.equal(disabledPeakCampaign.discountMinor, BigInt(0));
+
+assert.throws(
+  () => evaluateMobilityPromotion({
+    ...common,
+    vehicle: "TAXI",
+    distanceFareMinor: BigInt(-1),
+  }),
+  /Promotion money values cannot be negative/,
+);
+
+console.log("Mobility promotion non-stacking and disabled-campaign tests passed.");
