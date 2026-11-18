@@ -1,5 +1,7 @@
+import type { PrismaClient } from "@prisma/client";
+
 import { prisma } from "@/database/client/prisma";
-import { passwordService } from "@/core/authentication/password.service";
+import { passwordService, type PasswordService } from "@/core/authentication/password.service";
 import {
   generatePasswordResetToken,
   hashPasswordResetToken,
@@ -9,16 +11,32 @@ import {
 
 const TOKEN_COOLDOWN_MS = 60 * 1000;
 
+type PasswordResetDependencies = {
+  db: Pick<PrismaClient, "$transaction">;
+  passwords: Pick<PasswordService, "validatePassword" | "hash">;
+  now: () => Date;
+  createToken: () => string;
+};
+
 export class PasswordResetService {
+  constructor(
+    private readonly dependencies: PasswordResetDependencies = {
+      db: prisma,
+      passwords: passwordService,
+      now: () => new Date(),
+      createToken: generatePasswordResetToken,
+    },
+  ) {}
+
   async issue(userId: string) {
     if (!userId.trim()) return null;
 
-    const now = new Date();
-    const token = generatePasswordResetToken();
+    const now = this.dependencies.now();
+    const token = this.dependencies.createToken();
     const expiresAt = new Date(now.getTime() + PASSWORD_RESET_TOKEN_TTL_MS);
     const tokenHash = hashPasswordResetToken(token);
 
-    const issued = await prisma.$transaction(async (tx) => {
+    const issued = await this.dependencies.db.$transaction(async (tx) => {
       // Serialize requests per account so concurrent requests cannot bypass
       // the cooldown or leave multiple usable tokens.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-password-reset:${userId}`})) IS NULL AS locked`;
@@ -48,13 +66,13 @@ export class PasswordResetService {
 
   async reset(token: string, password: string): Promise<boolean> {
     if (!token || token.length > 256) return false;
-    passwordService.validatePassword(password);
+    this.dependencies.passwords.validatePassword(password);
 
     const tokenHash = hashPasswordResetToken(token);
-    const passwordHash = await passwordService.hash(password);
-    const now = new Date();
+    const passwordHash = await this.dependencies.passwords.hash(password);
+    const now = this.dependencies.now();
 
-    return prisma.$transaction(async (tx) => {
+    return this.dependencies.db.$transaction(async (tx) => {
       const record = await tx.passwordResetToken.findUnique({
         where: { tokenHash },
         select: { id: true, userId: true, expiresAt: true, usedAt: true },
