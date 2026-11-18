@@ -19,17 +19,33 @@ const assistanceOptions = [
 
 async function locateAddress(address: string): Promise<Point> {
   const query = address.trim();
-  if (query.length < 4) throw new Error("Escreva um endereço ou local mais completo.");
-  const params = new URLSearchParams({ q: query, format: "jsonv2", limit: "1", countrycodes: "ao", addressdetails: "1" });
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
+  if (query.length < 3) throw new Error("Escreva pelo menos 3 caracteres: bairro, rua ou município.");
+  const url = new URL("https://photon.komoot.io/api/");
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "8");
+  url.searchParams.set("lang", "pt");
+  url.searchParams.set("lat", "-8.83");
+  url.searchParams.set("lon", "13.23");
+  url.searchParams.set("zoom", "7");
+  const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+  if (!response.ok) throw new Error("A pesquisa de locais está temporariamente indisponível. Tente usar o GPS ou novamente dentro de instantes.");
+  const data = await response.json() as {
+    features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
+  };
+  const match = (data.features ?? []).find((feature) => {
+    const country = feature.properties?.country;
+    return !country || (typeof country === "string" && /angola/i.test(country));
   });
-  if (!response.ok) throw new Error("Não foi possível localizar o endereço. Tente novamente.");
-  const results = await response.json() as Array<{ lat: string; lon: string; display_name: string }>;
-  const match = results[0];
-  if (!match) throw new Error("Não encontrámos esse local. Experimente indicar bairro, rua ou município.");
-  return { latitude: Number(match.lat), longitude: Number(match.lon), address: match.display_name };
+  const coordinates = match?.geometry?.coordinates;
+  const properties = match?.properties ?? {};
+  if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) {
+    throw new Error("Não encontrámos esse local em Angola. Experimente indicar bairro, rua ou município.");
+  }
+  const label = [properties.name, properties.street, properties.district, properties.city, properties.state, properties.country]
+    .filter((part): part is string => typeof part === "string" && part.length > 0)
+    .filter((part, index, all) => all.indexOf(part) === index)
+    .join(", ");
+  return { latitude: coordinates[1], longitude: coordinates[0], address: label || query };
 }
 
 export default function MobilityFreightRequestForm() {
@@ -98,7 +114,7 @@ export default function MobilityFreightRequestForm() {
         <button type="button" disabled={field.searching || !field.address.trim()} onClick={() => void findPoint(field, setter)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text)] disabled:opacity-40">{field.searching ? "A localizar…" : "Localizar"}</button>
         <button type="button" disabled={field.searching} onClick={() => requestGpsLocation(setter, field)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text-muted)] disabled:opacity-40">Usar GPS</button>
       </div>
-      {field.point && <p className="text-[11px] text-emerald-700 dark:text-emerald-300">Local confirmado</p>}
+      {field.point && <p className="text-[11px] text-emerald-700 dark:text-emerald-300">Local confirmado: {field.point.address}</p>}
     </div>
   );
 
@@ -112,6 +128,10 @@ export default function MobilityFreightRequestForm() {
     }
     if (service === "CARGO_SHIPMENT" && (!origin.point || !destination.point || !cargoDescription.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
       setError("Confirme a recolha, o destino, descreva a carga e indique uma quantidade válida.");
+      return;
+    }
+    if (service === "CARGO_SHIPMENT" && origin.point && destination.point && origin.point.latitude === destination.point.latitude && origin.point.longitude === destination.point.longitude) {
+      setError("A recolha e o destino não podem ser o mesmo local.");
       return;
     }
     if (service === "WATER_DELIVERY" && (!destination.point || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
@@ -166,12 +186,22 @@ export default function MobilityFreightRequestForm() {
       const response = await fetch("/api/freight/requests", {
         method: "POST",
         credentials: "include",
+        cache: "no-store",
         headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": idempotencyKey },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível registar o pedido.");
-      setMessage(`Pedido ${data.request.reference} registado. Guarde esta referência para acompanhamento.`);
+      const data = await response.json().catch(() => ({})) as { request?: { reference?: string }; message?: string; code?: string };
+      if (!response.ok || !data.request?.reference) {
+        const friendly = data.code === "ORGANIZATION_ID_REQUIRED" || data.code === "ORGANIZATION_ACCESS_DENIED"
+          ? "A sua organização não está seleccionada ou já não tem acesso. Escolha uma organização activa e tente novamente."
+          : data.code === "AUTHENTICATION_REQUIRED" || data.code === "INVALID_SESSION"
+            ? "A sua sessão expirou. Entre novamente na MARKA e repita o pedido."
+            : data.code === "IDEMPOTENCY_CONFLICT"
+              ? "Este pedido já foi enviado com outros dados. Actualize a página e confirme o histórico antes de tentar novamente."
+              : data.message || "Não foi possível registar o pedido. Verifique a ligação e tente novamente.";
+        throw new Error(friendly);
+      }
+      setMessage(`Pedido ${data.request.reference} registado. Acompanhe o estado na secção “Os seus pedidos”.`);
       try {
         const pendingRaw = window.sessionStorage.getItem(storageKey);
         const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
@@ -239,11 +269,12 @@ export default function MobilityFreightRequestForm() {
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Que veículo é?</span><input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Ex.: Toyota Hiace, matrícula…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
         </>}
         <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Observações <span className="text-[var(--theme-text-faint)]">(opcional)</span></span><textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alguma informação adicional?" className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
-        {error && <p role="alert" className="rounded-xl border border-red-500/20 px-4 py-3 text-xs text-red-600">{error}</p>}
+        {!organizationId && <p role="alert" className="rounded-xl border border-amber-500/20 bg-amber-500/[.05] px-4 py-3 text-xs text-amber-700 dark:text-amber-300">Seleccione uma organização activa no topo da aplicação para poder registar o pedido.</p>}
+        {error && <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/[.04] px-4 py-3 text-xs text-red-600 dark:text-red-300">{error}</p>}
         {message && <p role="status" className="rounded-xl border border-emerald-500/20 px-4 py-3 text-xs text-emerald-700 dark:text-emerald-300">{message}</p>}
         <div className="flex flex-col gap-3 border-t border-[var(--theme-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Pedir uma proposta não implica pagamento nem despacho.</p>
-          <button type="submit" disabled={submitting} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-50">{submitting ? "A enviar pedido…" : "Pedir cotação"}</button>
+          <button type="submit" disabled={submitting || !organizationId} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "A enviar pedido…" : "Pedir cotação"}</button>
         </div>
       </form>
     </section>
