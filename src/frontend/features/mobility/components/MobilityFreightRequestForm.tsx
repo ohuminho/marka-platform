@@ -66,18 +66,21 @@ export default function MobilityFreightRequestForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const updatePoint = (setter: typeof setOrigin, field: PointField, address: string) => {
-    setter({ ...field, address, point: null });
+  const updatePoint = (setter: typeof setOrigin, _field: PointField, address: string) => {
+    setter((previous) => ({ ...previous, address, point: null, searching: false }));
   };
 
   const findPoint = async (field: PointField, setter: typeof setOrigin) => {
-    setter({ ...field, searching: true });
+    const query = field.address.trim();
+    setter((previous) => ({ ...previous, searching: true }));
     setError(null);
     try {
-      const point = await locateAddress(field.address);
-      setter({ address: point.address, point, searching: false });
+      const point = await locateAddress(query);
+      setter((previous) => previous.address.trim() === query
+        ? { address: point.address, point, searching: false }
+        : { ...previous, searching: false });
     } catch (cause) {
-      setter({ ...field, searching: false });
+      setter((previous) => ({ ...previous, searching: false }));
       setError(cause instanceof Error ? cause.message : "Não foi possível localizar o endereço.");
     }
   };
@@ -87,19 +90,23 @@ export default function MobilityFreightRequestForm() {
       setError("Este dispositivo não disponibiliza localização GPS.");
       return;
     }
+    const addressAtRequest = current.address;
     setError(null);
-    setter({ ...current, searching: true });
+    setter((previous) => ({ ...previous, searching: true }));
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const point = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          address: current.address.trim() || "Localização GPS atual",
-        };
-        setter({ address: point.address, point, searching: false });
+        setter((previous) => {
+          if (previous.address !== addressAtRequest) return { ...previous, searching: false };
+          const point = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            address: previous.address.trim() || "Localização GPS atual",
+          };
+          return { address: point.address, point, searching: false };
+        });
       },
       () => {
-        setter({ ...current, searching: false });
+        setter((previous) => ({ ...previous, searching: false }));
         setError("Não foi possível obter a localização. Verifique a permissão de GPS ou procure o endereço.");
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
