@@ -15,6 +15,20 @@ const pointSchema = z.object({
   address: z.string().trim().max(500).optional(),
 });
 
+function distanceBetweenPointsMeters(
+  first: { latitude: number; longitude: number },
+  second: { latitude: number; longitude: number },
+): number {
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = radians(second.latitude - first.latitude);
+  const longitudeDelta = radians(second.longitude - first.longitude);
+  const firstLatitude = radians(first.latitude);
+  const secondLatitude = radians(second.latitude);
+  const haversine = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+  return 6_371_000 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
 const requestSchema = z.object({
   requestType: z.enum([
     "CARGO_SHIPMENT",
@@ -61,6 +75,19 @@ const requestSchema = z.object({
     if (vehiclePreference !== undefined && (typeof vehiclePreference !== "string" || !allowedVehiclePreferences.includes(vehiclePreference))) {
       context.addIssue({ code: "custom", path: ["details", "vehiclePreference"], message: "A viatura preferida não é válida." });
     }
+  }
+
+  if (
+    value.requestType === "CARGO_SHIPMENT"
+    && value.origin
+    && value.destination
+    && distanceBetweenPointsMeters(value.origin, value.destination) < 10
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["destination"],
+      message: "A recolha e o destino devem estar separados por pelo menos 10 metros.",
+    });
   }
 
   if (value.requestType === "WATER_DELIVERY") {
