@@ -22,12 +22,9 @@ async function locateAddress(address: string): Promise<PointCandidate[]> {
   const query = address.trim();
   if (query.length < 3) throw new Error("Escreva pelo menos 3 caracteres: bairro, rua ou município.");
   const url = new URL("https://photon.komoot.io/api/");
-  url.searchParams.set("q", query);
+  url.searchParams.set("q", /\\bangola\\b/i.test(query) ? query : `${query}, Angola`);
   url.searchParams.set("limit", "8");
   url.searchParams.set("lang", "pt");
-  url.searchParams.set("lat", "-8.83");
-  url.searchParams.set("lon", "13.23");
-  url.searchParams.set("zoom", "7");
   const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
   if (!response.ok) throw new Error("A pesquisa de locais está temporariamente indisponível. Tente usar o GPS ou novamente dentro de instantes.");
   const data = await response.json() as {
