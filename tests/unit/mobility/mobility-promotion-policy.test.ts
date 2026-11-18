@@ -7,6 +7,7 @@ const common = {
   longDistanceThresholdMeters: 10_000,
   isPeakHour: false,
   quotedFareMinor: BigInt(500_000),
+  distanceFareMinor: BigInt(300_000),
   minimumPayableFareMinor: BigInt(100_000),
   availablePromotionBudgetMinor: BigInt(200_000),
 };
@@ -17,16 +18,16 @@ const taxi = evaluateMobilityPromotion({
 });
 
 assert.equal(taxi.eligible, true);
-assert.equal(taxi.discountMinor, BigInt(100_000)); // 1,000 Kz
-assert.equal(taxi.finalFareMinor, BigInt(400_000));
+assert.equal(taxi.discountMinor, BigInt(15_000)); // 5% da componente de distância
+assert.equal(taxi.finalFareMinor, BigInt(485_000));
 
 const motoTaxi = evaluateMobilityPromotion({
   ...common,
   vehicle: "MOTO_TAXI",
 });
 
-assert.equal(motoTaxi.discountMinor, BigInt(50_000)); // 500 Kz
-assert.equal(motoTaxi.finalFareMinor, BigInt(450_000));
+assert.equal(motoTaxi.discountMinor, BigInt(15_000));
+assert.equal(motoTaxi.finalFareMinor, BigInt(485_000));
 
 const shortOffPeak = evaluateMobilityPromotion({
   ...common,
@@ -64,6 +65,7 @@ const minimumFareProtected = evaluateMobilityPromotion({
   ...common,
   vehicle: "TAXI",
   quotedFareMinor: BigInt(120_000),
+  distanceFareMinor: BigInt(50_000),
   minimumPayableFareMinor: BigInt(110_000),
 });
 
@@ -103,8 +105,8 @@ const integratedPricing = new MobilityPricingService().calculate({
   },
 });
 
-assert.equal(integratedPricing.promotion?.discountMinor, BigInt(100_000));
-assert.equal(integratedPricing.totalMinor, BigInt(400_000));
+assert.equal(integratedPricing.promotion?.discountMinor, BigInt(2_500));
+assert.equal(integratedPricing.totalMinor, BigInt(497_500));
 
 console.log("Mobility pricing integration tests passed.");
 
