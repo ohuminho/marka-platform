@@ -183,14 +183,15 @@ export default function MobilityFreightRequestForm() {
         currency: "AOA",
         details,
       };
+      const requestId = globalThis.crypto.randomUUID();
       const response = await fetch("/api/freight/requests", {
         method: "POST",
         credentials: "include",
         cache: "no-store",
-        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": idempotencyKey },
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": idempotencyKey, "X-Request-Id": requestId },
         body: JSON.stringify(payload),
       });
-      const data = await response.json().catch(() => ({})) as { request?: { reference?: string }; message?: string; code?: string };
+      const data = await response.json().catch(() => ({})) as { request?: { reference?: string }; message?: string; code?: string; diagnosticId?: string };
       if (!response.ok || !data.request?.reference) {
         const friendly = data.code === "ORGANIZATION_ID_REQUIRED" || data.code === "ORGANIZATION_ACCESS_DENIED"
           ? "A sua organização não está seleccionada ou já não tem acesso. Escolha uma organização activa e tente novamente."
@@ -199,7 +200,8 @@ export default function MobilityFreightRequestForm() {
             : data.code === "IDEMPOTENCY_CONFLICT"
               ? "Este pedido já foi enviado com outros dados. Actualize a página e confirme o histórico antes de tentar novamente."
               : data.message || "Não foi possível registar o pedido. Verifique a ligação e tente novamente.";
-        throw new Error(friendly);
+        const diagnosticId = data.diagnosticId || response.headers.get("X-Request-Id") || requestId;
+        throw new Error(`${friendly} Referência técnica: ${diagnosticId}.`);
       }
       setMessage(`Pedido ${data.request.reference} registado. Acompanhe o estado na secção “Os seus pedidos”.`);
       try {
