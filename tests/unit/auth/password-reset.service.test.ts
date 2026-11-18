@@ -20,6 +20,7 @@ type State = {
 };
 
 function createHarness() {
+  let now = new Date("2026-11-18T05:00:00.000Z");
   const state: State = {
     tokens: [],
     password: "old-password-hash",
@@ -46,7 +47,7 @@ function createHarness() {
           id: `token-${++nextId}`,
           ...data,
           usedAt: null,
-          createdAt: new Date(now),
+          createdAt: new Date(now.getTime()),
         };
         state.tokens.push(record);
         return record;
@@ -89,7 +90,6 @@ function createHarness() {
     $transaction: async <T>(work: (tx: Prisma.TransactionClient) => Promise<T>) => work(transaction),
   } as unknown as Pick<PrismaClient, "$transaction">;
 
-  let now = new Date("2026-11-18T05:00:00.000Z");
   const issuedTokens = ["reset-token-first-000000000000000000", "reset-token-second-00000000000000"];
   let tokenIndex = 0;
   const passwords = {
@@ -103,7 +103,7 @@ function createHarness() {
   const service = new PasswordResetService({
     db,
     passwords,
-    now: () => new Date(now),
+    now: () => new Date(now.getTime()),
     createToken: () => issuedTokens[tokenIndex++],
   });
 
