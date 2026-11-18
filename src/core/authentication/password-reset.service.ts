@@ -32,9 +32,6 @@ export class PasswordResetService {
     if (!userId.trim()) return null;
 
     const now = this.dependencies.now();
-    const token = this.dependencies.createToken();
-    const expiresAt = new Date(now.getTime() + PASSWORD_RESET_TOKEN_TTL_MS);
-    const tokenHash = hashPasswordResetToken(token);
 
     const issued = await this.dependencies.db.$transaction(async (tx) => {
       // Serialize requests per account so concurrent requests cannot bypass
@@ -49,7 +46,11 @@ export class PasswordResetService {
         },
         select: { id: true },
       });
-      if (recent) return false;
+      if (recent) return null;
+
+      const token = this.dependencies.createToken();
+      const expiresAt = new Date(now.getTime() + PASSWORD_RESET_TOKEN_TTL_MS);
+      const tokenHash = hashPasswordResetToken(token);
 
       await tx.passwordResetToken.updateMany({
         where: { userId, usedAt: null },
@@ -58,10 +59,10 @@ export class PasswordResetService {
       await tx.passwordResetToken.create({
         data: { userId, tokenHash, expiresAt },
       });
-      return true;
+      return { token, expiresAt };
     });
 
-    return issued ? { token, expiresAt } : null;
+    return issued;
   }
 
   async reset(token: string, password: string): Promise<boolean> {
