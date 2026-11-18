@@ -44,6 +44,7 @@ const peakHour = evaluateMobilityPromotion({
   ...common,
   vehicle: "MOTO_TAXI",
   estimatedDistanceMeters: 2_000,
+  distanceFareMinor: BigInt(300_000),
   isPeakHour: true,
 });
 
@@ -53,7 +54,7 @@ assert.equal(peakHour.discountMinor, BigInt(50_000));
 const budgetLimited = evaluateMobilityPromotion({
   ...common,
   vehicle: "TAXI",
-  availablePromotionBudgetMinor: BigInt(20_000),
+  availablePromotionBudgetMinor: BigInt(10_000),
 });
 
 assert.equal(budgetLimited.eligible, false);
@@ -66,7 +67,7 @@ const minimumFareProtected = evaluateMobilityPromotion({
   vehicle: "TAXI",
   quotedFareMinor: BigInt(120_000),
   distanceFareMinor: BigInt(50_000),
-  minimumPayableFareMinor: BigInt(110_000),
+  minimumPayableFareMinor: BigInt(118_000),
 });
 
 assert.equal(minimumFareProtected.eligible, false);
@@ -94,7 +95,7 @@ const integratedPricing = new MobilityPricingService().calculate({
   baseFareMinor: BigInt(500_000),
   estimatedDistanceMeters: 12_000,
   estimatedDurationSeconds: 1_800,
-  distanceRateMinorPerKm: BigInt(0),
+  distanceRateMinorPerKm: BigInt(4_167),
   durationRateMinorPerMinute: BigInt(0),
   promotion: {
     vehicle: "TAXI",
