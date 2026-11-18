@@ -670,9 +670,13 @@ export default function MobilityLuxuryExperience() {
 
       <form
         onSubmit={submit}
-        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[72dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[30px] border border-white/10 bg-[#141417]/[.97] px-4 pb-[max(18px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-25px_90px_rgba(0,0,0,.62)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
+        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[76dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.12] bg-[linear-gradient(160deg,rgba(29,29,32,.98),rgba(12,12,14,.985))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.72)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gradient-to-r from-white/15 via-[#E5B84B]/80 to-white/15" />
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] px-3 py-2.5">
+          <div className="flex items-center gap-2.5"><span className="relative grid h-8 w-8 place-items-center rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/[.08] text-sm text-[#E5B84B]">✦<span className="absolute inset-0 animate-pulse rounded-full border border-[#E5B84B]/20" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#E5B84B]">MARKA Mobility</p><p className="mt-0.5 text-[10px] text-white/45">Uma viagem simples. Uma experiência superior.</p></div></div>
+          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[.06] px-2.5 py-1 text-[8px] font-semibold tracking-wide text-emerald-200/80">ANGOLA</span>
+        </div>
 
         {active ? (
           <section className="pb-3" aria-live="polite">
@@ -786,7 +790,7 @@ export default function MobilityLuxuryExperience() {
               <span className="rounded-full border border-white/10 px-3 py-1.5 text-[9px] text-white/40">AOA · Kz</span>
             </div>
 
-            <div role="tablist" aria-label="Tipo de serviço" className="mt-4 grid grid-cols-3 gap-2">
+            <div role="tablist" aria-label="Tipo de serviço" className="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/[.07] bg-black/20 p-1.5">
               {([
                 { id: "EXECUTIVE", label: "Executivo" },
                 { id: "MOTO", label: "Moto" },
@@ -806,9 +810,9 @@ export default function MobilityLuxuryExperience() {
                       }
                       changeGroup(tab.id);
                     }}
-                    className={"min-h-10 rounded-xl border text-[11px] font-semibold " + (selected
-                      ? "border-[#E5B84B]/60 bg-[#E5B84B]/10 text-[#E5B84B]"
-                      : "border-white/10 bg-white/[.025] text-white/50")}
+                    className={"min-h-11 rounded-[14px] border text-[11px] font-semibold transition-all duration-200 active:scale-[.98] " + (selected
+                      ? "border-[#E5B84B]/65 bg-gradient-to-b from-[#E5B84B]/15 to-[#E5B84B]/[.04] text-[#F2CF78] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_5px_20px_rgba(229,184,75,.08)]"
+                      : "border-transparent bg-white/[.025] text-white/50 hover:bg-white/[.06]")}
                   >
                     {tab.label}
                   </button>
@@ -925,9 +929,9 @@ export default function MobilityLuxuryExperience() {
                       setError(null);
                     }}
                     aria-pressed={serviceType === item.id}
-                    className={"flex min-w-[154px] flex-col items-center rounded-2xl border p-3 text-center transition " + (serviceType === item.id
-                      ? "border-[#E5B84B]/55 bg-[#E5B84B]/[.08]"
-                      : "border-white/[.08] bg-black/15")}
+                    className={"group flex min-w-[154px] flex-col items-center rounded-[22px] border p-3.5 text-center transition-all duration-300 active:scale-[.98] " + (serviceType === item.id
+                      ? "border-[#E5B84B]/65 bg-[linear-gradient(145deg,rgba(229,184,75,.14),rgba(229,184,75,.035)_58%,rgba(255,255,255,.015))] shadow-[0_12px_34px_rgba(229,184,75,.09),inset_0_1px_0_rgba(255,255,255,.10)]"
+                      : "border-white/[.08] bg-white/[.018] hover:border-white/20 hover:bg-white/[.04]")}
                   >
                     <VehicleArt kind={item.icon} />
                     <span className="mt-2 text-[11px] font-semibold">{item.title}</span>
@@ -943,7 +947,7 @@ export default function MobilityLuxuryExperience() {
               })}
             </div>
 
-            <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/[.08] bg-black/20 px-3 py-3">
+            <div className="mt-2 flex items-center justify-between gap-3 rounded-2xl border border-white/[.09] bg-[linear-gradient(110deg,rgba(255,255,255,.045),rgba(255,255,255,.015))] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,.035)]">
               <div>
                 <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Distância · duração rodoviária</p>
                 <p className="mt-1 text-xs font-semibold">{route
@@ -996,7 +1000,7 @@ export default function MobilityLuxuryExperience() {
             <button
               type="submit"
               disabled={!route || !quote || creating}
-              className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#F3D27A] via-[#E5B84B] to-[#C99632] px-4 text-xs font-extrabold text-[#09090B] shadow-[0_8px_26px_rgba(229,184,75,.18)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-35"
+              className="mt-4 flex min-h-14 w-full items-center justify-center rounded-2xl border border-[#F5D98D]/40 bg-[linear-gradient(110deg,#F5D98D_0%,#E5B84B_48%,#C99632_100%)] px-4 text-[13px] font-extrabold tracking-[.01em] text-[#09090B] shadow-[0_12px_34px_rgba(229,184,75,.22),inset_0_1px_0_rgba(255,255,255,.45)] transition-all duration-200 hover:brightness-110 hover:shadow-[0_16px_42px_rgba(229,184,75,.28)] active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-35"
             >
               {creating ? "A enviar pedido…" : route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa indisponível" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar MARKA Black"}
             </button>
