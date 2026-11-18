@@ -46,7 +46,7 @@ type Place = { label: string; lat: number; lon: number };
 
 const choices: Record<Group, Array<{ id: string; title: string; detail: string; icon: string }>> = {
   EXECUTIVE: [
-    { id: "TAXI", title: "MARKA Black", detail: "Sedan executivo · até 4 passageiros", icon: "sedan" },
+    { id: "TAXI", title: "Táxi normal", detail: "Viatura ligeira · até 4 passageiros", icon: "sedan" },
     { id: "EXECUTIVE", title: "Executivo", detail: "Conforto premium", icon: "sedan" },
   ],
   MOTO: [{ id: "MOTO_TAXI", title: "Moto", detail: "Moto-táxi · 1 passageiro", icon: "motorcycle" }],
@@ -792,7 +792,7 @@ export default function MobilityLuxuryExperience() {
 
             <div role="tablist" aria-label="Tipo de serviço" className="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/[.07] bg-black/20 p-1.5">
               {([
-                { id: "EXECUTIVE", label: "Executivo" },
+                { id: "EXECUTIVE", label: "Táxi" },
                 { id: "MOTO", label: "Moto" },
                 { id: "CARGO", label: "Carga" },
               ] as const).map((tab) => {
@@ -1002,7 +1002,7 @@ export default function MobilityLuxuryExperience() {
               disabled={!route || !quote || creating}
               className="mt-4 flex min-h-14 w-full items-center justify-center rounded-2xl border border-[#F5D98D]/40 bg-[linear-gradient(110deg,#F5D98D_0%,#E5B84B_48%,#C99632_100%)] px-4 text-[13px] font-extrabold tracking-[.01em] text-[#09090B] shadow-[0_12px_34px_rgba(229,184,75,.22),inset_0_1px_0_rgba(255,255,255,.45)] transition-all duration-200 hover:brightness-110 hover:shadow-[0_16px_42px_rgba(229,184,75,.28)] active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {creating ? "A enviar pedido…" : route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa indisponível" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar MARKA Black"}
+              {creating ? "A enviar pedido…" : route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa indisponível" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar táxi"}
             </button>
             <p className="mt-2 text-center text-[8px] text-white/30">A tarifa é calculada pela tabela MARKA e confirmada no servidor. Moeda: AOA (Kz).</p>
           </>
