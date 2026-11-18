@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
 import { AuthConfig } from "@/core/authentication/auth.config";
@@ -38,7 +39,8 @@ export class SessionService {
   }
 
   async create(
-    input: CreateSessionInput
+    input: CreateSessionInput,
+    transaction?: Prisma.TransactionClient,
   ): Promise<SessionResult> {
     const token = this.generateToken();
     const tokenHash = this.hashToken(token);
@@ -47,7 +49,8 @@ export class SessionService {
       Date.now() + this.sessionDurationMs
     );
 
-    const session = await prisma.session.create({
+    const database = transaction ?? prisma;
+    const session = await database.session.create({
       data: {
         userId: input.userId,
         tokenHash,
