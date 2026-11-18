@@ -235,9 +235,9 @@ export default function MobilityFreightRequestForm() {
   return (
     <section className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
       <div className="max-w-xl">
-        <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[var(--theme-text-faint)]">Outros serviços</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">O que precisa de transportar?</h2>
-        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Escolha um serviço e indique os dados necessários. A equipa MARKA analisa o pedido e emite uma cotação.</p>
+        <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[var(--theme-text-faint)]">MARKA Mobility · Serviços</p>
+        <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">{service === "CARGO_SHIPMENT" ? "Transporte de carga" : service === "WATER_DELIVERY" ? "Entrega de água" : "Assistência na estrada"}</h2>
+        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">{service === "CARGO_SHIPMENT" ? "Indique o que vai transportar, os locais e a viatura adequada. Receberá uma proposta antes de confirmar." : service === "WATER_DELIVERY" ? "Escolha o tipo e a quantidade de água e indique o local exacto de entrega." : "Diga-nos onde está, qual é o veículo e que tipo de ajuda precisa. A equipa procura um prestador adequado."}</p>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Tipo de serviço">
@@ -266,24 +266,44 @@ export default function MobilityFreightRequestForm() {
         </>}
         {service === "WATER_DELIVERY" && <>
           {pointInput("Endereço de entrega", destination, setDestination)}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="LITRE">Litros</option><option value="M3">Metros cúbicos (m³)</option></select></label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade de água</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder={quantityUnit === "LITRE" ? "Ex.: 5 000" : "Ex.: 5"} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+              <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="LITRE">Litros</option><option value="M3">Metros cúbicos (m³)</option></select></label>
+            </div>
+            <div className="flex flex-wrap gap-2" aria-label="Quantidades frequentes">
+              {(quantityUnit === "LITRE" ? ["1000", "5000", "10000", "20000"] : ["1", "5", "10", "20"]).map((value) => (
+                <button key={value} type="button" onClick={() => setQuantity(value)} aria-pressed={quantity === value} className={`min-h-9 rounded-full border px-3 text-[11px] font-medium transition ${quantity === value ? "border-[var(--theme-text-muted)] bg-[var(--theme-background)] text-[var(--theme-text)]" : "border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:bg-[var(--theme-background)]"}`}>
+                  {Number(value).toLocaleString("pt-PT")} {quantityUnit === "LITRE" ? "L" : "m³"}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">A quantidade é usada para identificar uma cisterna com capacidade adequada. O preço será apresentado na cotação.</p>
           </div>
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de água</span><select value={waterType} onChange={(event) => setWaterType(event.target.value as typeof waterType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="POTABLE_WATER">Potável</option><option value="NON_POTABLE_WATER">Não potável</option></select></label>
         </>}
         {service === "ROADSIDE_ASSISTANCE" && <>
           {pointInput("Onde está o veículo?", origin, setOrigin)}
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de assistência</span><select value={assistanceType} onChange={(event) => setAssistanceType(event.target.value as typeof assistanceType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]">{assistanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Que veículo é?</span><input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Ex.: Toyota Hiace, matrícula…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+          <fieldset className="space-y-3">
+            <legend className="text-xs font-medium text-[var(--theme-text)]">Que ajuda precisa?</legend>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {assistanceOptions.map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={assistanceType === value} onClick={() => setAssistanceType(value)} className={`min-h-12 rounded-xl border px-3 py-2 text-left text-xs font-medium transition ${assistanceType === value ? "border-[var(--theme-text-muted)] bg-[var(--theme-background)] text-[var(--theme-text)] ring-1 ring-[var(--theme-text-muted)]" : "border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:bg-[var(--theme-background)]"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Identifique o veículo</span><input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Marca, modelo e matrícula (ex.: Toyota Hiace LD-00-00-XX)" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /><span className="block text-[11px] leading-5 text-[var(--theme-text-muted)]">Inclua a matrícula, se possível, para o prestador reconhecer o veículo.</span></label>
+          <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-[11px] leading-5 text-[var(--theme-text-muted)]">Se estiver numa via perigosa, mantenha-se num local seguro e indique um ponto de referência nas observações. O pedido não substitui os serviços de emergência.</div>
         </>}
-        <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Observações <span className="text-[var(--theme-text-faint)]">(opcional)</span></span><textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alguma informação adicional?" className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
+        <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">{service === "WATER_DELIVERY" ? "Acesso ao local" : service === "ROADSIDE_ASSISTANCE" ? "Ponto de referência / detalhes da avaria" : "Instruções para o prestador"} <span className="text-[var(--theme-text-faint)]">(opcional)</span></span><textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={service === "WATER_DELIVERY" ? "Ex.: portão estreito, entrada pela rua lateral, contacto no local…" : service === "ROADSIDE_ASSISTANCE" ? "Ex.: junto à bomba, pneu furado, veículo não arranca…" : "Ex.: horário de recolha, acesso ao local, cuidados com a carga…"} className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
         {!organizationId && <p role="alert" className="rounded-xl border border-amber-500/20 bg-amber-500/[.05] px-4 py-3 text-xs text-amber-700 dark:text-amber-300">Seleccione uma organização activa no topo da aplicação para poder registar o pedido.</p>}
         {error && <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/[.04] px-4 py-3 text-xs text-red-600 dark:text-red-300">{error}</p>}
         {message && <p role="status" className="rounded-xl border border-emerald-500/20 px-4 py-3 text-xs text-emerald-700 dark:text-emerald-300">{message}</p>}
         <div className="flex flex-col gap-3 border-t border-[var(--theme-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Pedir uma proposta não implica pagamento nem despacho.</p>
-          <button type="submit" disabled={submitting || !organizationId} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "A enviar pedido…" : "Pedir cotação"}</button>
+          <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">{service === "ROADSIDE_ASSISTANCE" ? "Receberá a cotação e as condições antes de autorizar o despacho. O envio do pedido não activa automaticamente um reboque." : "Receberá uma proposta antes de confirmar. O envio do pedido não implica pagamento nem despacho."}</p>
+          <button type="submit" disabled={submitting || !organizationId} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "A enviar pedido…" : service === "CARGO_SHIPMENT" ? "Solicitar transporte" : service === "WATER_DELIVERY" ? "Solicitar entrega" : "Pedir assistência"}</button>
         </div>
       </form>
     </section>
