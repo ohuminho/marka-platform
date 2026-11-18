@@ -723,6 +723,7 @@ model MobilityRide {
   stops                       MobilityRideStop[]
   orchestration                MobilityRideOrchestration?
   orchestrationEvents          MobilityRideOrchestrationEvent[]
+  promotionReservation         MobilityPromotionReservation?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2576,4 +2577,54 @@ model MobilityLandmark {
   @@index([countryCode, province, municipality])
   @@index([isActive, category])
   @@index([aliases], type: Gin)
+}
+
+
+enum MobilityPromotionReservationStatus {
+  RESERVED
+  COMMITTED
+  RELEASED
+}
+
+model MobilityPromotionCampaign {
+  id                          String   @id @default(uuid())
+  code                        String   @unique @db.VarChar(80)
+  serviceType                 String   @db.VarChar(32)
+  currency                    String   @default("AOA") @db.Char(3)
+  enabled                     Boolean  @default(false)
+  budgetMinor                 BigInt
+  reservedMinor               BigInt   @default(0)
+  spentMinor                  BigInt   @default(0)
+  minimumPayableFareMinor     BigInt
+  longDistanceThresholdMeters Int      @default(10000)
+  peakHourEnabled             Boolean  @default(false)
+  startsAt                    DateTime? @db.Timestamptz(3)
+  endsAt                      DateTime? @db.Timestamptz(3)
+  reservations                MobilityPromotionReservation[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([enabled, startsAt, endsAt])
+  @@index([serviceType, enabled])
+}
+
+model MobilityPromotionReservation {
+  id             String                                @id @default(uuid())
+  campaignId     String
+  rideId         String                                @unique
+  idempotencyKey String                                @unique @db.VarChar(255)
+  amountMinor    BigInt
+  status         MobilityPromotionReservationStatus   @default(RESERVED)
+  committedAt    DateTime?                             @db.Timestamptz(3)
+  releasedAt     DateTime?                             @db.Timestamptz(3)
+
+  campaign MobilityPromotionCampaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  ride     MobilityRide              @relation(fields: [rideId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([campaignId, status])
+  @@index([status, createdAt])
 }
