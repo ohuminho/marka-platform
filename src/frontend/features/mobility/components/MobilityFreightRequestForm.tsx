@@ -22,7 +22,7 @@ async function locateAddress(address: string): Promise<PointCandidate[]> {
   const query = address.trim();
   if (query.length < 3) throw new Error("Escreva pelo menos 3 caracteres: bairro, rua ou município.");
   const url = new URL("https://photon.komoot.io/api/");
-  url.searchParams.set("q", /\\bangola\\b/i.test(query) ? query : `${query}, Angola`);
+  url.searchParams.set("q", query.toLocaleLowerCase("pt").includes("angola") ? query : `${query}, Angola`);
   url.searchParams.set("limit", "8");
   url.searchParams.set("lang", "pt");
   const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
