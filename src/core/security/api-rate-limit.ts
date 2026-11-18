@@ -17,6 +17,12 @@ type ReserveApiRequestInput = {
   anonymousIdentity?: string;
   windows: ApiRateLimitWindow[];
   bypass?: boolean;
+  /**
+   * When false, atomically checks existing usage without consuming a slot.
+   * Useful for authentication flows that should count failed credentials,
+   * not successful sign-ins.
+   */
+  record?: boolean;
 };
 
 /**
@@ -48,7 +54,10 @@ export async function reserveApiRequest(
     : identity.slice("anonymous:".length);
 
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-api-rate:${input.scope}:${identity}`}))`;
+    // Evaluate the advisory-lock call as part of a boolean expression.
+    // Selecting PostgreSQL VOID directly causes Prisma P2010; placing it in
+    // an unused subquery projection risks the planner removing the call.
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`marka-api-rate:${input.scope}:${identity}`})) IS NULL AS locked`;
 
     const now = new Date();
     let retryAfterSeconds = 0;
@@ -83,17 +92,19 @@ export async function reserveApiRequest(
       return { allowed: false, retryAfterSeconds };
     }
 
-    await tx.securityEvent.create({
-      data: {
-        type: eventType,
-        severity: "INFO",
-        ...(actorUserId ? { actorUserId } : { ipAddress: ipFingerprint }),
-        metadata: {
-          scope: input.scope,
-          windows: input.windows.map(({ limit, windowMs }) => ({ limit, windowMs })),
+    if (input.record !== false) {
+      await tx.securityEvent.create({
+        data: {
+          type: eventType,
+          severity: "INFO",
+          ...(actorUserId ? { actorUserId } : { ipAddress: ipFingerprint }),
+          metadata: {
+            scope: input.scope,
+            windows: input.windows.map(({ limit, windowMs }) => ({ limit, windowMs })),
+          },
         },
-      },
-    });
+      });
+    }
 
     return { allowed: true, retryAfterSeconds: 0 };
   });
