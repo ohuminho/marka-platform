@@ -133,11 +133,25 @@ export class MobilityMatchingService {
           },
         },
 
-        include: {
-          availability: true,
-
-          location: true,
-
+        // Fetch only fields consumed by matching/scoring. Loading full
+        // driver, location, availability and vehicle rows increases database
+        // transfer and serialization cost on every passenger request.
+        select: {
+          id: true,
+          displayName: true,
+          availability: {
+            select: { status: true },
+          },
+          location: {
+            select: {
+              latitude: true,
+              longitude: true,
+              accuracyM: true,
+              speedKph: true,
+              recordedAt: true,
+              source: true,
+            },
+          },
           ridesAsDriver: {
             where: {
               status: {
@@ -160,7 +174,6 @@ export class MobilityMatchingService {
               metadata: true,
             },
           },
-
           vehicles: {
             where: {
               isPrimary: true,
@@ -170,11 +183,30 @@ export class MobilityMatchingService {
                 capacity: { gte: input.passengerCount ?? 1 },
                 AND: requiredVehicleDocuments.map(currentVerifiedDocument),
                 ...(input.vehicleTypes?.length
-                  ? { type: { in: input.vehicleTypes as Array<"CAR" | "MOTORCYCLE" | "VAN" | "MINIBUS" | "BUS" | "COACH" | "TRUCK" | "OTHER"> } }
+                  ? {
+                      type: {
+                        in: input.vehicleTypes as Array<"CAR" | "MOTORCYCLE" | "VAN" | "MINIBUS" | "BUS" | "COACH" | "TRUCK" | "OTHER">,
+                      },
+                    }
                   : {}),
               },
             },
-            include: { vehicle: true },
+            select: {
+              vehicle: {
+                select: {
+                  id: true,
+                  organizationId: true,
+                  status: true,
+                  capacity: true,
+                  type: true,
+                  metadata: true,
+                  make: true,
+                  model: true,
+                  color: true,
+                  registrationNumber: true,
+                },
+              },
+            },
           },
         },
       });
