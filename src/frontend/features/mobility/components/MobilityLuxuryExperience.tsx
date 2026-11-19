@@ -47,7 +47,6 @@ type Place = { label: string; lat: number; lon: number };
 const choices: Record<Group, Array<{ id: string; title: string; detail: string; icon: string }>> = {
   EXECUTIVE: [
     { id: "TAXI", title: "Táxi normal", detail: "Viatura ligeira · até 4 passageiros", icon: "sedan" },
-    { id: "EXECUTIVE", title: "Executivo", detail: "Conforto premium", icon: "sedan" },
   ],
   MOTO: [{ id: "MOTO_TAXI", title: "Moto", detail: "Moto-táxi · 1 passageiro", icon: "motorcycle" }],
 };
