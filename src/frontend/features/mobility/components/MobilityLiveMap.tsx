@@ -25,7 +25,6 @@ type Props = {
   destinationPoint?: MobilityMapPoint | null;
 };
 
-const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 const FALLBACK_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -94,7 +93,6 @@ export default function MobilityLiveMap({
   const [mapError, setMapError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const fallbackStyleRef = useRef(false);
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
