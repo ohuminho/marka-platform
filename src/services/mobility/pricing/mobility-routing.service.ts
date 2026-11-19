@@ -122,7 +122,7 @@ export class MobilityRoutingService {
     try { endpoint=new URL("route/v1/driving/"+origin.longitude+","+origin.latitude+";"+destination.longitude+","+destination.latitude,this.baseUrl(options).endsWith("/")?this.baseUrl(options):this.baseUrl(options)+"/"); }
     catch { throw new MobilityRoutingError("Mobility routing provider URL is invalid.","MOBILITY_ROUTING_CONFIGURATION_INVALID"); }
     endpoint.searchParams.set("overview",geometry?"full":"false");endpoint.searchParams.set("steps","false");endpoint.searchParams.set("alternatives","false");if(geometry)endpoint.searchParams.set("geometries","geojson");
-    const timeout=options.timeoutMs??12000;
+    // Keep both attempts inside the serverless request budget; a slow public OSRM\n    // request must not hold the passenger flow open for 24+ seconds.\n    const timeout=options.timeoutMs??3000;
     if(!Number.isInteger(timeout)||timeout<500||timeout>20000)throw new MobilityRoutingError("Mobility routing timeout configuration is invalid.","MOBILITY_ROUTING_TIMEOUT_INVALID");
     let response:Response|undefined;
     for(let attempt=0;attempt<2;attempt++){
