@@ -202,7 +202,8 @@ export default function MobilityLiveMap({
     if (!hostRef.current || mapRef.current) return;
     // MapLibre initializes WebGL in its constructor. If the device cannot
     // create a WebGL context, the constructor failure activates the next renderer.
-    let map: MapLibreMap | null = null;
+    let map: MapLibreMap;
+    let initializedMap: MapLibreMap | null = null;
     let resize: ResizeObserver | null = null;
     try {
       map = new maplibregl.Map({
@@ -216,6 +217,7 @@ export default function MobilityLiveMap({
         dragRotate: false,
         maxPitch: 0,
       });
+      initializedMap = map;
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       map.on("style.load", () => {
@@ -268,7 +270,7 @@ export default function MobilityLiveMap({
       resize.observe(hostRef.current);
       setMapError(null);
     } catch (error) {
-      try { map?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
+      try { initializedMap?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
       mapRef.current = null;
       setMapError(error instanceof Error && /webgl|context/i.test(error.message)
         ? "Não foi possível iniciar o mapa neste dispositivo. A rota e o preço continuam independentes do mapa."
