@@ -200,12 +200,9 @@ export default function MobilityLiveMap({
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
-    if (!maplibregl.supported()) {
-      setMapError("Este dispositivo não suporta WebGL. A rota e o preço continuam a ser calculados, mas a visualização cartográfica requer um mapa compatível.");
-      return;
-    }
-
-    let map: MapLibreMap;
+    // MapLibre initializes WebGL in its constructor. If the device cannot
+    // create a WebGL context, the constructor failure activates the next renderer.
+    let map: MapLibreMap | null = null;
     let resize: ResizeObserver | null = null;
     try {
       map = new maplibregl.Map({
@@ -271,8 +268,8 @@ export default function MobilityLiveMap({
       resize.observe(hostRef.current);
       setMapError(null);
     } catch (error) {
+      try { map?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
       mapRef.current = null;
-      try { mapRef.current?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
       setMapError(error instanceof Error && /webgl|context/i.test(error.message)
         ? "Não foi possível iniciar o mapa neste dispositivo. A rota e o preço continuam independentes do mapa."
         : "Não foi possível iniciar a visualização do mapa. A rota e o preço continuam independentes do mapa.");
