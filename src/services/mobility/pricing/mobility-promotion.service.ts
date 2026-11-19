@@ -17,7 +17,7 @@ export class MobilityPromotionService {
   async quote(serviceType: string, fare: MobilityFareQuote): Promise<MobilityPromotionQuote | null> {
     if (serviceType !== "TAXI" && serviceType !== "MOTO_TAXI") return null;
     const now = new Date();
-    const campaign = await prisma.mobilityPromotionCampaign.findFirst({
+    const campaigns = await prisma.mobilityPromotionCampaign.findMany({
       where: {
         serviceType,
         currency: "AOA",
@@ -29,31 +29,36 @@ export class MobilityPromotionService {
       },
       orderBy: { createdAt: "asc" },
     });
-    if (!campaign) return null;
 
-    const availableBudget = campaign.budgetMinor - campaign.spentMinor - campaign.reservedMinor;
-    const result = evaluateMobilityPromotion({
-      vehicle: serviceType as MobilityPromotionVehicle,
-      estimatedDistanceMeters: fare.distanceMeters,
-      longDistanceThresholdMeters: campaign.longDistanceThresholdMeters,
-      isPeakHour: false,
-      quotedFareMinor: BigInt(fare.totalMinor),
-      distanceFareMinor: BigInt(fare.distanceFareMinor),
-      minimumPayableFareMinor: campaign.minimumPayableFareMinor > BigInt(fare.minimumFareMinor)
-        ? campaign.minimumPayableFareMinor
-        : BigInt(fare.minimumFareMinor),
-      availablePromotionBudgetMinor: availableBudget > BigInt(0) ? availableBudget : BigInt(0),
-      enabled: campaign.enabled,
-    });
-    if (!result.eligible) return null;
-    return {
-      campaignId: campaign.id,
-      campaignCode: campaign.code,
-      discountMinor: result.discountMinor.toString(),
-      finalFareMinor: result.finalFareMinor.toString(),
-      discountRateBps: result.discountRateBps,
-      reason: result.reason,
-    };
+    // Try eligible campaigns in deterministic order. An older campaign that
+    // has no budget or does not meet the distance threshold must not mask a
+    // later campaign that can legitimately fund this trip.
+    for (const campaign of campaigns) {
+      const availableBudget = campaign.budgetMinor - campaign.spentMinor - campaign.reservedMinor;
+      const result = evaluateMobilityPromotion({
+        vehicle: serviceType as MobilityPromotionVehicle,
+        estimatedDistanceMeters: fare.distanceMeters,
+        longDistanceThresholdMeters: campaign.longDistanceThresholdMeters,
+        isPeakHour: false,
+        quotedFareMinor: BigInt(fare.totalMinor),
+        distanceFareMinor: BigInt(fare.distanceFareMinor),
+        minimumPayableFareMinor: campaign.minimumPayableFareMinor > BigInt(fare.minimumFareMinor)
+          ? campaign.minimumPayableFareMinor
+          : BigInt(fare.minimumFareMinor),
+        availablePromotionBudgetMinor: availableBudget > BigInt(0) ? availableBudget : BigInt(0),
+        enabled: campaign.enabled,
+      });
+      if (!result.eligible) continue;
+      return {
+        campaignId: campaign.id,
+        campaignCode: campaign.code,
+        discountMinor: result.discountMinor.toString(),
+        finalFareMinor: result.finalFareMinor.toString(),
+        discountRateBps: result.discountRateBps,
+        reason: result.reason,
+      };
+    }
+    return null;
   }
 
   async reserveForRide(input: {
