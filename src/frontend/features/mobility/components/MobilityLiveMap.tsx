@@ -78,7 +78,6 @@ function RouteSvgFallback({
   }
 
   const latitudes = allCoordinates.map((point) => point[1]);
-  const longitudes = allCoordinates.map((point) => point[0]);
   const midLat = (Math.min(...latitudes) + Math.max(...latitudes)) / 2;
   const cosLat = Math.max(0.2, Math.cos((midLat * Math.PI) / 180));
   const project = (point: [number, number]) => [point[0] * cosLat, -point[1]] as const;
@@ -263,7 +262,6 @@ export default function MobilityLiveMap({
       });
       resize = new ResizeObserver(() => map.resize());
       resize.observe(hostRef.current);
-      setMapError(null);
     } catch (error) {
       try { initializedMap?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
       mapRef.current = null;
@@ -292,7 +290,6 @@ export default function MobilityLiveMap({
     markersRef.current = { pickup: null, dropoff: null, driver: null };
     map.remove();
     mapRef.current = null;
-    setMapReady(false);
   }, [mapError]);
 
   const calculateRoute = useCallback(async (from: MobilityMapPoint, to: MobilityMapPoint) => {
@@ -377,10 +374,13 @@ export default function MobilityLiveMap({
       return () => window.clearTimeout(routeTimer);
     }
     routeRef.current = null;
-    setDisplayRoute(null);
     onRouteChange?.(null);
-    setBusy(false);
-    setStatus("Defina a partida e o destino para calcular a rota.");
+    const resetTimer = window.setTimeout(() => {
+      setDisplayRoute(null);
+      setBusy(false);
+      setStatus("Defina a partida e o destino para calcular a rota.");
+    }, 0);
+    return () => window.clearTimeout(resetTimer);
   }, [
     originPoint?.lat,
     originPoint?.lon,
