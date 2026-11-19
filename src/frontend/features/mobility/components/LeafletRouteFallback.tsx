@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
+import type { LeafletApi, LeafletMap, LeafletLayer, LeafletMarker, LeafletTileLayer } from "@/types/leaflet";
 
 type Point = { lat: number; lon: number; label: string };
 type Geometry = { type: "LineString"; coordinates: [number, number][] };
@@ -19,9 +20,9 @@ const OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 export default function LeafletRouteFallback({ route, origin, destination, driverRoute, driver, onFailure }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const leafletRef = useRef<any>(null);
-  const overlaysRef = useRef<any[]>([]);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const leafletRef = useRef<LeafletApi | null>(null);
+  const overlaysRef = useRef<LeafletLayer[]>([]);
   const onFailureRef = useRef(onFailure);
   const [ready, setReady] = useState(false);
 
@@ -30,14 +31,14 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
   useEffect(() => {
     let active = true;
     let resizeObserver: ResizeObserver | null = null;
-    let currentLayer: any = null;
+    let currentLayer: LeafletTileLayer | null = null;
     let currentLayerErrorHandler: (() => void) | null = null;
     let tileErrors = 0;
     let providerIndex = 0;
 
     void import("leaflet").then((module) => {
       if (!active || !hostRef.current) return;
-      const L = (module as any).default ?? module;
+      const L = (module as unknown as { default?: LeafletApi }).default ?? (module as unknown as LeafletApi);
       leafletRef.current = L;
       const map = L.map(hostRef.current, {
         zoomControl: false,
