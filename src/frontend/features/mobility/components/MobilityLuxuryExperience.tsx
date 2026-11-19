@@ -116,6 +116,7 @@ export default function MobilityLuxuryExperience() {
   const [callPanelOpen, setCallPanelOpen] = useState(false);
   const [driverEta, setDriverEta] = useState<{ rideId: string; minutes: number } | null>(null);
   const [driverApproachGeometry, setDriverApproachGeometry] = useState<{ rideId: string; geometry: MobilityRoute["geometry"] } | null>(null);
+  const recoveryAttemptedRef = useRef<Set<string>>(new Set());
 
   const driver = useMemo(() => {
     const lat = Number(ride?.driver?.location?.latitude ?? ride?.driver?.latitude);
@@ -197,9 +198,39 @@ export default function MobilityLuxuryExperience() {
         });
         if (!response.ok) return;
         const data = await response.json() as RideResponse;
-        if (mounted && data.ride) setRide(data.ride);
+        if (!mounted || !data.ride) return;
+        setRide(data.ride);
+
+        // A persisted ride can remain in SEARCHING when dispatch reports a
+        // recoverable failure. Retry once from the passenger session; the
+        // stable key makes repeated tabs/polls safe at the lifecycle boundary.
+        if (
+          data.orchestration?.recoveryRequired &&
+          data.ride.status === "SEARCHING" &&
+          !recoveryAttemptedRef.current.has(data.ride.id)
+        ) {
+          recoveryAttemptedRef.current.add(data.ride.id);
+          const recoveryResponse = await fetch("/api/mobility/rides/" + encodeURIComponent(data.ride.id), {
+            method: "PATCH",
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id,
+              "X-Organization-Id": organizationId || "",
+            },
+            body: JSON.stringify({ action: "RETRY_DISPATCH" }),
+          });
+          const recoveryData = await recoveryResponse.json() as RideResponse;
+          if (mounted && recoveryData.ride) {
+            setRide(recoveryData.ride);
+            setRideMessage(recoveryData.orchestration?.recoveryRequired
+              ? "Pedido registado. A procura de motorista continua em recuperação."
+              : "A procura de motorista foi retomada para a mesma viagem.");
+          }
+        }
       } catch {
-        // Retry on the next polling cycle.
+        // Retry status retrieval on the next polling cycle.
       }
     };
     const timer = window.setInterval(() => void poll(), 2500);
