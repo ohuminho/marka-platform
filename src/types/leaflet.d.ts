@@ -11,7 +11,7 @@ declare module "leaflet" {
     off(event: "tileerror", handler: () => void): this;
   }
 
-  export interface LeafletMarker extends LeafletLayer {}
+  export type LeafletMarker = LeafletLayer;
 
   export interface LeafletMap {
     setView(center: LatLngTuple, zoom: number): this;
