@@ -238,7 +238,6 @@ export default function MobilityLiveMap({
       return () => window.clearTimeout(routeTimer);
     } else {
       routeRef.current = null;
-      setRouteError(null);
       (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
         type: "FeatureCollection",
         features: [],
