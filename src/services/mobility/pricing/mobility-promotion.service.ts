@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/database/client/prisma";
 import { evaluateMobilityPromotion, type MobilityPromotionVehicle } from "./mobility-promotion-policy.service";
 import { mobilityPromotionBudgetService } from "./mobility-promotion-budget.service";
@@ -115,7 +116,7 @@ export class MobilityPromotionService {
               discountRateBps: input.promotion.discountRateBps,
               funding: "MARKA_PROMOTION_BUDGET",
             } },
-          },
+          } as Prisma.InputJsonValue,
         },
       });
       return { applied: true, finalFareMinor };
