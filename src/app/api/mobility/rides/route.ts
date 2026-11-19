@@ -312,7 +312,7 @@ export async function POST(
       if (
         orchestration.recoveryRequired &&
         orchestration.currentStep === "RECOVERY_REQUIRED" &&
-        orchestration.ride?.status === "SEARCHING"
+        orchestration.ride && typeof orchestration.ride === "object" && "status" in orchestration.ride && orchestration.ride.status === "SEARCHING"
       ) {
         orchestration = await mobilityLifecycleService.execute({
           organizationId: authentication.session.organizationId,
