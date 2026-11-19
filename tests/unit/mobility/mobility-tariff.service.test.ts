@@ -26,6 +26,8 @@ try {
   assert.equal(quote.totalMinor, "120000");
   assert.equal(quote.totalAOA, 1200);
   assert.equal(quote.currency, "AOA");
+  assert.equal(quote.distanceFareMinor, "10000");
+  assert.equal(quote.minimumFareMinor, "120000");
 
   delete process.env.MARKA_MOBILITY_TAXI_MINIMUM_FARE_MINOR;
   assert.equal(quoteMobilityFare("TAXI", 1000, 60), null);
