@@ -67,12 +67,18 @@ export class MobilityPromotionService {
     });
     if (existing) {
       const applied = existing.status === "RESERVED" || existing.status === "COMMITTED";
-      return {
-        applied,
-        finalFareMinor: applied
-          ? (BigInt(input.originalFareMinor) - existing.amountMinor).toString()
-          : input.originalFareMinor,
-      };
+      if (!applied) return { applied: false, finalFareMinor: input.originalFareMinor };
+      const persistedRide = await prisma.mobilityRide.findUnique({
+        where: { id: input.rideId },
+        select: { metadata: true },
+      });
+      const persistedMetadata = persistedRide?.metadata && typeof persistedRide.metadata === "object" && !Array.isArray(persistedRide.metadata)
+        ? persistedRide.metadata as Record<string, unknown>
+        : {};
+      const persistedFare = typeof persistedMetadata.estimatedFareMinor === "string"
+        ? persistedMetadata.estimatedFareMinor
+        : (BigInt(input.originalFareMinor) - existing.amountMinor).toString();
+      return { applied: true, finalFareMinor: persistedFare };
     }
     if (!input.promotion || input.currency !== "AOA") {
       return { applied: false, finalFareMinor: input.originalFareMinor };
