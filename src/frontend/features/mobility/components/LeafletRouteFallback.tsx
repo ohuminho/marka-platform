@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
-import type { LeafletApi, LeafletMap, LeafletLayer, LeafletMarker, LeafletTileLayer } from "@/types/leaflet";
+import type { LeafletApi, LeafletMap, LeafletLayer, LeafletMarker, LeafletTileLayer } from "leaflet";
 
 type Point = { lat: number; lon: number; label: string };
 type Geometry = { type: "LineString"; coordinates: [number, number][] };
