@@ -116,7 +116,8 @@ export default function MobilityLuxuryExperience() {
   const [callPanelOpen, setCallPanelOpen] = useState(false);
   const [driverEta, setDriverEta] = useState<{ rideId: string; minutes: number } | null>(null);
   const [driverApproachGeometry, setDriverApproachGeometry] = useState<{ rideId: string; geometry: MobilityRoute["geometry"] } | null>(null);
-  const recoveryAttemptedRef = useRef<Set<string>>(new Set());
+  const recoveryAttemptCountRef = useRef<Map<string, number>>(new Map());
+  const recoveryInFlightRef = useRef<Set<string>>(new Set());
 
   const driver = useMemo(() => {
     const lat = Number(ride?.driver?.location?.latitude ?? ride?.driver?.latitude);
@@ -201,32 +202,39 @@ export default function MobilityLuxuryExperience() {
         if (!mounted || !data.ride) return;
         setRide(data.ride);
 
-        // A dispatch failure can leave orchestration in recovery while the
-        // ride is either still SEARCHING or already assigned. Retry once so
-        // the backend can resume dispatch or reconcile the committed assignment.
+        // Bounded recovery retries cover transient client/network failures.
+        // The stable idempotency key and backend lease/version checks prevent
+        // duplicate ride creation or concurrent dispatch assignment.
+        const recoveryAttempts = recoveryAttemptCountRef.current.get(data.ride.id) ?? 0;
         if (
           data.orchestration?.recoveryRequired &&
           (data.ride.status === "SEARCHING" || data.ride.status === "DRIVER_ASSIGNED") &&
-          !recoveryAttemptedRef.current.has(data.ride.id)
+          recoveryAttempts < 3 &&
+          !recoveryInFlightRef.current.has(data.ride.id)
         ) {
-          recoveryAttemptedRef.current.add(data.ride.id);
-          const recoveryResponse = await fetch("/api/mobility/rides/" + encodeURIComponent(data.ride.id), {
-            method: "PATCH",
-            credentials: "include",
-            cache: "no-store",
-            headers: {
-              "Content-Type": "application/json",
-              "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id,
-              "X-Organization-Id": organizationId || "",
-            },
-            body: JSON.stringify({ action: "RETRY_DISPATCH" }),
-          });
-          const recoveryData = await recoveryResponse.json() as RideResponse;
-          if (mounted && recoveryData.ride) {
-            setRide(recoveryData.ride);
-            setRideMessage(recoveryData.orchestration?.recoveryRequired
-              ? "Pedido registado. A procura de motorista continua em recuperação."
-              : "A procura de motorista foi retomada para a mesma viagem.");
+          recoveryInFlightRef.current.add(data.ride.id);
+          recoveryAttemptCountRef.current.set(data.ride.id, recoveryAttempts + 1);
+          try {
+            const recoveryResponse = await fetch("/api/mobility/rides/" + encodeURIComponent(data.ride.id), {
+              method: "PATCH",
+              credentials: "include",
+              cache: "no-store",
+              headers: {
+                "Content-Type": "application/json",
+                "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id,
+                "X-Organization-Id": organizationId || "",
+              },
+              body: JSON.stringify({ action: "RETRY_DISPATCH" }),
+            });
+            const recoveryData = await recoveryResponse.json() as RideResponse;
+            if (mounted && recoveryData.ride) {
+              setRide(recoveryData.ride);
+              setRideMessage(recoveryData.orchestration?.recoveryRequired
+                ? "Pedido registado. A procura de motorista continua em recuperação."
+                : "A procura de motorista foi retomada para a mesma viagem.");
+            }
+          } finally {
+            recoveryInFlightRef.current.delete(data.ride.id);
           }
         }
       } catch {
