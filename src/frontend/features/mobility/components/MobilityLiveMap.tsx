@@ -277,10 +277,23 @@ export default function MobilityLiveMap({
       resize?.disconnect();
       if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
       Object.values(markersRef.current).forEach((marker) => marker?.remove());
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current === map) {
+        map.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!mapError) return;
+    const map = mapRef.current;
+    if (!map) return;
+    Object.values(markersRef.current).forEach((marker) => marker?.remove());
+    markersRef.current = { pickup: null, dropoff: null, driver: null };
+    map.remove();
+    mapRef.current = null;
+    setMapReady(false);
+  }, [mapError]);
 
   const calculateRoute = useCallback(async (from: MobilityMapPoint, to: MobilityMapPoint) => {
     const id = ++requestRef.current;
