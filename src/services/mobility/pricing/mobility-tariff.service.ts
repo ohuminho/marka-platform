@@ -49,7 +49,6 @@ export function quoteMobilityFare(serviceType: string, distanceMeters: number, d
   const durationRateMinorPerMinute = readMinor(prefix + "DURATION_RATE_MINOR_PER_MINUTE") ?? defaults.durationRateMinorPerMinute;
   const minimumFareMinor = readMinor(prefix + "MINIMUM_FARE_MINOR") ?? defaults.minimumFareMinor;
   const bookingFeeMinor = readMinor(prefix + "BOOKING_FEE_MINOR");
-  const minimumFareMinor = readMinor(prefix + "MINIMUM_FARE_MINOR");
   const result = mobilityPricingService.calculate({
     currency: "AOA", baseFareMinor, distanceRateMinorPerKm, durationRateMinorPerMinute,
     estimatedDistanceMeters: distanceMeters, estimatedDurationSeconds: durationSeconds,
