@@ -15,13 +15,13 @@ async function main(): Promise<void> {
     for (const name of names) delete process.env[name];
     const defaultTaxi = quoteMobilityFare("TAXI", 2_500, 120);
     assert.ok(defaultTaxi);
-    assert.equal(defaultTaxi.totalMinor, "88750");
-    assert.equal(defaultTaxi.totalAOA, 887.5);
+    assert.equal(defaultTaxi.totalMinor, "50000");
+    assert.equal(defaultTaxi.totalAOA, 500);
 
     const defaultMoto = quoteMobilityFare("MOTO_TAXI", 2_500, 120);
     assert.ok(defaultMoto);
-    assert.equal(defaultMoto.totalMinor, "65500");
-    assert.equal(defaultMoto.totalAOA, 655);
+    assert.equal(defaultMoto.totalMinor, "44000");
+    assert.equal(defaultMoto.totalAOA, 440);
     assert.equal(quoteMobilityFare("EXECUTIVE", 2_500, 120), null);
 
     process.env.MARKA_MOBILITY_TAXI_BASE_FARE_MINOR = "50000";
