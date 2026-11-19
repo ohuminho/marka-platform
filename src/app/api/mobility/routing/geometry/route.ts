@@ -163,8 +163,11 @@ export async function GET(request: Request) {
         : code === "MOBILITY_ROUTE_NOT_FOUND"
           ? 422
           : 503;
+    const message = error instanceof MobilityRoutingError
+      ? error.message
+      : "The MARKA route service is not available for this journey.";
     return NextResponse.json(
-      { message: "The MARKA route service is not available for this journey.", code },
+      { message, code },
       { status, headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }
