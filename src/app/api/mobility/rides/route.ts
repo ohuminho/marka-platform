@@ -9,6 +9,7 @@ import {
 import { mobilityLifecycleService } from "@/services/mobility/orchestration/mobility-lifecycle.service";
 import { mobilityRoutingService } from "@/services/mobility/pricing/mobility-routing.service";
 import { quoteMobilityFare } from "@/services/mobility/pricing/mobility-tariff.service";
+import { mobilityPromotionService } from "@/services/mobility/pricing/mobility-promotion.service";
 
 import type { MobilitySafetyMode } from "@/services/mobility/orchestration/mobility-lifecycle.types";
 
@@ -172,6 +173,7 @@ export async function POST(
     if (!fare) {
       return NextResponse.json({ message: "A tabela tarifária desta categoria ainda não está configurada.", code: "MOBILITY_TARIFF_NOT_CONFIGURED" }, { status: 409 });
     }
+    const promotion = await mobilityPromotionService.quote(serviceType, fare);
 
     const { ride } =
       await mobilityRideService.createIdempotent({
@@ -251,6 +253,14 @@ export async function POST(
         },
       }, idempotencyKey);
 
+    const promotionResult = await mobilityPromotionService.reserveForRide({
+      rideId: ride.id,
+      idempotencyKey: `${idempotencyKey}:promotion`,
+      promotion,
+      originalFareMinor: fare.totalMinor,
+      currency,
+    });
+
     await mobilityLifecycleService.initialize({
       organizationId:
         authentication.session
@@ -326,6 +336,13 @@ export async function POST(
       {
         ride: refreshedRide ?? ride,
         orchestration,
+        pricing: {
+          currency,
+          originalFareMinor: fare.totalMinor,
+          finalFareMinor: promotionResult.finalFareMinor,
+          promotionApplied: promotionResult.applied,
+          promotionDiscountMinor: promotionResult.applied ? promotion?.discountMinor ?? "0" : "0",
+        },
       },
       {
         status:
