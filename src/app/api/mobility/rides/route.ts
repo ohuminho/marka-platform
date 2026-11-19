@@ -259,16 +259,25 @@ export async function POST(
     let orchestration;
 
     try {
-      const promotionResult = await mobilityPromotionService.reserveForRide({
-        rideId: ride.id,
-        idempotencyKey: idempotencyKey + ":promotion",
-        promotion,
-        originalFareMinor: fare.totalMinor,
-        currency,
-      });
-      finalFareMinor = promotionResult.finalFareMinor;
-      promotionApplied = promotionResult.applied;
-      promotionDiscountMinor = promotionResult.applied ? promotion?.discountMinor ?? "0" : "0";
+      try {
+        const promotionResult = await mobilityPromotionService.reserveForRide({
+          rideId: ride.id,
+          idempotencyKey: idempotencyKey + ":promotion",
+          promotion,
+          originalFareMinor: fare.totalMinor,
+          currency,
+        });
+        finalFareMinor = promotionResult.finalFareMinor;
+        promotionApplied = promotionResult.applied;
+        promotionDiscountMinor = promotionResult.applied ? promotion?.discountMinor ?? "0" : "0";
+      } catch (promotionError) {
+        // Promotions are optional. A promotion subsystem outage must never
+        // prevent a passenger's already-priced ride from reaching dispatch.
+        console.error("[MOBILITY_RIDE_PROMOTION_RESERVATION_FAILED]", {
+          rideId: ride.id,
+          error: promotionError,
+        });
+      }
 
       await mobilityLifecycleService.initialize({
         organizationId: authentication.session.organizationId,
@@ -296,6 +305,28 @@ export async function POST(
         safetyMode,
         action: "DISPATCH",
       });
+
+      // If dispatch reached SEARCHING but hit a retryable dependency failure,
+      // make one bounded recovery attempt in this request. The lifecycle's
+      // lease and idempotency checks prevent duplicate concurrent assignment.
+      if (
+        orchestration.recoveryRequired &&
+        orchestration.currentStep === "RECOVERY_REQUIRED" &&
+        orchestration.ride?.status === "SEARCHING"
+      ) {
+        orchestration = await mobilityLifecycleService.execute({
+          organizationId: authentication.session.organizationId,
+          rideId: ride.id,
+          actorUserId: authentication.session.userId,
+          correlationId: requestContext.correlationId,
+          requestId: requestContext.requestId,
+          idempotencyKey: idempotencyKey + ":dispatch-recovery-attempt",
+          ipAddress: requestContext.ipAddress,
+          userAgent: requestContext.userAgent,
+          safetyMode,
+          action: "RETRY_DISPATCH",
+        });
+      }
     } catch (postCreateError) {
       console.error("[MOBILITY_RIDE_POST_CREATE_RECOVERY_REQUIRED]", { rideId: ride.id, error: postCreateError });
       const [recoveredRide, recoveredOrchestration] = await Promise.all([
