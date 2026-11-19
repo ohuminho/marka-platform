@@ -33,9 +33,7 @@ declare module "leaflet" {
     polyline(positions: LatLngTuple[], options?: Record<string, unknown>): LeafletLayer;
     latLngBounds(positions: LatLngTuple[]): unknown;
   }
-}
 
-declare module "leaflet" {
-  const leaflet: import("leaflet").LeafletApi;
-  export = leaflet;
+  const leaflet: LeafletApi;
+  export default leaflet;
 }
