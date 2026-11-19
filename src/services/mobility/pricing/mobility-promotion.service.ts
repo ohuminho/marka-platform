@@ -62,10 +62,6 @@ export class MobilityPromotionService {
     originalFareMinor: string;
     currency: string;
   }): Promise<{ applied: boolean; finalFareMinor: string }> {
-    if (!input.promotion || input.currency !== "AOA") {
-      return { applied: false, finalFareMinor: input.originalFareMinor };
-    }
-
     const existing = await prisma.mobilityPromotionReservation.findUnique({
       where: { rideId: input.rideId },
     });
@@ -77,6 +73,9 @@ export class MobilityPromotionService {
           ? (BigInt(input.originalFareMinor) - existing.amountMinor).toString()
           : input.originalFareMinor,
       };
+    }
+    if (!input.promotion || input.currency !== "AOA") {
+      return { applied: false, finalFareMinor: input.originalFareMinor };
     }
 
     try {
