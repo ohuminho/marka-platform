@@ -152,13 +152,7 @@ export default function MobilityLiveMap({
     });
     map.on("error", (event) => {
       if (!event.error?.message) return;
-      if (!fallbackStyleRef.current) {
-        fallbackStyleRef.current = true;
-        setMapError("O mapa principal está indisponível. A MARKA mudou para o mapa alternativo.");
-        map.setStyle(FALLBACK_STYLE);
-      } else {
-        setMapError("O fornecedor de mapas está temporariamente indisponível. A rota e os endereços continuam disponíveis.");
-      }
+      setMapError("Alguns elementos do mapa estão temporariamente indisponíveis. A MARKA mantém os endereços e a rota selecionados.");
     });
     mapRef.current = map;
     const resize = new ResizeObserver(() => map.resize());
