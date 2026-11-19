@@ -390,33 +390,46 @@ export default function MobilityLuxuryExperience() {
 
   const locateMe = () => {
     if (!navigator.geolocation) {
-      setError("Este dispositivo não disponibiliza GPS.");
+      setError("Este dispositivo não disponibiliza geolocalização. Escolha a partida manualmente.");
       return;
     }
     setGpsBusy(true);
     setError(null);
+    const applyPosition = (position: GeolocationPosition) => {
+      setOrigin({
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        label: "A minha localização GPS",
+      });
+      setOriginText("A minha localização GPS");
+      setOriginSuggestions([]);
+      setRoute(null);
+      setQuote(null);
+      setFareByService({});
+      setFareStatus("NO_ROUTE");
+      setGpsBusy(false);
+    };
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setOrigin({
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-          label: "A minha localização GPS",
-        });
-        setOriginText("A minha localização GPS");
-        setOriginSuggestions([]);
-        setRoute(null);
-        setQuote(null);
-        setFareByService({});
-        setFareStatus("NO_ROUTE");
-        setGpsBusy(false);
-      },
+      applyPosition,
       (geoError) => {
-        setError(geoError.code === geoError.PERMISSION_DENIED
-          ? "Permita o acesso à localização nas definições do dispositivo."
-          : "Não foi possível obter a localização GPS.");
-        setGpsBusy(false);
+        if (geoError.code === geoError.PERMISSION_DENIED) {
+          setError("A permissão de localização foi recusada. Active a localização para o navegador nas definições do dispositivo.");
+          setGpsBusy(false);
+          return;
+        }
+        // Retry with network-assisted/coarse location for devices where GPS is slow or unavailable.
+        navigator.geolocation.getCurrentPosition(
+          applyPosition,
+          (fallbackError) => {
+            setError(fallbackError.code === fallbackError.PERMISSION_DENIED
+              ? "A permissão de localização foi recusada. Escolha a partida manualmente."
+              : "Não foi possível obter a localização. Confirme o GPS, a ligação e tente novamente ou escolha a partida no mapa/pesquisa.");
+            setGpsBusy(false);
+          },
+          { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 },
+        );
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 10000 },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 },
     );
   };
 
