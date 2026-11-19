@@ -98,7 +98,7 @@ export default function MobilityLuxuryExperience() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fareStatus, setFareStatus] = useState("NO_ROUTE");
   const [fareByService, setFareByService] = useState<Record<string, Quote | null>>({});
-  const [passengers, setPassengers] = useState(1);
+  const [passengers, setPassengers] = useState<number | "">("");
   const [safety, setSafety] = useState("STANDARD");
   const [destinationText, setDestinationText] = useState("");
   const [suggestions, setSuggestions] = useState<Place[]>([]);
@@ -486,7 +486,7 @@ export default function MobilityLuxuryExperience() {
     setCreating(true);
     const payload = {
       serviceType,
-      passengerCount: serviceType === "MOTO_TAXI" ? 1 : passengers,
+      ...(serviceType !== "MOTO_TAXI" && passengers !== "" ? { passengerCount: passengers } : {}),
       currency: "AOA",
       pickupLatitude: origin.lat,
       pickupLongitude: origin.lon,
@@ -497,9 +497,6 @@ export default function MobilityLuxuryExperience() {
       safetyMode: safety,
       metadata: {
         requestSource: "MARKA_MOBILITY_LUXURY_APP",
-        quotedFareMinor: quote.totalMinor,
-        estimatedDistanceMeters: route.distanceMeters,
-        estimatedDurationSeconds: route.durationSeconds,
       },
     };
     const requestFingerprint = JSON.stringify(payload);
@@ -962,14 +959,18 @@ export default function MobilityLuxuryExperience() {
 
             {group !== "MOTO" && (
               <div className="mt-3 flex items-center justify-between gap-3">
-                <label htmlFor="marka-passengers" className="text-[10px] text-white/55">Passageiros</label>
+                <label htmlFor="marka-passengers" className="text-[10px] text-white/55">Passageiros (opcional)</label>
                 <input
                   id="marka-passengers"
                   type="number"
                   min={1}
                   max={4}
                   value={passengers}
-                  onChange={(event) => setPassengers(Math.max(1, Math.min(4, Number(event.target.value) || 1)))}
+                  placeholder="1"
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setPassengers(value === "" ? "" : Math.max(1, Math.min(4, Number(value) || 1)));
+                  }}
                   className="w-20 rounded-lg border border-white/10 bg-black/30 px-2 py-2 text-center text-xs text-white"
                 />
               </div>
