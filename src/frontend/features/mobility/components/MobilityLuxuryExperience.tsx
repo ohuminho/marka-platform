@@ -210,20 +210,35 @@ export default function MobilityLuxuryExperience() {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setOriginSearchBusy(true);
+      let localPlaces: Place[] = [];
       try {
+        try {
+          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value), {
+            signal: controller.signal,
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          if (localResponse.ok) {
+            const localData = await localResponse.json() as { places?: Place[] };
+            localPlaces = (localData.places ?? []).filter((place) =>
+              Number.isFinite(place.lat) && Number.isFinite(place.lon)
+              && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
+            );
+          }
+        } catch {
+          if (controller.signal.aborted) return;
+        }
+
         const url = new URL("https://photon.komoot.io/api/");
-        url.searchParams.set("q", value);
-        url.searchParams.set("limit", "6");
+        url.searchParams.set("q", value + ", Angola");
+        url.searchParams.set("limit", "8");
         url.searchParams.set("lang", "pt");
-        url.searchParams.set("lat", "-8.83");
-        url.searchParams.set("lon", "13.23");
-        url.searchParams.set("zoom", "7");
         const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
         if (!response.ok) throw new Error("Pesquisa indisponível");
         const data = await response.json() as {
           features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
         };
-        const places = (data.features ?? []).flatMap((feature) => {
+        const remotePlaces = (data.features ?? []).flatMap((feature) => {
           const coordinates = feature.geometry?.coordinates;
           const properties = feature.properties ?? {};
           if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
@@ -235,9 +250,14 @@ export default function MobilityLuxuryExperience() {
             .join(", ");
           return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
         });
-        if (!controller.signal.aborted) setOriginSuggestions(places);
+        const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
+        if (!controller.signal.aborted) {
+          setOriginSuggestions([...localPlaces, ...remotePlaces.filter((place) =>
+            !seen.has(place.label.toLocaleLowerCase("pt-AO")),
+          )].slice(0, 6));
+        }
       } catch {
-        if (!controller.signal.aborted) setOriginSuggestions([]);
+        if (!controller.signal.aborted) setOriginSuggestions(localPlaces.slice(0, 6));
       } finally {
         if (!controller.signal.aborted) setOriginSearchBusy(false);
       }
@@ -274,12 +294,9 @@ export default function MobilityLuxuryExperience() {
         }
 
         const url = new URL("https://photon.komoot.io/api/");
-        url.searchParams.set("q", value);
+        url.searchParams.set("q", value + ", Angola");
         url.searchParams.set("limit", "8");
         url.searchParams.set("lang", "pt");
-        url.searchParams.set("lat", "-8.83");
-        url.searchParams.set("lon", "13.23");
-        url.searchParams.set("zoom", "7");
         const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
         if (!response.ok) throw new Error("Pesquisa indisponível");
         const data = await response.json() as {
@@ -390,7 +407,9 @@ export default function MobilityLuxuryExperience() {
 
   const locateMe = () => {
     if (!navigator.geolocation) {
-      setError("Este dispositivo não disponibiliza geolocalização. Escolha a partida manualmente.");
+      setError(window.isSecureContext
+        ? "Este dispositivo ou navegador não disponibiliza geolocalização. Escolha a partida pela pesquisa."
+        : "O GPS só pode ser usado numa ligação segura HTTPS. Abra a MARKA pelo endereço oficial e escolha a partida pela pesquisa enquanto isso.");
       return;
     }
     setGpsBusy(true);
@@ -429,7 +448,7 @@ export default function MobilityLuxuryExperience() {
           { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 },
         );
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 },
+      { enableHighAccuracy: true, timeout: 18000, maximumAge: 30000 },
     );
   };
 
