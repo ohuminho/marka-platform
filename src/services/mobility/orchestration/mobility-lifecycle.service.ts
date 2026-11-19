@@ -20,6 +20,7 @@ import { mobilitySafetyService } from "@/services/mobility/safety/mobility-safet
 import { mobilityRideService } from "@/services/mobility/rides/mobility-ride.service";
 import { transitionNoDriverFoundToSearching } from "@/services/mobility/rides/mobility-ride.state-machine";
 import { mobilityPaymentEngineService } from "@/services/mobility/payments/mobility-payment-engine.service";
+import { mobilityPromotionBudgetService } from "@/services/mobility/pricing/mobility-promotion-budget.service";
 
 import type {
   InitializeMobilityLifecycleInput,
@@ -1090,6 +1091,9 @@ export class MobilityLifecycleService {
           reason,
         );
 
+        // Release platform-funded promotion budget only after cancellation succeeds.
+        await mobilityPromotionBudgetService.release(input.rideId);
+
         if (
           paymentBefore &&
           (
@@ -1562,6 +1566,9 @@ export class MobilityLifecycleService {
               "MOBILITY_LIFECYCLE",
           },
         });
+
+    // Commit reserved campaign funds only after the ride's financial settlement succeeds.
+    await mobilityPromotionBudgetService.commit(input.rideId);
 
     current =
       await this.transitionPersisted(
