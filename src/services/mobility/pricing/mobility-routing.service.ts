@@ -122,7 +122,8 @@ export class MobilityRoutingService {
     try { endpoint=new URL("route/v1/driving/"+origin.longitude+","+origin.latitude+";"+destination.longitude+","+destination.latitude,this.baseUrl(options).endsWith("/")?this.baseUrl(options):this.baseUrl(options)+"/"); }
     catch { throw new MobilityRoutingError("Mobility routing provider URL is invalid.","MOBILITY_ROUTING_CONFIGURATION_INVALID"); }
     endpoint.searchParams.set("overview",geometry?"full":"false");endpoint.searchParams.set("steps","false");endpoint.searchParams.set("alternatives","false");if(geometry)endpoint.searchParams.set("geometries","geojson");
-    // Fail quickly when the routing provider is slow; never block the ride flow.\n    const timeout=options.timeoutMs??1000;
+    // Fail quickly when the routing provider is slow; never block the ride flow.
+    const timeout=options.timeoutMs??1000;
     if(!Number.isInteger(timeout)||timeout<250||timeout>5000)throw new MobilityRoutingError("Mobility routing timeout configuration is invalid.","MOBILITY_ROUTING_TIMEOUT_INVALID");
     let response:Response|undefined;
     for(let attempt=0;attempt<1;attempt++){
