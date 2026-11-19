@@ -322,7 +322,7 @@ export default function MobilityLiveMap({
       const response = await fetch("/api/mobility/routing/geometry?" + query.toString(), {
         credentials: "include",
         cache: "no-store",
-        signal: AbortSignal.timeout(27000),
+        signal: AbortSignal.timeout(2500),
       });
       const data = await response.json() as {
         route?: MobilityRoute;
@@ -353,7 +353,7 @@ export default function MobilityLiveMap({
         map.fitBounds(bounds, {
           padding: { top: 112, right: 58, bottom: 340, left: 58 },
           maxZoom: 16,
-          duration: 850,
+          duration: 250,
         });
       }
       onRouteChange?.(resolvedRoute);
