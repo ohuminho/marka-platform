@@ -41,7 +41,7 @@ type Ride = {
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
   metadata?: { estimatedFareMinor?: string | null } | null;
 };
-type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string | null; recoveryRequired?: boolean } | null; pricing?: { finalFareMinor?: string; promotionApplied?: boolean; promotionDiscountMinor?: string } | null; message?: string };
+type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string | null; recoveryRequired?: boolean } | null; recoveryRequired?: boolean; pricing?: { finalFareMinor?: string; promotionApplied?: boolean; promotionDiscountMinor?: string } | null; message?: string };
 type Quote = { currency: string; totalMinor: string; totalAOA: number };
 type Place = { label: string; lat: number; lon: number };
 
@@ -579,8 +579,8 @@ export default function MobilityLuxuryExperience() {
       setCommunicationError(null);
       setRideMessage(data.ride.status === "NO_DRIVER_FOUND"
         ? "Não encontrámos motoristas disponíveis para esta solicitação. Pode ajustar o pedido ou tentar novamente mais tarde."
-        : data.orchestration?.recoveryRequired
-          ? "Pedido registado; estamos a recuperar uma etapa operacional."
+        : (data.recoveryRequired || data.orchestration?.recoveryRequired)
+          ? "Pedido registado; estamos a recuperar uma etapa operacional. Não crie outro pedido."
           : "Pedido enviado aos motoristas elegíveis.");
     } catch (requestFailure) {
       setError(requestFailure instanceof Error ? requestFailure.message : "Falha ao criar o pedido.");
