@@ -117,6 +117,7 @@ export default function MobilityLuxuryExperience() {
   const [driverEta, setDriverEta] = useState<{ rideId: string; minutes: number } | null>(null);
   const [driverApproachGeometry, setDriverApproachGeometry] = useState<{ rideId: string; geometry: MobilityRoute["geometry"] } | null>(null);
   const recoveryAttemptCountRef = useRef<Map<string, number>>(new Map());
+  const recoveryNextAttemptAtRef = useRef<Map<string, number>>(new Map());
   const recoveryInFlightRef = useRef<Set<string>>(new Set());
 
   const driver = useMemo(() => {
@@ -206,35 +207,68 @@ export default function MobilityLuxuryExperience() {
         // Each attempt has a distinct idempotency key; backend state transitions
         // and optimistic version checks prevent concurrent dispatch assignment.
         const recoveryAttempts = recoveryAttemptCountRef.current.get(data.ride.id) ?? 0;
+        const recoveryNextAttemptAt = recoveryNextAttemptAtRef.current.get(data.ride.id) ?? 0;
         if (
           data.orchestration?.recoveryRequired &&
           (data.ride.status === "SEARCHING" || data.ride.status === "DRIVER_ASSIGNED") &&
           recoveryAttempts < 3 &&
+          Date.now() >= recoveryNextAttemptAt &&
           !recoveryInFlightRef.current.has(data.ride.id)
         ) {
           recoveryInFlightRef.current.add(data.ride.id);
-          recoveryAttemptCountRef.current.set(data.ride.id, recoveryAttempts + 1);
           try {
+            const attemptNumber = recoveryAttempts + 1;
             const recoveryResponse = await fetch("/api/mobility/rides/" + encodeURIComponent(data.ride.id), {
               method: "PATCH",
               credentials: "include",
               cache: "no-store",
               headers: {
                 "Content-Type": "application/json",
-                // Each bounded recovery attempt needs its own idempotency key.
-                // Reusing one key would replay the first lifecycle event and block later retries.
-                "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id + "-" + (recoveryAttempts + 1),
+                // A distinct key prevents replaying an earlier recovery event.
+                "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id + "-" + attemptNumber,
                 "X-Organization-Id": organizationId || "",
               },
               body: JSON.stringify({ action: "RETRY_DISPATCH" }),
             });
+
+            if (recoveryResponse.status === 409) {
+              // The server's dispatch lease is 120 seconds. Do not burn an
+              // automatic attempt or hammer the endpoint while that lease is active.
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + 120_000);
+              return;
+            }
+
+            if (recoveryResponse.status === 429) {
+              const retryAfter = Number(recoveryResponse.headers.get("Retry-After"));
+              const delay = Number.isFinite(retryAfter) && retryAfter > 0
+                ? Math.min(120_000, retryAfter * 1000)
+                : 30_000;
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + delay);
+              return;
+            }
+
             const recoveryData = await recoveryResponse.json() as RideResponse;
+            if (!recoveryResponse.ok) {
+              recoveryAttemptCountRef.current.set(data.ride.id, attemptNumber);
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + Math.min(30_000, 2_500 * (2 ** recoveryAttempts)));
+              return;
+            }
+
+            recoveryAttemptCountRef.current.set(data.ride.id, attemptNumber);
             if (mounted && recoveryData.ride) {
               setRide(recoveryData.ride);
               setRideMessage(recoveryData.orchestration?.recoveryRequired
                 ? "Pedido registado. A procura de motorista continua em recuperação."
                 : "A procura de motorista foi retomada para a mesma viagem.");
             }
+            if (recoveryData.orchestration?.recoveryRequired) {
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + Math.min(30_000, 2_500 * (2 ** recoveryAttempts)));
+            } else {
+              recoveryNextAttemptAtRef.current.delete(data.ride.id);
+            }
+          } catch {
+            recoveryAttemptCountRef.current.set(data.ride.id, attemptNumber);
+            recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + Math.min(30_000, 2_500 * (2 ** recoveryAttempts)));
           } finally {
             recoveryInFlightRef.current.delete(data.ride.id);
           }
