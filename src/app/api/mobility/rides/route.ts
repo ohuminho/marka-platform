@@ -92,12 +92,15 @@ export async function POST(
       );
     }
 
+    const passengerCountWasProvided = body?.passengerCount !== undefined;
     const passengerCount =
-      Number.isInteger(body?.passengerCount)
-        ? Number(body.passengerCount)
-        : 1;
+      !passengerCountWasProvided
+        ? 1
+        : Number.isInteger(body.passengerCount)
+          ? Number(body.passengerCount)
+          : Number.NaN;
 
-    if (passengerCount < 1 || passengerCount > 100) {
+    if (!Number.isInteger(passengerCount) || passengerCount < 1 || passengerCount > 100) {
       return NextResponse.json(
         {
           message: "O número de passageiros deve estar entre 1 e 100.",
