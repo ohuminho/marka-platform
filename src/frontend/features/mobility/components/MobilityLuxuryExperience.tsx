@@ -203,8 +203,8 @@ export default function MobilityLuxuryExperience() {
         setRide(data.ride);
 
         // Bounded recovery retries cover transient client/network failures.
-        // The stable idempotency key and backend lease/version checks prevent
-        // duplicate ride creation or concurrent dispatch assignment.
+        // Each attempt has a distinct idempotency key; backend state transitions
+        // and optimistic version checks prevent concurrent dispatch assignment.
         const recoveryAttempts = recoveryAttemptCountRef.current.get(data.ride.id) ?? 0;
         if (
           data.orchestration?.recoveryRequired &&
