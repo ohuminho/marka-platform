@@ -205,7 +205,7 @@ export default function MobilityLiveMap({
       const source = map?.getSource("marka-route") as GeoJSONSource | undefined;
       source?.setData({ type: "Feature", properties: {}, geometry: resolvedRoute.geometry });
       const coordinates = resolvedRoute.geometry.coordinates;
-      if (map && mapReady && coordinates.length) {
+      if (map && map.isStyleLoaded() && coordinates.length) {
         const bounds = coordinates.reduce(
           (value, coordinate) => value.extend(coordinate as [number, number]),
           new maplibregl.LngLatBounds(coordinates[0], coordinates[0]),
@@ -234,41 +234,18 @@ export default function MobilityLiveMap({
     } finally {
       if (id === requestRef.current) setBusy(false);
     }
-  }, [onRouteChange, serviceType, serviceTypes, mapReady]);
+  }, [onRouteChange, serviceType, serviceTypes]);
 
   useEffect(() => {
-    // Route and fare calculation must not depend on the map renderer.
-    // A WebGL/style failure must never leave the fare empty or disable ride requests.
-    const map = mapRef.current;
+    // Route and fare calculation is independent from map initialization and WebGL.
     requestRef.current += 1;
-
-    if (map && mapReady) {
-      markersRef.current.pickup?.remove();
-      markersRef.current.dropoff?.remove();
-      markersRef.current.pickup = originPoint
-        ? new maplibregl.Marker({ element: markerElement("pickup") }).setLngLat([originPoint.lon, originPoint.lat]).addTo(map)
-        : null;
-      markersRef.current.dropoff = destinationPoint
-        ? new maplibregl.Marker({ element: markerElement("dropoff") }).setLngLat([destinationPoint.lon, destinationPoint.lat]).addTo(map)
-        : null;
-    }
-
     if (originPoint && destinationPoint) {
       const routeTimer = window.setTimeout(() => {
         void calculateRoute(originPoint, destinationPoint);
       }, 0);
       return () => window.clearTimeout(routeTimer);
     }
-
     routeRef.current = null;
-    if (map && mapReady) {
-      (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
-        type: "FeatureCollection",
-        features: [],
-      });
-      const focus = originPoint || destinationPoint;
-      if (focus) map.flyTo({ center: [focus.lon, focus.lat], zoom: 15, duration: 650 });
-    }
     onRouteChange?.(null);
     setBusy(false);
     setStatus("Defina a partida e o destino para calcular a rota.");
@@ -281,6 +258,34 @@ export default function MobilityLiveMap({
     destinationPoint?.label,
     calculateRoute,
     onRouteChange,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    markersRef.current.pickup?.remove();
+    markersRef.current.dropoff?.remove();
+    markersRef.current.pickup = originPoint
+      ? new maplibregl.Marker({ element: markerElement("pickup") }).setLngLat([originPoint.lon, originPoint.lat]).addTo(map)
+      : null;
+    markersRef.current.dropoff = destinationPoint
+      ? new maplibregl.Marker({ element: markerElement("dropoff") }).setLngLat([destinationPoint.lon, destinationPoint.lat]).addTo(map)
+      : null;
+    if (!originPoint || !destinationPoint) {
+      (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
+        type: "FeatureCollection",
+        features: [],
+      });
+      const focus = originPoint || destinationPoint;
+      if (focus) map.flyTo({ center: [focus.lon, focus.lat], zoom: 15, duration: 650 });
+    }
+  }, [
+    originPoint?.lat,
+    originPoint?.lon,
+    originPoint?.label,
+    destinationPoint?.lat,
+    destinationPoint?.lon,
+    destinationPoint?.label,
     mapReady,
   ]);
 
