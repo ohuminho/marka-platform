@@ -7,6 +7,7 @@ import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { quoteMobilityFare } from "@/services/mobility/pricing/mobility-tariff.service";
+import { mobilityPromotionService } from "@/services/mobility/pricing/mobility-promotion.service";
 import {
   MobilityRoutingError,
   mobilityRoutingService,
@@ -135,12 +136,24 @@ export async function GET(request: Request) {
       },
     );
 
-    const fares = Object.fromEntries(
-      validatedServiceTypes.data.map((type) => [
-        type,
-        quoteMobilityFare(type, route.distanceMeters, route.durationSeconds),
-      ]),
+    const fareEntries = await Promise.all(
+      validatedServiceTypes.data.map(async (type) => {
+        const quote = quoteMobilityFare(type, route.distanceMeters, route.durationSeconds);
+        if (!quote) return [type, null] as const;
+        const promotion = await mobilityPromotionService.quote(type, quote);
+        return [type, promotion ? {
+          ...quote,
+          totalMinor: promotion.finalFareMinor,
+          totalAOA: Number(BigInt(promotion.finalFareMinor)) / 100,
+          promotion: {
+            campaignCode: promotion.campaignCode,
+            discountMinor: promotion.discountMinor,
+            discountRateBps: promotion.discountRateBps,
+          },
+        } : quote] as const;
+      }),
     );
+    const fares = Object.fromEntries(fareEntries);
     const fare = parsed.data.serviceType ? fares[parsed.data.serviceType] ?? null : null;
 
     return NextResponse.json(
