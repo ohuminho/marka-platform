@@ -17,18 +17,26 @@ export class MobilityPromotionService {
   async quote(serviceType: string, fare: MobilityFareQuote): Promise<MobilityPromotionQuote | null> {
     if (serviceType !== "TAXI" && serviceType !== "MOTO_TAXI") return null;
     const now = new Date();
-    const campaigns = await prisma.mobilityPromotionCampaign.findMany({
-      where: {
-        serviceType,
-        currency: "AOA",
-        enabled: true,
-        AND: [
-          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
-          { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
-        ],
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    let campaigns;
+    try {
+      campaigns = await prisma.mobilityPromotionCampaign.findMany({
+        where: {
+          serviceType,
+          currency: "AOA",
+          enabled: true,
+          AND: [
+            { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    } catch (error) {
+      // Promotion schema may not yet be migrated in an environment. The
+      // passenger flow must continue with the normal server tariff.
+      console.warn("[MOBILITY_PROMOTION_SCHEMA_UNAVAILABLE]", error);
+      return null;
+    }
 
     // Try eligible campaigns in deterministic order. An older campaign that
     // has no budget or does not meet the distance threshold must not mask a
@@ -68,29 +76,29 @@ export class MobilityPromotionService {
     originalFareMinor: string;
     currency: string;
   }): Promise<{ applied: boolean; finalFareMinor: string }> {
-    const existing = await prisma.mobilityPromotionReservation.findUnique({
-      where: { rideId: input.rideId },
-    });
-    if (existing) {
-      const applied = existing.status === "RESERVED" || existing.status === "COMMITTED";
-      if (!applied) return { applied: false, finalFareMinor: input.originalFareMinor };
-      const persistedRide = await prisma.mobilityRide.findUnique({
-        where: { id: input.rideId },
-        select: { metadata: true },
-      });
-      const persistedMetadata = persistedRide?.metadata && typeof persistedRide.metadata === "object" && !Array.isArray(persistedRide.metadata)
-        ? persistedRide.metadata as Record<string, unknown>
-        : {};
-      const persistedFare = typeof persistedMetadata.estimatedFareMinor === "string"
-        ? persistedMetadata.estimatedFareMinor
-        : (BigInt(input.originalFareMinor) - existing.amountMinor).toString();
-      return { applied: true, finalFareMinor: persistedFare };
-    }
     if (!input.promotion || input.currency !== "AOA") {
       return { applied: false, finalFareMinor: input.originalFareMinor };
     }
 
     try {
+      const existing = await prisma.mobilityPromotionReservation.findUnique({
+        where: { rideId: input.rideId },
+      });
+      if (existing) {
+        const applied = existing.status === "RESERVED" || existing.status === "COMMITTED";
+        if (!applied) return { applied: false, finalFareMinor: input.originalFareMinor };
+        const persistedRide = await prisma.mobilityRide.findUnique({
+          where: { id: input.rideId },
+          select: { metadata: true },
+        });
+        const persistedMetadata = persistedRide?.metadata && typeof persistedRide.metadata === "object" && !Array.isArray(persistedRide.metadata)
+          ? persistedRide.metadata as Record<string, unknown>
+          : {};
+        const persistedFare = typeof persistedMetadata.estimatedFareMinor === "string"
+          ? persistedMetadata.estimatedFareMinor
+          : (BigInt(input.originalFareMinor) - existing.amountMinor).toString();
+        return { applied: true, finalFareMinor: persistedFare };
+      }
       await mobilityPromotionBudgetService.reserve({
         campaignId: input.promotion.campaignId,
         rideId: input.rideId,
