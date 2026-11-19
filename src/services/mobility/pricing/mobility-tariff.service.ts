@@ -6,6 +6,8 @@ export interface MobilityFareQuote {
   totalAOA: number;
   distanceMeters: number;
   durationSeconds: number;
+  distanceFareMinor: string;
+  minimumFareMinor: string;
 }
 
 type MobilityTariff = {
@@ -64,5 +66,7 @@ export function quoteMobilityFare(serviceType: string, distanceMeters: number, d
     totalAOA: Number(result.totalMinor) / 100,
     distanceMeters,
     durationSeconds,
+    distanceFareMinor: result.distanceFareMinor.toString(),
+    minimumFareMinor: (tariff.minimumFareMinor ?? BigInt(0)).toString(),
   };
 }
