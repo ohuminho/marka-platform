@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type Marker, type StyleSpecification } from "maplibre-gl";
+import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type Marker } from "maplibre-gl";
+import LeafletRouteFallback from "./LeafletRouteFallback";
 
 export type MobilityMapPoint = { lat: number; lon: number; label: string };
 export type MobilityRoute = {
@@ -25,18 +26,7 @@ type Props = {
   destinationPoint?: MobilityMapPoint | null;
 };
 
-const FALLBACK_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    "marka-fallback-raster": {
-      type: "raster",
-      tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    },
-  },
-  layers: [{ id: "marka-fallback-raster-layer", type: "raster", source: "marka-fallback-raster" }],
-};
+const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 function markerElement(kind: "pickup" | "dropoff" | "driver") {
   const el = document.createElement("div");
@@ -197,6 +187,7 @@ export default function MobilityLiveMap({
   const [routeError, setRouteError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [displayRoute, setDisplayRoute] = useState<MobilityRoute | null>(null);
+  const [leafletFailed, setLeafletFailed] = useState(false);
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
@@ -205,10 +196,11 @@ export default function MobilityLiveMap({
     let map: MapLibreMap;
     let initializedMap: MapLibreMap | null = null;
     let resize: ResizeObserver | null = null;
+    let rendererErrors = 0;
     try {
       map = new maplibregl.Map({
         container: hostRef.current,
-        style: FALLBACK_STYLE,
+        style: PRIMARY_STYLE,
         center: [13.23, -8.83],
         zoom: 11,
         attributionControl: {},
@@ -264,7 +256,10 @@ export default function MobilityLiveMap({
       });
       map.on("error", (event) => {
         if (!event.error?.message) return;
-        setMapError("Alguns elementos cartográficos estão temporariamente indisponíveis. A MARKA mantém os endereços, a rota e o preço seleccionados.");
+        rendererErrors += 1;
+        if (rendererErrors >= 3 || /webgl|context/i.test(event.error.message)) {
+          setMapError("A alternar automaticamente para o mapa de reserva.");
+        }
       });
       resize = new ResizeObserver(() => map.resize());
       resize.observe(hostRef.current);
@@ -462,7 +457,17 @@ export default function MobilityLiveMap({
 
   return (
     <div className="marka-mobility-map absolute inset-0">
-      {mapError ? <RouteSvgFallback route={displayRoute} origin={originPoint} destination={destinationPoint} driverRoute={driverRouteGeometry} driver={driverPoint} /> : null}
+      {mapError && !leafletFailed ? (
+        <LeafletRouteFallback
+          route={displayRoute?.geometry ?? null}
+          origin={originPoint}
+          destination={destinationPoint}
+          driverRoute={driverRouteGeometry}
+          driver={driverPoint}
+          onFailure={() => setLeafletFailed(true)}
+        />
+      ) : null}
+      {leafletFailed ? <RouteSvgFallback route={displayRoute} origin={originPoint} destination={destinationPoint} driverRoute={driverRouteGeometry} driver={driverPoint} /> : null}
       <div ref={hostRef} className={"absolute inset-0 " + (mapError ? "invisible" : "")} role="application" aria-label="Mapa de mobilidade MARKA" />
       <div className="absolute left-4 right-4 top-[76px] z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
         <span className={"mr-1.5 inline-block h-1.5 w-1.5 rounded-full " + (routeError ? "bg-rose-400" : busy ? "animate-pulse bg-amber-300" : "bg-[#E5B84B]")} />
@@ -478,10 +483,10 @@ export default function MobilityLiveMap({
           </button>
         )}
       </div>
-      {mapError && (
-        <p role="alert" className="absolute left-4 top-20 z-10 rounded-xl border border-rose-200/15 bg-[#141417]/90 p-3 text-[10px] text-rose-100">
-          {mapError}
-        </p>
+      {leafletFailed && (
+        <span className="absolute right-4 top-[76px] z-10 rounded-full border border-white/10 bg-[#141417]/75 px-2.5 py-1 text-[9px] text-white/55 backdrop-blur">
+          Visualização simplificada
+        </span>
       )}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-[#09090B] via-[#09090B]/55 to-transparent" />
     </div>
