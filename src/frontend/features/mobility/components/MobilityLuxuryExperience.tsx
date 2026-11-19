@@ -39,8 +39,9 @@ type Ride = {
     location?: { latitude?: number | string | null; longitude?: number | string | null; heading?: number | string | null } | null;
   } | null;
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
+  metadata?: { estimatedFareMinor?: string | null } | null;
 };
-type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string | null; recoveryRequired?: boolean } | null; message?: string };
+type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string | null; recoveryRequired?: boolean } | null; pricing?: { finalFareMinor?: string; promotionApplied?: boolean; promotionDiscountMinor?: string } | null; message?: string };
 type Quote = { currency: string; totalMinor: string; totalAOA: number };
 type Place = { label: string; lat: number; lon: number };
 
@@ -107,6 +108,7 @@ export default function MobilityLuxuryExperience() {
   const [retryingRide, setRetryingRide] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ride, setRide] = useState<Ride | null>(null);
+  const [confirmedFareMinor, setConfirmedFareMinor] = useState<string | null>(null);
   const [rideMessage, setRideMessage] = useState<string | null>(null);
   const [communicationLoading, setCommunicationLoading] = useState(false);
   const [communicationError, setCommunicationError] = useState<string | null>(null);
@@ -163,6 +165,7 @@ export default function MobilityLuxuryExperience() {
       .then((data: RideResponse | null) => {
         if (!mounted || !data?.ride) return;
         setRide(data.ride);
+        setConfirmedFareMinor(typeof data.ride.metadata?.estimatedFareMinor === "string" ? data.ride.metadata.estimatedFareMinor : null);
         if (data.ride.status === "NO_DRIVER_FOUND") {
           setRideMessage("Não encontrámos motoristas disponíveis para esta solicitação. Pode ajustar o pedido ou tentar novamente mais tarde.");
         }
@@ -570,6 +573,7 @@ export default function MobilityLuxuryExperience() {
         // A chave de idempotência é apenas um apoio local; o servidor mantém a autoridade.
       }
       setRide(data.ride);
+      setConfirmedFareMinor(data.pricing?.finalFareMinor ?? (typeof data.ride.metadata?.estimatedFareMinor === "string" ? data.ride.metadata.estimatedFareMinor : null));
       setCommunicationThreadId(null);
       setCallPanelOpen(false);
       setCommunicationError(null);
@@ -712,6 +716,12 @@ export default function MobilityLuxuryExperience() {
               <p className="text-[9px] font-bold uppercase tracking-[.2em] text-[#E5B84B]">Viagem em tempo real</p>
               <span className="rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/10 px-3 py-1.5 text-[9px] text-[#E5B84B]">{labels[ride?.status || ""] || ride?.status}</span>
             </div>
+            {confirmedFareMinor && /^\\d+$/.test(confirmedFareMinor) && (
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-[#E5B84B]/20 bg-[#E5B84B]/[.06] px-3 py-2.5">
+                <span className="text-[10px] text-white/55">Preço confirmado pela MARKA</span>
+                <strong className="text-sm text-[#F2CF78]">{fmt(Number(BigInt(confirmedFareMinor)) / 100)}</strong>
+              </div>
+            )}
             {!assigned ? (
               <div className="mt-4 flex items-center gap-4 rounded-2xl bg-black/25 p-4">
                 <div className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full border border-[#E5B84B]/35 bg-[#E5B84B]/10">
@@ -787,6 +797,9 @@ export default function MobilityLuxuryExperience() {
                 <p className="mt-1 text-xs leading-5 text-white/65">
                   O pedido anterior foi registado, mas nenhum motorista elegível foi encontrado. Pode alterar o destino ou a categoria e enviar um novo pedido.
                 </p>
+                {confirmedFareMinor && /^\\d+$/.test(confirmedFareMinor) && (
+                  <p className="mt-2 text-xs font-semibold text-[#F2CF78]">Preço calculado: {fmt(Number(BigInt(confirmedFareMinor)) / 100)}</p>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
