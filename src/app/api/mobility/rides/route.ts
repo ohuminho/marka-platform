@@ -19,6 +19,11 @@ import {
 const mobilityRideService =
   new MobilityRideService();
 
+const MOBILITY_SERVICE_TYPES = new Set([
+  "TAXI", "EXECUTIVE", "MOTO_TAXI", "VAN", "MINIBUS", "BUS", "COACH",
+  "PICKUP", "LIGHT_TRUCK", "MEDIUM_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK",
+]);
+
 export async function POST(
   request: Request,
 ) {
@@ -75,6 +80,16 @@ export async function POST(
         {
           status: 400,
         },
+      );
+    }
+
+    if (!MOBILITY_SERVICE_TYPES.has(serviceType)) {
+      return NextResponse.json(
+        {
+          message: "O tipo de serviço Mobility não é válido.",
+          code: "MOBILITY_SERVICE_TYPE_INVALID",
+        },
+        { status: 400 },
       );
     }
 
