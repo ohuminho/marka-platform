@@ -17,7 +17,7 @@ export class MobilityPromotionService {
   async quote(serviceType: string, fare: MobilityFareQuote): Promise<MobilityPromotionQuote | null> {
     if (serviceType !== "TAXI" && serviceType !== "MOTO_TAXI") return null;
     const now = new Date();
-    let campaigns;
+    let campaigns: Awaited<ReturnType<typeof prisma.mobilityPromotionCampaign.findMany>>;
     try {
       campaigns = await prisma.mobilityPromotionCampaign.findMany({
         where: {
