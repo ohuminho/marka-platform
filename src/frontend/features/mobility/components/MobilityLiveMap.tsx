@@ -80,6 +80,7 @@ export default function MobilityLiveMap({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
   const [mapError, setMapError] = useState<string | null>(null);
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
@@ -154,6 +155,7 @@ export default function MobilityLiveMap({
   const calculateRoute = useCallback(async (from: MobilityMapPoint, to: MobilityMapPoint) => {
     const id = ++requestRef.current;
     setBusy(true);
+    setRouteError(null);
     setStatus("A calcular a rota rodoviária…");
     try {
       const query = new URLSearchParams({
@@ -200,12 +202,15 @@ export default function MobilityLiveMap({
         });
       }
       onRouteChange?.(resolvedRoute);
+      setRouteError(null);
       setStatus("Rota calculada.");
     } catch (error) {
       if (id === requestRef.current) {
         routeRef.current = null;
         onRouteChange?.(null);
-        setStatus(error instanceof Error ? error.message : "Falha ao calcular a rota.");
+        const message = error instanceof Error ? error.message : "Falha ao calcular a rota.";
+        setRouteError(message);
+        setStatus(message);
       }
     } finally {
       if (id === requestRef.current) setBusy(false);
@@ -233,6 +238,7 @@ export default function MobilityLiveMap({
       return () => window.clearTimeout(routeTimer);
     } else {
       routeRef.current = null;
+      setRouteError(null);
       (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
         type: "FeatureCollection",
         features: [],
@@ -309,9 +315,19 @@ export default function MobilityLiveMap({
   return (
     <div className="marka-mobility-map absolute inset-0">
       <div ref={hostRef} className="absolute inset-0" role="application" aria-label="Mapa de mobilidade MARKA" />
-      <div className="absolute bottom-[310px] right-4 z-10 rounded-xl border border-white/10 bg-[#141417]/85 px-3 py-2 text-[9px] text-white/50 backdrop-blur-lg">
-        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#E5B84B]" />
+      <div className="absolute bottom-[310px] right-4 z-10 max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
+        <span className={"mr-1.5 inline-block h-1.5 w-1.5 rounded-full " + (routeError ? "bg-rose-400" : busy ? "animate-pulse bg-amber-300" : "bg-[#E5B84B]")} />
         {busy ? "A calcular rota…" : status}
+        {routeError && originPoint && destinationPoint && (
+          <button
+            type="button"
+            onClick={() => void calculateRoute(originPoint, destinationPoint)}
+            disabled={busy}
+            className="ml-2 rounded-lg border border-[#E5B84B]/40 px-2 py-1 font-semibold text-[#F2CF78] disabled:opacity-50"
+          >
+            Tentar novamente
+          </button>
+        )}
       </div>
       {mapError && (
         <p role="alert" className="absolute left-4 top-20 z-10 rounded-xl border border-rose-200/15 bg-[#141417]/90 p-3 text-[10px] text-rose-100">
