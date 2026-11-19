@@ -196,6 +196,8 @@ export default function MobilityLiveMap({
     let initializedMap: MapLibreMap | null = null;
     let resize: ResizeObserver | null = null;
     let rendererErrors = 0;
+    let styleLoaded = false;
+    let styleTimeout: ReturnType<typeof window.setTimeout> | null = null;
     try {
       map = new maplibregl.Map({
         container: hostRef.current,
@@ -211,7 +213,14 @@ export default function MobilityLiveMap({
       initializedMap = map;
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      // If the vector style stalls without emitting a useful error, move to
+      // the Leaflet renderer instead of leaving the passenger on a blank map.
+      styleTimeout = window.setTimeout(() => {
+        if (!styleLoaded) setMapError("O mapa principal demorou a responder. A activar o mapa alternativo.");
+      }, 12000);
       map.on("style.load", () => {
+        styleLoaded = true;
+        if (styleTimeout !== null) window.clearTimeout(styleTimeout);
         setMapReady(true);
         tuneDarkStyle(map);
         map.addSource("marka-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -276,6 +285,7 @@ export default function MobilityLiveMap({
 
     return () => {
       resize?.disconnect();
+      if (styleTimeout !== null) window.clearTimeout(styleTimeout);
       if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
       Object.values(markersRef.current).forEach((marker) => marker?.remove());
       if (mapRef.current === map) {
