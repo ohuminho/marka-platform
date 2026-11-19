@@ -213,7 +213,7 @@ export default function MobilityLuxuryExperience() {
       let localPlaces: Place[] = [];
       try {
         try {
-          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value), {
+          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
             signal: controller.signal,
             credentials: "same-origin",
             cache: "no-store",
@@ -277,7 +277,7 @@ export default function MobilityLuxuryExperience() {
       let localPlaces: Place[] = [];
       try {
         try {
-          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value), {
+          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
             signal: controller.signal,
             credentials: "same-origin",
             cache: "no-store",
