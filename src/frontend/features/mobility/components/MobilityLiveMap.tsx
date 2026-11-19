@@ -92,7 +92,9 @@ export default function MobilityLiveMap({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
   const [mapError, setMapError] = useState<string | null>(null);
-  const [routeError, setRouteError] = useState<string | null>(null);\n  const [mapReady, setMapReady] = useState(false);\n  const fallbackStyleRef = useRef(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const fallbackStyleRef = useRef(false);
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
