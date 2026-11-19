@@ -314,7 +314,7 @@ export default function MobilityLiveMap({
   return (
     <div className="marka-mobility-map absolute inset-0">
       <div ref={hostRef} className="absolute inset-0" role="application" aria-label="Mapa de mobilidade MARKA" />
-      <div className="absolute bottom-[310px] right-4 z-10 max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
+      <div className="absolute left-4 right-4 top-[76px] z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
         <span className={"mr-1.5 inline-block h-1.5 w-1.5 rounded-full " + (routeError ? "bg-rose-400" : busy ? "animate-pulse bg-amber-300" : "bg-[#E5B84B]")} />
         {busy ? "A calcular rota…" : status}
         {routeError && originPoint && destinationPoint && (
