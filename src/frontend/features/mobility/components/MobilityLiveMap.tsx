@@ -26,6 +26,18 @@ type Props = {
 };
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
+const FALLBACK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "marka-fallback-raster": {
+      type: "raster",
+      tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    },
+  },
+  layers: [{ id: "marka-fallback-raster-layer", type: "raster", source: "marka-fallback-raster" }],
+};
 
 function markerElement(kind: "pickup" | "dropoff" | "driver") {
   const el = document.createElement("div");
@@ -80,7 +92,7 @@ export default function MobilityLiveMap({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Defina a partida e o destino para calcular a rota.");
   const [mapError, setMapError] = useState<string | null>(null);
-  const [routeError, setRouteError] = useState<string | null>(null);
+  const [routeError, setRouteError] = useState<string | null>(null);\n  const [mapReady, setMapReady] = useState(false);\n  const fallbackStyleRef = useRef(false);
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
@@ -96,7 +108,8 @@ export default function MobilityLiveMap({
       maxPitch: 0,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-    map.on("load", () => {
+    map.on("style.load", () => {
+      setMapReady(true);
       tuneDarkStyle(map);
       map.addSource("marka-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
@@ -138,7 +151,14 @@ export default function MobilityLiveMap({
       map.resize();
     });
     map.on("error", (event) => {
-      if (event.error?.message) setMapError("O mapa não conseguiu carregar os tiles. Verifique a ligação.");
+      if (!event.error?.message) return;
+      if (!fallbackStyleRef.current) {
+        fallbackStyleRef.current = true;
+        setMapError("O mapa principal está indisponível. A MARKA mudou para o mapa alternativo.");
+        map.setStyle(FALLBACK_STYLE);
+      } else {
+        setMapError("O fornecedor de mapas está temporariamente indisponível. A rota e os endereços continuam disponíveis.");
+      }
     });
     mapRef.current = map;
     const resize = new ResizeObserver(() => map.resize());
@@ -149,6 +169,7 @@ export default function MobilityLiveMap({
       Object.values(markersRef.current).forEach((marker) => marker?.remove());
       map.remove();
       mapRef.current = null;
+      setMapReady(false);
     };
   }, []);
 
@@ -219,7 +240,7 @@ export default function MobilityLiveMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
     requestRef.current += 1;
 
     markersRef.current.pickup?.remove();
@@ -262,19 +283,20 @@ export default function MobilityLiveMap({
     destinationPoint?.label,
     calculateRoute,
     onRouteChange,
+    mapReady,
   ]);
 
   useEffect(() => {
     driverRouteRef.current = driverRouteGeometry;
-    const source = mapRef.current?.getSource("marka-driver-route") as GeoJSONSource | undefined;
+    const source = mapReady ? mapRef.current?.getSource("marka-driver-route") as GeoJSONSource | undefined : undefined;
     source?.setData(driverRouteGeometry
       ? { type: "Feature", properties: {}, geometry: driverRouteGeometry }
       : { type: "FeatureCollection", features: [] });
-  }, [driverRouteGeometry]);
+  }, [driverRouteGeometry, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
     if (!driverPoint) {
       if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
       driverAnimationRef.current = null;
@@ -309,7 +331,7 @@ export default function MobilityLiveMap({
       driverAnimationRef.current = requestAnimationFrame(animate);
     }
     markersRef.current.driver.setRotation(Number.isFinite(driverPoint.bearing) ? Number(driverPoint.bearing) : 0);
-  }, [driverPoint?.lat, driverPoint?.lon, driverPoint?.bearing]);
+  }, [driverPoint?.lat, driverPoint?.lon, driverPoint?.bearing, mapReady]);
 
   return (
     <div className="marka-mobility-map absolute inset-0">
