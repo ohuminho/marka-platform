@@ -202,7 +202,7 @@ export default function MobilityLuxuryExperience() {
         // Retry on the next polling cycle.
       }
     };
-    const timer = window.setInterval(() => void poll(), 7000);
+    const timer = window.setInterval(() => void poll(), 2500);
     return () => { mounted = false; window.clearInterval(timer); };
   }, [ride?.id, ride?.status, organizationId]);
 
@@ -263,7 +263,7 @@ export default function MobilityLuxuryExperience() {
       } finally {
         if (!controller.signal.aborted) setOriginSearchBusy(false);
       }
-    }, 320);
+    }, 180);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
@@ -447,10 +447,10 @@ export default function MobilityLuxuryExperience() {
               : "Não foi possível obter a localização. Confirme o GPS, a ligação e tente novamente ou escolha a partida no mapa/pesquisa.");
             setGpsBusy(false);
           },
-          { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 },
+          { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 },
         );
       },
-      { enableHighAccuracy: true, timeout: 18000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 },
     );
   };
 
