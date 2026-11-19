@@ -274,53 +274,54 @@ export class MobilityDispatchService {
       MobilityMatchCandidate[] =
       [];
 
+    // Safety checks perform several database reads and persist an audit
+    // result. Run a small bounded batch in parallel: this cuts dispatch
+    // latency without opening an unbounded number of concurrent DB queries.
+    // Promise.all preserves candidate order, so the highest-ranked eligible
+    // driver is still selected deterministically.
+    const SAFETY_CHECK_CONCURRENCY = 4;
+
     for (
-      const candidate of candidates
+      let offset = 0;
+      offset < candidates.length;
+      offset += SAFETY_CHECK_CONCURRENCY
     ) {
-      try {
-        const eligibility =
-          await mobilitySafetyService.evaluateDriverSafety({
-            organizationId:
-              ride.organizationId,
+      const batch = candidates.slice(
+        offset,
+        offset + SAFETY_CHECK_CONCURRENCY,
+      );
 
-            driverId:
-              candidate.driverId,
+      const evaluated = await Promise.all(
+        batch.map(async (candidate) => {
+          try {
+            const eligibility =
+              await mobilitySafetyService.evaluateDriverSafety({
+                organizationId: ride.organizationId,
+                driverId: candidate.driverId,
+                vehicleId: candidate.vehicleId,
+                requireTrustedRide: safetyMode === "TRUSTED",
+                requireChildRide: safetyMode === "CHILD",
+              });
 
-            vehicleId:
-              candidate.vehicleId,
+            const eligible =
+              eligibility.status === "ELIGIBLE" &&
+              eligibility.eligibleForStandardRides &&
+              (safetyMode !== "TRUSTED" || eligibility.eligibleForTrustedRides) &&
+              (safetyMode !== "CHILD" || eligibility.eligibleForChildRides);
 
-            requireTrustedRide:
-              safetyMode ===
-              "TRUSTED",
+            return eligible ? candidate : null;
+          } catch {
+            // Fail closed: a safety-service failure never makes a driver eligible.
+            return null;
+          }
+        }),
+      );
 
-            requireChildRide:
-              safetyMode ===
-              "CHILD",
-          });
-
-        const eligible =
-          eligibility.status ===
-            "ELIGIBLE" &&
-          eligibility.eligibleForStandardRides &&
-          (
-            safetyMode !==
-              "TRUSTED" ||
-            eligibility.eligibleForTrustedRides
-          ) &&
-          (
-            safetyMode !==
-              "CHILD" ||
-            eligibility.eligibleForChildRides
-          );
-
-        if (eligible) {
-          eligibleCandidates.push(
-            candidate
-          );
-        }
-      } catch {
-        continue;
-      }
+      eligibleCandidates.push(
+        ...evaluated.filter(
+          (candidate): candidate is MobilityMatchCandidate => candidate !== null,
+        ),
+      );
     }
 
     if (
