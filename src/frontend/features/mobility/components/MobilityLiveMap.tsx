@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type Marker } from "maplibre-gl";
+import maplibregl, { type GeoJSONSource, type Map as MapLibreMap, type Marker, type StyleSpecification } from "maplibre-gl";
 
 export type MobilityMapPoint = { lat: number; lon: number; label: string };
 export type MobilityRoute = {
@@ -26,7 +26,7 @@ type Props = {
 };
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
-const FALLBACK_STYLE: maplibregl.StyleSpecification = {
+const FALLBACK_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     "marka-fallback-raster": {
