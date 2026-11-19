@@ -265,9 +265,12 @@ export default function MobilityLiveMap({
     } catch (error) {
       try { initializedMap?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
       mapRef.current = null;
-      setMapError(error instanceof Error && /webgl|context/i.test(error.message)
+      const fallbackMessage = error instanceof Error && /webgl|context/i.test(error.message)
         ? "Não foi possível iniciar o mapa neste dispositivo. A rota e o preço continuam independentes do mapa."
-        : "Não foi possível iniciar a visualização do mapa. A rota e o preço continuam independentes do mapa.");
+        : "Não foi possível iniciar a visualização do mapa. A rota e o preço continuam independentes do mapa.";
+      queueMicrotask(() => {
+        if (hostRef.current) setMapError(fallbackMessage);
+      });
       return;
     }
 
