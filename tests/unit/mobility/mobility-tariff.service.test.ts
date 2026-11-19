@@ -12,7 +12,11 @@ const previous = new Map(names.map((name) => [name, process.env[name]]));
 
 try {
   for (const name of names) delete process.env[name];
-  assert.equal(quoteMobilityFare("TAXI", 1000, 60), null);
+  const defaultQuote = quoteMobilityFare("TAXI", 1000, 60);
+  assert.ok(defaultQuote);
+  assert.equal(defaultQuote.totalMinor, "50000");
+  assert.equal(defaultQuote.totalAOA, 500);
+  assert.equal(quoteMobilityFare("UNKNOWN_SERVICE", 1000, 60), null);
 
   process.env.MARKA_MOBILITY_TAXI_BASE_FARE_MINOR = "100000";
   process.env.MARKA_MOBILITY_TAXI_DISTANCE_RATE_MINOR_PER_KM = "10000";
