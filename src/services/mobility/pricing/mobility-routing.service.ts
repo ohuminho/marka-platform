@@ -122,9 +122,22 @@ export class MobilityRoutingService {
     try { endpoint=new URL("route/v1/driving/"+origin.longitude+","+origin.latitude+";"+destination.longitude+","+destination.latitude,this.baseUrl(options).endsWith("/")?this.baseUrl(options):this.baseUrl(options)+"/"); }
     catch { throw new MobilityRoutingError("Mobility routing provider URL is invalid.","MOBILITY_ROUTING_CONFIGURATION_INVALID"); }
     endpoint.searchParams.set("overview",geometry?"full":"false");endpoint.searchParams.set("steps","false");endpoint.searchParams.set("alternatives","false");if(geometry)endpoint.searchParams.set("geometries","geojson");
-    const timeout=options.timeoutMs??5000;if(!Number.isInteger(timeout)||timeout<500||timeout>15000)throw new MobilityRoutingError("Mobility routing timeout configuration is invalid.","MOBILITY_ROUTING_TIMEOUT_INVALID");
-    let response:Response;try{response=await(options.fetcher??fetch)(endpoint,{method:"GET",headers:{accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(timeout)});}catch{throw new MobilityRoutingError("Mobility routing provider is unavailable.","MOBILITY_ROUTING_PROVIDER_UNAVAILABLE");}
-    if(!response.ok)throw new MobilityRoutingError("Mobility routing provider returned an unsuccessful response.","MOBILITY_ROUTING_PROVIDER_ERROR");
+    const timeout=options.timeoutMs??12000;
+    if(!Number.isInteger(timeout)||timeout<500||timeout>20000)throw new MobilityRoutingError("Mobility routing timeout configuration is invalid.","MOBILITY_ROUTING_TIMEOUT_INVALID");
+    let response:Response|undefined;
+    for(let attempt=0;attempt<2;attempt++){
+      try{
+        response=await(options.fetcher??fetch)(endpoint,{method:"GET",headers:{accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(timeout)});
+        if(response.ok)break;
+        if(response.status<500&&response.status!==429)throw new MobilityRoutingError("Mobility routing provider returned an unsuccessful response.","MOBILITY_ROUTING_PROVIDER_ERROR");
+      }catch(error){
+        if(error instanceof MobilityRoutingError)throw error;
+        if(attempt===1)throw new MobilityRoutingError("O serviço de rotas não respondeu após nova tentativa.","MOBILITY_ROUTING_PROVIDER_UNAVAILABLE");
+      }
+      if(attempt===0)await new Promise(resolve=>setTimeout(resolve,350));
+    }
+    if(!response)throw new MobilityRoutingError("Mobility routing provider is unavailable.","MOBILITY_ROUTING_PROVIDER_UNAVAILABLE");
+    if(!response.ok)throw new MobilityRoutingError("O serviço de rotas está temporariamente ocupado. Tenta novamente dentro de instantes.","MOBILITY_ROUTING_PROVIDER_ERROR");
     let payload:unknown;try{payload=await response.json();}catch{throw new MobilityRoutingError("Mobility routing provider returned invalid JSON.","MOBILITY_ROUTING_INVALID_RESPONSE");}
     if(!record(payload)||payload.code!=="Ok"||!Array.isArray(payload.routes))throw new MobilityRoutingError("No drivable route was found for the selected locations.","MOBILITY_ROUTE_NOT_FOUND");
     const item=payload.routes[0];if(!record(item)||typeof item.distance!=="number"||!Number.isFinite(item.distance)||item.distance<=0||item.distance>2000000||typeof item.duration!=="number"||!Number.isFinite(item.duration)||item.duration<=0||item.duration>604800)throw new MobilityRoutingError("Mobility routing provider returned invalid route measurements.","MOBILITY_ROUTE_MEASUREMENTS_INVALID");
