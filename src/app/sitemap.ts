@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/database/client/prisma";
 
+export const dynamic = "force-dynamic";
+
 const baseUrl = "https://markaao.com";
 const MAX_DYNAMIC_URLS = 49_995;
 
@@ -12,6 +14,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/mobilidade`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}/advertise`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
   ];
+
+  // The sitemap must remain available during builds and in environments where
+  // catalog access is intentionally not configured. Dynamic URLs are added
+  // only at runtime when the existing database connection is present.
+  if (!process.env.DATABASE_URL) {
+    return routes;
+  }
 
   try {
     const products = await prisma.product.findMany({
