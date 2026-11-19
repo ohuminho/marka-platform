@@ -201,12 +201,12 @@ export default function MobilityLuxuryExperience() {
         if (!mounted || !data.ride) return;
         setRide(data.ride);
 
-        // A persisted ride can remain in SEARCHING when dispatch reports a
-        // recoverable failure. Retry once from the passenger session; the
-        // stable key makes repeated tabs/polls safe at the lifecycle boundary.
+        // A dispatch failure can leave orchestration in recovery while the
+        // ride is either still SEARCHING or already assigned. Retry once so
+        // the backend can resume dispatch or reconcile the committed assignment.
         if (
           data.orchestration?.recoveryRequired &&
-          data.ride.status === "SEARCHING" &&
+          (data.ride.status === "SEARCHING" || data.ride.status === "DRIVER_ASSIGNED") &&
           !recoveryAttemptedRef.current.has(data.ride.id)
         ) {
           recoveryAttemptedRef.current.add(data.ride.id);
