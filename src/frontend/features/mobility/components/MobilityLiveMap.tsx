@@ -322,7 +322,9 @@ export default function MobilityLiveMap({
       const response = await fetch("/api/mobility/routing/geometry?" + query.toString(), {
         credentials: "include",
         cache: "no-store",
-        signal: AbortSignal.timeout(2500),
+        // Route calculation includes session validation, provider routing and server-side fare lookup.
+        // A 2.5s client cutoff was aborting valid requests on slower mobile networks.
+        signal: AbortSignal.timeout(8000),
       });
       const data = await response.json() as {
         route?: MobilityRoute;
@@ -368,7 +370,9 @@ export default function MobilityLiveMap({
           features: [],
         });
         onRouteChange?.(null);
-        const message = error instanceof Error ? error.message : "Falha ao calcular a rota.";
+        const message = error instanceof Error && error.name === "TimeoutError"
+          ? "O cálculo da rota demorou mais do que o esperado. Verifique a ligação e tente novamente."
+          : error instanceof Error ? error.message : "Falha ao calcular a rota.";
         setRouteError(message);
         setStatus(message);
       }
