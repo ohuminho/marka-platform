@@ -74,22 +74,10 @@ export class MobilityMatchingService {
             ? { notIn: input.excludedDriverIds }
             : undefined,
           status: MobilityDriverStatus.ACTIVE,
-          AND: [
-            ...requiredDriverDocuments.map(currentVerifiedDocument),
-            {
-              vehicles: {
-                some: {
-                  isPrimary: true,
-                  activeUntil: null,
-                  vehicle: {
-                    status: MobilityVehicleStatus.ACTIVE,
-                    capacity: { gte: input.passengerCount ?? 1 },
-                    AND: requiredVehicleDocuments.map((documentType) => currentVerifiedDocument(documentType)),
-                  },
-                },
-              },
-            },
-          ],
+          // Vehicle eligibility is enforced by the single vehicles.some
+          // relation filter below; do not repeat the same EXISTS predicate
+          // here as a second nested relation scan.
+          AND: requiredDriverDocuments.map(currentVerifiedDocument),
 
           availability: {
             status: {
