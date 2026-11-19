@@ -216,8 +216,8 @@ export default function MobilityLuxuryExperience() {
           !recoveryInFlightRef.current.has(data.ride.id)
         ) {
           recoveryInFlightRef.current.add(data.ride.id);
+          const attemptNumber = recoveryAttempts + 1;
           try {
-            const attemptNumber = recoveryAttempts + 1;
             const recoveryResponse = await fetch("/api/mobility/rides/" + encodeURIComponent(data.ride.id), {
               method: "PATCH",
               credentials: "include",
