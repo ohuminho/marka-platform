@@ -221,7 +221,9 @@ export default function MobilityLuxuryExperience() {
               cache: "no-store",
               headers: {
                 "Content-Type": "application/json",
-                "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id,
+                // Each bounded recovery attempt needs its own idempotency key.
+                // Reusing one key would replay the first lifecycle event and block later retries.
+                "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id + "-" + (recoveryAttempts + 1),
                 "X-Organization-Id": organizationId || "",
               },
               body: JSON.stringify({ action: "RETRY_DISPATCH" }),
