@@ -125,7 +125,7 @@ export class MobilityRoutingService {
     // Keep both attempts inside the serverless request budget; a slow public OSRM\n    // request must not hold the passenger flow open for 24+ seconds.\n    const timeout=options.timeoutMs??1000;
     if(!Number.isInteger(timeout)||timeout<250||timeout>5000)throw new MobilityRoutingError("Mobility routing timeout configuration is invalid.","MOBILITY_ROUTING_TIMEOUT_INVALID");
     let response:Response|undefined;
-    for(let attempt=0;attempt<2;attempt++){
+    for(let attempt=0;attempt<1;attempt++){
       try{
         response=await(options.fetcher??fetch)(endpoint,{method:"GET",headers:{accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(timeout)});
         if(response.ok)break;
@@ -134,7 +134,6 @@ export class MobilityRoutingService {
         if(error instanceof MobilityRoutingError)throw error;
         if(attempt===1)throw new MobilityRoutingError("O serviço de rotas não respondeu após nova tentativa.","MOBILITY_ROUTING_PROVIDER_UNAVAILABLE");
       }
-      if(attempt===0)await new Promise(resolve=>setTimeout(resolve,100));
     }
     if(!response)throw new MobilityRoutingError("Mobility routing provider is unavailable.","MOBILITY_ROUTING_PROVIDER_UNAVAILABLE");
     if(!response.ok)throw new MobilityRoutingError("O serviço de rotas está temporariamente ocupado. Tenta novamente dentro de instantes.","MOBILITY_ROUTING_PROVIDER_ERROR");
