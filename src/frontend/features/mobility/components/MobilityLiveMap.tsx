@@ -98,7 +98,7 @@ export default function MobilityLiveMap({
     if (!hostRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: hostRef.current,
-      style: STYLE_URL,
+      style: FALLBACK_STYLE,
       center: [13.23, -8.83],
       zoom: 11,
       attributionControl: {},
