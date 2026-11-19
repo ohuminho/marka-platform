@@ -96,69 +96,87 @@ export default function MobilityLiveMap({
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: hostRef.current,
-      style: FALLBACK_STYLE,
-      center: [13.23, -8.83],
-      zoom: 11,
-      attributionControl: {},
-      cooperativeGestures: true,
-      pitchWithRotate: false,
-      dragRotate: false,
-      maxPitch: 0,
-    });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-    map.on("style.load", () => {
-      setMapReady(true);
-      tuneDarkStyle(map);
-      map.addSource("marka-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: "marka-route-glow",
-        type: "line",
-        source: "marka-route",
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#E5B84B", "line-width": 10, "line-opacity": 0.16, "line-blur": 4 },
+    if (!maplibregl.supported()) {
+      setMapError("Este dispositivo não suporta WebGL. A rota e o preço continuam a ser calculados, mas a visualização cartográfica requer um mapa compatível.");
+      return;
+    }
+
+    let map: MapLibreMap;
+    let resize: ResizeObserver | null = null;
+    try {
+      map = new maplibregl.Map({
+        container: hostRef.current,
+        style: FALLBACK_STYLE,
+        center: [13.23, -8.83],
+        zoom: 11,
+        attributionControl: {},
+        cooperativeGestures: true,
+        pitchWithRotate: false,
+        dragRotate: false,
+        maxPitch: 0,
       });
-      map.addLayer({
-        id: "marka-route-line",
-        type: "line",
-        source: "marka-route",
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#E5B84B", "line-width": 4, "line-opacity": 0.98 },
-      });
-      map.addSource("marka-driver-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({
-        id: "marka-driver-route-line",
-        type: "line",
-        source: "marka-driver-route",
-        layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#E5B84B", "line-width": 2.5, "line-opacity": 0.42, "line-dasharray": [2, 2] },
-      });
-      if (driverRouteRef.current) {
-        (map.getSource("marka-driver-route") as GeoJSONSource).setData({
-          type: "Feature",
-          properties: {},
-          geometry: driverRouteRef.current,
+      mapRef.current = map;
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      map.on("style.load", () => {
+        setMapReady(true);
+        tuneDarkStyle(map);
+        map.addSource("marka-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "marka-route-glow",
+          type: "line",
+          source: "marka-route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#E5B84B", "line-width": 10, "line-opacity": 0.16, "line-blur": 4 },
         });
-      }
-      if (routeRef.current) {
-        (map.getSource("marka-route") as GeoJSONSource).setData({
-          type: "Feature",
-          properties: {},
-          geometry: routeRef.current.geometry,
+        map.addLayer({
+          id: "marka-route-line",
+          type: "line",
+          source: "marka-route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#E5B84B", "line-width": 4, "line-opacity": 0.98 },
         });
-      }
-      map.resize();
-    });
-    map.on("error", (event) => {
-      if (!event.error?.message) return;
-      setMapError("Alguns elementos do mapa estão temporariamente indisponíveis. A MARKA mantém os endereços e a rota selecionados.");
-    });
-    mapRef.current = map;
-    const resize = new ResizeObserver(() => map.resize());
-    resize.observe(hostRef.current);
+        map.addSource("marka-driver-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "marka-driver-route-line",
+          type: "line",
+          source: "marka-driver-route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#E5B84B", "line-width": 2.5, "line-opacity": 0.42, "line-dasharray": [2, 2] },
+        });
+        if (driverRouteRef.current) {
+          (map.getSource("marka-driver-route") as GeoJSONSource).setData({
+            type: "Feature",
+            properties: {},
+            geometry: driverRouteRef.current,
+          });
+        }
+        if (routeRef.current) {
+          (map.getSource("marka-route") as GeoJSONSource).setData({
+            type: "Feature",
+            properties: {},
+            geometry: routeRef.current.geometry,
+          });
+        }
+        map.resize();
+      });
+      map.on("error", (event) => {
+        if (!event.error?.message) return;
+        setMapError("Alguns elementos cartográficos estão temporariamente indisponíveis. A MARKA mantém os endereços, a rota e o preço seleccionados.");
+      });
+      resize = new ResizeObserver(() => map.resize());
+      resize.observe(hostRef.current);
+      setMapError(null);
+    } catch (error) {
+      mapRef.current = null;
+      try { map?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
+      setMapError(error instanceof Error && /webgl|context/i.test(error.message)
+        ? "Não foi possível iniciar o mapa neste dispositivo. A rota e o preço continuam independentes do mapa."
+        : "Não foi possível iniciar a visualização do mapa. A rota e o preço continuam independentes do mapa.");
+      return;
+    }
+
     return () => {
-      resize.disconnect();
+      resize?.disconnect();
       if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
       Object.values(markersRef.current).forEach((marker) => marker?.remove());
       map.remove();
