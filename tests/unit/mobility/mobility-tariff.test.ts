@@ -13,7 +13,16 @@ async function main(): Promise<void> {
 
   try {
     for (const name of names) delete process.env[name];
-    assert.equal(quoteMobilityFare("TAXI", 2_500, 120), null);
+    const defaultTaxi = quoteMobilityFare("TAXI", 2_500, 120);
+    assert.ok(defaultTaxi);
+    assert.equal(defaultTaxi.totalMinor, "88750");
+    assert.equal(defaultTaxi.totalAOA, 887.5);
+
+    const defaultMoto = quoteMobilityFare("MOTO_TAXI", 2_500, 120);
+    assert.ok(defaultMoto);
+    assert.equal(defaultMoto.totalMinor, "65500");
+    assert.equal(defaultMoto.totalAOA, 655);
+    assert.equal(quoteMobilityFare("EXECUTIVE", 2_500, 120), null);
 
     process.env.MARKA_MOBILITY_TAXI_BASE_FARE_MINOR = "50000";
     process.env.MARKA_MOBILITY_TAXI_DISTANCE_RATE_MINOR_PER_KM = "10000";
@@ -34,7 +43,7 @@ async function main(): Promise<void> {
     assert.equal(minimumQuote?.totalAOA, 900);
 
     process.env.MARKA_MOBILITY_TAXI_BASE_FARE_MINOR = "-1";
-    assert.equal(quoteMobilityFare("TAXI", 2_500, 120), null);
+    assert.throws(() => quoteMobilityFare("TAXI", 2_500, 120), /Invalid MARKA Mobility tariff value/);
   } finally {
     for (const name of names) {
       const value = previous[name];
