@@ -128,6 +128,8 @@ const transitions: Record<Step, readonly Step[]> = {
     "FINANCIAL_FINALIZED",
     "FAILED",
     "CANCELLED",
+    "SEARCHING",
+    "DRIVER_ASSIGNED",
   ],
 };
 
@@ -252,6 +254,20 @@ assertInvalidTransition(
 assertInvalidTransition(
   "RECOVERY_REQUIRED",
   "TRIP_IN_PROGRESS",
+);
+
+/*
+ * Dispatch recovery must be able to resume searching or reconcile
+ * an assignment that committed before a previous request failed.
+ */
+assertValidTransition(
+  "RECOVERY_REQUIRED",
+  "SEARCHING",
+);
+
+assertValidTransition(
+  "RECOVERY_REQUIRED",
+  "DRIVER_ASSIGNED",
 );
 
 /*
