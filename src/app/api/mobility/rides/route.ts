@@ -253,80 +253,64 @@ export async function POST(
         },
       }, idempotencyKey);
 
-    const promotionResult = await mobilityPromotionService.reserveForRide({
-      rideId: ride.id,
-      idempotencyKey: `${idempotencyKey}:promotion`,
-      promotion,
-      originalFareMinor: fare.totalMinor,
-      currency,
-    });
+    let finalFareMinor = fare.totalMinor;
+    let promotionApplied = false;
+    let promotionDiscountMinor = "0";
+    let orchestration;
 
-    await mobilityLifecycleService.initialize({
-      organizationId:
-        authentication.session
-          .organizationId,
+    try {
+      const promotionResult = await mobilityPromotionService.reserveForRide({
+        rideId: ride.id,
+        idempotencyKey: idempotencyKey + ":promotion",
+        promotion,
+        originalFareMinor: fare.totalMinor,
+        currency,
+      });
+      finalFareMinor = promotionResult.finalFareMinor;
+      promotionApplied = promotionResult.applied;
+      promotionDiscountMinor = promotionResult.applied ? promotion?.discountMinor ?? "0" : "0";
 
-      rideId:
-        ride.id,
-
-      actorUserId:
-        authentication.session
-          .userId,
-
-      correlationId:
-        requestContext.correlationId,
-
-      requestId:
-        requestContext.requestId,
-
-      idempotencyKey:
-        `${idempotencyKey}:orchestration`,
-
-      ipAddress:
-        requestContext.ipAddress,
-
-      userAgent:
-        requestContext.userAgent,
-
-      safetyMode,
-    });
-
-    // A ride request must enter the real safety + matching + dispatch
-    // pipeline immediately; merely creating an orchestration leaves it stuck
-    // at REQUESTED and no driver can ever receive the offer.
-    const orchestration =
-      await mobilityLifecycleService.execute({
-        organizationId:
-          authentication.session
-            .organizationId,
-
-        rideId:
-          ride.id,
-
-        actorUserId:
-          authentication.session
-            .userId,
-
-        correlationId:
-          requestContext.correlationId,
-
-        requestId:
-          requestContext.requestId,
-
-        idempotencyKey:
-          `${idempotencyKey}:dispatch`,
-
-        ipAddress:
-          requestContext.ipAddress,
-
-        userAgent:
-          requestContext.userAgent,
-
+      await mobilityLifecycleService.initialize({
+        organizationId: authentication.session.organizationId,
+        rideId: ride.id,
+        actorUserId: authentication.session.userId,
+        correlationId: requestContext.correlationId,
+        requestId: requestContext.requestId,
+        idempotencyKey: idempotencyKey + ":orchestration",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
         safetyMode,
-
-        action: "DISPATCH",
       });
 
+      // Start real matching immediately. A transient dispatch failure must
+      // never turn an already-persisted ride into a client-visible create error.
+      orchestration = await mobilityLifecycleService.execute({
+        organizationId: authentication.session.organizationId,
+        rideId: ride.id,
+        actorUserId: authentication.session.userId,
+        correlationId: requestContext.correlationId,
+        requestId: requestContext.requestId,
+        idempotencyKey: idempotencyKey + ":dispatch",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        safetyMode,
+        action: "DISPATCH",
+      });
+    } catch (postCreateError) {
+      console.error("[MOBILITY_RIDE_POST_CREATE_RECOVERY_REQUIRED]", { rideId: ride.id, error: postCreateError });
+      const [recoveredRide, recoveredOrchestration] = await Promise.all([
+        mobilityRideService.getById(ride.id).catch(() => null),
+        mobilityLifecycleService.get(authentication.session.organizationId, ride.id).catch(() => null),
+      ]);
+      return NextResponse.json({
+        ride: recoveredRide ?? ride,
+        orchestration: recoveredOrchestration,
+        recoveryRequired: true,
+        pricing: { currency, originalFareMinor: fare.totalMinor, finalFareMinor, promotionApplied, promotionDiscountMinor },
+        code: "MOBILITY_RIDE_POST_CREATE_RECOVERY_REQUIRED",
+        message: "A viagem foi registada. Estamos a recuperar a procura de motorista; não crie outro pedido.",
+      }, { status: 202 });
+    }
     const refreshedRide =
       await mobilityRideService.getById(
         ride.id,
@@ -339,9 +323,9 @@ export async function POST(
         pricing: {
           currency,
           originalFareMinor: fare.totalMinor,
-          finalFareMinor: promotionResult.finalFareMinor,
-          promotionApplied: promotionResult.applied,
-          promotionDiscountMinor: promotionResult.applied ? promotion?.discountMinor ?? "0" : "0",
+          finalFareMinor,
+          promotionApplied,
+          promotionDiscountMinor,
         },
       },
       {
