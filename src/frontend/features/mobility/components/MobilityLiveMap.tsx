@@ -168,7 +168,7 @@ export default function MobilityLiveMap({
       setMapError(null);
     } catch (error) {
       mapRef.current = null;
-      try { map?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
+      try { mapRef.current?.remove(); } catch { /* Ignore partial MapLibre initialization cleanup. */ }
       setMapError(error instanceof Error && /webgl|context/i.test(error.message)
         ? "Não foi possível iniciar o mapa neste dispositivo. A rota e o preço continuam independentes do mapa."
         : "Não foi possível iniciar a visualização do mapa. A rota e o preço continuam independentes do mapa.");
