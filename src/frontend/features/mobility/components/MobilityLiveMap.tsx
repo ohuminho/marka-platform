@@ -171,7 +171,6 @@ export default function MobilityLiveMap({
       Object.values(markersRef.current).forEach((marker) => marker?.remove());
       map.remove();
       mapRef.current = null;
-      setMapReady(false);
     };
   }, []);
 
@@ -192,6 +191,7 @@ export default function MobilityLiveMap({
       const response = await fetch("/api/mobility/routing/geometry?" + query.toString(), {
         credentials: "include",
         cache: "no-store",
+        signal: AbortSignal.timeout(27000),
       });
       const data = await response.json() as {
         route?: MobilityRoute;
@@ -230,6 +230,10 @@ export default function MobilityLiveMap({
     } catch (error) {
       if (id === requestRef.current) {
         routeRef.current = null;
+        (mapRef.current?.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
+          type: "FeatureCollection",
+          features: [],
+        });
         onRouteChange?.(null);
         const message = error instanceof Error ? error.message : "Falha ao calcular a rota.";
         setRouteError(message);
