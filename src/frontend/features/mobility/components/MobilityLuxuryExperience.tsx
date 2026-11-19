@@ -716,7 +716,7 @@ export default function MobilityLuxuryExperience() {
               <p className="text-[9px] font-bold uppercase tracking-[.2em] text-[#E5B84B]">Viagem em tempo real</p>
               <span className="rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/10 px-3 py-1.5 text-[9px] text-[#E5B84B]">{labels[ride?.status || ""] || ride?.status}</span>
             </div>
-            {confirmedFareMinor && /^\\d+$/.test(confirmedFareMinor) && (
+            {confirmedFareMinor && /^\d+$/.test(confirmedFareMinor) && (
               <div className="mt-3 flex items-center justify-between rounded-xl border border-[#E5B84B]/20 bg-[#E5B84B]/[.06] px-3 py-2.5">
                 <span className="text-[10px] text-white/55">Preço confirmado pela MARKA</span>
                 <strong className="text-sm text-[#F2CF78]">{fmt(Number(BigInt(confirmedFareMinor)) / 100)}</strong>
@@ -797,7 +797,7 @@ export default function MobilityLuxuryExperience() {
                 <p className="mt-1 text-xs leading-5 text-white/65">
                   O pedido anterior foi registado, mas nenhum motorista elegível foi encontrado. Pode alterar o destino ou a categoria e enviar um novo pedido.
                 </p>
-                {confirmedFareMinor && /^\\d+$/.test(confirmedFareMinor) && (
+                {confirmedFareMinor && /^\d+$/.test(confirmedFareMinor) && (
                   <p className="mt-2 text-xs font-semibold text-[#F2CF78]">Preço calculado: {fmt(Number(BigInt(confirmedFareMinor)) / 100)}</p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
