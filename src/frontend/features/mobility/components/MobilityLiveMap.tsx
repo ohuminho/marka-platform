@@ -197,7 +197,7 @@ export default function MobilityLiveMap({
     let resize: ResizeObserver | null = null;
     let rendererErrors = 0;
     let styleLoaded = false;
-    let styleTimeout: ReturnType<typeof window.setTimeout> | null = null;
+    let styleTimeout: number | null = null;
     try {
       map = new maplibregl.Map({
         container: hostRef.current,
