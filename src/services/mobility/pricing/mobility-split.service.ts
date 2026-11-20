@@ -38,8 +38,6 @@ export function resolveMobilitySplitServiceType(serviceType: string): MobilitySp
     "MOTO_BOX",
     "VAN",
     "TRUCK",
-    "WATER_DELIVERY",
-    "ROADSIDE_ASSISTANCE",
   ].includes(normalized)) return "carga";
 
   throw new RangeError(`Unsupported MARKA Mobility service type: ${serviceType}`);
