@@ -21,6 +21,7 @@ type Props = {
   onPointsChange?: (points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => void;
   onRouteChange?: (route: MobilityRoute | null) => void;
   onRouteStatusChange?: (status: MobilityRouteStatus) => void;
+  onMapDestinationSelect?: (point: { lat: number; lon: number }) => void;
   serviceType?: string;
   serviceTypes?: string;
   driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
@@ -147,6 +148,7 @@ function RouteSvgFallback({
 export default function MobilityLiveMap({
   onRouteChange,
   onRouteStatusChange,
+  onMapDestinationSelect,
   serviceType = "TAXI",
   serviceTypes = serviceType,
   driverPoint = null,
@@ -155,6 +157,8 @@ export default function MobilityLiveMap({
   destinationPoint = null,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const mapDestinationSelectRef = useRef(onMapDestinationSelect);
+  useEffect(() => { mapDestinationSelectRef.current = onMapDestinationSelect; }, [onMapDestinationSelect]);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<{ pickup: Marker | null; dropoff: Marker | null; driver: Marker | null }>({
     pickup: null,
@@ -199,6 +203,7 @@ export default function MobilityLiveMap({
       initializedMap = map;
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      map.on("click", (event) => mapDestinationSelectRef.current?.({ lat: event.lngLat.lat, lon: event.lngLat.lng }));
       // If the vector style stalls without emitting a useful error, move to
       // the Leaflet renderer instead of leaving the passenger on a blank map.
       styleTimeout = window.setTimeout(() => {
@@ -502,6 +507,7 @@ export default function MobilityLiveMap({
           driverRoute={driverRouteGeometry}
           driver={driverPoint}
           onFailure={() => setLeafletFailed(true)}
+          onMapDestinationSelect={(point) => mapDestinationSelectRef.current?.(point)}
         />
       ) : null}
       {leafletFailed ? <RouteSvgFallback route={displayRoute} origin={originPoint} destination={destinationPoint} driverRoute={driverRouteGeometry} driver={driverPoint} /> : null}
@@ -525,7 +531,7 @@ export default function MobilityLiveMap({
           Visualização simplificada
         </span>
       )}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-[#09090B] via-[#09090B]/55 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#09090B]/35 via-[#09090B]/10 to-transparent" />
     </div>
   );
 }
