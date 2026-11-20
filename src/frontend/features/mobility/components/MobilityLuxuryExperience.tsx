@@ -178,7 +178,6 @@ export default function MobilityLuxuryExperience() {
   }, [ride]);
 
   const active = Boolean(ride && !["COMPLETED", "CANCELLED", "REJECTED", "EXPIRED", "NO_DRIVER_FOUND", "FAILED"].includes(ride.status));
-  useEffect(() => { if (active) setPanelExpanded(false); }, [active]);
   const assigned = Boolean(ride?.driver);
   const list = choices[group];
   const serviceTypes = list.map((item) => item.id).join(",");
@@ -436,6 +435,17 @@ export default function MobilityLuxuryExperience() {
     setError(null);
   };
 
+  const chooseDestination = (place: Place) => {
+    setDestination(place);
+    setDestinationText(place.label);
+    setSuggestions([]);
+    setRoute(null);
+    setQuote(null);
+    setFareByService({});
+    setFareStatus("NO_ROUTE");
+    setError(null);
+  };
+
   const chooseMapDestination = useCallback(async (point: { lat: number; lon: number }) => {
     let label = "Ponto seleccionado no mapa";
     try {
@@ -457,17 +467,6 @@ export default function MobilityLuxuryExperience() {
     }
     chooseDestination({ lat: point.lat, lon: point.lon, label });
   }, []);
-
-  const chooseDestination = (place: Place) => {
-    setDestination(place);
-    setDestinationText(place.label);
-    setSuggestions([]);
-    setRoute(null);
-    setQuote(null);
-    setFareByService({});
-    setFareStatus("NO_ROUTE");
-    setError(null);
-  };
 
   const locateMe = () => {
     if (!window.isSecureContext) {
