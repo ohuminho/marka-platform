@@ -408,6 +408,15 @@ export default function MobilityLuxuryExperience() {
     setError(null);
   };
 
+  useEffect(() => {
+    const requestedService = new URLSearchParams(window.location.search).get("service");
+    if (requestedService !== "moto") return;
+    // The URL query is the initial service selection when returning from the freight screen.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGroup("MOTO");
+    setServiceType("MOTO_TAXI");
+  }, []);
+
   const chooseOrigin = (place: Place) => {
     setOrigin(place);
     setOriginText(place.label);
