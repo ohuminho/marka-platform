@@ -3,9 +3,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
-import { reserveApiRequest } from "@/core/security/api-rate-limit";
+import { reserveApiRequests } from "@/core/security/api-rate-limit";
 import { SessionService } from "@/core/auth/sessions/session.service";
-import { prisma } from "@/database/client/prisma";
 import { quoteMobilityFare } from "@/services/mobility/pricing/mobility-tariff.service";
 import {
   MobilityRoutingError,
@@ -44,17 +43,6 @@ export async function GET(request: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { status: true, role: true, isFounder: true },
-    });
-    if (!user || user.status !== "ACTIVE") {
-      return NextResponse.json(
-        { message: "User account is not available.", code: "USER_ACCOUNT_UNAVAILABLE" },
-        { status: 401 },
-      );
-    }
-
     const parsed = coordinatesSchema.safeParse(
       Object.fromEntries(new URL(request.url).searchParams.entries()),
     );
@@ -65,16 +53,26 @@ export async function GET(request: Request) {
       );
     }
 
-    const privileged = user.isFounder || ["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(user.role);
-    const quota = await reserveApiRequest({
-      scope: "MOBILITY_ROUTE_GEOMETRY",
-      actorUserId: session.userId,
-      bypass: privileged,
-      windows: [
-        { limit: 10, windowMs: 60_000 },
-        { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
-      ],
-    });
+    const privileged = session.isFounder || ["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(session.role);
+    const [quota, globalQuota] = await reserveApiRequests([
+      {
+        scope: "MOBILITY_ROUTE_GEOMETRY",
+        actorUserId: session.userId,
+        bypass: privileged,
+        windows: [
+          { limit: 10, windowMs: 60_000 },
+          { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
+        ],
+      },
+      {
+        scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
+        anonymousIdentity: "marka:shared-osrm-geometry-provider",
+        windows: [
+          { limit: 60, windowMs: 60_000 },
+          { limit: 2_000, windowMs: 24 * 60 * 60 * 1000 },
+        ],
+      },
+    ]);
     if (!quota.allowed) {
       return NextResponse.json(
         { message: "Route request limit reached.", code: "RATE_LIMITED" },
@@ -87,17 +85,6 @@ export async function GET(request: Request) {
         },
       );
     }
-
-    // A per-user quota protects individual accounts; this shared quota also
-    // protects the public routing provider from aggregate traffic across users.
-    const globalQuota = await reserveApiRequest({
-      scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
-      anonymousIdentity: "marka:shared-osrm-geometry-provider",
-      windows: [
-        { limit: 60, windowMs: 60_000 },
-        { limit: 2_000, windowMs: 24 * 60 * 60 * 1000 },
-      ],
-    });
     if (!globalQuota.allowed) {
       return NextResponse.json(
         { message: "O serviço de rotas está temporariamente ocupado. Tenta novamente dentro de instantes.", code: "ROUTING_PROVIDER_CAPACITY" },

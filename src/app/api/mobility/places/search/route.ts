@@ -30,13 +30,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ places: [] }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { status: true, role: true, isFounder: true },
-  });
-  if (!user || user.status !== "ACTIVE") {
-    return NextResponse.json({ places: [] }, { status: 401 });
-  }
 
   const rawQuery = request.nextUrl.searchParams.get("q") ?? "";
   const query = normalizeSearch(rawQuery);
@@ -49,7 +42,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ places: [] }, { status: 200 });
   }
 
-  const privileged = user.isFounder || ["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(user.role);
+  const privileged = session.isFounder || ["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(session.role);
   const quota = await reserveApiRequest({
     scope: "MOBILITY_LANDMARK_SEARCH",
     actorUserId: session.userId,

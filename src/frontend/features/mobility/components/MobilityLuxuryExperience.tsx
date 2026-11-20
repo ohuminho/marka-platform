@@ -45,6 +45,51 @@ type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string
 type Quote = { currency: string; totalMinor: string; totalAOA: number };
 type Place = { label: string; lat: number; lon: number };
 
+async function searchPlacesInAngola(value: string, signal: AbortSignal): Promise<Place[]> {
+  const localRequest = fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
+    signal,
+    credentials: "same-origin",
+    cache: "no-store",
+  }).then(async (response) => {
+    if (!response.ok) return [] as Place[];
+    const data = await response.json() as { places?: Place[] };
+    return (data.places ?? []).filter((place) =>
+      Number.isFinite(place.lat) && Number.isFinite(place.lon)
+      && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
+    );
+  }).catch(() => [] as Place[]);
+
+  const remoteRequest = (async () => {
+    const url = new URL("https://photon.komoot.io/api/");
+    url.searchParams.set("q", value + ", Angola");
+    url.searchParams.set("limit", "8");
+    url.searchParams.set("lang", "pt");
+    const response = await fetch(url, { signal, headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("Pesquisa externa indisponível");
+    const data = await response.json() as {
+      features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
+    };
+    return (data.features ?? []).flatMap((feature) => {
+      const coordinates = feature.geometry?.coordinates;
+      const properties = feature.properties ?? {};
+      if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
+      const country = typeof properties.country === "string" ? properties.country : "";
+      if (country && !/angola/i.test(country)) return [];
+      const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
+        .filter((part): part is string => typeof part === "string" && part.length > 0)
+        .filter((part, index, all) => all.indexOf(part) === index)
+        .join(", ");
+      return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
+    });
+  })().catch(() => [] as Place[]);
+
+  const [localPlaces, remotePlaces] = await Promise.all([localRequest, remoteRequest]);
+  const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
+  return [...localPlaces, ...remotePlaces.filter((place) =>
+    !seen.has(place.label.toLocaleLowerCase("pt-AO")),
+  )].slice(0, 6);
+}
+
 const choices: Record<Group, Array<{ id: string; title: string; detail: string; icon: string }>> = {
   EXECUTIVE: [
     { id: "TAXI", title: "Táxi normal", detail: "Viatura ligeira · até 4 passageiros", icon: "sedan" },
@@ -104,6 +149,7 @@ export default function MobilityLuxuryExperience() {
   const [suggestions, setSuggestions] = useState<Place[]>([]);
   const [searchBusy, setSearchBusy] = useState(false);
   const [gpsBusy, setGpsBusy] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [retryingRide, setRetryingRide] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,54 +333,9 @@ export default function MobilityLuxuryExperience() {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setOriginSearchBusy(true);
-      let localPlaces: Place[] = [];
       try {
-        try {
-          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
-            signal: controller.signal,
-            credentials: "same-origin",
-            cache: "no-store",
-          });
-          if (localResponse.ok) {
-            const localData = await localResponse.json() as { places?: Place[] };
-            localPlaces = (localData.places ?? []).filter((place) =>
-              Number.isFinite(place.lat) && Number.isFinite(place.lon)
-              && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
-            );
-          }
-        } catch {
-          if (controller.signal.aborted) return;
-        }
-
-        const url = new URL("https://photon.komoot.io/api/");
-        url.searchParams.set("q", value + ", Angola");
-        url.searchParams.set("limit", "8");
-        url.searchParams.set("lang", "pt");
-        const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
-        if (!response.ok) throw new Error("Pesquisa indisponível");
-        const data = await response.json() as {
-          features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
-        };
-        const remotePlaces = (data.features ?? []).flatMap((feature) => {
-          const coordinates = feature.geometry?.coordinates;
-          const properties = feature.properties ?? {};
-          if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
-          const country = typeof properties.country === "string" ? properties.country : "";
-          if (country && !/angola/i.test(country)) return [];
-          const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
-            .filter((part): part is string => typeof part === "string" && part.length > 0)
-            .filter((part, index, all) => all.indexOf(part) === index)
-            .join(", ");
-          return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
-        });
-        const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
-        if (!controller.signal.aborted) {
-          setOriginSuggestions([...localPlaces, ...remotePlaces.filter((place) =>
-            !seen.has(place.label.toLocaleLowerCase("pt-AO")),
-          )].slice(0, 6));
-        }
-      } catch {
-        if (!controller.signal.aborted) setOriginSuggestions(localPlaces.slice(0, 6));
+        const places = await searchPlacesInAngola(value, controller.signal);
+        if (!controller.signal.aborted) setOriginSuggestions(places);
       } finally {
         if (!controller.signal.aborted) setOriginSearchBusy(false);
       }
@@ -351,54 +352,13 @@ export default function MobilityLuxuryExperience() {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setSearchBusy(true);
-      let localPlaces: Place[] = [];
       try {
-        try {
-          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
-            signal: controller.signal,
-            credentials: "same-origin",
-            cache: "no-store",
-          });
-          if (localResponse.ok) {
-            const localData = await localResponse.json() as { places?: Place[] };
-            localPlaces = (localData.places ?? []).filter((place) =>
-              Number.isFinite(place.lat) && Number.isFinite(place.lon)
-              && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
-            );
-          }
-        } catch {
-          if (controller.signal.aborted) return;
-        }
-
-        const url = new URL("https://photon.komoot.io/api/");
-        url.searchParams.set("q", value + ", Angola");
-        url.searchParams.set("limit", "8");
-        url.searchParams.set("lang", "pt");
-        const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
-        if (!response.ok) throw new Error("Pesquisa indisponível");
-        const data = await response.json() as {
-          features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
-        };
-        const remotePlaces = (data.features ?? []).flatMap((feature) => {
-          const coordinates = feature.geometry?.coordinates;
-          const properties = feature.properties ?? {};
-          if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
-          const country = typeof properties.country === "string" ? properties.country : "";
-          if (country && !/angola/i.test(country)) return [];
-          const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
-            .filter((part): part is string => typeof part === "string" && part.length > 0)
-            .filter((part, index, all) => all.indexOf(part) === index)
-            .join(", ");
-          return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
-        });
-        const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
-        setSuggestions([...localPlaces, ...remotePlaces.filter((place) => !seen.has(place.label.toLocaleLowerCase("pt-AO")))].slice(0, 6));
-      } catch {
-        if (!controller.signal.aborted) setSuggestions(localPlaces.slice(0, 6));
+        const places = await searchPlacesInAngola(value, controller.signal);
+        if (!controller.signal.aborted) setSuggestions(places);
       } finally {
         if (!controller.signal.aborted) setSearchBusy(false);
       }
-    }, 320);
+    }, 220);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
@@ -483,49 +443,88 @@ export default function MobilityLuxuryExperience() {
   };
 
   const locateMe = () => {
-    if (!navigator.geolocation) {
-      setError(window.isSecureContext
-        ? "Este dispositivo ou navegador não disponibiliza geolocalização. Escolha a partida pela pesquisa."
-        : "O GPS só pode ser usado numa ligação segura HTTPS. Abra a MARKA pelo endereço oficial e escolha a partida pela pesquisa enquanto isso.");
+    if (!window.isSecureContext) {
+      setLocationStatus("A localização só funciona em HTTPS. Abra markaao.com.");
+      setError("A localização do telemóvel exige uma ligação segura HTTPS.");
       return;
     }
+    if (!navigator.geolocation) {
+      setLocationStatus("Este navegador não disponibiliza localização.");
+      setError("Ative os serviços de localização do Android ou use outro navegador compatível.");
+      return;
+    }
+
     setGpsBusy(true);
     setError(null);
+    setLocationStatus("A pedir autorização e a obter a sua localização…");
+
+    let completed = false;
+    const finish = () => {
+      completed = true;
+      setGpsBusy(false);
+    };
     const applyPosition = (position: GeolocationPosition) => {
-      setOrigin({
-        lat: position.coords.latitude,
-        lon: position.coords.longitude,
+      if (completed) return;
+      const { latitude, longitude, accuracy } = position.coords;
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+        || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        finish();
+        setLocationStatus("O telemóvel devolveu coordenadas inválidas. Tente novamente.");
+        return;
+      }
+      const point = {
+        lat: latitude,
+        lon: longitude,
         label: "A minha localização GPS",
-      });
-      setOriginText("A minha localização GPS");
+      };
+      setOrigin(point);
+      setOriginText(point.label);
       setOriginSuggestions([]);
       setRoute(null);
       setQuote(null);
       setFareByService({});
       setFareStatus("NO_ROUTE");
-      setGpsBusy(false);
+      setLocationStatus(
+        Number.isFinite(accuracy)
+          ? "Partida definida pela localização do telemóvel (precisão aproximada: " + Math.round(accuracy) + " m)."
+          : "Partida definida pela localização do telemóvel.",
+      );
+      finish();
     };
+    const fail = (geoError: GeolocationPositionError) => {
+      if (completed) return;
+      finish();
+      if (geoError.code === geoError.PERMISSION_DENIED) {
+        setLocationStatus("Permissão recusada. Ative a localização para o navegador nas definições do Android e tente novamente.");
+        setError("A MARKA precisa da sua autorização para usar a localização como ponto de partida.");
+      } else if (geoError.code === geoError.POSITION_UNAVAILABLE) {
+        setLocationStatus("O telemóvel não conseguiu determinar a posição. Ative a localização do dispositivo e tente novamente.");
+        setError("Não foi possível obter a posição atual.");
+      } else {
+        setLocationStatus("A localização demorou demasiado. Confirme o GPS e tente novamente num local com melhor sinal.");
+        setError("O GPS não respondeu dentro do tempo esperado.");
+      }
+    };
+
+    // First request: precise GPS. The browser permission prompt is triggered
+    // by this explicit user action, never automatically on page load.
     navigator.geolocation.getCurrentPosition(
       applyPosition,
-      (geoError) => {
-        if (geoError.code === geoError.PERMISSION_DENIED) {
-          setError("A permissão de localização foi recusada. Active a localização para o navegador nas definições do dispositivo.");
-          setGpsBusy(false);
+      (preciseError) => {
+        if (completed) return;
+        if (preciseError.code === preciseError.PERMISSION_DENIED) {
+          fail(preciseError);
           return;
         }
-        // Retry with network-assisted/coarse location for devices where GPS is slow or unavailable.
+        setLocationStatus("O sinal GPS está lento. A tentar localização assistida pela rede…");
+        // Second request: network/Wi-Fi-assisted location for indoor or weak GPS.
         navigator.geolocation.getCurrentPosition(
           applyPosition,
-          (fallbackError) => {
-            setError(fallbackError.code === fallbackError.PERMISSION_DENIED
-              ? "A permissão de localização foi recusada. Escolha a partida manualmente."
-              : "Não foi possível obter a localização. Confirme o GPS, a ligação e tente novamente ou escolha a partida no mapa/pesquisa.");
-            setGpsBusy(false);
-          },
-          { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 },
+          fail,
+          { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 },
         );
       },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 18000, maximumAge: 0 },
     );
   };
 
@@ -777,7 +776,7 @@ export default function MobilityLuxuryExperience() {
 
       <form
         onSubmit={submit}
-        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[76dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.12] bg-[linear-gradient(160deg,rgba(29,29,32,.98),rgba(12,12,14,.985))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.72)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
+        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[64dvh] sm:max-h-[76dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.12] bg-[linear-gradient(160deg,rgba(29,29,32,.98),rgba(12,12,14,.985))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.72)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
       >
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gradient-to-r from-white/15 via-[#E5B84B]/80 to-white/15" />
         <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] px-3 py-2.5">
@@ -943,9 +942,12 @@ export default function MobilityLuxuryExperience() {
                   onClick={locateMe}
                   disabled={gpsBusy}
                   aria-label="Usar a minha localização como partida"
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-lg text-[#E5B84B] disabled:opacity-50"
+                  title="Usar a localização do telemóvel como partida"
+                  className="grid h-11 w-[60px] shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-[#E5B84B] disabled:opacity-50"
                 >
-                  {gpsBusy ? "…" : "⌖"}
+                  {gpsBusy
+                    ? <span className="text-sm">…</span>
+                    : <span className="flex flex-col items-center leading-none"><span className="text-base">⌖</span><span className="mt-0.5 text-[8px] font-bold tracking-wide">GPS</span></span>}
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Partida</p>
@@ -971,6 +973,7 @@ export default function MobilityLuxuryExperience() {
                 </div>
                 {originSearchBusy && originText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
               </div>
+              {locationStatus && <p className="px-2 pb-1 text-[10px] leading-4 text-[#E5B84B]" role="status" aria-live="polite">{locationStatus}</p>}
               {originSuggestions.length > 0 && !active && (
                 <div className="overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
                   {originSuggestions.map((place, index) => (
