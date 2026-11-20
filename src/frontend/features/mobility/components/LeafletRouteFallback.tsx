@@ -35,6 +35,8 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
     let currentLayerErrorHandler: (() => void) | null = null;
     let tileErrors = 0;
     let providerIndex = 0;
+    let providerTimer: number | null = null;
+    let providerTileLoaded = false;
 
     void import("leaflet").then((module) => {
       if (!active || !hostRef.current) return;
@@ -54,14 +56,18 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
       const providers = [
         { url: OSM_TILES, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
         { url: CARTO_TILES, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
+        { url: "https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, HOT' },
       ];
 
       const activateProvider = (index: number) => {
         if (!active) return;
         if (currentLayer && currentLayerErrorHandler) currentLayer.off("tileerror", currentLayerErrorHandler);
+        if (providerTimer !== null) window.clearTimeout(providerTimer);
+        providerTimer = null;
         if (currentLayer) map.removeLayer(currentLayer);
         providerIndex = index;
         tileErrors = 0;
+        providerTileLoaded = false;
         const provider = providers[index];
         currentLayer = L.tileLayer(provider.url, {
           maxZoom: 19,
@@ -78,7 +84,19 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
           }
         };
         currentLayer.on("tileerror", currentLayerErrorHandler);
+        currentLayer.on("tileload", () => {
+          providerTileLoaded = true;
+          if (providerTimer !== null) window.clearTimeout(providerTimer);
+          providerTimer = null;
+        });
         currentLayer.addTo(map);
+        // Some mobile networks silently stall tile requests without emitting
+        // tileerror. A watchdog ensures that a blank Leaflet canvas cannot persist.
+        providerTimer = window.setTimeout(() => {
+          if (providerTileLoaded || !active) return;
+          if (providerIndex + 1 < providers.length) activateProvider(providerIndex + 1);
+          else onFailureRef.current();
+        }, 7000);
       };
 
       activateProvider(0);
@@ -93,6 +111,7 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
     return () => {
       active = false;
       resizeObserver?.disconnect();
+      if (providerTimer !== null) window.clearTimeout(providerTimer);
       overlaysRef.current.forEach((overlay) => overlay.remove?.());
       overlaysRef.current = [];
       mapRef.current?.remove();
