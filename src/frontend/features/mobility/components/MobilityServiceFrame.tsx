@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
 import MobilityServiceTabs from "@/frontend/features/mobility/components/MobilityServiceTabs";
+import MobilityBottomSheet from "@/frontend/features/mobility/components/MobilityBottomSheet";
 
 type MapPoint = { lat: number; lon: number };
 type MapTarget = "origin" | "destination";
@@ -44,10 +45,11 @@ export default function MobilityServiceFrame({ title, children }: Props) {
         <Link href="/app/account" aria-label="Abrir perfil" className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-[#c8a24a]/35 bg-[#0d0d0f]/75 text-sm font-semibold text-[#e8c77c] shadow-lg backdrop-blur-xl">◎</Link>
       </header>
 
-      <section className={"absolute inset-x-0 bottom-0 z-20 mx-auto flex w-full max-w-3xl flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-[#0d0d0f]/75 shadow-[0_-20px_70px_rgba(0,0,0,.28)] backdrop-blur-xl sm:bottom-4 sm:rounded-[28px] " + (expanded ? "max-h-[84dvh]" : "max-h-[46dvh] sm:max-h-[48dvh]")}>
-        <button type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? "Recolher painel" : "Expandir painel"} aria-expanded={expanded} className="mx-auto flex h-7 w-16 shrink-0 items-center justify-center">
-          <span className="h-1 w-10 rounded-full bg-white/35" />
-        </button>
+      <MobilityBottomSheet
+        expanded={expanded}
+        onToggle={() => setExpanded((value) => !value)}
+        heightClassName={expanded ? "max-h-[84dvh]" : "max-h-[46dvh] sm:max-h-[48dvh]"}
+      >
         <div className="shrink-0 px-4 pb-3 sm:px-6">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h1 className="text-base font-semibold tracking-tight">{title}</h1>
@@ -59,7 +61,7 @@ export default function MobilityServiceFrame({ title, children }: Props) {
           {children(mapPoint, requestMapPoint)}
           <p className="pb-2 pt-4 text-center text-[9px] text-white/35">Powered By Magestade Pura Digital</p>
         </div>
-      </section>
+      </MobilityBottomSheet>
     </main>
   );
 }
