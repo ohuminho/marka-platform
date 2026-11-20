@@ -49,9 +49,11 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
       mapRef.current = map;
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
+      // Prefer the canonical OSM raster endpoint for the recovery renderer;
+      // CARTO remains the secondary provider if OSM tiles are unavailable.
       const providers = [
-        { url: CARTO_TILES, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
         { url: OSM_TILES, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
+        { url: CARTO_TILES, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
       ];
 
       const activateProvider = (index: number) => {
