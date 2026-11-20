@@ -161,6 +161,57 @@ async function main(): Promise<void> {
       error.code === "MOBILITY_ROUTE_MATRIX_INVALID",
   );
 
+
+  const orsFetch: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    assert.equal(url.hostname, "api.heigit.org");
+    assert.equal(url.pathname, "/openrouteservice/v2/directions/driving-car/geojson");
+    assert.equal((init?.headers as Record<string, string>).authorization, "test-free-key");
+    assert.equal(init?.method, "POST");
+    const body = JSON.parse(String(init?.body)) as { coordinates: number[][]; instructions: boolean };
+    assert.deepEqual(body.coordinates, [[13.2, -8.8], [13.3, -8.9]]);
+    assert.equal(body.instructions, false);
+    return new Response(JSON.stringify({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: [[13.2, -8.8], [13.25, -8.85], [13.3, -8.9]] },
+        properties: { summary: { distance: 12_500, duration: 1_800 } },
+      }],
+    }), { status: 200, headers: { "content-type": "application/geo+json" } });
+  };
+  const orsService = new MobilityRoutingService();
+  const orsRoute = await orsService.getGeometry(
+    { latitude: -8.8, longitude: 13.2 },
+    { latitude: -8.9, longitude: 13.3 },
+    { provider: "OPENROUTESERVICE", apiKey: "test-free-key", fetcher: orsFetch },
+  );
+  assert.equal(orsRoute.provider, "OPENROUTESERVICE");
+  assert.equal(orsRoute.distanceMeters, 12_500);
+  assert.equal(orsRoute.durationSeconds, 1_800);
+  assert.equal(orsRoute.geometry.coordinates.length, 3);
+
+  await assert.rejects(
+    () => orsService.estimate(
+      { latitude: -8.8, longitude: 13.2 },
+      { latitude: -8.9, longitude: 13.3 },
+      { provider: "OPENROUTESERVICE", fetcher: orsFetch },
+    ),
+    (error: unknown) => error instanceof MobilityRoutingError && error.code === "MOBILITY_ROUTING_API_KEY_MISSING",
+  );
+
+  const orsMatrixFetch: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    assert.equal(url.pathname, "/openrouteservice/v2/matrix/driving-car");
+    assert.equal(init?.method, "POST");
+    return new Response(JSON.stringify({ durations: [[0, 120], [120, 0]] }), { status: 200 });
+  };
+  const orsMatrix = await orsService.getDurationMatrix(
+    [{ latitude: -8.8, longitude: 13.2 }, { latitude: -8.81, longitude: 13.21 }],
+    { provider: "OPENROUTESERVICE", apiKey: "test-free-key", fetcher: orsMatrixFetch },
+  );
+  assert.deepEqual(orsMatrix, [[0, 120], [120, 0]]);
+
   console.log("Mobility routing adapter tests passed.");
 }
 
