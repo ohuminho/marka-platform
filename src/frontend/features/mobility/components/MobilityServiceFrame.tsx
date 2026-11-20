@@ -19,7 +19,7 @@ export default function MobilityServiceFrame({ title, children }: Props) {
     setMapTarget(target);
     setMapPoint(null);
     setSelectingMapPoint(true);
-    setExpanded(true);
+    setExpanded(false);
   };
 
   const handleMapPoint = (point: MapPoint) => {
