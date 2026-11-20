@@ -20,6 +20,8 @@ import type {
   MobilityPaymentStatus,
 } from "@/services/mobility/payments/mobility-payment-engine.types";
 
+const BPS_TOTAL = 10_000;
+
 type SqlExecutor =
   | typeof prisma
   | Prisma.TransactionClient;
