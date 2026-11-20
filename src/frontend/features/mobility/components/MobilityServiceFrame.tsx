@@ -33,7 +33,7 @@ export default function MobilityServiceFrame({ title, children }: Props) {
       <div className="absolute inset-0 z-0 h-full w-full" aria-hidden="true">
         <MobilityLiveMap showStatus={false} onMapDestinationSelect={handleMapPoint} />
       </div>
-      {selectingMapPoint && <div className="pointer-events-none absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-full border border-[#c8a24a]/35 bg-[#0d0d0f]/85 px-4 py-2 text-[11px] font-medium text-[#e8c77c] shadow-lg backdrop-blur-xl">Toque no mapa para marcar o ponto</div>}
+      {selectingMapPoint && <div className="pointer-events-none absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-full border border-[#c8a24a]/35 bg-[#0d0d0f]/85 px-4 py-2 text-[11px] font-medium text-[#e8c77c] shadow-lg backdrop-blur-xl">{mapTarget === "origin" ? "Toque no mapa para marcar a recolha" : "Toque no mapa para marcar o destino"}</div>}
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top))] sm:px-6">
         <Link href="/app" aria-label="Menu principal" className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-[#0d0d0f]/75 text-lg text-white shadow-lg backdrop-blur-xl">☰</Link>
