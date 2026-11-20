@@ -454,8 +454,7 @@ export default function MobilityLuxuryExperience() {
       // The selected coordinates remain usable when reverse geocoding is unavailable.
     }
     chooseDestination({ lat: point.lat, lon: point.lon, label });
-    setLocationStatus("Destino seleccionado directamente no mapa.");
-  }, [serviceType]);
+  }, []);
 
   const chooseDestination = (place: Place) => {
     setDestination(place);
