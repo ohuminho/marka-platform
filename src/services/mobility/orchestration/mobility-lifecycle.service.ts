@@ -2169,28 +2169,8 @@ export class MobilityLifecycleService {
     return "STANDARD";
   }
 
-  private getMobilityCommissionPolicy(
-    serviceType: string,
-  ) {
-    const normalized =
-      serviceType
-        .trim()
-        .toUpperCase();
-
-    if (
-      normalized ===
-        "MOTO_TAXI" ||
-      normalized ===
-        "MOTO-TAXI" ||
-      normalized ===
-        "MOTOTAXI"
-    ) {
-      return commissionPolicyService
-        .getMotoTaxiPolicy();
-    }
-
-    return commissionPolicyService
-      .getTaxiPolicy();
+  private getMobilityCommissionPolicy(serviceType: string) {
+    return commissionPolicyService.getMobilityPolicy(serviceType);
   }
 
   private result(
