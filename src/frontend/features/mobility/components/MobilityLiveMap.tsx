@@ -14,10 +14,13 @@ export type MobilityRoute = {
   fareStatus?: string;
 };
 
+export type MobilityRouteStatus = { state: "idle" | "calculating" | "ready" | "error"; message: string };
+
 type Props = {
   /** Backward-compatible callback for legacy MobilityExperience callers. */
   onPointsChange?: (points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => void;
   onRouteChange?: (route: MobilityRoute | null) => void;
+  onRouteStatusChange?: (status: MobilityRouteStatus) => void;
   serviceType?: string;
   serviceTypes?: string;
   driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
@@ -26,7 +29,7 @@ type Props = {
   destinationPoint?: MobilityMapPoint | null;
 };
 
-const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
 function markerElement(kind: "pickup" | "dropoff" | "driver") {
   const el = document.createElement("div");
@@ -141,27 +144,9 @@ function RouteSvgFallback({
   );
 }
 
-function tuneDarkStyle(map: MapLibreMap) {
-  for (const layer of map.getStyle().layers ?? []) {
-    const id = layer.id.toLowerCase();
-    try {
-      if (layer.type === "background") {
-        map.setPaintProperty(layer.id, "background-color", "#0B0D10");
-      } else if (layer.type === "fill" && /(water|ocean|river|lake)/.test(id)) {
-        map.setPaintProperty(layer.id, "fill-color", "#0B0D10");
-      } else if (layer.type === "line" && /(road|street|highway|transportation)/.test(id)) {
-        map.setPaintProperty(layer.id, "line-color", "#1E2229");
-      } else if (layer.type === "fill" && /(building)/.test(id)) {
-        map.setPaintProperty(layer.id, "fill-color", "#14171C");
-      }
-    } catch {
-      // A style layer may not expose the paint property we are tuning.
-    }
-  }
-}
-
 export default function MobilityLiveMap({
   onRouteChange,
+  onRouteStatusChange,
   serviceType = "TAXI",
   serviceTypes = serviceType,
   driverPoint = null,
@@ -223,7 +208,6 @@ export default function MobilityLiveMap({
         styleLoaded = true;
         if (styleTimeout !== null) window.clearTimeout(styleTimeout);
         setMapReady(true);
-        tuneDarkStyle(map);
         map.addSource("marka-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map.addLayer({
           id: "marka-route-glow",
@@ -325,6 +309,7 @@ export default function MobilityLiveMap({
     setBusy(true);
     setRouteError(null);
     setStatus("A calcular a rota rodoviária…");
+    onRouteStatusChange?.({ state: "calculating", message: "A calcular a rota rodoviária…" });
     try {
       const query = new URLSearchParams({
         originLat: String(from.lat),
@@ -368,12 +353,13 @@ export default function MobilityLiveMap({
           new maplibregl.LngLatBounds(coordinates[0], coordinates[0]),
         );
         map.fitBounds(bounds, {
-          padding: { top: 112, right: 58, bottom: 340, left: 58 },
+          padding: { top: 104, right: 44, bottom: Math.min(260, Math.round(window.innerHeight * 0.32)), left: 44 },
           maxZoom: 16,
           duration: 250,
         });
       }
       onRouteChange?.(resolvedRoute);
+      onRouteStatusChange?.({ state: "ready", message: "Rota calculada. A tarifa foi validada no servidor." });
       setRouteError(null);
       setStatus("Rota calculada.");
     } catch (error) {
@@ -390,11 +376,12 @@ export default function MobilityLiveMap({
           : error instanceof Error ? error.message : "Falha ao calcular a rota.";
         setRouteError(message);
         setStatus(message);
+        onRouteStatusChange?.({ state: "error", message });
       }
     } finally {
       if (id === requestRef.current) setBusy(false);
     }
-  }, [onRouteChange, serviceType, serviceTypes]);
+  }, [onRouteChange, onRouteStatusChange, serviceType, serviceTypes]);
 
   useEffect(() => {
     // Route and fare calculation is independent from map initialization and WebGL.
@@ -407,6 +394,10 @@ export default function MobilityLiveMap({
     }
     routeRef.current = null;
     onRouteChange?.(null);
+    onRouteStatusChange?.({
+      state: "idle",
+      message: !originPoint ? "Defina o ponto de partida." : "Selecione um destino para calcular a rota.",
+    });
     const resetTimer = window.setTimeout(() => {
       setDisplayRoute(null);
       setBusy(false);
@@ -422,6 +413,7 @@ export default function MobilityLiveMap({
     destinationPoint?.label,
     calculateRoute,
     onRouteChange,
+    onRouteStatusChange,
   ]);
 
   useEffect(() => {

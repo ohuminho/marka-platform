@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
-import MobilityLiveMap, { type MobilityMapPoint, type MobilityRoute } from "@/frontend/features/mobility/components/MobilityLiveMap";
+import MobilityLiveMap, { type MobilityMapPoint, type MobilityRoute, type MobilityRouteStatus } from "@/frontend/features/mobility/components/MobilityLiveMap";
 import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
 import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
 import {
@@ -140,6 +140,7 @@ export default function MobilityLuxuryExperience() {
   const [originSearchBusy, setOriginSearchBusy] = useState(false);
   const [destination, setDestination] = useState<MobilityMapPoint | null>(null);
   const [route, setRoute] = useState<MobilityRoute | null>(null);
+  const [routeStatus, setRouteStatus] = useState<MobilityRouteStatus>({ state: "idle", message: "Defina a partida e o destino." });
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fareStatus, setFareStatus] = useState("NO_ROUTE");
   const [fareByService, setFareByService] = useState<Record<string, Quote | null>>({});
@@ -193,6 +194,8 @@ export default function MobilityLuxuryExperience() {
   const visibleDriverApproachGeometry = active && assigned && driverApproachGeometry && driverApproachGeometry.rideId === ride?.id
     ? driverApproachGeometry.geometry
     : null;
+
+  const onRouteStatus = useCallback((value: MobilityRouteStatus) => setRouteStatus(value), []);
 
   const onRoute = useCallback((value: MobilityRoute | null) => {
     setRoute(value);
@@ -705,6 +708,7 @@ export default function MobilityLuxuryExperience() {
     <main className="fixed inset-0 z-40 h-[100dvh] overflow-hidden bg-[#09090B] text-white">
       <MobilityLiveMap
         onRouteChange={onRoute}
+        onRouteStatusChange={onRouteStatus}
         serviceType={serviceType}
         serviceTypes={serviceTypes}
         driverPoint={driver}
@@ -1120,14 +1124,28 @@ export default function MobilityLuxuryExperience() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={!route || !quote || creating}
-              className="mt-4 flex min-h-14 w-full items-center justify-center rounded-2xl border border-[#F5D98D]/40 bg-[linear-gradient(110deg,#F5D98D_0%,#E5B84B_48%,#C99632_100%)] px-4 text-[13px] font-extrabold tracking-[.01em] text-[#09090B] shadow-[0_12px_34px_rgba(229,184,75,.22),inset_0_1px_0_rgba(255,255,255,.45)] transition-all duration-200 hover:brightness-110 hover:shadow-[0_16px_42px_rgba(229,184,75,.28)] active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              {creating ? "A enviar pedido…" : route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa indisponível" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar táxi"}
-            </button>
-            <p className="mt-2 text-center text-[8px] text-white/30">A tarifa é calculada pela tabela MARKA e confirmada no servidor. Moeda: AOA (Kz).</p>
+            <div className="sticky bottom-0 z-20 -mx-4 mt-4 border-t border-white/10 bg-[#0D0D10]/95 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_rgba(0,0,0,.35)] backdrop-blur-xl">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 text-[10px] font-medium text-white/65" role="status" aria-live="polite">
+                    <span className={"h-2 w-2 shrink-0 rounded-full " + (routeStatus.state === "ready" ? "bg-emerald-400" : routeStatus.state === "error" ? "bg-rose-400" : routeStatus.state === "calculating" ? "animate-pulse bg-amber-300" : "bg-white/30")} />
+                    <span className="truncate">{!origin ? "Defina a partida pelo GPS ou pesquise um local." : !destination ? (destinationText.trim() ? "Escolha um destino na lista de resultados." : "Pesquise e selecione o destino.") : routeStatus.message}</span>
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-[8px] uppercase tracking-[.14em] text-white/35">Preço</p>
+                  <p className="text-sm font-extrabold text-[#F2CF78]">{quote ? fmt(quote.totalAOA) : fareStatus === "TARIFF_NOT_CONFIGURED" ? "Pendente" : "—"}</p>
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={!route || !quote || creating}
+                className="flex min-h-14 w-full items-center justify-center rounded-2xl border border-[#F5D98D]/40 bg-[linear-gradient(110deg,#F5D98D_0%,#E5B84B_48%,#C99632_100%)] px-4 text-[13px] font-extrabold tracking-[.01em] text-[#09090B] shadow-[0_12px_34px_rgba(229,184,75,.22),inset_0_1px_0_rgba(255,255,255,.45)] transition-all duration-200 hover:brightness-110 hover:shadow-[0_16px_42px_rgba(229,184,75,.28)] active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {creating ? "A enviar pedido…" : !origin ? "Defina a partida" : !destination ? "Selecione o destino" : routeStatus.state === "calculating" ? "A calcular rota…" : routeStatus.state === "error" ? "Rota indisponível" : route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa pendente" : serviceType === "MOTO_TAXI" ? "Pedir moto-táxi" : "Pedir táxi"}
+              </button>
+              <p className="mt-2 text-center text-[8px] text-white/35">O pedido só é ativado depois de rota válida e tarifa confirmada pelo servidor.</p>
+            </div>
           </>
         )}
       </form>
