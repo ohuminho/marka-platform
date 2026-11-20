@@ -28,6 +28,7 @@ type Props = {
   driverRouteGeometry?: MobilityRoute["geometry"] | null;
   originPoint?: MobilityMapPoint | null;
   destinationPoint?: MobilityMapPoint | null;
+  showStatus?: boolean;
 };
 
 const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -155,6 +156,7 @@ export default function MobilityLiveMap({
   driverRouteGeometry = null,
   originPoint = null,
   destinationPoint = null,
+  showStatus = true,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapDestinationSelectRef = useRef(onMapDestinationSelect);
@@ -498,7 +500,7 @@ export default function MobilityLiveMap({
   }, [driverPoint?.lat, driverPoint?.lon, driverPoint?.bearing, mapReady]);
 
   return (
-    <div className="marka-mobility-map absolute inset-0">
+    <div className="marka-mobility-map absolute inset-0 z-0 h-full w-full bg-transparent">
       {mapError && !leafletFailed ? (
         <LeafletRouteFallback
           route={displayRoute?.geometry ?? null}
@@ -512,7 +514,7 @@ export default function MobilityLiveMap({
       ) : null}
       {leafletFailed ? <RouteSvgFallback route={displayRoute} origin={originPoint} destination={destinationPoint} driverRoute={driverRouteGeometry} driver={driverPoint} /> : null}
       <div ref={hostRef} className={"absolute inset-0 " + (mapError ? "invisible" : "")} role="application" aria-label="Mapa de mobilidade MARKA" />
-      <div className="absolute left-4 right-4 top-[76px] z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
+      {showStatus && <div className="absolute left-4 right-4 top-[76px] z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
         <span className={"mr-1.5 inline-block h-1.5 w-1.5 rounded-full " + (routeError ? "bg-rose-400" : busy ? "animate-pulse bg-amber-300" : "bg-[#E5B84B]")} />
         {busy ? "A calcular rota…" : status}
         {routeError && originPoint && destinationPoint && (
@@ -525,7 +527,7 @@ export default function MobilityLiveMap({
             Tentar novamente
           </button>
         )}
-      </div>
+      </div>}
       {leafletFailed && (
         <span className="absolute right-4 top-[76px] z-10 rounded-full border border-white/10 bg-[#141417]/75 px-2.5 py-1 text-[9px] text-white/55 backdrop-blur">
           Visualização simplificada
