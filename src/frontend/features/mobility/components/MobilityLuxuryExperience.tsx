@@ -942,9 +942,12 @@ export default function MobilityLuxuryExperience() {
                   onClick={locateMe}
                   disabled={gpsBusy}
                   aria-label="Usar a minha localização como partida"
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-lg text-[#E5B84B] disabled:opacity-50"
+                  title="Usar a localização do telemóvel como partida"
+                  className="grid h-11 w-[60px] shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-[#E5B84B] disabled:opacity-50"
                 >
-                  {gpsBusy ? "…" : "⌖"}
+                  {gpsBusy
+                    ? <span className="text-sm">…</span>
+                    : <span className="flex flex-col items-center leading-none"><span className="text-base">⌖</span><span className="mt-0.5 text-[8px] font-bold tracking-wide">GPS</span></span>}
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Partida</p>
