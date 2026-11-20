@@ -132,6 +132,7 @@ export default function MobilityLuxuryExperience() {
   const organizationId = activeOrganization?.id;
 
   const [drawer, setDrawer] = useState(false);
+  const [panelExpanded, setPanelExpanded] = useState(false);
   const [group, setGroup] = useState<Group>("EXECUTIVE");
   const [serviceType, setServiceType] = useState("TAXI");
   const [origin, setOrigin] = useState<MobilityMapPoint | null>(null);
@@ -177,6 +178,7 @@ export default function MobilityLuxuryExperience() {
   }, [ride]);
 
   const active = Boolean(ride && !["COMPLETED", "CANCELLED", "REJECTED", "EXPIRED", "NO_DRIVER_FOUND", "FAILED"].includes(ride.status));
+  useEffect(() => { if (active) setPanelExpanded(false); }, [active]);
   const assigned = Boolean(ride?.driver);
   const list = choices[group];
   const serviceTypes = list.map((item) => item.id).join(",");
@@ -803,9 +805,9 @@ export default function MobilityLuxuryExperience() {
 
       <form
         onSubmit={submit}
-        className={"absolute inset-x-0 bottom-0 z-20 mx-auto " + (active ? "max-h-[42dvh] sm:max-h-[58dvh] " : "max-h-[54dvh] sm:max-h-[70dvh] ") + "w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.16] bg-[linear-gradient(160deg,rgba(29,29,32,.82),rgba(12,12,14,.78))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.52)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"}
+        className={"absolute inset-x-0 bottom-0 z-20 mx-auto " + (active ? "max-h-[38dvh] sm:max-h-[48dvh] " : panelExpanded ? "max-h-[72dvh] sm:max-h-[82dvh] " : "max-h-[42dvh] sm:max-h-[56dvh] ") + "w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.16] bg-[linear-gradient(160deg,rgba(29,29,32,.82),rgba(12,12,14,.78))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.52)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gradient-to-r from-white/15 via-[#E5B84B]/80 to-white/15" />
+        <button type="button" onClick={() => setPanelExpanded((value) => !value)} aria-label={panelExpanded ? "Recolher painel" : "Expandir painel"} aria-expanded={panelExpanded} className="mx-auto mb-4 flex h-5 w-16 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E5B84B]"><span className="h-1 w-10 rounded-full bg-gradient-to-r from-white/20 via-[#E5B84B]/90 to-white/20" /></button>
         <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[.10] bg-white/[.055] px-3 py-2.5">
           <div className="flex items-center gap-2.5"><span className="relative grid h-8 w-8 place-items-center rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/[.08] text-sm text-[#E5B84B]">✦<span className="absolute inset-0 animate-pulse rounded-full border border-[#E5B84B]/20" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#E5B84B]">MARKA Mobility</p><p className="mt-0.5 text-[10px] text-white/45">Uma viagem simples. Uma experiência superior.</p></div></div>
           <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[.06] px-2.5 py-1 text-[8px] font-semibold tracking-wide text-emerald-200/80">ANGOLA</span>
