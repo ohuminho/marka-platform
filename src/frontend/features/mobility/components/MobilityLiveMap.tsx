@@ -217,7 +217,7 @@ export default function MobilityLiveMap({
       // the Leaflet renderer instead of leaving the passenger on a blank map.
       styleTimeout = window.setTimeout(() => {
         if (!styleLoaded) setMapError("O mapa principal demorou a responder. A activar o mapa alternativo.");
-      }, 12000);
+      }, 8000);
       map.on("style.load", () => {
         styleLoaded = true;
         if (styleTimeout !== null) window.clearTimeout(styleTimeout);
