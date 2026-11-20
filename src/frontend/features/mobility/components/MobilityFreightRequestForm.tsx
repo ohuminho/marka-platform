@@ -53,6 +53,12 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mapTarget, setMapTarget] = useState<MapTarget>("destination");
+  const [loadSize, setLoadSize] = useState<"MOTO_BOX" | "VAN" | "TRUCK">("MOTO_BOX");
+  const [recipientOpen, setRecipientOpen] = useState(false);
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [includeHelper, setIncludeHelper] = useState(false);
+  const [driverNote, setDriverNote] = useState("");
 
   useEffect(() => {
     if (!mapPoint) return;
@@ -152,6 +158,17 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
       setError("Confirme a recolha, o destino, descreva a carga e indique uma quantidade válida.");
       return;
     }
+    if (service === "CARGO_SHIPMENT") {
+      const weightKg = quantityUnit === "TON" ? Number(quantity) * 1000 : quantityUnit === "KG" ? Number(quantity) : NaN;
+      if (!Number.isFinite(weightKg) || weightKg <= 0 || (loadSize === "MOTO_BOX" && weightKg > 15) || (loadSize === "VAN" && (weightKg <= 15 || weightKg > 500)) || (loadSize === "TRUCK" && weightKg <= 500)) {
+        setError("O peso não corresponde ao porte. Moto Box: até 15 kg; Carrinha: acima de 15 até 500 kg; Camião: acima de 500 kg.");
+        return;
+      }
+    }
+    if (recipientPhone.trim() && !/^\\+?\\d[\\d\\s()-]{7,17}$/.test(recipientPhone.trim())) {
+      setError("Confirme o número de telefone do destinatário.");
+      return;
+    }
     if (service === "WATER_DELIVERY" && (!destination.point || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
       setError("Confirme o endereço e a quantidade de água.");
       return;
@@ -167,7 +184,7 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
         service, origin: origin.point, destination: destination.point,
         cargoDescription: cargoDescription.trim(), vehiclePreference, waterType, quantity: Number(quantity),
         quantityUnit, vehicleDescription: vehicleDescription.trim(), assistanceType,
-        notes: notes.trim(),
+        notes: notes.trim(), loadSize, recipientName: recipientName.trim(), recipientPhone: recipientPhone.trim(), includeHelper, driverNote: driverNote.trim(),
       });
       const storageKey = "marka:freight:pending:" + organizationId;
       let idempotencyKey: string;
@@ -184,7 +201,9 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
       const details: Record<string, unknown> = { notes: notes.trim() || undefined };
       if (service === "CARGO_SHIPMENT") {
         details.cargoItems = [{ description: cargoDescription.trim(), quantity: Number(quantity), unit: quantityUnit, category: "GENERAL" }];
-        if (vehiclePreference !== "ANY") details.vehiclePreference = vehiclePreference;
+        details.loadSize = loadSize;
+        details.vehiclePreference = loadSize === "MOTO_BOX" ? "CARGO_TRICYCLE" : loadSize === "VAN" ? "CARGO_VAN" : "HEAVY_TRUCK";
+        details.recipient = { name: recipientName.trim() || undefined, phone: recipientPhone.trim() || undefined, includeHelper, driverNote: driverNote.trim() || undefined };
       } else if (service === "WATER_DELIVERY") {
         details.waterType = waterType;
       } else {
