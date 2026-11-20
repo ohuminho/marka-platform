@@ -840,6 +840,12 @@ export class MobilityLifecycleService {
             throw new Error("This ride is not in a recoverable dispatch state.");
           }
 
+          // Respect the persisted recovery lease before reopening dispatch.
+          // Assignment reconciliation above remains immediate and does not wait on this lease.
+          if (current.nextRetryAt && current.nextRetryAt.getTime() > Date.now()) {
+            throw new Error("Dispatch recovery is already leased. Wait until the retry window expires.");
+          }
+
           current = await this.transitionPersisted(
             current,
             { ...input, idempotencyKey: input.idempotencyKey + ":resume-search" },
@@ -1746,7 +1752,8 @@ export class MobilityLifecycleService {
                   NULL,
 
                 "nextRetryAt" =
-                  ${nextStep === "SEARCHING" && nextStatus === "ACTIVE"
+                  ${(nextStep === "SEARCHING" && nextStatus === "ACTIVE") ||
+                    (nextStep === "RECOVERY_REQUIRED" && nextStatus === "RECOVERY_REQUIRED")
                     ? new Date(now.getTime() + 120_000)
                     : null},
 
