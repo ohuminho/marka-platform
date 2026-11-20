@@ -4,6 +4,10 @@ import {
   MobilityRideStatus,
   Prisma,
 } from "@prisma/client";
+import {
+  createMobilityDispatchRecoveryLease,
+  isMobilityDispatchRecoveryLeaseActive,
+} from "./mobility-recovery-lease";
 
 import { prisma } from "@/database/client/prisma";
 
@@ -842,7 +846,7 @@ export class MobilityLifecycleService {
 
           // Respect the persisted recovery lease before reopening dispatch.
           // Assignment reconciliation above remains immediate and does not wait on this lease.
-          if (current.nextRetryAt && current.nextRetryAt.getTime() > Date.now()) {
+          if (isMobilityDispatchRecoveryLeaseActive(current.nextRetryAt)) {
             throw new Error("Dispatch recovery is already leased. Wait until the retry window expires.");
           }
 
@@ -1754,7 +1758,7 @@ export class MobilityLifecycleService {
                 "nextRetryAt" =
                   ${(nextStep === "SEARCHING" && nextStatus === "ACTIVE") ||
                     (nextStep === "RECOVERY_REQUIRED" && nextStatus === "RECOVERY_REQUIRED")
-                    ? new Date(now.getTime() + 120_000)
+                    ? createMobilityDispatchRecoveryLease(now)
                     : null},
 
                 "completedAt" =
