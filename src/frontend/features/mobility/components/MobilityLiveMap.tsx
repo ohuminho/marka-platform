@@ -198,6 +198,7 @@ export default function MobilityLiveMap({
     let rendererErrors = 0;
     let styleLoaded = false;
     let styleTimeout: number | null = null;
+    let tilesTimeout: number | null = null;
     try {
       map = new maplibregl.Map({
         container: hostRef.current,
@@ -261,6 +262,19 @@ export default function MobilityLiveMap({
           });
         }
         map.resize();
+        // A loaded style is not enough: the passenger needs actual road tiles.
+        // Switch to Leaflet if the basemap remains empty or stalled.
+        tilesTimeout = window.setTimeout(() => {
+          if (!map.areTilesLoaded()) {
+            setMapError("As imagens do mapa não chegaram a carregar. A activar o mapa alternativo.");
+          }
+        }, 9000);
+      });
+      map.on("idle", () => {
+        if (tilesTimeout !== null && map.areTilesLoaded()) {
+          window.clearTimeout(tilesTimeout);
+          tilesTimeout = null;
+        }
       });
       map.on("error", (event) => {
         if (!event.error?.message) return;
@@ -286,6 +300,7 @@ export default function MobilityLiveMap({
     return () => {
       resize?.disconnect();
       if (styleTimeout !== null) window.clearTimeout(styleTimeout);
+      if (tilesTimeout !== null) window.clearTimeout(tilesTimeout);
       if (driverAnimationRef.current !== null) cancelAnimationFrame(driverAnimationRef.current);
       Object.values(markersRef.current).forEach((marker) => marker?.remove());
       if (mapRef.current === map) {
