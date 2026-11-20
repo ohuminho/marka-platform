@@ -11,7 +11,7 @@ export type ApiRateLimitDecision = {
   retryAfterSeconds: number;
 };
 
-type ReserveApiRequestInput = {
+export type ReserveApiRequestInput = {
   scope: string;
   actorUserId?: string;
   anonymousIdentity?: string;
@@ -107,5 +107,104 @@ export async function reserveApiRequest(
     }
 
     return { allowed: true, retryAfterSeconds: 0 };
+  });
+}
+
+/**
+ * Reserves multiple related quotas in one database transaction. This avoids
+ * acquiring the small serverless Prisma pool once per quota when an endpoint
+ * needs both per-user and provider-wide protection.
+ */
+export async function reserveApiRequests(
+  inputs: ReserveApiRequestInput[],
+): Promise<ApiRateLimitDecision[]> {
+  if (inputs.length === 0) return [];
+  const decisions: ApiRateLimitDecision[] = inputs.map(() => ({
+    allowed: true,
+    retryAfterSeconds: 0,
+  }));
+  const pending = inputs.flatMap((input, index) => {
+    if (input.bypass) return [];
+    if (!input.scope || input.windows.length === 0) {
+      throw new Error("A rate-limit scope and at least one window are required.");
+    }
+    const actorUserId = input.actorUserId;
+    const identity = actorUserId
+      ? `user:${actorUserId}`
+      : input.anonymousIdentity
+        ? `anonymous:${createHash("sha256").update(input.anonymousIdentity).digest("hex")}`
+        : null;
+    if (!identity) throw new Error("A rate-limit identity is required.");
+    return [{
+      input,
+      index,
+      identity,
+      actorUserId,
+      eventType: `API_RATE_LIMIT:${input.scope.toUpperCase()}`,
+      ipFingerprint: actorUserId ? undefined : identity.slice("anonymous:".length),
+    }];
+  });
+  if (pending.length === 0) return decisions;
+
+  return prisma.$transaction(async (tx) => {
+    // Stable lock ordering prevents deadlocks when concurrent requests reserve
+    // the same scopes in a different order.
+    const lockKeys = pending
+      .map(({ input, identity }) => `marka-api-rate:${input.scope}:${identity}`)
+      .sort();
+    for (const key of lockKeys) {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key})) IS NULL AS locked`;
+    }
+
+    const now = new Date();
+    for (const item of pending) {
+      let retryAfterSeconds = 0;
+      for (const window of item.input.windows) {
+        const windowStart = new Date(now.getTime() - window.windowMs);
+        const where = {
+          type: item.eventType,
+          createdAt: { gte: windowStart },
+          ...(item.actorUserId
+            ? { actorUserId: item.actorUserId }
+            : { actorUserId: null, ipAddress: item.ipFingerprint }),
+        };
+        const count = await tx.securityEvent.count({ where });
+        if (count < window.limit) continue;
+        const oldest = await tx.securityEvent.findFirst({
+          where,
+          orderBy: { createdAt: "asc" },
+          select: { createdAt: true },
+        });
+        if (oldest) {
+          retryAfterSeconds = Math.max(
+            retryAfterSeconds,
+            Math.ceil((oldest.createdAt.getTime() + window.windowMs - now.getTime()) / 1000),
+          );
+        }
+      }
+      decisions[item.index] = {
+        allowed: retryAfterSeconds === 0,
+        retryAfterSeconds,
+      };
+    }
+
+    // Do not consume one quota if another quota in the same request rejects it.
+    if (decisions.some((decision) => !decision.allowed)) return decisions;
+
+    for (const item of pending) {
+      if (item.input.record === false) continue;
+      await tx.securityEvent.create({
+        data: {
+          type: item.eventType,
+          severity: "INFO",
+          ...(item.actorUserId ? { actorUserId: item.actorUserId } : { ipAddress: item.ipFingerprint }),
+          metadata: {
+            scope: item.input.scope,
+            windows: item.input.windows.map(({ limit, windowMs }) => ({ limit, windowMs })),
+          },
+        },
+      });
+    }
+    return decisions;
   });
 }
