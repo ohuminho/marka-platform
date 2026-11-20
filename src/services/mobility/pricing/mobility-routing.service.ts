@@ -101,7 +101,7 @@ export class MobilityRoutingService {
 
     const payload = await this.fetchJson(endpoint, init, options);
     const matrix = provider === "OPENROUTESERVICE"
-      ? isRecord(payload) && isRecord(payload.durations) ? payload.durations.durations : null
+      ? isRecord(payload) ? payload.durations : null
       : isRecord(payload) && payload.code === "Ok" ? payload.durations : null;
     if (!Array.isArray(matrix) || matrix.length !== points.length || matrix.some((row) =>
       !Array.isArray(row) || row.length !== points.length || row.some((duration) =>
