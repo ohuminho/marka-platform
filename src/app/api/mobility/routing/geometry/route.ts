@@ -13,6 +13,7 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 10;
 
 const mobilityServiceTypeSchema = z.enum(["TAXI","EXECUTIVE","MOTO_TAXI","VAN","MINIBUS","BUS","COACH","PICKUP","LIGHT_TRUCK","MEDIUM_TRUCK","TIPPER_TRUCK","HEAVY_TRUCK"]);
 
@@ -144,6 +145,11 @@ export async function GET(request: Request) {
       error instanceof MobilityRoutingError
         ? error.code
         : "MOBILITY_ROUTING_PROVIDER_UNAVAILABLE";
+    console.error("[mobility-routing] geometry request failed", {
+      requestId: request.headers.get("x-vercel-id") ?? undefined,
+      code,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
     const status =
       code === "MOBILITY_COORDINATES_INVALID"
         ? 400
