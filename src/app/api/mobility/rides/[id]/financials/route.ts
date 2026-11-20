@@ -232,7 +232,7 @@ export async function POST(
     }
 
     const estimatedFareMinor = BigInt(estimatedFareValue);
-    const policy = getMobilityCommissionPolicy(ride.serviceType);
+    const policy = commissionPolicyService.getMobilityPolicy(ride.serviceType);
     const result = await mobilityFinancialOrchestratorService.initializeRideFinancials({
       organizationId: authentication.session.organizationId,
       rideId,
@@ -483,26 +483,3 @@ function isRecord(
   );
 }
 
-function getMobilityCommissionPolicy(
-  serviceType: string,
-) {
-  const normalized =
-    serviceType
-      .trim()
-      .toUpperCase();
-
-  if (
-    normalized ===
-      "MOTO_TAXI" ||
-    normalized ===
-      "MOTO-TAXI" ||
-    normalized ===
-      "MOTOTAXI"
-  ) {
-    return commissionPolicyService
-      .getMotoTaxiPolicy();
-  }
-
-  return commissionPolicyService
-    .getTaxiPolicy();
-}
