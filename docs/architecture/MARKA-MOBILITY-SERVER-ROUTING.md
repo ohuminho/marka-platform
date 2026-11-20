@@ -4,7 +4,7 @@
 
 The server-only adapter also supports OpenRouteService (HeiGIT). Select it explicitly with `MOBILITY_ROUTING_PROVIDER=OPENROUTESERVICE` and configure `OPENROUTESERVICE_API_KEY` as a server-only Vercel environment variable. The current API base is `https://api.heigit.org/openrouteservice/`; the retired `api.openrouteservice.org` hostname must not be used.
 
-HeiGIT provides a free Standard API key after account registration and has confirmed that commercial use is permitted within the Standard plan limits. The API is quota-limited and does not provide a production SLA. Check the account dashboard for current per-service quotas before launch. Directions results are licensed under CC-BY-SA 4.0; legal review must confirm the attribution and handling of derived results.
+HeiGIT provides a free Standard API key after account registration and has confirmed that commercial use is permitted within the Standard plan limits. The published Standard limits currently include 2,000 Directions requests/day (40/minute) and 500 Matrix requests/day (40/minute). MARKA applies lower internal safety caps of 1,800 Directions/day and 450 Matrix/day, each at 35/minute, to preserve quota headroom. The API is quota-limited and does not provide a production SLA. Check the account dashboard for current per-service quotas before launch. Directions results are licensed under CC-BY-SA 4.0; legal review must confirm the attribution and handling of derived results.
 
 ```env
 MOBILITY_ROUTING_PROVIDER=OPENROUTESERVICE
