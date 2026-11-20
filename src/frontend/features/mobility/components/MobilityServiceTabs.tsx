@@ -24,7 +24,7 @@ export default function MobilityServiceTabs({ active, onSelect }: Props) {
           (selected
             ? "border border-[#c8a24a]/45 bg-[#c8a24a]/12 text-[#e8c77c]"
             : "border border-transparent text-white/60 hover:bg-white/[.06] hover:text-white");
-        if (tab.id !== "cargo" && onSelect) {
+        if ((tab.id === "taxi" || tab.id === "moto") && onSelect) {
           return (
             <button key={tab.id} type="button" role="tab" aria-selected={selected} onClick={() => onSelect(tab.id)} className={className}>
               {tab.label}
