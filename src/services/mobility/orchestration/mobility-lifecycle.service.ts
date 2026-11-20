@@ -7,6 +7,7 @@ import {
 import {
   createMobilityDispatchRecoveryLease,
   isMobilityDispatchRecoveryLeaseActive,
+  shouldHoldMobilityDispatchLease,
 } from "./mobility-recovery-lease";
 
 import { prisma } from "@/database/client/prisma";
@@ -1756,8 +1757,7 @@ export class MobilityLifecycleService {
                   NULL,
 
                 "nextRetryAt" =
-                  ${(nextStep === "SEARCHING" && nextStatus === "ACTIVE") ||
-                    (nextStep === "RECOVERY_REQUIRED" && nextStatus === "RECOVERY_REQUIRED")
+                  ${shouldHoldMobilityDispatchLease(nextStep, nextStatus)
                     ? createMobilityDispatchRecoveryLease(now)
                     : null},
 
