@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
 import { SessionService } from "@/core/auth/sessions/session.service";
+import { prisma } from "@/database/client/prisma";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
