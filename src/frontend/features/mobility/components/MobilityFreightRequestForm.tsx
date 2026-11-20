@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
-import MarkaVehicleIllustration from "./MarkaVehicleIllustration";
 
 type ServiceType = "CARGO_SHIPMENT" | "WATER_DELIVERY" | "ROADSIDE_ASSISTANCE";
 type Point = { latitude: number; longitude: number; address: string };
@@ -168,7 +167,7 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
         return;
       }
     }
-    if (recipientPhone.trim() && !/^\\+?\\d[\\d\\s()-]{7,17}$/.test(recipientPhone.trim())) {
+    if (recipientPhone.trim() && !/^[0-9]{9}$/.test(recipientPhone.trim())) {
       setError("Confirme o número de telefone do destinatário.");
       return;
     }
@@ -206,7 +205,7 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
         details.cargoItems = [{ description: cargoDescription.trim(), quantity: Number(quantity), unit: quantityUnit, category: "GENERAL" }];
         details.loadSize = loadSize;
         details.vehiclePreference = loadSize === "MOTO_BOX" ? "CARGO_TRICYCLE" : loadSize === "VAN" ? "CARGO_VAN" : "HEAVY_TRUCK";
-        details.recipient = { name: recipientName.trim() || undefined, phone: recipientPhone.trim() || undefined, includeHelper, driverNote: driverNote.trim() || undefined };
+        details.recipient = { name: recipientName.trim() || undefined, phone: recipientPhone.trim() ? "+244" + recipientPhone.trim() : undefined, includeHelper, driverNote: driverNote.trim() || undefined };
       } else if (service === "WATER_DELIVERY") {
         details.waterType = waterType;
       } else {
@@ -260,6 +259,9 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
   return (
     <section className="mobility-freight-form relative text-white">
       <form onSubmit={submit} className="space-y-3">
+        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/25 p-1" role="group" aria-label="Serviço de carga">
+          {([{ id: "CARGO_SHIPMENT", label: "Carga" }, { id: "WATER_DELIVERY", label: "Água" }, { id: "ROADSIDE_ASSISTANCE", label: "Assistência" }] as const).map((item) => <button key={item.id} type="button" aria-pressed={service === item.id} onClick={() => { setService(item.id); setQuantity(""); setQuantityUnit(item.id === "WATER_DELIVERY" ? "LITRE" : "KG"); setError(null); setMessage(null); }} className={"min-h-9 rounded-xl px-2 text-[10px] font-semibold transition " + (service === item.id ? "bg-[#c8a24a]/15 text-[#e8c77c]" : "text-white/55 hover:bg-white/[.06]")}>{item.label}</button>)}
+        </div>
         {service === "CARGO_SHIPMENT" && <>
           {pointInput("Recolha", origin, setOrigin, true, "origin")}
           {pointInput("Entrega", destination, setDestination, true, "destination")}
