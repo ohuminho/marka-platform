@@ -21,12 +21,14 @@ type Props = {
   onPointsChange?: (points: { origin: MobilityMapPoint | null; destination: MobilityMapPoint | null }) => void;
   onRouteChange?: (route: MobilityRoute | null) => void;
   onRouteStatusChange?: (status: MobilityRouteStatus) => void;
+  onMapDestinationSelect?: (point: { lat: number; lon: number }) => void;
   serviceType?: string;
   serviceTypes?: string;
   driverPoint?: { lat: number; lon: number; bearing?: number | null } | null;
   driverRouteGeometry?: MobilityRoute["geometry"] | null;
   originPoint?: MobilityMapPoint | null;
   destinationPoint?: MobilityMapPoint | null;
+  showStatus?: boolean;
 };
 
 const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -43,118 +45,21 @@ function markerElement(kind: "pickup" | "dropoff" | "driver") {
 }
 
 
-function RouteSvgFallback({
-  route,
-  origin,
-  destination,
-  driverRoute,
-  driver,
-}: {
-  route: MobilityRoute | null;
-  origin: MobilityMapPoint | null;
-  destination: MobilityMapPoint | null;
-  driverRoute: MobilityRoute["geometry"] | null;
-  driver: { lat: number; lon: number } | null;
-}) {
-  const allCoordinates = [
-    ...(route?.geometry.coordinates ?? []),
-    ...(driverRoute?.coordinates ?? []),
-    ...(origin ? [[origin.lon, origin.lat] as [number, number]] : []),
-    ...(destination ? [[destination.lon, destination.lat] as [number, number]] : []),
-    ...(driver ? [[driver.lon, driver.lat] as [number, number]] : []),
-  ];
-  if (!allCoordinates.length) {
-    return (
-      <div className="absolute inset-0 grid place-items-center bg-[#101318] px-8 text-center">
-        <div className="max-w-xs">
-          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl border border-[#E5B84B]/25 bg-[#E5B84B]/10 text-[#E5B84B]">
-            <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-              <path d="M4 6.5 9 4l6 2.5L20 4v13.5L15 20l-6-2.5L4 20z" />
-              <path d="M9 4v13.5M15 6.5V20" />
-            </svg>
-          </div>
-          <p className="text-sm font-semibold text-white">Percurso MARKA</p>
-          <p className="mt-1 text-xs text-white/55">Seleccione a partida e o destino para visualizar o caminho.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const latitudes = allCoordinates.map((point) => point[1]);
-  const midLat = (Math.min(...latitudes) + Math.max(...latitudes)) / 2;
-  const cosLat = Math.max(0.2, Math.cos((midLat * Math.PI) / 180));
-  const project = (point: [number, number]) => [point[0] * cosLat, -point[1]] as const;
-  const projected = allCoordinates.map((point) => project(point as [number, number]));
-  const minX = Math.min(...projected.map((point) => point[0]));
-  const maxX = Math.max(...projected.map((point) => point[0]));
-  const minY = Math.min(...projected.map((point) => point[1]));
-  const maxY = Math.max(...projected.map((point) => point[1]));
-  const span = Math.max(maxX - minX, maxY - minY, 0.002);
-  const pad = span * 0.18;
-  const width = 1000;
-  const height = 620;
-  const scale = Math.min((width - 2 * 72) / (maxX - minX + pad * 2), (height - 2 * 72) / (maxY - minY + pad * 2));
-  const pointToSvg = (point: [number, number]) => {
-    const [x, y] = project(point);
-    return [width / 2 + (x - (minX + maxX) / 2) * scale, height / 2 + (y - (minY + maxY) / 2) * scale] as const;
-  };
-  const toPath = (coordinates: [number, number][]) => coordinates.map((point, index) => {
-    const [x, y] = pointToSvg(point);
-    return (index === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1);
-  }).join(" ");
-  const originXY = origin ? pointToSvg([origin.lon, origin.lat]) : null;
-  const destinationXY = destination ? pointToSvg([destination.lon, destination.lat]) : null;
-  const driverXY = driver ? pointToSvg([driver.lon, driver.lat]) : null;
-
-  return (
-    <div className="absolute inset-0 overflow-hidden bg-[#101318]">
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" className="h-full w-full" role="img" aria-label="Representação SVG do percurso rodoviário MARKA">
-        <defs>
-          <pattern id="marka-svg-grid" width="48" height="48" patternUnits="userSpaceOnUse">
-            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#FFFFFF" strokeOpacity=".035" strokeWidth="1" />
-          </pattern>
-          <filter id="marka-svg-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="7" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-        <rect width={width} height={height} fill="url(#marka-svg-grid)" />
-        {Array.from({ length: 7 }, (_, index) => (
-          <path key={index} d={`M ${-100 + index * 190} 0 L ${index * 190 + 100} ${height}`} stroke="#FFFFFF" strokeOpacity=".035" strokeWidth="18" fill="none" />
-        ))}
-        {driverRoute?.coordinates?.length ? (
-          <path d={toPath(driverRoute.coordinates)} fill="none" stroke="#E5B84B" strokeOpacity=".45" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="13 12" />
-        ) : null}
-        {route?.geometry.coordinates?.length ? (
-          <>
-            <path d={toPath(route.geometry.coordinates)} fill="none" stroke="#E5B84B" strokeOpacity=".2" strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" filter="url(#marka-svg-glow)" />
-            <path d={toPath(route.geometry.coordinates)} fill="none" stroke="#E5B84B" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-          </>
-        ) : null}
-        {originXY ? <g><circle cx={originXY[0]} cy={originXY[1]} r="17" fill="#16A36A" stroke="#FFFFFF" strokeWidth="4" /><text x={originXY[0]} y={originXY[1] + 5} fill="#FFFFFF" fontSize="15" fontWeight="700" textAnchor="middle">A</text></g> : null}
-        {destinationXY ? <g><circle cx={destinationXY[0]} cy={destinationXY[1]} r="17" fill="#D94A4A" stroke="#FFFFFF" strokeWidth="4" /><text x={destinationXY[0]} y={destinationXY[1] + 5} fill="#FFFFFF" fontSize="15" fontWeight="700" textAnchor="middle">B</text></g> : null}
-        {driverXY ? <g><circle cx={driverXY[0]} cy={driverXY[1]} r="13" fill="#171717" stroke="#E5B84B" strokeWidth="5" /><path d={`M ${driverXY[0]-5} ${driverXY[1]+3} l5 -10 5 10z`} fill="#E5B84B" /></g> : null}
-      </svg>
-      <div className="absolute bottom-5 left-4 right-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#09090B]/85 px-3 py-2 text-[10px] text-white/70 backdrop-blur">
-        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Partida</span>
-        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Destino</span>
-        <span className="flex items-center gap-2"><i className="h-1 w-5 rounded bg-[#E5B84B]" /> Percurso rodoviário</span>
-      </div>
-    </div>
-  );
-}
-
 export default function MobilityLiveMap({
   onRouteChange,
   onRouteStatusChange,
+  onMapDestinationSelect,
   serviceType = "TAXI",
   serviceTypes = serviceType,
   driverPoint = null,
   driverRouteGeometry = null,
   originPoint = null,
   destinationPoint = null,
+  showStatus = true,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const mapDestinationSelectRef = useRef(onMapDestinationSelect);
+  useEffect(() => { mapDestinationSelectRef.current = onMapDestinationSelect; }, [onMapDestinationSelect]);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<{ pickup: Marker | null; dropoff: Marker | null; driver: Marker | null }>({
     pickup: null,
@@ -199,6 +104,7 @@ export default function MobilityLiveMap({
       initializedMap = map;
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+      map.on("click", (event) => mapDestinationSelectRef.current?.({ lat: event.lngLat.lat, lon: event.lngLat.lng }));
       // If the vector style stalls without emitting a useful error, move to
       // the Leaflet renderer instead of leaving the passenger on a blank map.
       styleTimeout = window.setTimeout(() => {
@@ -359,9 +265,13 @@ export default function MobilityLiveMap({
         });
       }
       onRouteChange?.(resolvedRoute);
-      onRouteStatusChange?.({ state: "ready", message: "Rota calculada. A tarifa foi validada no servidor." });
+      const fareAvailable = Boolean(resolvedRoute.fare);
+      const routeMessage = fareAvailable
+        ? "Rota calculada e tarifa disponível."
+        : "Rota calculada, mas a tarifa deste serviço não está configurada.";
+      onRouteStatusChange?.({ state: "ready", message: routeMessage });
       setRouteError(null);
-      setStatus("Rota calculada.");
+      setStatus(routeMessage);
     } catch (error) {
       if (id === requestRef.current) {
         routeRef.current = null;
@@ -493,7 +403,7 @@ export default function MobilityLiveMap({
   }, [driverPoint?.lat, driverPoint?.lon, driverPoint?.bearing, mapReady]);
 
   return (
-    <div className="marka-mobility-map absolute inset-0">
+    <div className="marka-mobility-map absolute inset-0 z-0 h-full w-full bg-transparent">
       {mapError && !leafletFailed ? (
         <LeafletRouteFallback
           route={displayRoute?.geometry ?? null}
@@ -502,11 +412,27 @@ export default function MobilityLiveMap({
           driverRoute={driverRouteGeometry}
           driver={driverPoint}
           onFailure={() => setLeafletFailed(true)}
+          onMapDestinationSelect={(point) => mapDestinationSelectRef.current?.(point)}
         />
       ) : null}
-      {leafletFailed ? <RouteSvgFallback route={displayRoute} origin={originPoint} destination={destinationPoint} driverRoute={driverRouteGeometry} driver={driverPoint} /> : null}
+      {leafletFailed && (
+        <div role="alert" className="absolute inset-0 z-20 grid place-items-center bg-[#101318] px-6 text-center">
+          <div className="w-full max-w-sm rounded-2xl border border-rose-300/20 bg-[#0d0d0f]/90 p-5 shadow-2xl backdrop-blur-xl">
+            <p className="text-sm font-semibold text-white">Mapa indisponível</p>
+            <p className="mt-2 text-xs leading-5 text-white/60">
+              Não foi possível carregar o mapa rodoviário. A MARKA não vai substituir o mapa real por um desenho ilustrativo. Verifique a ligação e tente novamente.
+            </p>
+            <p className="mt-2 text-[10px] leading-4 text-white/40">
+              Também pode pesquisar os endereços manualmente. O pedido só avança quando a rota e a tarifa forem confirmadas.
+            </p>
+            <button type="button" onClick={() => window.location.reload()} className="mt-4 min-h-11 w-full rounded-xl bg-[#c8a24a] px-4 text-xs font-bold text-[#17130a]">
+              Tentar carregar novamente
+            </button>
+          </div>
+        </div>
+      )}
       <div ref={hostRef} className={"absolute inset-0 " + (mapError ? "invisible" : "")} role="application" aria-label="Mapa de mobilidade MARKA" />
-      <div className="absolute left-4 right-4 top-[76px] z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
+      {showStatus && <div className="absolute left-4 right-4 top-[76px] z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
         <span className={"mr-1.5 inline-block h-1.5 w-1.5 rounded-full " + (routeError ? "bg-rose-400" : busy ? "animate-pulse bg-amber-300" : "bg-[#E5B84B]")} />
         {busy ? "A calcular rota…" : status}
         {routeError && originPoint && destinationPoint && (
@@ -519,13 +445,9 @@ export default function MobilityLiveMap({
             Tentar novamente
           </button>
         )}
-      </div>
-      {leafletFailed && (
-        <span className="absolute right-4 top-[76px] z-10 rounded-full border border-white/10 bg-[#141417]/75 px-2.5 py-1 text-[9px] text-white/55 backdrop-blur">
-          Visualização simplificada
-        </span>
-      )}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-[#09090B] via-[#09090B]/55 to-transparent" />
+      </div>}
+      
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#09090B]/35 via-[#09090B]/10 to-transparent" />
     </div>
   );
 }

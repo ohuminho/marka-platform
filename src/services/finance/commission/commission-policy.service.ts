@@ -1,7 +1,12 @@
+import {
+  resolveMobilitySplitServiceType,
+} from "@/services/mobility/pricing/mobility-split.service";
+
 export type CommissionPolicyChannel =
   | "MARKETPLACE"
   | "TAXI"
-  | "MOTO_TAXI";
+  | "MOTO_TAXI"
+  | "CARGO";
 
 export interface CommissionPolicy {
   key: string;
@@ -14,76 +19,58 @@ export interface CommissionPolicy {
 
 const BPS_TOTAL = 10_000;
 
-const COMMISSION_POLICIES: Record<
-  CommissionPolicyChannel,
-  CommissionPolicy
-> = {
+const COMMISSION_POLICIES: Record<CommissionPolicyChannel, CommissionPolicy> = {
   MARKETPLACE: {
     key: "MARKETPLACE_STANDARD",
     version: 1,
     channel: "MARKETPLACE",
     rateBps: 1_000,
     vendorRateBps: 9_000,
-    effectiveFrom: new Date(
-      "2026-09-23T00:00:00.000Z"
-    ),
+    effectiveFrom: new Date("2026-09-23T00:00:00.000Z"),
   },
-
   TAXI: {
     key: "MOBILITY_TAXI_STANDARD",
     version: 1,
     channel: "TAXI",
     rateBps: 1_200,
     vendorRateBps: 8_800,
-    effectiveFrom: new Date(
-      "2026-09-23T00:00:00.000Z"
-    ),
+    effectiveFrom: new Date("2026-09-23T00:00:00.000Z"),
   },
-
   MOTO_TAXI: {
     key: "MOBILITY_MOTO_TAXI_STANDARD",
     version: 1,
     channel: "MOTO_TAXI",
     rateBps: 1_000,
     vendorRateBps: 9_000,
-    effectiveFrom: new Date(
-      "2026-09-23T00:00:00.000Z"
-    ),
+    effectiveFrom: new Date("2026-09-23T00:00:00.000Z"),
+  },
+  CARGO: {
+    key: "MOBILITY_CARGO_STANDARD",
+    version: 1,
+    channel: "CARGO",
+    rateBps: 1_000,
+    vendorRateBps: 9_000,
+    effectiveFrom: new Date("2026-11-20T00:00:00.000Z"),
   },
 };
 
 export class CommissionPolicyService {
-  get(
-    channel: CommissionPolicyChannel
-  ): CommissionPolicy {
-    const policy =
-      COMMISSION_POLICIES[channel];
+  get(channel: CommissionPolicyChannel): CommissionPolicy {
+    const policy = COMMISSION_POLICIES[channel];
 
     if (!policy) {
-      throw new Error(
-        `Commission policy "${channel}" is not configured.`
-      );
+      throw new Error(`Commission policy "${channel}" is not configured.`);
     }
 
     if (
       policy.rateBps < 0 ||
       policy.vendorRateBps < 0 ||
-      policy.rateBps +
-        policy.vendorRateBps !==
-        BPS_TOTAL
+      policy.rateBps + policy.vendorRateBps !== BPS_TOTAL
     ) {
-      throw new Error(
-        `Commission policy "${policy.key}" is mathematically invalid.`
-      );
+      throw new Error(`Commission policy "${policy.key}" is mathematically invalid.`);
     }
 
-    return {
-      ...policy,
-      effectiveFrom:
-        new Date(
-          policy.effectiveFrom
-        ),
-    };
+    return { ...policy, effectiveFrom: new Date(policy.effectiveFrom) };
   }
 
   getMarketplacePolicy(): CommissionPolicy {
@@ -97,7 +84,17 @@ export class CommissionPolicyService {
   getMotoTaxiPolicy(): CommissionPolicy {
     return this.get("MOTO_TAXI");
   }
+
+  getCargoPolicy(): CommissionPolicy {
+    return this.get("CARGO");
+  }
+
+  getMobilityPolicy(serviceType: string): CommissionPolicy {
+    const splitType = resolveMobilitySplitServiceType(serviceType);
+    if (splitType === "taxi") return this.getTaxiPolicy();
+    if (splitType === "moto") return this.getMotoTaxiPolicy();
+    return this.getCargoPolicy();
+  }
 }
 
-export const commissionPolicyService =
-  new CommissionPolicyService();
+export const commissionPolicyService = new CommissionPolicyService();

@@ -55,6 +55,7 @@ export async function GET(request: Request) {
     }
 
     const privileged = session.isFounder || ["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(session.role);
+    const usingOpenRouteService = process.env.MOBILITY_ROUTING_PROVIDER === "OPENROUTESERVICE";
     const [quota, globalQuota] = await reserveApiRequests([
       {
         scope: "MOBILITY_ROUTE_GEOMETRY",
@@ -67,10 +68,10 @@ export async function GET(request: Request) {
       },
       {
         scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
-        anonymousIdentity: "marka:shared-osrm-geometry-provider",
+        anonymousIdentity: "marka:shared-mobility-routing-provider",
         windows: [
-          { limit: 60, windowMs: 60_000 },
-          { limit: 2_000, windowMs: 24 * 60 * 60 * 1000 },
+          { limit: usingOpenRouteService ? 35 : 60, windowMs: 60_000 },
+          { limit: usingOpenRouteService ? 1_800 : 2_000, windowMs: 24 * 60 * 60 * 1000 },
         ],
       },
     ]);

@@ -181,7 +181,7 @@ export class MobilityMatchingService {
 
     const candidates: MobilityMatchCandidate[] =
       [];
-    // Prioritize nearby drivers so the bounded OSRM checks are spent on
+    // Prioritize nearby drivers so bounded road-routing checks are spent on
     // the most promising shared-ride candidates first.
     drivers.sort((a, b) => {
       if (!a.location) return 1;
@@ -202,7 +202,7 @@ export class MobilityMatchingService {
     let sharedRouteChecks = 0;
     let nextDriverIndex = 0;
 
-    // Process candidate evaluation with bounded concurrency. OSRM checks are
+    // Process candidate evaluation with bounded concurrency. Routing checks are
     // network-bound; serial awaits could add up to 50 seconds to dispatch.
     const processDriverBatch = async () => {
       while (nextDriverIndex < drivers.length) {
@@ -298,11 +298,11 @@ export class MobilityMatchingService {
           // Share the same provider-wide budget as the public route geometry API.
           // Dispatch matrix checks otherwise bypass the browser-facing quota.
           const providerQuota = await reserveApiRequest({
-            scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
-            anonymousIdentity: "marka:shared-osrm-geometry-provider",
+            scope: "MOBILITY_ROUTE_MATRIX_GLOBAL",
+            anonymousIdentity: "marka:shared-mobility-routing-matrix",
             windows: [
-              { limit: 60, windowMs: 60_000 },
-              { limit: 2_000, windowMs: 24 * 60 * 60 * 1_000 },
+              { limit: process.env.MOBILITY_ROUTING_PROVIDER === "OPENROUTESERVICE" ? 35 : 60, windowMs: 60_000 },
+              { limit: process.env.MOBILITY_ROUTING_PROVIDER === "OPENROUTESERVICE" ? 450 : 2_000, windowMs: 24 * 60 * 60 * 1_000 },
             ],
           });
           if (!providerQuota.allowed) continue;

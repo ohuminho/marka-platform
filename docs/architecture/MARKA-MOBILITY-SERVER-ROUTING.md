@@ -1,8 +1,27 @@
 # MARKA Mobility — server-side routing
 
+## OpenRouteService alternative (free hosted pilot)
+
+The server-only adapter also supports OpenRouteService (HeiGIT). Select it explicitly with `MOBILITY_ROUTING_PROVIDER=OPENROUTESERVICE` and configure `OPENROUTESERVICE_API_KEY` as a server-only Vercel environment variable. The current API base is `https://api.heigit.org/openrouteservice/`; the retired `api.openrouteservice.org` hostname must not be used.
+
+HeiGIT provides a free Standard API key after account registration and has confirmed that commercial use is permitted within the Standard plan limits. The published Standard limits currently include 2,000 Directions requests/day (40/minute) and 500 Matrix requests/day (40/minute). MARKA applies lower internal safety caps of 1,800 Directions/day and 450 Matrix/day, each at 35/minute, to preserve quota headroom. The API is quota-limited and does not provide a production SLA. Check the account dashboard for current per-service quotas before launch. Directions results are licensed under CC-BY-SA 4.0; legal review must confirm the attribution and handling of derived results.
+
+```env
+MOBILITY_ROUTING_PROVIDER=OPENROUTESERVICE
+OPENROUTESERVICE_API_KEY=<secret stored only in Vercel server environment>
+# Optional; this is the default base URL:
+OPENROUTESERVICE_BASE_URL=https://api.heigit.org/openrouteservice/
+```
+
+Never use a `NEXT_PUBLIC_` variable for the key, expose it to browser code, or commit it to Git. Do not enable billing or upgrade to a paid plan.
+
+The adapter requests driving-car GeoJSON directions and duration matrices server-side, validates geometry and measurements, and handles provider quota errors. Provider selection is explicit: there is no silent fallback between routing engines because different road graphs can change distance, duration and fare. A failed route request must fail closed without inventing a route or price.
+
+The OpenRouteService free hosted API is a candidate for the MARKA pilot, not yet an approved production dependency. Live tests must validate representative routes in Luanda and across Angola, provider quotas, timeouts, no-route behaviour, tariff calculations, attribution and licensing before production activation.
+
 ## Implemented adapter
 
-The Mobility backend now has a server-only OSRM adapter at
+The Mobility backend has a server-only routing adapter at
 `src/services/mobility/pricing/mobility-routing.service.ts`.
 
 - Accepts validated WGS84 origin/destination coordinates.
@@ -10,12 +29,12 @@ The Mobility backend now has a server-only OSRM adapter at
 - Provides a lightweight distance/duration estimate and a GeoJSON route geometry endpoint for MapLibre; no turn-by-turn instruction payload is requested.
 - Enforces a bounded timeout and rejects malformed, non-positive, or implausible measurements.
 - Does not trust distance/duration supplied by the browser.
-- Uses the public OSRM demo endpoint as a zero-cost pilot fallback when no server URL is configured.
-- Supports an operator-managed OSRM endpoint through `MOBILITY_ROUTING_BASE_URL`.
+- Supports OSRM and OpenRouteService through an explicit server-side provider selection.
+- Supports a managed OSRM endpoint through `MOBILITY_ROUTING_BASE_URL` and the HeiGIT hosted API through `OPENROUTESERVICE_API_KEY`.
 
 ## Required deployment configuration
 
-For pilot traffic, the adapter defaults to `https://router.project-osrm.org/` and requires no API key. The public demo is community-operated, has no production SLA and must not receive sustained high-volume commercial traffic. Before scaling, deploy an open-source OSRM instance and set `MOBILITY_ROUTING_BASE_URL` in Vercel to its base URL (not the full `/route/v1/...` path).
+For no-key development, OSRM remains the default adapter. Do not treat the public OSRM demo as a production dependency. For the free hosted OpenRouteService pilot, configure `MOBILITY_ROUTING_PROVIDER=OPENROUTESERVICE` and a free HeiGIT API key as described above. No provider is silently substituted if the selected one fails.
 
 ## Passenger map UI
 

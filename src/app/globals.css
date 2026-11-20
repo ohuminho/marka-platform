@@ -110,3 +110,66 @@ html[dir="rtl"] { text-align: right; }
 @keyframes marka-pulse{0%{transform:scale(.55);opacity:.9}100%{transform:scale(1.65);opacity:0}}
 @media(prefers-reduced-motion:reduce){.marka-route-pulse::before{animation:none}.marka-map-marker--driver{transition:none}}
 .marka-driver-marker{transition:transform .7s linear!important;}
+
+
+/* MARKA Mobility visual system */
+:root {
+  --mobility-bg: #09090b;
+  --mobility-glass: rgba(13, 13, 15, .75);
+  --mobility-accent: #c8a24a;
+  --mobility-border: rgba(255, 255, 255, .10);
+  --mobility-radius: 1.25rem;
+}
+.mobility-service-scroll,
+.mobility-service-content {
+  --theme-background: #09090b;
+  --theme-surface: rgba(13, 13, 15, .72);
+  --theme-border: rgba(255, 255, 255, .10);
+  --theme-text: #f7f7f7;
+  --theme-text-muted: rgba(255, 255, 255, .66);
+  --theme-text-faint: rgba(255, 255, 255, .38);
+  color: #f7f7f7;
+  color-scheme: dark;
+}
+.mobility-service-scroll { scrollbar-width: thin; scrollbar-color: rgba(200,162,74,.35) transparent; }
+.mobility-service-content input,
+.mobility-service-content select,
+.mobility-service-content textarea {
+  min-height: 44px;
+  border-radius: 12px;
+  border-color: var(--mobility-border);
+  background-color: rgba(0,0,0,.24);
+  color: #fff;
+}
+.mobility-service-content input:focus,
+.mobility-service-content select:focus,
+.mobility-service-content textarea:focus {
+  border-color: rgba(200,162,74,.75);
+  outline: 2px solid rgba(200,162,74,.16);
+  outline-offset: 1px;
+}
+.mobility-service-content input::placeholder,
+.mobility-service-content textarea::placeholder { color: rgba(255,255,255,.38); }
+.mobility-service-content option { background: #09090b; color: #fff; }
+.mobility-freight-form { background: rgba(255,255,255,.025); }
+.mobility-freight-submit { z-index: 15; }
+.marka-mobility-map,
+.marka-mobility-map .maplibregl-map,
+.marka-mobility-map .maplibregl-canvas-container,
+.marka-mobility-map .leaflet-container {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+.marka-mobility-map .maplibregl-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+.marka-mobility-map .maplibregl-ctrl-bottom-right { bottom: calc(49dvh + env(safe-area-inset-bottom)); }
+@media (max-height: 720px) {
+  .mobility-service-scroll { overscroll-behavior: contain; }
+}
