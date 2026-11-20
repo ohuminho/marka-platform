@@ -194,7 +194,7 @@ export default function MobilityFreightRequestForm() {
   };
 
   return (
-    <section className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
+    <section className="mobility-freight-form rounded-2xl border border-white/10 bg-white/[.035] p-4 text-white sm:p-5">
       <div className="max-w-xl">
         <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[var(--theme-text-faint)]">Outros serviços</p>
         <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">O que precisa de transportar?</h2>
@@ -241,9 +241,9 @@ export default function MobilityFreightRequestForm() {
         <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Observações <span className="text-[var(--theme-text-faint)]">(opcional)</span></span><textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alguma informação adicional?" className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
         {error && <p role="alert" className="rounded-xl border border-red-500/20 px-4 py-3 text-xs text-red-600">{error}</p>}
         {message && <p role="status" className="rounded-xl border border-emerald-500/20 px-4 py-3 text-xs text-emerald-700 dark:text-emerald-300">{message}</p>}
-        <div className="flex flex-col gap-3 border-t border-[var(--theme-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mobility-freight-submit sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-white/10 bg-[#0d0d0f]/95 px-4 pb-2 pt-3 backdrop-blur-xl sm:-mx-5 sm:px-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Pedir uma proposta não implica pagamento nem despacho.</p>
-          <button type="submit" disabled={submitting} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-50">{submitting ? "A enviar pedido…" : "Pedir cotação"}</button>
+          <button type="submit" disabled={submitting} className="min-h-12 rounded-2xl border border-[#c8a24a]/40 bg-[#c8a24a] px-6 text-xs font-bold text-[#09090b] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-50">{submitting ? "A enviar pedido…" : "Pedir cotação"}</button>
         </div>
       </form>
     </section>
