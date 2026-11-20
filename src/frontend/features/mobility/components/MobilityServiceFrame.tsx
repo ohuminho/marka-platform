@@ -5,16 +5,35 @@ import Link from "next/link";
 import MobilityLiveMap from "@/frontend/features/mobility/components/MobilityLiveMap";
 import MobilityServiceTabs from "@/frontend/features/mobility/components/MobilityServiceTabs";
 
-type Props = { title: string; children: ReactNode };
+type MapPoint = { lat: number; lon: number };
+type MapTarget = "origin" | "destination";
+type Props = { title: string; children: (mapPoint: MapPoint | null, requestMapPoint: (target: MapTarget) => void) => ReactNode };
 
 export default function MobilityServiceFrame({ title, children }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [mapTarget, setMapTarget] = useState<MapTarget>("destination");
+  const [selectingMapPoint, setSelectingMapPoint] = useState(false);
+  const [mapPoint, setMapPoint] = useState<MapPoint | null>(null);
+
+  const requestMapPoint = (target: MapTarget) => {
+    setMapTarget(target);
+    setMapPoint(null);
+    setSelectingMapPoint(true);
+    setExpanded(true);
+  };
+
+  const handleMapPoint = (point: MapPoint) => {
+    if (!selectingMapPoint) return;
+    setMapPoint(point);
+    setSelectingMapPoint(false);
+  };
 
   return (
     <main className="fixed inset-0 z-40 isolate h-[100dvh] w-full overflow-hidden bg-[#09090b] text-white">
       <div className="absolute inset-0 z-0 h-full w-full" aria-hidden="true">
-        <MobilityLiveMap showStatus={false} />
+        <MobilityLiveMap showStatus={false} onMapDestinationSelect={handleMapPoint} />
       </div>
+      {selectingMapPoint && <div className="pointer-events-none absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-full border border-[#c8a24a]/35 bg-[#0d0d0f]/85 px-4 py-2 text-[11px] font-medium text-[#e8c77c] shadow-lg backdrop-blur-xl">Toque no mapa para marcar o ponto</div>}
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top))] sm:px-6">
         <Link href="/app" aria-label="Menu principal" className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-[#0d0d0f]/75 text-lg text-white shadow-lg backdrop-blur-xl">☰</Link>
@@ -37,7 +56,7 @@ export default function MobilityServiceFrame({ title, children }: Props) {
           <MobilityServiceTabs active="cargo" />
         </div>
         <div className="mobility-service-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(16px,env(safe-area-inset-bottom))] sm:px-5">
-          {children}
+          {children(mapPoint, requestMapPoint)}
           <p className="pb-2 pt-4 text-center text-[9px] text-white/35">Powered By Magestade Pura Digital</p>
         </div>
       </section>
