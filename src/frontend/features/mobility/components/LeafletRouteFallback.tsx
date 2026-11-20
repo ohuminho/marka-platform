@@ -13,12 +13,13 @@ type Props = {
   driverRoute: Geometry | null;
   driver: { lat: number; lon: number; bearing?: number | null } | null;
   onFailure: () => void;
+  onMapDestinationSelect?: (point: { lat: number; lon: number }) => void;
 };
 
 const CARTO_TILES = "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
 const OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-export default function LeafletRouteFallback({ route, origin, destination, driverRoute, driver, onFailure }: Props) {
+export default function LeafletRouteFallback({ route, origin, destination, driverRoute, driver, onFailure, onMapDestinationSelect }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const leafletRef = useRef<LeafletApi | null>(null);
@@ -49,6 +50,7 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
         scrollWheelZoom: true,
       }).setView([-8.8383, 13.2344], 12);
       mapRef.current = map;
+      if (onMapDestinationSelect) map.on("click", (event) => onMapDestinationSelect({ lat: event.latlng.lat, lon: event.latlng.lng }));
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       // Prefer the canonical OSM raster endpoint for the recovery renderer;
