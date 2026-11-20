@@ -1,0 +1,2 @@
+# OpenStreetMap extract and generated OSRM graph files are large and must not be committed.
+data/
