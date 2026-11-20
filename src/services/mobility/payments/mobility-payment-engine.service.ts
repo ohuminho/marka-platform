@@ -462,6 +462,7 @@ export class MobilityPaymentEngineService {
 
           const policy = commissionPolicyService.getMobilityPolicy(ride.serviceType);
           if (
+            input.commissionRateBps !== policy.rateBps ||
             existing.commissionRateBps !== policy.rateBps ||
             existing.commissionPolicyKey !== policy.key ||
             existing.commissionPolicyVersion !== policy.version
