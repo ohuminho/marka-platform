@@ -50,6 +50,8 @@ assert.deepEqual(calculateSplitMinor(9_007_199_254_740_993n, "taxi").providerAmo
 assert.equal(getMobilityCommissionRateBps("MOTO_TAXI"), 1_000);
 assert.equal(resolveMobilitySplitServiceType("CARGO_SHIPMENT"), "carga");
 assert.equal(resolveMobilitySplitServiceType("VAN"), "carga");
+assert.equal(resolveMobilitySplitServiceType("HEAVY_TRUCK"), "carga");
+assert.equal(resolveMobilitySplitServiceType("PICKUP"), "carga");
 assert.equal(commissionPolicyService.getMobilityPolicy("TAXI").rateBps, 1_200);
 assert.equal(commissionPolicyService.getMobilityPolicy("MOTO_TAXI").rateBps, 1_000);
 assert.equal(commissionPolicyService.getMobilityPolicy("CARGO_SHIPMENT").rateBps, 1_000);
