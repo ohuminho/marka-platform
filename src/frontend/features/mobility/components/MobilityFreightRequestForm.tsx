@@ -134,15 +134,18 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
   };
 
   const pointInput = (label: string, field: PointField, setter: typeof setOrigin, required = true, target: MapTarget = "destination") => (
-    <div className="space-y-2">
-      <label className="block text-xs font-medium text-[var(--theme-text)]">{label}{!required && <span className="ml-1 text-[var(--theme-text-faint)]">(opcional)</span>}</label>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input value={field.address} onChange={(event) => updatePoint(setter, field, event.target.value)} placeholder="Bairro, rua ou município" className="min-h-11 min-w-0 flex-1 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" />
-        <button type="button" disabled={field.searching || !field.address.trim()} onClick={() => void findPoint(field, setter)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text)] disabled:opacity-40">{field.searching ? "A localizar…" : "Localizar"}</button>
-        <button type="button" disabled={field.searching} onClick={() => requestGpsLocation(setter, field)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text-muted)] disabled:opacity-40">Usar GPS</button>
-        {onRequestMapPoint && <button type="button" onClick={() => { setMapTarget(target); onRequestMapPoint(target); }} className="min-h-11 rounded-xl border border-[#c8a24a]/35 bg-[#c8a24a]/10 px-4 text-xs font-semibold text-[#e8c77c]">Mapa</button>}
+    <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/25 p-2">
+      <span aria-hidden="true" className={"grid h-9 w-9 shrink-0 place-items-center rounded-xl " + (target === "origin" ? "bg-emerald-400/10 text-emerald-300" : "bg-[#c8a24a]/10 text-[#e8c77c]")}>{target === "origin" ? "●" : "◆"}</span>
+      <div className="min-w-0 flex-1">
+        <label className="block text-[8px] font-bold uppercase tracking-[.16em] text-white/40">{label}{!required ? " · opcional" : ""}</label>
+        <input value={field.address} onChange={(event) => updatePoint(setter, field, event.target.value)} placeholder="Bairro, rua ou local" className="h-7 w-full min-w-0 border-0 bg-transparent p-0 text-[12px] text-white outline-none placeholder:text-white/35 focus:ring-0" />
+        {field.point && <span className="text-[9px] text-emerald-300">Local confirmado</span>}
       </div>
-      {field.point && <p className="text-[11px] text-emerald-300">Local confirmado</p>}
+      <div className="flex shrink-0 items-center gap-1">
+        <button type="button" disabled={field.searching || !field.address.trim()} onClick={() => void findPoint(field, setter)} aria-label={"Localizar " + label} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-[11px] text-white/65 disabled:opacity-35">{field.searching ? "…" : "⌕"}</button>
+        <button type="button" disabled={field.searching} onClick={() => requestGpsLocation(setter, field)} aria-label={"Usar GPS para " + label} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-[10px] text-[#e8c77c] disabled:opacity-35">GPS</button>
+        {onRequestMapPoint && <button type="button" onClick={() => { setMapTarget(target); onRequestMapPoint(target); }} aria-label={"Escolher " + label + " no mapa"} className="grid h-9 w-9 place-items-center rounded-xl border border-[#c8a24a]/35 bg-[#c8a24a]/10 text-[11px] text-[#e8c77c]">⌖</button>}
+      </div>
     </div>
   );
 
@@ -250,59 +253,74 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
     }
   };
 
+  const recipientSummary = recipientName.trim()
+    ? recipientName.trim() + (recipientPhone.trim() ? " · +244 " + recipientPhone.trim() : "") + (includeHelper ? " · Com ajudante" : "")
+    : "Nome e telefone · Ajudante opcional";
+
   return (
-    <section className="mobility-freight-form rounded-2xl border border-white/10 bg-white/[.035] p-4 text-white sm:p-5">
-      <div className="max-w-xl">
-        <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[var(--theme-text-faint)]">Outros serviços</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">O que precisa de transportar?</h2>
-        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Escolha um serviço e indique os dados necessários. A equipa MARKA analisa o pedido e emite uma cotação.</p>
-      </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/25 p-1" role="group" aria-label="Tipo de serviço">
-        {([
-          ["CARGO_SHIPMENT", "Transportar carga", "Mercadorias e materiais"],
-          ["WATER_DELIVERY", "Pedir água", "Por litros ou m³"],
-          ["ROADSIDE_ASSISTANCE", "Assistência", "Avaria, pneu ou reboque"],
-        ] as const).map(([value, title, subtitle]) => (
-          <button key={value} type="button" aria-pressed={service === value} onClick={() => { setService(value); setQuantity(""); if (value === "WATER_DELIVERY") setQuantityUnit("LITRE"); else if (value === "CARGO_SHIPMENT") setQuantityUnit("KG"); setError(null); setMessage(null); }} className={`min-h-11 rounded-xl border px-2 py-2 text-center transition ${service === value ? "border-[#c8a24a]/45 bg-[#c8a24a]/12" : "border-transparent bg-white/[.025] hover:bg-white/[.06]"}`}>
-            <span className="block text-[11px] font-semibold text-white">{title}</span>
-            <span className="mt-0.5 block text-[9px] text-white/45">{subtitle}</span>
-          </button>
-        ))}
-      </div>
-
-      <form onSubmit={submit} className="mt-5 space-y-5">
+    <section className="mobility-freight-form relative text-white">
+      <form onSubmit={submit} className="space-y-3">
         {service === "CARGO_SHIPMENT" && <>
-          {pointInput("Local de recolha", origin, setOrigin, true, "origin")}
-          {pointInput("Destino", destination, setDestination, true, "destination")}
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">O que pretende transportar?</span><input value={cargoDescription} onChange={(event) => setCargoDescription(event.target.value)} placeholder="Ex.: 20 sacos de cimento, mobiliário…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade da carga</span><input type="number" min="0.01" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="KG">Quilogramas (kg)</option><option value="TON">Toneladas (t)</option><option value="M3">Metros cúbicos (m³)</option><option value="LITRE">Litros</option></select></label>
+          {pointInput("Recolha", origin, setOrigin, true, "origin")}
+          {pointInput("Entrega", destination, setDestination, true, "destination")}
+          <fieldset>
+            <legend className="sr-only">Porte da carga</legend>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                { id: "MOTO_BOX", icon: "▣", title: "Moto Box", weight: "até 15 kg" },
+                { id: "VAN", icon: "▰", title: "Carrinha", weight: "até 500 kg" },
+                { id: "TRUCK", icon: "▤", title: "Camião", weight: "+500 kg" },
+              ] as const).map((item) => <button key={item.id} type="button" aria-pressed={loadSize === item.id} onClick={() => { setLoadSize(item.id); setVehiclePreference(item.id === "MOTO_BOX" ? "CARGO_TRICYCLE" : item.id === "VAN" ? "CARGO_VAN" : "HEAVY_TRUCK"); setError(null); }} className={"flex min-h-14 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1.5 transition-colors " + (loadSize === item.id ? "border-[#c8a24a]/55 bg-[#c8a24a]/12 text-[#f0d28b]" : "border-white/10 bg-white/[.035] text-white/65 hover:bg-white/[.07]")}>
+                <span aria-hidden="true" className="text-base">{item.icon}</span><span className="min-w-0 text-left leading-tight"><span className="block truncate text-[10px] font-bold">{item.title}</span><span className="mt-0.5 block whitespace-nowrap text-[8px] text-white/45">{item.weight}</span></span>
+              </button>)}
+            </div>
+          </fieldset>
+          <div className="grid grid-cols-[1fr_104px] gap-2">
+            <label className="min-w-0 rounded-xl border border-white/10 bg-black/25 px-3 py-2"><span className="block text-[8px] font-bold uppercase tracking-[.14em] text-white/40">O que vai transportar?</span><input value={cargoDescription} onChange={(event) => setCargoDescription(event.target.value)} placeholder="Ex.: caixas, móveis…" className="h-7 w-full bg-transparent text-[11px] text-white outline-none placeholder:text-white/35" /></label>
+            <label className="rounded-xl border border-white/10 bg-black/25 px-3 py-2"><span className="block text-[8px] font-bold uppercase tracking-[.14em] text-white/40">Peso · kg</span><input type="number" min="0.1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="0" className="h-7 w-full bg-transparent text-[11px] text-white outline-none placeholder:text-white/35" /></label>
           </div>
-          <fieldset className="space-y-3"><legend className="text-xs font-medium text-[var(--theme-text)]">Tipo de viatura preferida</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{([{value:"ANY",label:"Qualquer adequada",hint:"Mais opções",illustration:null},{value:"CARGO_TRICYCLE",label:"Carrinho tipo MyLads",hint:"Carga ligeira",illustration:"CARGO_TRICYCLE"},{value:"PICKUP",label:"Pick-up aberta",hint:"Caixa aberta",illustration:"PICKUP"},{value:"LIGHT_TRUCK",label:"Canter / Dyna",hint:"Caixa aberta",illustration:"LIGHT_TRUCK"},{value:"FLATBED_TRUCK",label:"Plataforma aberta",hint:"Carga volumosa",illustration:"FLATBED_TRUCK"},{value:"CARGO_VAN",label:"Carrinha fechada",hint:"Carga protegida",illustration:"CARGO_VAN"},{value:"TIPPER_TRUCK",label:"Basculante",hint:"Areia e inertes",illustration:"TIPPER_TRUCK"},{value:"HEAVY_TRUCK",label:"Camião pesado",hint:"Grande volume",illustration:"HEAVY_TRUCK"}] as const).map((option)=><button key={option.value} type="button" aria-pressed={vehiclePreference===option.value} onClick={()=>setVehiclePreference(option.value)} className={`min-w-0 rounded-xl border p-2 text-left transition ${vehiclePreference===option.value?"border-[#c8a24a]/55 bg-[#c8a24a]/10 ring-1 ring-[#c8a24a]/25":"border-[var(--theme-border)] bg-black/15 hover:bg-white/[.05]"}`}>{option.illustration?<MarkaVehicleIllustration kind={option.illustration} className="h-14 w-full"/>:<div className="flex h-14 items-center justify-center text-[11px] font-semibold text-[var(--theme-text-muted)]">MARKA Mobility</div>}<span className="mt-1 block text-[11px] font-semibold text-[var(--theme-text)]">{option.label}</span><span className="block text-[10px] text-[var(--theme-text-muted)]">{option.hint}</span></button>)}</div><p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Caixa aberta e carrinha fechada são opções distintas. A preferência será usada para encontrar um prestador com a viatura correspondente.</p></fieldset>
+          <button type="button" onClick={() => setRecipientOpen(true)} className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 text-left transition hover:bg-white/[.06]">
+            <span className="min-w-0"><span className="block text-[10px] font-semibold text-white/85">Dados do destinatário</span><span className="block truncate text-[9px] text-white/45">{recipientSummary}</span></span><span aria-hidden="true" className="shrink-0 text-sm text-[#c8a24a]">＋</span>
+          </button>
         </>}
+
         {service === "WATER_DELIVERY" && <>
-          {pointInput("Endereço de entrega", destination, setDestination, true, "destination")}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="LITRE">Litros</option><option value="M3">Metros cúbicos (m³)</option></select></label>
+          {pointInput("Entrega", destination, setDestination, true, "destination")}
+          <div className="grid grid-cols-2 gap-2">
+            <label className="rounded-xl border border-white/10 bg-black/25 px-3 py-2"><span className="block text-[8px] uppercase tracking-wider text-white/45">Quantidade</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Litros / m³" className="h-7 w-full bg-transparent text-xs text-white outline-none" /></label>
+            <label className="rounded-xl border border-white/10 bg-black/25 px-3 py-2"><span className="block text-[8px] uppercase tracking-wider text-white/45">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="h-7 w-full bg-transparent text-xs text-white outline-none"><option className="bg-zinc-900" value="LITRE">Litros</option><option className="bg-zinc-900" value="M3">m³</option></select></label>
           </div>
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de água</span><select value={waterType} onChange={(event) => setWaterType(event.target.value as typeof waterType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="POTABLE_WATER">Potável</option><option value="NON_POTABLE_WATER">Não potável</option></select></label>
+          <label className="block rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] text-white/70">Tipo de água<select value={waterType} onChange={(event) => setWaterType(event.target.value as typeof waterType)} className="mt-1 h-8 w-full bg-transparent text-xs text-white"><option className="bg-zinc-900" value="POTABLE_WATER">Potável</option><option className="bg-zinc-900" value="NON_POTABLE_WATER">Não potável</option></select></label>
         </>}
+
         {service === "ROADSIDE_ASSISTANCE" && <>
-          {pointInput("Onde está o veículo?", origin, setOrigin, true, "origin")}
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de assistência</span><select value={assistanceType} onChange={(event) => setAssistanceType(event.target.value as typeof assistanceType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]">{assistanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Que veículo é?</span><input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Ex.: Toyota Hiace, matrícula…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+          {pointInput("Localização do veículo", origin, setOrigin, true, "origin")}
+          <label className="block rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] text-white/70">Assistência<select value={assistanceType} onChange={(event) => setAssistanceType(event.target.value as typeof assistanceType)} className="mt-1 h-8 w-full bg-transparent text-xs text-white">{assistanceOptions.map(([value, label]) => <option className="bg-zinc-900" key={value} value={value}>{label}</option>)}</select></label>
+          <input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Marca e modelo do veículo" className="h-11 w-full rounded-xl border border-white/10 bg-black/25 px-3 text-xs text-white outline-none placeholder:text-white/35" />
         </>}
-        <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Observações <span className="text-[var(--theme-text-faint)]">(opcional)</span></span><textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alguma informação adicional?" className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
-        {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/[.06] px-4 py-3 text-xs text-rose-200">{error}</p>}
-        {message && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[.06] px-4 py-3 text-xs text-emerald-200">{message}</p>}
-        <div className="mobility-freight-submit sticky bottom-0 -mx-4 flex flex-col gap-3 border-t border-white/10 bg-[#0d0d0f]/95 px-4 pb-2 pt-3 backdrop-blur-xl sm:-mx-5 sm:px-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Pedir uma proposta não implica pagamento nem despacho.</p>
-          <button type="submit" disabled={submitting} className="min-h-12 rounded-2xl border border-[#c8a24a]/40 bg-[#c8a24a] px-6 text-xs font-bold text-[#09090b] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-50">{submitting ? "A enviar pedido…" : "Pedir cotação"}</button>
+
+        {service !== "CARGO_SHIPMENT" && <label className="block rounded-xl border border-white/10 bg-black/25 px-3 py-2"><span className="block text-[8px] uppercase tracking-wider text-white/45">Observações (opcional)</span><input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Informação adicional" className="h-8 w-full bg-transparent text-xs text-white outline-none placeholder:text-white/35" /></label>}
+        {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/[.06] px-3 py-2 text-[10px] text-rose-200">{error}</p>}
+        {message && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[.06] px-3 py-2 text-[10px] text-emerald-200">{message}</p>}
+
+        <div className="sticky bottom-0 -mx-3 flex items-center justify-between gap-3 border-t border-white/10 bg-[#0d0d0f]/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+          <div className="min-w-0"><span className="block text-[8px] font-bold uppercase tracking-[.14em] text-white/40">Preço estimado</span><strong className="block truncate text-sm text-[#e8c77c]">Sob cotação · AOA</strong></div>
+          <button type="submit" disabled={submitting} className="min-h-11 shrink-0 rounded-xl border border-[#c8a24a]/50 bg-[#c8a24a] px-5 text-[11px] font-extrabold text-[#09090b] shadow-lg shadow-[#c8a24a]/10 transition hover:brightness-110 disabled:cursor-wait disabled:opacity-50">{submitting ? "A enviar…" : service === "CARGO_SHIPMENT" ? "Pedir Entrega" : service === "WATER_DELIVERY" ? "Pedir Água" : "Pedir Assistência"}</button>
         </div>
       </form>
+
+      {recipientOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-3 backdrop-blur-sm sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setRecipientOpen(false); }}>
+        <section role="dialog" aria-modal="true" aria-labelledby="recipient-title" className="w-full max-w-md rounded-3xl border border-white/10 bg-[#101014]/95 p-4 shadow-2xl backdrop-blur-2xl">
+          <div className="mb-4 flex items-center justify-between"><div><h2 id="recipient-title" className="text-sm font-bold text-white">Dados do destinatário</h2><p className="mt-1 text-[10px] text-white/45">Opcional · Para facilitar a entrega</p></div><button type="button" onClick={() => setRecipientOpen(false)} aria-label="Fechar" className="grid h-8 w-8 place-items-center rounded-full bg-white/[.07] text-white/70">×</button></div>
+          <div className="space-y-3">
+            <label className="block"><span className="mb-1 block text-[9px] font-semibold text-white/55">Nome do destinatário</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nome completo" className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-xs text-white outline-none focus:border-[#c8a24a]/60" /></label>
+            <label className="block"><span className="mb-1 block text-[9px] font-semibold text-white/55">Telemóvel do destinatário</span><div className="flex h-11 items-center rounded-xl border border-white/10 bg-black/30 px-3 focus-within:border-[#c8a24a]/60"><span className="mr-2 text-xs text-white/50">+244</span><input value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value.replace(/[^0-9\s()-]/g, "").slice(0, 16))} placeholder="923 000 000" inputMode="tel" className="h-full min-w-0 flex-1 bg-transparent text-xs text-white outline-none" /></div></label>
+            <label className="flex min-h-11 items-center justify-between rounded-xl border border-white/10 bg-white/[.035] px-3"><span className="text-xs text-white/80">Incluir ajudante de carga</span><input type="checkbox" checked={includeHelper} onChange={(event) => setIncludeHelper(event.target.checked)} className="h-4 w-4 accent-[#c8a24a]" /></label>
+            <label className="block"><span className="mb-1 block text-[9px] font-semibold text-white/55">Nota rápida para o motorista</span><input value={driverNote} onChange={(event) => setDriverNote(event.target.value)} placeholder="Portão azul, ligar ao chegar" className="h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-xs text-white outline-none focus:border-[#c8a24a]/60" /></label>
+          </div>
+          <button type="button" onClick={() => setRecipientOpen(false)} className="mt-4 min-h-11 w-full rounded-xl bg-[#c8a24a] text-xs font-extrabold text-[#09090b]">Guardar dados</button>
+        </section>
+      </div>}
     </section>
   );
 }
