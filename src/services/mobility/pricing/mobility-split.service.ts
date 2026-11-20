@@ -36,6 +36,11 @@ export function resolveMobilitySplitServiceType(serviceType: string): MobilitySp
     "CARGO_SHIPMENT",
     "FREIGHT",
     "MOTO_BOX",
+    "CARGO_TRICYCLE",
+    "CARGO_VAN",
+    "CARRINHA",
+    "CAMIAO",
+    "CAMIÃO",
     "VAN",
     "PICKUP",
     "LIGHT_TRUCK",
@@ -63,6 +68,7 @@ export function calculateSplitMinor(
   if (totalKz < 0n) throw new RangeError("totalKz cannot be negative.");
 
   const rateBps = COMMISSION_RATE_BPS[serviceType];
+  if (rateBps === undefined) throw new RangeError(`Unsupported MARKA Mobility split type: ${serviceType}`);
   const platformFeeKz = (totalKz * BigInt(rateBps) + BPS_TOTAL / 2n) / BPS_TOTAL;
 
   return {
