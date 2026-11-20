@@ -22,6 +22,8 @@ export interface ValidatedSession {
   expiresAt: Date;
   createdAt: Date;
   lastSeenAt: Date | null;
+  role: string;
+  isFounder: boolean;
 }
 
 export class SessionService {
@@ -95,6 +97,8 @@ export class SessionService {
         user: {
           select: {
             status: true,
+            role: true,
+            isFounder: true,
           },
         },
       },
@@ -118,6 +122,8 @@ export class SessionService {
       expiresAt: session.expiresAt,
       createdAt: session.createdAt,
       lastSeenAt: session.lastSeenAt,
+      role: session.user.role,
+      isFounder: session.user.isFounder,
     };
   }
 
