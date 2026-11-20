@@ -3,6 +3,11 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/database/client/prisma";
 import { FinancialAuditService } from "@/core/audit/financial-audit.service";
+import { commissionPolicyService } from "@/services/finance/commission/commission-policy.service";
+import {
+  calculateSplitMinor,
+  resolveMobilitySplitServiceType,
+} from "@/services/mobility/pricing/mobility-split.service";
 
 import {
   type CompleteMobilityPaymentInput,
@@ -14,8 +19,6 @@ import type {
   MobilityPaymentMethod,
   MobilityPaymentStatus,
 } from "@/services/mobility/payments/mobility-payment-engine.types";
-
-const BPS_TOTAL = 10_000;
 
 type SqlExecutor =
   | typeof prisma
@@ -107,6 +110,7 @@ export class MobilityPaymentEngineService {
                 driverId: string | null;
                 currency: string;
                 status: string;
+                serviceType: string;
               }>
             >`
               SELECT
@@ -115,7 +119,8 @@ export class MobilityPaymentEngineService {
                 "riderId",
                 "driverId",
                 "currency",
-                "status"::text AS "status"
+                "status"::text AS "status",
+                "serviceType"
               FROM "MobilityRide"
               WHERE "id" = ${input.rideId}
               LIMIT 1
@@ -167,15 +172,24 @@ export class MobilityPaymentEngineService {
             );
           }
 
+          const policy = commissionPolicyService.getMobilityPolicy(currentRide.serviceType);
+          if (
+            input.commissionRateBps !== policy.rateBps ||
+            input.commissionPolicyKey !== policy.key ||
+            input.commissionPolicyVersion !== policy.version
+          ) {
+            throw new Error("Mobility commission policy does not match the persisted ride service type.");
+          }
+
           const finalFare =
             input.finalFareMinor ??
             input.estimatedFareMinor;
 
-          const commission =
-            this.calculateCommission(
-              finalFare,
-              input.commissionRateBps,
-            );
+          const split = calculateSplitMinor(
+            finalFare,
+            resolveMobilitySplitServiceType(currentRide.serviceType),
+          );
+          const commission = split.platformFeeKz;
 
           const driverGross =
             finalFare;
@@ -258,10 +272,10 @@ export class MobilityPaymentEngineService {
                 ),
                 ${input.estimatedFareMinor},
                 ${finalFare},
-                ${input.commissionRateBps},
+                ${policy.rateBps},
                 ${commission},
-                ${input.commissionPolicyKey},
-                ${input.commissionPolicyVersion},
+                ${policy.key},
+                ${policy.version},
                 ${driverGross},
                 ${driverNet},
                 ${pricingSnapshotJson}::jsonb,
@@ -378,9 +392,9 @@ export class MobilityPaymentEngineService {
           // Serialize collection against ride cancellation. Both paths lock
           // the ride first, then the payment, to avoid contradictory outcomes.
           const rides = await database.$queryRaw<
-            Array<{ id: string; organizationId: string; status: string }>
+            Array<{ id: string; organizationId: string; status: string; serviceType: string }>
           >`
-            SELECT "id", "organizationId", "status"::text AS "status"
+            SELECT "id", "organizationId", "status"::text AS "status", "serviceType"
             FROM "MobilityRide"
             WHERE "id" = ${input.rideId}
             FOR UPDATE
@@ -446,14 +460,21 @@ export class MobilityPaymentEngineService {
             );
           }
 
-          const finalFare =
-            existing.finalFareMinor;
+          const policy = commissionPolicyService.getMobilityPolicy(ride.serviceType);
+          if (
+            existing.commissionRateBps !== policy.rateBps ||
+            existing.commissionPolicyKey !== policy.key ||
+            existing.commissionPolicyVersion !== policy.version
+          ) {
+            throw new Error("Persisted Mobility commission policy no longer matches the ride service type.");
+          }
 
-          const commission =
-            this.calculateCommission(
-              finalFare,
-              existing.commissionRateBps,
-            );
+          const finalFare = existing.finalFareMinor;
+          const split = calculateSplitMinor(
+            finalFare,
+            resolveMobilitySplitServiceType(ride.serviceType),
+          );
+          const commission = split.platformFeeKz;
 
           const driverGross =
             finalFare;
@@ -664,17 +685,6 @@ export class MobilityPaymentEngineService {
       `;
 
     return rows[0] ?? null;
-  }
-
-  private calculateCommission(
-    fareMinor: bigint,
-    rateBps: number,
-  ): bigint {
-    return (
-      fareMinor *
-      BigInt(rateBps)
-    ) /
-      BigInt(BPS_TOTAL);
   }
 
   private toResult(
