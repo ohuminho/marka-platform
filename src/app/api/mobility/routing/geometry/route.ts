@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
-import { reserveApiRequest } from "@/core/security/api-rate-limit";
+import { reserveApiRequests } from "@/core/security/api-rate-limit";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { quoteMobilityFare } from "@/services/mobility/pricing/mobility-tariff.service";
 import {
@@ -54,15 +54,25 @@ export async function GET(request: Request) {
     }
 
     const privileged = session.isFounder || ["ADMIN", "SUPER_ADMIN", "SYSTEM_ADMIN"].includes(session.role);
-    const quota = await reserveApiRequest({
-      scope: "MOBILITY_ROUTE_GEOMETRY",
-      actorUserId: session.userId,
-      bypass: privileged,
-      windows: [
-        { limit: 10, windowMs: 60_000 },
-        { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
-      ],
-    });
+    const [quota, globalQuota] = await reserveApiRequests([
+      {
+        scope: "MOBILITY_ROUTE_GEOMETRY",
+        actorUserId: session.userId,
+        bypass: privileged,
+        windows: [
+          { limit: 10, windowMs: 60_000 },
+          { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
+        ],
+      },
+      {
+        scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
+        anonymousIdentity: "marka:shared-osrm-geometry-provider",
+        windows: [
+          { limit: 60, windowMs: 60_000 },
+          { limit: 2_000, windowMs: 24 * 60 * 60 * 1000 },
+        ],
+      },
+    ]);
     if (!quota.allowed) {
       return NextResponse.json(
         { message: "Route request limit reached.", code: "RATE_LIMITED" },
@@ -75,17 +85,6 @@ export async function GET(request: Request) {
         },
       );
     }
-
-    // A per-user quota protects individual accounts; this shared quota also
-    // protects the public routing provider from aggregate traffic across users.
-    const globalQuota = await reserveApiRequest({
-      scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
-      anonymousIdentity: "marka:shared-osrm-geometry-provider",
-      windows: [
-        { limit: 60, windowMs: 60_000 },
-        { limit: 2_000, windowMs: 24 * 60 * 60 * 1000 },
-      ],
-    });
     if (!globalQuota.allowed) {
       return NextResponse.json(
         { message: "O serviço de rotas está temporariamente ocupado. Tenta novamente dentro de instantes.", code: "ROUTING_PROVIDER_CAPACITY" },
