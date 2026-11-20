@@ -298,11 +298,11 @@ export class MobilityMatchingService {
           // Share the same provider-wide budget as the public route geometry API.
           // Dispatch matrix checks otherwise bypass the browser-facing quota.
           const providerQuota = await reserveApiRequest({
-            scope: "MOBILITY_ROUTE_GEOMETRY_GLOBAL",
-            anonymousIdentity: "marka:shared-mobility-routing-provider",
+            scope: "MOBILITY_ROUTE_MATRIX_GLOBAL",
+            anonymousIdentity: "marka:shared-mobility-routing-matrix",
             windows: [
               { limit: process.env.MOBILITY_ROUTING_PROVIDER === "OPENROUTESERVICE" ? 35 : 60, windowMs: 60_000 },
-              { limit: process.env.MOBILITY_ROUTING_PROVIDER === "OPENROUTESERVICE" ? 1_800 : 2_000, windowMs: 24 * 60 * 60 * 1_000 },
+              { limit: process.env.MOBILITY_ROUTING_PROVIDER === "OPENROUTESERVICE" ? 450 : 2_000, windowMs: 24 * 60 * 60 * 1_000 },
             ],
           });
           if (!providerQuota.allowed) continue;
