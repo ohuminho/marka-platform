@@ -84,7 +84,7 @@ export class MobilityRoutingService {
     let init: RequestInit;
     try {
       if (provider === "OPENROUTESERVICE") {
-        endpoint = new URL("openrouteservice/v2/matrix/driving-car", this.baseUrl(options, provider).endsWith("/") ? this.baseUrl(options, provider) : `${this.baseUrl(options, provider)}/`);
+        endpoint = new URL("v2/matrix/driving-car", this.baseUrl(options, provider).endsWith("/") ? this.baseUrl(options, provider) : `${this.baseUrl(options, provider)}/`);
         headers["content-type"] = "application/json";
         headers.authorization = this.apiKey(options);
         init = { method: "POST", headers, body: JSON.stringify({ locations: coordinates, metrics: ["duration"], units: "m" }), cache: "no-store", signal: AbortSignal.timeout(timeout) };
@@ -123,7 +123,7 @@ export class MobilityRoutingService {
     try {
       if (provider === "OPENROUTESERVICE") {
         const base = this.baseUrl(options, provider);
-        endpoint = new URL("openrouteservice/v2/directions/driving-car/geojson", base.endsWith("/") ? base : `${base}/`);
+        endpoint = new URL("v2/directions/driving-car/geojson", base.endsWith("/") ? base : `${base}/`);
         const headers: Record<string, string> = { accept: "application/geo+json, application/json", "content-type": "application/json", authorization: this.apiKey(options) };
         init = {
           method: "POST",
