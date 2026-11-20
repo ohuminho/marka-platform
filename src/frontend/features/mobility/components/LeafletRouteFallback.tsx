@@ -50,7 +50,10 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
         scrollWheelZoom: true,
       }).setView([-8.8383, 13.2344], 12);
       mapRef.current = map;
-      if (onMapDestinationSelect) map.on("click", (event) => onMapDestinationSelect({ lat: event.latlng.lat, lon: event.latlng.lng }));
+      if (onMapDestinationSelect) {
+        const interactiveMap = map as LeafletMap & { on: (type: "click", handler: (event: { latlng: { lat: number; lng: number } }) => void) => unknown };
+        interactiveMap.on("click", (event) => onMapDestinationSelect({ lat: event.latlng.lat, lon: event.latlng.lng }));
+      }
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       // Prefer the canonical OSM raster endpoint for the recovery renderer;
