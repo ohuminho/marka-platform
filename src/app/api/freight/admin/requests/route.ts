@@ -1,11 +1,13 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { authorizationService } from "@/core/authorization/authorization.service";
 import { prisma } from "@/database/client/prisma";
+import { calculateSplit } from "@/services/mobility/pricing/mobility-split.service";
 
 export const dynamic = "force-dynamic";
 
@@ -254,10 +256,35 @@ export async function PATCH(request: Request) {
   const expiresAt = new Date(now.getTime() + validityHours * 60 * 60 * 1000);
   const freightMeta = await prisma.freightRequest.findFirst({
     where: { id: requestId, organizationId: auth.organizationId },
-    select: { currency: true },
+    select: { currency: true, requestType: true },
   });
   if (!freightMeta) {
     return NextResponse.json({ message: "Pedido não encontrado." }, { status: 404 });
+  }
+
+  // Cargo quotes are the server-approved final fare. Persist their split
+  // alongside the quote so later payment/settlement steps can reuse it.
+  let cargoSplitSnapshot: Record<string, number | string> | null = null;
+  if (freightMeta.requestType === "CARGO_SHIPMENT") {
+    if (freightMeta.currency !== "AOA" || !Number.isSafeInteger(amount)) {
+      return NextResponse.json({
+        message: "A cotação de carga deve ser um valor inteiro em Kz (AOA).",
+        code: "INVALID_AOA_CARGO_QUOTE_AMOUNT",
+      }, { status: 400 });
+    }
+
+    const split = calculateSplit(amount, "carga");
+    cargoSplitSnapshot = {
+      version: 1,
+      serviceType: "carga",
+      currency: "AOA",
+      totalKz: split.totalKz,
+      commissionRate: split.commissionRate,
+      platformFeeKz: split.platformFeeKz,
+      providerAmountKz: split.providerAmountKz,
+      policyKey: "MOBILITY_CARGO_STANDARD",
+      policyVersion: 1,
+    };
   }
 
   const requestHeaders = await headers();
@@ -266,6 +293,23 @@ export async function PATCH(request: Request) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const current = await tx.freightRequest.findFirst({
+        where: { id: requestId, organizationId: auth.organizationId },
+        select: { details: true },
+      });
+      if (!current) return false;
+
+      const currentDetails =
+        current.details && typeof current.details === "object" && !Array.isArray(current.details)
+          ? current.details as Record<string, Prisma.JsonValue>
+          : {};
+      const nextDetails = cargoSplitSnapshot
+        ? {
+            ...currentDetails,
+            quoteSplitSnapshot: cargoSplitSnapshot,
+          } as Prisma.InputJsonValue
+        : undefined;
+
       const updated = await tx.freightRequest.updateMany({
         where: {
           id: requestId,
@@ -279,6 +323,7 @@ export async function PATCH(request: Request) {
           quotedAmount: amount,
           quoteExpiresAt: expiresAt,
           status: "QUOTED",
+          ...(nextDetails ? { details: nextDetails } : {}),
         },
       });
 
@@ -299,6 +344,7 @@ export async function PATCH(request: Request) {
             currency: freightMeta.currency,
             validityHours,
             expiresAt: expiresAt.toISOString(),
+            splitSnapshot: cargoSplitSnapshot,
           },
         },
       });
@@ -319,6 +365,7 @@ export async function PATCH(request: Request) {
       amount,
       currency: freightMeta.currency,
       quoteExpiresAt: expiresAt.toISOString(),
+      split: cargoSplitSnapshot,
     });
   } catch (error) {
     console.error("[MARKA_FREIGHT_QUOTE]", error instanceof Error ? error.message : "unknown error");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 function formatDate(value?: string) {
@@ -20,25 +20,65 @@ function initials(name?: string) {
     .join("");
 }
 
+type AuthContext = ReturnType<typeof useAuth>;
+type AccountContentProps = {
+  user: NonNullable<AuthContext["user"]>;
+  session: AuthContext["session"];
+  organizations: AuthContext["organizations"];
+  activeOrganization: AuthContext["activeOrganization"];
+  authorization: AuthContext["authorization"];
+  refreshUser: AuthContext["refreshUser"];
+};
+
 export default function AccountPage() {
-  const { user, session, organizations, activeOrganization, authorization, loading, refreshUser } = useAuth();
-  const [displayName, setDisplayName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [countryCode, setCountryCode] = useState("AO");
-  const [locale, setLocale] = useState("pt-AO");
-  const [timezone, setTimezone] = useState("Africa/Luanda");
+  const auth = useAuth();
+
+  if (auth.loading) {
+    return <div className="py-16 text-sm text-[var(--theme-text-muted)]">Loading account context…</div>;
+  }
+
+  if (!auth.user) {
+    return <div className="py-16 text-sm text-[var(--theme-text-muted)]">No authenticated account context.</div>;
+  }
+
+  const profileKey = [
+    auth.user.id,
+    auth.user.profile?.displayName ?? "",
+    auth.user.profile?.phone ?? "",
+    auth.user.profile?.countryCode ?? "",
+    auth.user.profile?.locale ?? "",
+    auth.user.profile?.timezone ?? "",
+  ].join(":");
+
+  return (
+    <AccountContent
+      key={profileKey}
+      user={auth.user}
+      session={auth.session}
+      organizations={auth.organizations}
+      activeOrganization={auth.activeOrganization}
+      authorization={auth.authorization}
+      refreshUser={auth.refreshUser}
+    />
+  );
+}
+
+function AccountContent({
+  user,
+  session,
+  organizations,
+  activeOrganization,
+  authorization,
+  refreshUser,
+}: AccountContentProps) {
+  const [displayName, setDisplayName] = useState(user.profile?.displayName || user.name || "");
+  const [phone, setPhone] = useState(user.profile?.phone || "");
+  const [countryCode, setCountryCode] = useState(user.profile?.countryCode || "AO");
+  const [locale, setLocale] = useState(user.profile?.locale || "pt-AO");
+  const [timezone, setTimezone] = useState(user.profile?.timezone || "Africa/Luanda");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    setDisplayName(user.profile?.displayName || user.name || "");
-    setPhone(user.profile?.phone || "");
-    setCountryCode(user.profile?.countryCode || "AO");
-    setLocale(user.profile?.locale || "pt-AO");
-    setTimezone(user.profile?.timezone || "Africa/Luanda");
-  }, [user]);
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,14 +116,6 @@ export default function AccountPage() {
     }
     return Array.from(grouped.entries());
   }, [authorization.permissions]);
-
-  if (loading) {
-    return <div className="py-16 text-sm text-[var(--theme-text-muted)]">Loading account context…</div>;
-  }
-
-  if (!user) {
-    return <div className="py-16 text-sm text-[var(--theme-text-muted)]">No authenticated account context.</div>;
-  }
 
   return (
     <section className="space-y-6">
