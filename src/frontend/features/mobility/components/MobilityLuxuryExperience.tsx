@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MobilityLiveMap, { type MobilityMapPoint, type MobilityRoute, type MobilityRouteStatus } from "@/frontend/features/mobility/components/MobilityLiveMap";
 import MobilityServiceTabs from "@/frontend/features/mobility/components/MobilityServiceTabs";
+import MobilityBottomSheet from "@/frontend/features/mobility/components/MobilityBottomSheet";
 import MarketplaceCallPanel from "@/frontend/features/communications/components/MarketplaceCallPanel";
 
 type Group = "EXECUTIVE" | "MOTO";
@@ -796,11 +797,15 @@ export default function MobilityLuxuryExperience() {
         </div>
       )}
 
+      <MobilityBottomSheet
+        expanded={panelExpanded}
+        onToggle={() => setPanelExpanded((value) => !value)}
+        heightClassName={active ? "max-h-[40dvh] sm:max-h-[46dvh]" : panelExpanded ? "max-h-[82dvh]" : "max-h-[46dvh] sm:max-h-[48dvh]"}
+      >
       <form
         onSubmit={submit}
-        className={"absolute inset-x-0 bottom-0 z-20 mx-auto " + (active ? "max-h-[40dvh] sm:max-h-[46dvh] " : panelExpanded ? "max-h-[82dvh] " : "max-h-[46dvh] sm:max-h-[48dvh] ") + "w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[28px] border border-white/10 bg-[#0d0d0f]/75 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-20px_70px_rgba(0,0,0,.28)] backdrop-blur-xl sm:bottom-4 sm:rounded-[28px] sm:px-6"}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-1 sm:px-6"
       >
-        <button type="button" onClick={() => setPanelExpanded((value) => !value)} aria-label={panelExpanded ? "Recolher painel" : "Expandir painel"} aria-expanded={panelExpanded} className="mx-auto mb-2 flex h-5 w-16 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8a24a]"><span className="h-1 w-10 rounded-full bg-gradient-to-r from-white/20 via-[#c8a24a]/90 to-white/20" /></button>
         {active ? (
           <section className="pb-3" aria-live="polite">
             <div className="flex items-center justify-between gap-3">
@@ -1070,6 +1075,7 @@ export default function MobilityLuxuryExperience() {
           </>
         )}
       </form>
+      </MobilityBottomSheet>
     </main>
   );
 }
