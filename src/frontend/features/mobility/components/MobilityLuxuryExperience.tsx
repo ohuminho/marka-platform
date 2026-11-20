@@ -947,7 +947,7 @@ export default function MobilityLuxuryExperience() {
                     placeholder="GPS ou pesquisar bairro/rua"
                     aria-label="Pesquisar local de partida em Angola"
                     autoComplete="off"
-                    className="h-10 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                    className="h-11 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
                   />
                 </div>
                 {originSearchBusy && originText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
@@ -985,7 +985,7 @@ export default function MobilityLuxuryExperience() {
                     placeholder="Para onde vamos?"
                     aria-label="Pesquisar destino em Angola"
                     autoComplete="off"
-                    className="h-8 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                    className="h-11 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
                   />
                 </div>
                 {searchBusy && destinationText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
