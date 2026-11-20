@@ -6,7 +6,8 @@ import MarkaVehicleIllustration from "./MarkaVehicleIllustration";
 
 type ServiceType = "CARGO_SHIPMENT" | "WATER_DELIVERY" | "ROADSIDE_ASSISTANCE";
 type Point = { latitude: number; longitude: number; address: string };
-type PointField = { address: string; point: Point | null; searching: boolean };
+type PointCandidate = Point & { label: string };
+type PointField = { address: string; point: Point | null; searching: boolean; candidates: PointCandidate[] };
 
 const assistanceOptions = [
   ["TOW", "Reboque"],
@@ -17,27 +18,44 @@ const assistanceOptions = [
   ["ON_SITE_MECHANIC", "Mecânico no local"],
 ] as const;
 
-async function locateAddress(address: string): Promise<Point> {
+async function locateAddress(address: string): Promise<PointCandidate[]> {
   const query = address.trim();
-  if (query.length < 4) throw new Error("Escreva um endereço ou local mais completo.");
-  const params = new URLSearchParams({ q: query, format: "jsonv2", limit: "1", countrycodes: "ao", addressdetails: "1" });
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
+  if (query.length < 3) throw new Error("Escreva pelo menos 3 caracteres: bairro, rua ou município.");
+  const url = new URL("https://photon.komoot.io/api/");
+  url.searchParams.set("q", query.toLocaleLowerCase("pt").includes("angola") ? query : `${query}, Angola`);
+  url.searchParams.set("limit", "8");
+  url.searchParams.set("lang", "pt");
+  const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+  if (!response.ok) throw new Error("A pesquisa de locais está temporariamente indisponível. Tente usar o GPS ou novamente dentro de instantes.");
+  const data = await response.json() as {
+    features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
+  };
+  const candidates = (data.features ?? []).flatMap((feature): PointCandidate[] => {
+    const properties = feature.properties ?? {};
+    const country = properties.country;
+    if (typeof country !== "string" || !/angola/i.test(country)) return [];
+    const coordinates = feature.geometry?.coordinates;
+    if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
+    const parts = [properties.name, properties.street, properties.district, properties.city, properties.state, properties.country]
+      .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+      .filter((part, index, all) => all.indexOf(part) === index);
+    const label = parts.join(", ");
+    if (!label) return [];
+    return [{ latitude: coordinates[1], longitude: coordinates[0], address: label, label }];
   });
-  if (!response.ok) throw new Error("Não foi possível localizar o endereço. Tente novamente.");
-  const results = await response.json() as Array<{ lat: string; lon: string; display_name: string }>;
-  const match = results[0];
-  if (!match) throw new Error("Não encontrámos esse local. Experimente indicar bairro, rua ou município.");
-  return { latitude: Number(match.lat), longitude: Number(match.lon), address: match.display_name };
+  const unique = candidates.filter((candidate, index, all) =>
+    all.findIndex((item) => item.latitude === candidate.latitude && item.longitude === candidate.longitude) === index
+  );
+  if (!unique.length) throw new Error("Não encontrámos resultados confirmados em Angola. Experimente indicar bairro, rua ou município, ou use o GPS.");
+  return unique.slice(0, 6);
 }
 
 export default function MobilityFreightRequestForm() {
   const { activeOrganization } = useAuth();
   const organizationId = activeOrganization?.id;
   const [service, setService] = useState<ServiceType>("CARGO_SHIPMENT");
-  const [origin, setOrigin] = useState<PointField>({ address: "", point: null, searching: false });
-  const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false });
+  const [origin, setOrigin] = useState<PointField>({ address: "", point: null, searching: false, candidates: [] });
+  const [destination, setDestination] = useState<PointField>({ address: "", point: null, searching: false, candidates: [] });
   const [cargoDescription, setCargoDescription] = useState("");
   const [vehiclePreference, setVehiclePreference] = useState("ANY");
   const [waterType, setWaterType] = useState<"POTABLE_WATER" | "NON_POTABLE_WATER">("POTABLE_WATER");
@@ -50,18 +68,27 @@ export default function MobilityFreightRequestForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const updatePoint = (setter: typeof setOrigin, field: PointField, address: string) => {
-    setter({ ...field, address, point: null });
+  const locationSearching = service === "CARGO_SHIPMENT"
+    ? origin.searching || destination.searching
+    : service === "WATER_DELIVERY"
+      ? destination.searching
+      : origin.searching;
+
+  const updatePoint = (setter: typeof setOrigin, _field: PointField, address: string) => {
+    setter((previous) => ({ ...previous, address, point: null, searching: false, candidates: [] }));
   };
 
   const findPoint = async (field: PointField, setter: typeof setOrigin) => {
-    setter({ ...field, searching: true });
+    const query = field.address.trim();
+    setter((previous) => ({ ...previous, searching: true, candidates: [], point: null }));
     setError(null);
     try {
-      const point = await locateAddress(field.address);
-      setter({ address: point.address, point, searching: false });
+      const candidates = await locateAddress(query);
+      setter((previous) => previous.address.trim() === query
+        ? { ...previous, point: null, candidates, searching: false }
+        : { ...previous, searching: false });
     } catch (cause) {
-      setter({ ...field, searching: false });
+      setter((previous) => ({ ...previous, searching: false }));
       setError(cause instanceof Error ? cause.message : "Não foi possível localizar o endereço.");
     }
   };
@@ -71,19 +98,23 @@ export default function MobilityFreightRequestForm() {
       setError("Este dispositivo não disponibiliza localização GPS.");
       return;
     }
+    const addressAtRequest = current.address;
     setError(null);
-    setter({ ...current, searching: true });
+    setter((previous) => ({ ...previous, searching: true }));
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const point = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          address: current.address.trim() || "Localização GPS atual",
-        };
-        setter({ address: point.address, point, searching: false });
+        setter((previous) => {
+          if (previous.address !== addressAtRequest) return { ...previous, searching: false };
+          const point = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            address: previous.address.trim() || "Localização GPS atual",
+          };
+          return { address: point.address, point, searching: false, candidates: [] };
+        });
       },
       () => {
-        setter({ ...current, searching: false });
+        setter((previous) => ({ ...previous, searching: false }));
         setError("Não foi possível obter a localização. Verifique a permissão de GPS ou procure o endereço.");
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
@@ -98,7 +129,21 @@ export default function MobilityFreightRequestForm() {
         <button type="button" disabled={field.searching || !field.address.trim()} onClick={() => void findPoint(field, setter)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text)] disabled:opacity-40">{field.searching ? "A localizar…" : "Localizar"}</button>
         <button type="button" disabled={field.searching} onClick={() => requestGpsLocation(setter, field)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text-muted)] disabled:opacity-40">Usar GPS</button>
       </div>
-      {field.point && <p className="text-[11px] text-emerald-700 dark:text-emerald-300">Local confirmado</p>}
+      {field.candidates.length > 0 && !field.point && (
+        <div className="space-y-1 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-2" role="group" aria-label={`Escolher localização para ${label}`}>
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--theme-text-muted)]">Escolha o local correcto</p>
+          {field.candidates.map((candidate, index) => (
+            <button key={`${candidate.latitude}:${candidate.longitude}:${index}`} type="button"
+              onClick={() => setter((previous) => previous.address === field.address
+                ? { address: candidate.address, point: candidate, searching: false, candidates: [] }
+                : previous)}
+              className="min-h-10 w-full rounded-lg px-3 py-2 text-left text-xs text-[var(--theme-text)] hover:bg-[var(--theme-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-text-muted)]">
+              {candidate.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {field.point && <p className="text-[11px] text-emerald-700 dark:text-emerald-300">Local confirmado: {field.point.address}</p>}
     </div>
   );
 
@@ -106,12 +151,20 @@ export default function MobilityFreightRequestForm() {
     event.preventDefault();
     setError(null);
     setMessage(null);
+    if (locationSearching) {
+      setError("Aguarde a confirmação da localização antes de enviar o pedido.");
+      return;
+    }
     if (!organizationId) {
       setError("Seleccione primeiro a sua organização.");
       return;
     }
     if (service === "CARGO_SHIPMENT" && (!origin.point || !destination.point || !cargoDescription.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
       setError("Confirme a recolha, o destino, descreva a carga e indique uma quantidade válida.");
+      return;
+    }
+    if (service === "CARGO_SHIPMENT" && origin.point && destination.point && origin.point.latitude === destination.point.latitude && origin.point.longitude === destination.point.longitude) {
+      setError("A recolha e o destino não podem ser o mesmo local.");
       return;
     }
     if (service === "WATER_DELIVERY" && (!destination.point || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0)) {
@@ -163,15 +216,27 @@ export default function MobilityFreightRequestForm() {
         currency: "AOA",
         details,
       };
+      const requestId = globalThis.crypto.randomUUID();
       const response = await fetch("/api/freight/requests", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": idempotencyKey },
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", "X-Organization-Id": organizationId, "Idempotency-Key": idempotencyKey, "X-Request-Id": requestId },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível registar o pedido.");
-      setMessage(`Pedido ${data.request.reference} registado. Guarde esta referência para acompanhamento.`);
+      const data = await response.json().catch(() => ({})) as { request?: { reference?: string }; message?: string; code?: string; diagnosticId?: string };
+      if (!response.ok || !data.request?.reference) {
+        const friendly = data.code === "ORGANIZATION_ID_REQUIRED" || data.code === "ORGANIZATION_ACCESS_DENIED"
+          ? "A sua organização não está seleccionada ou já não tem acesso. Escolha uma organização activa e tente novamente."
+          : data.code === "AUTHENTICATION_REQUIRED" || data.code === "INVALID_SESSION"
+            ? "A sua sessão expirou. Entre novamente na MARKA e repita o pedido."
+            : data.code === "IDEMPOTENCY_CONFLICT"
+              ? "Este pedido já foi enviado com outros dados. Actualize a página e confirme o histórico antes de tentar novamente."
+              : data.message || "Não foi possível registar o pedido. Verifique a ligação e tente novamente.";
+        const diagnosticId = data.diagnosticId || response.headers.get("X-Request-Id") || requestId;
+        throw new Error(`${friendly} Referência técnica: ${diagnosticId}.`);
+      }
+      setMessage(`Pedido ${data.request.reference} registado. Acompanhe o estado na secção “Os seus pedidos”.`);
       try {
         const pendingRaw = window.sessionStorage.getItem(storageKey);
         const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
@@ -183,8 +248,8 @@ export default function MobilityFreightRequestForm() {
       setQuantity("");
       setVehicleDescription("");
       setNotes("");
-      setOrigin({ address: "", point: null, searching: false });
-      setDestination({ address: "", point: null, searching: false });
+      setOrigin({ address: "", point: null, searching: false, candidates: [] });
+      setDestination({ address: "", point: null, searching: false, candidates: [] });
       window.dispatchEvent(new Event("marka:freight-request-created"));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "O pedido não foi concluído. Tente novamente.");
@@ -196,9 +261,9 @@ export default function MobilityFreightRequestForm() {
   return (
     <section className="rounded-[1.75rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-7">
       <div className="max-w-xl">
-        <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[var(--theme-text-faint)]">Outros serviços</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">O que precisa de transportar?</h2>
-        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">Escolha um serviço e indique os dados necessários. A equipa MARKA analisa o pedido e emite uma cotação.</p>
+        <p className="text-[9px] font-semibold uppercase tracking-[.22em] text-[var(--theme-text-faint)]">MARKA Mobility · Serviços</p>
+        <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--theme-text)]">{service === "CARGO_SHIPMENT" ? "Transporte de carga" : service === "WATER_DELIVERY" ? "Entrega de água" : "Assistência na estrada"}</h2>
+        <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">{service === "CARGO_SHIPMENT" ? "Indique o que vai transportar, os locais e a viatura adequada. Receberá uma proposta antes de confirmar." : service === "WATER_DELIVERY" ? "Escolha o tipo e a quantidade de água e indique o local exacto de entrega." : "Diga-nos onde está, qual é o veículo e que tipo de ajuda precisa. A equipa procura um prestador adequado."}</p>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Tipo de serviço">
@@ -227,23 +292,44 @@ export default function MobilityFreightRequestForm() {
         </>}
         {service === "WATER_DELIVERY" && <>
           {pointInput("Endereço de entrega", destination, setDestination)}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
-            <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="LITRE">Litros</option><option value="M3">Metros cúbicos (m³)</option></select></label>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade de água</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder={quantityUnit === "LITRE" ? "Ex.: 5 000" : "Ex.: 5"} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+              <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="LITRE">Litros</option><option value="M3">Metros cúbicos (m³)</option></select></label>
+            </div>
+            <div className="flex flex-wrap gap-2" aria-label="Quantidades frequentes">
+              {(quantityUnit === "LITRE" ? ["1000", "5000", "10000", "20000"] : ["1", "5", "10", "20"]).map((value) => (
+                <button key={value} type="button" onClick={() => setQuantity(value)} aria-pressed={quantity === value} className={`min-h-9 rounded-full border px-3 text-[11px] font-medium transition ${quantity === value ? "border-[var(--theme-text-muted)] bg-[var(--theme-background)] text-[var(--theme-text)]" : "border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:bg-[var(--theme-background)]"}`}>
+                  {Number(value).toLocaleString("pt-PT")} {quantityUnit === "LITRE" ? "L" : "m³"}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">A quantidade é usada para identificar uma cisterna com capacidade adequada. O preço será apresentado na cotação.</p>
           </div>
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de água</span><select value={waterType} onChange={(event) => setWaterType(event.target.value as typeof waterType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="POTABLE_WATER">Potável</option><option value="NON_POTABLE_WATER">Não potável</option></select></label>
         </>}
         {service === "ROADSIDE_ASSISTANCE" && <>
           {pointInput("Onde está o veículo?", origin, setOrigin)}
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de assistência</span><select value={assistanceType} onChange={(event) => setAssistanceType(event.target.value as typeof assistanceType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]">{assistanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Que veículo é?</span><input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Ex.: Toyota Hiace, matrícula…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
+          <fieldset className="space-y-3">
+            <legend className="text-xs font-medium text-[var(--theme-text)]">Que ajuda precisa?</legend>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {assistanceOptions.map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={assistanceType === value} onClick={() => setAssistanceType(value)} className={`min-h-12 rounded-xl border px-3 py-2 text-left text-xs font-medium transition ${assistanceType === value ? "border-[var(--theme-text-muted)] bg-[var(--theme-background)] text-[var(--theme-text)] ring-1 ring-[var(--theme-text-muted)]" : "border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:bg-[var(--theme-background)]"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Identifique o veículo</span><input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Marca, modelo e matrícula (ex.: Toyota Hiace LD-00-00-XX)" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /><span className="block text-[11px] leading-5 text-[var(--theme-text-muted)]">Inclua a matrícula, se possível, para o prestador reconhecer o veículo.</span></label>
+          <div className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-[11px] leading-5 text-[var(--theme-text-muted)]">Se estiver numa via perigosa, mantenha-se num local seguro e indique um ponto de referência nas observações. O pedido não substitui os serviços de emergência.</div>
         </>}
-        <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Observações <span className="text-[var(--theme-text-faint)]">(opcional)</span></span><textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alguma informação adicional?" className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
-        {error && <p role="alert" className="rounded-xl border border-red-500/20 px-4 py-3 text-xs text-red-600">{error}</p>}
+        <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">{service === "WATER_DELIVERY" ? "Acesso ao local" : service === "ROADSIDE_ASSISTANCE" ? "Ponto de referência / detalhes da avaria" : "Instruções para o prestador"} <span className="text-[var(--theme-text-faint)]">(opcional)</span></span><textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={service === "WATER_DELIVERY" ? "Ex.: portão estreito, entrada pela rua lateral, contacto no local…" : service === "ROADSIDE_ASSISTANCE" ? "Ex.: junto à bomba, pneu furado, veículo não arranca…" : "Ex.: horário de recolha, acesso ao local, cuidados com a carga…"} className="w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
+        {!organizationId && <p role="alert" className="rounded-xl border border-amber-500/20 bg-amber-500/[.05] px-4 py-3 text-xs text-amber-700 dark:text-amber-300">Seleccione uma organização activa no topo da aplicação para poder registar o pedido.</p>}
+        {error && <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/[.04] px-4 py-3 text-xs text-red-600 dark:text-red-300">{error}</p>}
         {message && <p role="status" className="rounded-xl border border-emerald-500/20 px-4 py-3 text-xs text-emerald-700 dark:text-emerald-300">{message}</p>}
         <div className="flex flex-col gap-3 border-t border-[var(--theme-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Pedir uma proposta não implica pagamento nem despacho.</p>
-          <button type="submit" disabled={submitting} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-50">{submitting ? "A enviar pedido…" : "Pedir cotação"}</button>
+          <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">{service === "ROADSIDE_ASSISTANCE" ? "Receberá a cotação e as condições antes de autorizar o despacho. O envio do pedido não activa automaticamente um reboque." : "Receberá uma proposta antes de confirmar. O envio do pedido não implica pagamento nem despacho."}</p>
+          <button type="submit" disabled={submitting || !organizationId || locationSearching} className="min-h-12 rounded-xl bg-[var(--theme-text)] px-6 text-xs font-semibold text-[var(--theme-background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "A enviar pedido…" : locationSearching ? "A confirmar localização…" : service === "CARGO_SHIPMENT" ? "Solicitar transporte" : service === "WATER_DELIVERY" ? "Solicitar entrega" : "Pedir assistência"}</button>
         </div>
       </form>
     </section>

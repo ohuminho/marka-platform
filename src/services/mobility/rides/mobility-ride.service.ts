@@ -171,10 +171,7 @@ export class MobilityRideService {
     }
 
     const scope = `mobility:ride:create:${input.organizationId}:${input.riderId}`;
-    const { estimatedFareMinor: _fareForReplay, ...requestIdentity } = input;
-    const requestHash = createHash("sha256")
-      .update(JSON.stringify(normalizeIdempotencyValue(requestIdentity)))
-      .digest("hex");
+    const requestHash = buildMobilityRideRequestHash(input);
 
     const existingResult = async () => {
       const record = await prisma.idempotencyRecord.findUnique({
@@ -1448,6 +1445,27 @@ function withEstimatedFare(
     ? metadata as Prisma.InputJsonObject
     : {};
   return { ...base, estimatedFareMinor: amountMinor.toString() };
+}
+
+
+
+/**
+ * Hash only passenger-controlled trip details. The fare and pricingSnapshot are
+ * recalculated by the server on every attempt, so route-provider rounding or
+ * a tariff refresh must not turn a safe retry into an idempotency conflict.
+ */
+export function buildMobilityRideRequestHash(input: CreateMobilityRideInput): string {
+  const { estimatedFareMinor: _estimatedFareMinor, metadata, ...requestIdentity } = input;
+  const stableMetadata = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? Object.fromEntries(Object.entries(metadata).filter(([key]) => key !== "pricingSnapshot"))
+    : metadata;
+  const identity = {
+    ...requestIdentity,
+    ...(metadata === undefined ? {} : { metadata: stableMetadata }),
+  };
+  return createHash("sha256")
+    .update(JSON.stringify(normalizeIdempotencyValue(identity)))
+    .digest("hex");
 }
 
 function normalizeIdempotencyValue(value: unknown): unknown {

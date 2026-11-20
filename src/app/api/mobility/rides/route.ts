@@ -9,6 +9,7 @@ import {
 import { mobilityLifecycleService } from "@/services/mobility/orchestration/mobility-lifecycle.service";
 import { mobilityRoutingService } from "@/services/mobility/pricing/mobility-routing.service";
 import { quoteMobilityFare } from "@/services/mobility/pricing/mobility-tariff.service";
+import { mobilityPromotionService } from "@/services/mobility/pricing/mobility-promotion.service";
 
 import type { MobilitySafetyMode } from "@/services/mobility/orchestration/mobility-lifecycle.types";
 
@@ -18,6 +19,11 @@ import {
 
 const mobilityRideService =
   new MobilityRideService();
+
+const MOBILITY_SERVICE_TYPES = new Set([
+  "TAXI", "EXECUTIVE", "MOTO_TAXI", "VAN", "MINIBUS", "BUS", "COACH",
+  "PICKUP", "LIGHT_TRUCK", "MEDIUM_TRUCK", "TIPPER_TRUCK", "HEAVY_TRUCK",
+]);
 
 export async function POST(
   request: Request,
@@ -78,6 +84,16 @@ export async function POST(
       );
     }
 
+    if (!MOBILITY_SERVICE_TYPES.has(serviceType)) {
+      return NextResponse.json(
+        {
+          message: "O tipo de serviço Mobility não é válido.",
+          code: "MOBILITY_SERVICE_TYPE_INVALID",
+        },
+        { status: 400 },
+      );
+    }
+
     if (!idempotencyKey) {
       return NextResponse.json(
         {
@@ -92,12 +108,15 @@ export async function POST(
       );
     }
 
+    const passengerCountWasProvided = body?.passengerCount !== undefined;
     const passengerCount =
-      Number.isInteger(body?.passengerCount)
-        ? Number(body.passengerCount)
-        : 1;
+      !passengerCountWasProvided
+        ? 1
+        : Number.isInteger(body.passengerCount)
+          ? Number(body.passengerCount)
+          : Number.NaN;
 
-    if (passengerCount < 1 || passengerCount > 100) {
+    if (!Number.isInteger(passengerCount) || passengerCount < 1 || passengerCount > 100) {
       return NextResponse.json(
         {
           message: "O número de passageiros deve estar entre 1 e 100.",
@@ -154,6 +173,7 @@ export async function POST(
     if (!fare) {
       return NextResponse.json({ message: "A tabela tarifária desta categoria ainda não está configurada.", code: "MOBILITY_TARIFF_NOT_CONFIGURED" }, { status: 409 });
     }
+    const promotion = await mobilityPromotionService.quote(serviceType, fare);
 
     const { ride } =
       await mobilityRideService.createIdempotent({
@@ -233,72 +253,95 @@ export async function POST(
         },
       }, idempotencyKey);
 
-    await mobilityLifecycleService.initialize({
-      organizationId:
-        authentication.session
-          .organizationId,
+    let finalFareMinor = fare.totalMinor;
+    let promotionApplied = false;
+    let promotionDiscountMinor = "0";
+    let orchestration;
 
-      rideId:
-        ride.id,
+    try {
+      try {
+        const promotionResult = await mobilityPromotionService.reserveForRide({
+          rideId: ride.id,
+          idempotencyKey: idempotencyKey + ":promotion",
+          promotion,
+          originalFareMinor: fare.totalMinor,
+          currency,
+        });
+        finalFareMinor = promotionResult.finalFareMinor;
+        promotionApplied = promotionResult.applied;
+        promotionDiscountMinor = promotionResult.applied ? promotion?.discountMinor ?? "0" : "0";
+      } catch (promotionError) {
+        // Promotions are optional. A promotion subsystem outage must never
+        // prevent a passenger's already-priced ride from reaching dispatch.
+        console.error("[MOBILITY_RIDE_PROMOTION_RESERVATION_FAILED]", {
+          rideId: ride.id,
+          error: promotionError,
+        });
+      }
 
-      actorUserId:
-        authentication.session
-          .userId,
-
-      correlationId:
-        requestContext.correlationId,
-
-      requestId:
-        requestContext.requestId,
-
-      idempotencyKey:
-        `${idempotencyKey}:orchestration`,
-
-      ipAddress:
-        requestContext.ipAddress,
-
-      userAgent:
-        requestContext.userAgent,
-
-      safetyMode,
-    });
-
-    // A ride request must enter the real safety + matching + dispatch
-    // pipeline immediately; merely creating an orchestration leaves it stuck
-    // at REQUESTED and no driver can ever receive the offer.
-    const orchestration =
-      await mobilityLifecycleService.execute({
-        organizationId:
-          authentication.session
-            .organizationId,
-
-        rideId:
-          ride.id,
-
-        actorUserId:
-          authentication.session
-            .userId,
-
-        correlationId:
-          requestContext.correlationId,
-
-        requestId:
-          requestContext.requestId,
-
-        idempotencyKey:
-          `${idempotencyKey}:dispatch`,
-
-        ipAddress:
-          requestContext.ipAddress,
-
-        userAgent:
-          requestContext.userAgent,
-
+      await mobilityLifecycleService.initialize({
+        organizationId: authentication.session.organizationId,
+        rideId: ride.id,
+        actorUserId: authentication.session.userId,
+        correlationId: requestContext.correlationId,
+        requestId: requestContext.requestId,
+        idempotencyKey: idempotencyKey + ":orchestration",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
         safetyMode,
+      });
 
+      // Start real matching immediately. A transient dispatch failure must
+      // never turn an already-persisted ride into a client-visible create error.
+      orchestration = await mobilityLifecycleService.execute({
+        organizationId: authentication.session.organizationId,
+        rideId: ride.id,
+        actorUserId: authentication.session.userId,
+        correlationId: requestContext.correlationId,
+        requestId: requestContext.requestId,
+        idempotencyKey: idempotencyKey + ":dispatch",
+        ipAddress: requestContext.ipAddress,
+        userAgent: requestContext.userAgent,
+        safetyMode,
         action: "DISPATCH",
       });
 
+      // If dispatch reached SEARCHING but hit a retryable dependency failure,
+      // make one bounded recovery attempt in this request. The lifecycle's
+      // lease and idempotency checks prevent duplicate concurrent assignment.
+      if (
+        orchestration.recoveryRequired &&
+        orchestration.currentStep === "RECOVERY_REQUIRED" &&
+        orchestration.ride && typeof orchestration.ride === "object" && "status" in orchestration.ride && orchestration.ride.status === "SEARCHING"
+      ) {
+        orchestration = await mobilityLifecycleService.execute({
+          organizationId: authentication.session.organizationId,
+          rideId: ride.id,
+          actorUserId: authentication.session.userId,
+          correlationId: requestContext.correlationId,
+          requestId: requestContext.requestId,
+          idempotencyKey: idempotencyKey + ":dispatch-recovery-attempt",
+          ipAddress: requestContext.ipAddress,
+          userAgent: requestContext.userAgent,
+          safetyMode,
+          action: "RETRY_DISPATCH",
+        });
+      }
+    } catch (postCreateError) {
+      console.error("[MOBILITY_RIDE_POST_CREATE_RECOVERY_REQUIRED]", { rideId: ride.id, error: postCreateError });
+      const [recoveredRide, recoveredOrchestration] = await Promise.all([
+        mobilityRideService.getById(ride.id).catch(() => null),
+        mobilityLifecycleService.get(authentication.session.organizationId, ride.id).catch(() => null),
+      ]);
+      return NextResponse.json({
+        ride: recoveredRide ?? ride,
+        orchestration: recoveredOrchestration,
+        recoveryRequired: true,
+        pricing: { currency, originalFareMinor: fare.totalMinor, finalFareMinor, promotionApplied, promotionDiscountMinor },
+        code: "MOBILITY_RIDE_POST_CREATE_RECOVERY_REQUIRED",
+        message: "A viagem foi registada. Estamos a recuperar a procura de motorista; não crie outro pedido.",
+      }, { status: 202 });
+    }
     const refreshedRide =
       await mobilityRideService.getById(
         ride.id,
@@ -308,6 +351,13 @@ export async function POST(
       {
         ride: refreshedRide ?? ride,
         orchestration,
+        pricing: {
+          currency,
+          originalFareMinor: fare.totalMinor,
+          finalFareMinor,
+          promotionApplied,
+          promotionDiscountMinor,
+        },
       },
       {
         status:

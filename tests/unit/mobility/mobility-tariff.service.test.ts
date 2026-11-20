@@ -13,6 +13,7 @@ const previous = new Map(names.map((name) => [name, process.env[name]]));
 try {
   for (const name of names) delete process.env[name];
   assert.equal(quoteMobilityFare("TAXI", 1000, 60), null);
+  assert.equal(quoteMobilityFare("UNKNOWN_SERVICE", 1000, 60), null);
 
   process.env.MARKA_MOBILITY_TAXI_BASE_FARE_MINOR = "100000";
   process.env.MARKA_MOBILITY_TAXI_DISTANCE_RATE_MINOR_PER_KM = "10000";
@@ -25,6 +26,11 @@ try {
   assert.equal(quote.totalMinor, "120000");
   assert.equal(quote.totalAOA, 1200);
   assert.equal(quote.currency, "AOA");
+  assert.equal(quote.distanceFareMinor, "10000");
+  assert.equal(quote.minimumFareMinor, "120000");
+
+  delete process.env.MARKA_MOBILITY_TAXI_MINIMUM_FARE_MINOR;
+  assert.equal(quoteMobilityFare("TAXI", 1000, 60), null);
 } finally {
   for (const name of names) {
     const value = previous.get(name);

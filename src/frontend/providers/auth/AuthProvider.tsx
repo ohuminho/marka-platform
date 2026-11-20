@@ -136,14 +136,16 @@ export function AuthProvider({
         }
       );
 
-      if (!response.ok) {
+      if (response.status === 401) {
         setUser(undefined);
         setSession(undefined);
         setOrganizations([]);
-        setAuthorization(
-          emptyAuthorization
-        );
+        setAuthorization(emptyAuthorization);
         return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Authentication check failed with status ${response.status}.`);
       }
 
       const data =
@@ -180,12 +182,8 @@ export function AuthProvider({
         error
       );
 
-      setUser(undefined);
-      setSession(undefined);
-      setOrganizations([]);
-      setAuthorization(
-        emptyAuthorization
-      );
+      // Network and server failures must never be treated as logout.
+      // Keep the last known authenticated state and allow a later retry.
     } finally {
       setLoading(false);
     }
@@ -222,7 +220,11 @@ export function AuthProvider({
   useEffect(() => {
     let mounted = true;
 
+    let retryAttempt = 0;
+    let retryTimeout: number | undefined;
+
     const initialize = async () => {
+      let shouldRetry = false;
       try {
         const response =
           await fetch(
@@ -234,18 +236,18 @@ export function AuthProvider({
             }
           );
 
-        if (!response.ok) {
+        if (response.status === 401) {
           if (mounted) {
             setUser(undefined);
             setSession(undefined);
             setOrganizations([]);
-            setAuthorization(
-              emptyAuthorization
-            );
-            setLoading(false);
+            setAuthorization(emptyAuthorization);
           }
-
           return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Authentication bootstrap failed with status ${response.status}.`);
         }
 
         const data =
@@ -398,16 +400,19 @@ export function AuthProvider({
           error
         );
 
+        // A transient network/5xx/invalid-response error is not a logout.
+        // Retry with capped exponential backoff while keeping the auth gate
+        // in its checking state instead of redirecting the user to sign-in.
         if (mounted) {
-          setUser(undefined);
-          setSession(undefined);
-          setOrganizations([]);
-          setAuthorization(
-            emptyAuthorization
-          );
+          shouldRetry = true;
+          const delay = Math.min(1000 * 2 ** retryAttempt, 30_000);
+          retryAttempt += 1;
+          retryTimeout = window.setTimeout(() => {
+            if (mounted) void initialize();
+          }, delay);
         }
       } finally {
-        if (mounted) {
+        if (mounted && !shouldRetry) {
           setLoading(false);
         }
       }
@@ -417,6 +422,9 @@ export function AuthProvider({
 
     return () => {
       mounted = false;
+      if (retryTimeout !== undefined) {
+        window.clearTimeout(retryTimeout);
+      }
     };
   }, []);
 

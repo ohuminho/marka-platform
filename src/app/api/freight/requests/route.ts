@@ -15,6 +15,20 @@ const pointSchema = z.object({
   address: z.string().trim().max(500).optional(),
 });
 
+function distanceBetweenPointsMeters(
+  first: { latitude: number; longitude: number },
+  second: { latitude: number; longitude: number },
+): number {
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = radians(second.latitude - first.latitude);
+  const longitudeDelta = radians(second.longitude - first.longitude);
+  const firstLatitude = radians(first.latitude);
+  const secondLatitude = radians(second.latitude);
+  const haversine = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(firstLatitude) * Math.cos(secondLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+  return 6_371_000 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
 const requestSchema = z.object({
   requestType: z.enum([
     "CARGO_SHIPMENT",
@@ -61,6 +75,19 @@ const requestSchema = z.object({
     if (vehiclePreference !== undefined && (typeof vehiclePreference !== "string" || !allowedVehiclePreferences.includes(vehiclePreference))) {
       context.addIssue({ code: "custom", path: ["details", "vehiclePreference"], message: "A viatura preferida não é válida." });
     }
+  }
+
+  if (
+    value.requestType === "CARGO_SHIPMENT"
+    && value.origin
+    && value.destination
+    && distanceBetweenPointsMeters(value.origin, value.destination) < 10
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["destination"],
+      message: "A recolha e o destino devem estar separados por pelo menos 10 metros.",
+    });
   }
 
   if (value.requestType === "WATER_DELIVERY") {
@@ -167,36 +194,50 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const requestId = request.headers.get("X-Request-Id")?.trim() || randomUUID();
+  console.info("[FREIGHT_REQUEST_STAGE]", { requestId, stage: "received" });
+
   const authentication = await authenticateMobilityRequest(request);
-  if (!authentication.ok) return authentication.response;
+  if (!authentication.ok) {
+    console.warn("[FREIGHT_REQUEST_REJECTED]", {
+      requestId,
+      stage: "authentication",
+      status: authentication.response.status,
+    });
+    authentication.response.headers.set("X-Request-Id", requestId);
+    return authentication.response;
+  }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json(
-      { message: "Corpo do pedido inválido.", code: "INVALID_JSON" },
-      { status: 400 },
+      { message: "Corpo do pedido inválido.", code: "INVALID_JSON", diagnosticId: requestId },
+      { status: 400, headers: { "X-Request-Id": requestId } },
     );
   }
 
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
+    console.warn("[FREIGHT_REQUEST_REJECTED]", { requestId, stage: "validation", code: "INVALID_FREIGHT_REQUEST" });
     return NextResponse.json(
       {
         message: "Os dados do pedido não são válidos.",
         code: "INVALID_FREIGHT_REQUEST",
         errors: parsed.error.flatten().fieldErrors,
+        diagnosticId: requestId,
       },
-      { status: 400 },
+      { status: 400, headers: { "X-Request-Id": requestId } },
     );
   }
 
   const idempotencyKey = getIdempotencyKey(request, body);
   if (!idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
+    console.warn("[FREIGHT_REQUEST_REJECTED]", { requestId, stage: "idempotency", code: "IDEMPOTENCY_KEY_REQUIRED" });
     return NextResponse.json(
-      { message: "É necessária uma chave de idempotência válida.", code: "IDEMPOTENCY_KEY_REQUIRED" },
-      { status: 400 },
+      { message: "É necessária uma chave de idempotência válida.", code: "IDEMPOTENCY_KEY_REQUIRED", diagnosticId: requestId },
+      { status: 400, headers: { "X-Request-Id": requestId } },
     );
   }
 
@@ -229,7 +270,8 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ request: publicRequest(created), replayed: false }, { status: 201 });
+    console.info("[FREIGHT_REQUEST_STAGE]", { requestId, stage: "created", requestType: input.requestType });
+    return NextResponse.json({ request: publicRequest(created), replayed: false, diagnosticId: requestId }, { status: 201, headers: { "X-Request-Id": requestId } });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       const existing = await prisma.freightRequest.findUnique({
@@ -244,19 +286,25 @@ export async function POST(request: Request) {
 
       if (existing) {
         if (existing.requestHash !== requestHash) {
+          console.warn("[FREIGHT_REQUEST_REJECTED]", { requestId, stage: "idempotency_conflict", code: "IDEMPOTENCY_CONFLICT" });
           return NextResponse.json(
-            { message: "A chave já foi utilizada com dados diferentes.", code: "IDEMPOTENCY_CONFLICT" },
-            { status: 409 },
+            { message: "A chave já foi utilizada com dados diferentes.", code: "IDEMPOTENCY_CONFLICT", diagnosticId: requestId },
+            { status: 409, headers: { "X-Request-Id": requestId } },
           );
         }
-        return NextResponse.json({ request: publicRequest(existing), replayed: true });
+        console.info("[FREIGHT_REQUEST_STAGE]", { requestId, stage: "idempotency_replayed", requestType: input.requestType });
+        return NextResponse.json({ request: publicRequest(existing), replayed: true, diagnosticId: requestId }, { headers: { "X-Request-Id": requestId } });
       }
     }
 
-    console.error("[FREIGHT_REQUEST_CREATE_ERROR]", error);
+    console.error("[FREIGHT_REQUEST_CREATE_ERROR]", {
+      requestId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorCode: typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined,
+    });
     return NextResponse.json(
-      { message: "Não foi possível registar o pedido de transporte ou assistência.", code: "FREIGHT_REQUEST_CREATE_FAILED" },
-      { status: 500 },
+      { message: "Não foi possível registar o pedido de transporte ou assistência.", code: "FREIGHT_REQUEST_CREATE_FAILED", diagnosticId: requestId },
+      { status: 500, headers: { "X-Request-Id": requestId } },
     );
   }
 }

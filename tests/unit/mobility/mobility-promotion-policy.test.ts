@@ -7,6 +7,7 @@ const common = {
   longDistanceThresholdMeters: 10_000,
   isPeakHour: false,
   quotedFareMinor: BigInt(500_000),
+  distanceFareMinor: BigInt(300_000),
   minimumPayableFareMinor: BigInt(100_000),
   availablePromotionBudgetMinor: BigInt(200_000),
 };
@@ -17,16 +18,16 @@ const taxi = evaluateMobilityPromotion({
 });
 
 assert.equal(taxi.eligible, true);
-assert.equal(taxi.discountMinor, BigInt(100_000)); // 1,000 Kz
-assert.equal(taxi.finalFareMinor, BigInt(400_000));
+assert.equal(taxi.discountMinor, BigInt(15_000)); // 5% da componente de distância
+assert.equal(taxi.finalFareMinor, BigInt(485_000));
 
 const motoTaxi = evaluateMobilityPromotion({
   ...common,
   vehicle: "MOTO_TAXI",
 });
 
-assert.equal(motoTaxi.discountMinor, BigInt(50_000)); // 500 Kz
-assert.equal(motoTaxi.finalFareMinor, BigInt(450_000));
+assert.equal(motoTaxi.discountMinor, BigInt(15_000));
+assert.equal(motoTaxi.finalFareMinor, BigInt(485_000));
 
 const shortOffPeak = evaluateMobilityPromotion({
   ...common,
@@ -43,6 +44,7 @@ const peakHour = evaluateMobilityPromotion({
   ...common,
   vehicle: "MOTO_TAXI",
   estimatedDistanceMeters: 2_000,
+  distanceFareMinor: BigInt(300_000),
   isPeakHour: true,
 });
 
@@ -52,7 +54,7 @@ assert.equal(peakHour.discountMinor, BigInt(50_000));
 const budgetLimited = evaluateMobilityPromotion({
   ...common,
   vehicle: "TAXI",
-  availablePromotionBudgetMinor: BigInt(20_000),
+  availablePromotionBudgetMinor: BigInt(10_000),
 });
 
 assert.equal(budgetLimited.eligible, false);
@@ -64,7 +66,8 @@ const minimumFareProtected = evaluateMobilityPromotion({
   ...common,
   vehicle: "TAXI",
   quotedFareMinor: BigInt(120_000),
-  minimumPayableFareMinor: BigInt(110_000),
+  distanceFareMinor: BigInt(50_000),
+  minimumPayableFareMinor: BigInt(118_000),
 });
 
 assert.equal(minimumFareProtected.eligible, false);
@@ -82,6 +85,22 @@ assert.equal(disabled.eligible, false);
 assert.equal(disabled.discountMinor, BigInt(0));
 assert.equal(disabled.finalFareMinor, common.quotedFareMinor);
 
+const longDistanceTiers = [
+  { distance: 12_000, rate: 500 },
+  { distance: 20_000, rate: 800 },
+  { distance: 30_000, rate: 1_200 },
+  { distance: 45_000, rate: 1_500 },
+];
+for (const tier of longDistanceTiers) {
+  const result = evaluateMobilityPromotion({
+    ...common,
+    vehicle: "TAXI",
+    estimatedDistanceMeters: tier.distance,
+    distanceFareMinor: BigInt(1_000_000),
+  });
+  assert.equal(result.discountRateBps, tier.rate);
+}
+
 console.log("Mobility promotion policy tests passed.");
 
 
@@ -92,7 +111,7 @@ const integratedPricing = new MobilityPricingService().calculate({
   baseFareMinor: BigInt(500_000),
   estimatedDistanceMeters: 12_000,
   estimatedDurationSeconds: 1_800,
-  distanceRateMinorPerKm: BigInt(0),
+  distanceRateMinorPerKm: BigInt(4_167),
   durationRateMinorPerMinute: BigInt(0),
   promotion: {
     vehicle: "TAXI",
@@ -103,8 +122,8 @@ const integratedPricing = new MobilityPricingService().calculate({
   },
 });
 
-assert.equal(integratedPricing.promotion?.discountMinor, BigInt(100_000));
-assert.equal(integratedPricing.totalMinor, BigInt(400_000));
+assert.equal(integratedPricing.promotion?.discountMinor, BigInt(2_500));
+assert.equal(integratedPricing.totalMinor, BigInt(547_504));
 
 console.log("Mobility pricing integration tests passed.");
 
@@ -155,3 +174,115 @@ assert.throws(
 );
 
 console.log("Mobility pricing precision tests passed.");
+
+const distanceTierBoundaries = [
+  { distance: 10_000, rate: 0 },
+  { distance: 10_001, rate: 500 },
+  { distance: 15_000, rate: 500 },
+  { distance: 15_001, rate: 800 },
+  { distance: 25_000, rate: 800 },
+  { distance: 25_001, rate: 1_200 },
+  { distance: 40_000, rate: 1_200 },
+  { distance: 40_001, rate: 1_500 },
+];
+for (const boundary of distanceTierBoundaries) {
+  const result = evaluateMobilityPromotion({
+    ...common,
+    vehicle: "TAXI",
+    estimatedDistanceMeters: boundary.distance,
+    distanceFareMinor: BigInt(1_000_000),
+  });
+  assert.equal(result.discountRateBps, boundary.rate, `Unexpected tier at ${boundary.distance}m`);
+}
+
+const taxiDiscountCap = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(2_000_000),
+});
+assert.equal(taxiDiscountCap.discountMinor, BigInt(100_000)); // máximo 1.000 Kz
+
+const motoTaxiDiscountCap = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "MOTO_TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(2_000_000),
+});
+assert.equal(motoTaxiDiscountCap.discountMinor, BigInt(50_000)); // máximo 500 Kz
+
+const customThreshold = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 15_000,
+  longDistanceThresholdMeters: 20_000,
+});
+assert.equal(customThreshold.eligible, false);
+assert.equal(customThreshold.discountMinor, BigInt(0));
+
+console.log("Mobility promotion boundary and cap tests passed.");
+
+const peakAndLongDistanceDoesNotStack = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(1_000_000),
+  isPeakHour: true,
+});
+assert.equal(peakAndLongDistanceDoesNotStack.discountRateBps, 1_500);
+assert.equal(peakAndLongDistanceDoesNotStack.discountMinor, BigInt(100_000));
+
+const disabledPeakCampaign = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "MOTO_TAXI",
+  isPeakHour: true,
+  enabled: false,
+});
+assert.equal(disabledPeakCampaign.eligible, false);
+assert.equal(disabledPeakCampaign.reason, "DISABLED");
+assert.equal(disabledPeakCampaign.discountMinor, BigInt(0));
+
+assert.throws(
+  () => evaluateMobilityPromotion({
+    ...common,
+    vehicle: "TAXI",
+    distanceFareMinor: BigInt(-1),
+  }),
+  /Promotion money values cannot be negative/,
+);
+
+console.log("Mobility promotion non-stacking and disabled-campaign tests passed.");
+
+
+for (const invalidDistance of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+  assert.throws(
+    () => evaluateMobilityPromotion({
+      ...common,
+      vehicle: "TAXI",
+      estimatedDistanceMeters: invalidDistance,
+    }),
+    /Promotion distance must be non-negative/,
+  );
+}
+
+for (const invalidThreshold of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+  assert.throws(
+    () => evaluateMobilityPromotion({
+      ...common,
+      vehicle: "TAXI",
+      longDistanceThresholdMeters: invalidThreshold,
+    }),
+    /long-distance threshold must be positive/,
+  );
+}
+
+const longDistanceWithoutDistanceFare = evaluateMobilityPromotion({
+  ...common,
+  vehicle: "TAXI",
+  estimatedDistanceMeters: 45_000,
+  distanceFareMinor: BigInt(0),
+});
+assert.equal(longDistanceWithoutDistanceFare.eligible, false);
+assert.equal(longDistanceWithoutDistanceFare.discountMinor, BigInt(0));
+
+console.log("Mobility promotion invalid-distance and zero-distance-fare tests passed.");

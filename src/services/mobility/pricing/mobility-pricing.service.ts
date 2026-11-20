@@ -122,6 +122,7 @@ export class MobilityPricingService {
             input.promotion.longDistanceThresholdMeters,
           isPeakHour: input.promotion.isPeakHour,
           quotedFareMinor: totalMinor,
+          distanceFareMinor,
           minimumPayableFareMinor:
             input.promotion.minimumPayableFareMinor,
           availablePromotionBudgetMinor:

@@ -6,29 +6,67 @@ export interface MobilityFareQuote {
   totalAOA: number;
   distanceMeters: number;
   durationSeconds: number;
+  distanceFareMinor: string;
+  minimumFareMinor: string;
 }
+
+type MobilityTariff = {
+  baseFareMinor: bigint;
+  distanceRateMinorPerKm: bigint;
+  durationRateMinorPerMinute: bigint;
+  minimumFareMinor: bigint;
+};
 
 function readMinor(name: string): bigint | undefined {
   const value = process.env[name];
-  if (!value || !/^[0-9]+$/.test(value)) return undefined;
-  try { return BigInt(value); } catch { return undefined; }
+  if (value === undefined || value.trim() === "") return undefined;
+  if (!/^[0-9]+$/.test(value)) throw new Error("Invalid MARKA Mobility tariff value: " + name);
+  return BigInt(value);
 }
 
-/** Rates are supplied by MARKA-controlled production environment variables. */
-export function quoteMobilityFare(serviceType: string, distanceMeters: number, durationSeconds: number): MobilityFareQuote | null {
-  const prefix = "MARKA_MOBILITY_" + serviceType.trim().toUpperCase() + "_";
+function readTariff(serviceType: string): MobilityTariff | null {
+  const prefix = "MARKA_MOBILITY_" + serviceType + "_";
   const baseFareMinor = readMinor(prefix + "BASE_FARE_MINOR");
   const distanceRateMinorPerKm = readMinor(prefix + "DISTANCE_RATE_MINOR_PER_KM");
   const durationRateMinorPerMinute = readMinor(prefix + "DURATION_RATE_MINOR_PER_MINUTE");
-  if (baseFareMinor === undefined || distanceRateMinorPerKm === undefined || durationRateMinorPerMinute === undefined) return null;
-  const bookingFeeMinor = readMinor(prefix + "BOOKING_FEE_MINOR");
   const minimumFareMinor = readMinor(prefix + "MINIMUM_FARE_MINOR");
+
+  // Never silently apply test or fallback prices in production. Every category
+  // must have an explicitly approved tariff in the active environment.
+  if (
+    baseFareMinor === undefined ||
+    distanceRateMinorPerKm === undefined ||
+    durationRateMinorPerMinute === undefined ||
+    minimumFareMinor === undefined
+  ) return null;
+
+  return { baseFareMinor, distanceRateMinorPerKm, durationRateMinorPerMinute, minimumFareMinor };
+}
+
+/** Server-authoritative tariff calculation in AOA minor units (centavos). */
+export function quoteMobilityFare(serviceType: string, distanceMeters: number, durationSeconds: number): MobilityFareQuote | null {
+  const normalizedType = serviceType.trim().toUpperCase();
+  if (!["TAXI", "MOTO_TAXI"].includes(normalizedType)) return null;
+
+  const tariff = readTariff(normalizedType);
+  if (!tariff) return null;
+
+  const bookingFeeMinor = readMinor("MARKA_MOBILITY_" + normalizedType + "_BOOKING_FEE_MINOR");
   const result = mobilityPricingService.calculate({
-    currency: "AOA", baseFareMinor, distanceRateMinorPerKm, durationRateMinorPerMinute,
-    estimatedDistanceMeters: distanceMeters, estimatedDurationSeconds: durationSeconds,
+    currency: "AOA",
+    ...tariff,
+    estimatedDistanceMeters: distanceMeters,
+    estimatedDurationSeconds: durationSeconds,
     ...(bookingFeeMinor === undefined ? {} : { bookingFeeMinor }),
-    ...(minimumFareMinor === undefined ? {} : { minimumFareMinor }),
   });
   if (result.totalMinor > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Configured mobility fare exceeds the supported display range.");
-  return { currency: "AOA", totalMinor: result.totalMinor.toString(), totalAOA: Number(result.totalMinor) / 100, distanceMeters, durationSeconds };
+  return {
+    currency: "AOA",
+    totalMinor: result.totalMinor.toString(),
+    totalAOA: Number(result.totalMinor) / 100,
+    distanceMeters,
+    durationSeconds,
+    distanceFareMinor: result.distanceFareMinor.toString(),
+    minimumFareMinor: (tariff.minimumFareMinor ?? BigInt(0)).toString(),
+  };
 }

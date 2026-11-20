@@ -4,6 +4,11 @@ import {
   MobilityRideStatus,
   Prisma,
 } from "@prisma/client";
+import {
+  createMobilityDispatchRecoveryLease,
+  isMobilityDispatchRecoveryLeaseActive,
+  shouldHoldMobilityDispatchLease,
+} from "./mobility-recovery-lease";
 
 import { prisma } from "@/database/client/prisma";
 
@@ -20,6 +25,7 @@ import { mobilitySafetyService } from "@/services/mobility/safety/mobility-safet
 import { mobilityRideService } from "@/services/mobility/rides/mobility-ride.service";
 import { transitionNoDriverFoundToSearching } from "@/services/mobility/rides/mobility-ride.state-machine";
 import { mobilityPaymentEngineService } from "@/services/mobility/payments/mobility-payment-engine.service";
+import { mobilityPromotionBudgetService } from "@/services/mobility/pricing/mobility-promotion-budget.service";
 
 import type {
   InitializeMobilityLifecycleInput,
@@ -839,6 +845,12 @@ export class MobilityLifecycleService {
             throw new Error("This ride is not in a recoverable dispatch state.");
           }
 
+          // Respect the persisted recovery lease before reopening dispatch.
+          // Assignment reconciliation above remains immediate and does not wait on this lease.
+          if (isMobilityDispatchRecoveryLeaseActive(current.nextRetryAt)) {
+            throw new Error("Dispatch recovery is already leased. Wait until the retry window expires.");
+          }
+
           current = await this.transitionPersisted(
             current,
             { ...input, idempotencyKey: input.idempotencyKey + ":resume-search" },
@@ -1089,6 +1101,9 @@ export class MobilityLifecycleService {
           input.rideId,
           reason,
         );
+
+        // Release platform-funded promotion budget only after cancellation succeeds.
+        await mobilityPromotionBudgetService.release(input.rideId);
 
         if (
           paymentBefore &&
@@ -1563,6 +1578,9 @@ export class MobilityLifecycleService {
           },
         });
 
+    // Commit reserved campaign funds only after the ride's financial settlement succeeds.
+    await mobilityPromotionBudgetService.commit(input.rideId);
+
     current =
       await this.transitionPersisted(
         current,
@@ -1739,8 +1757,8 @@ export class MobilityLifecycleService {
                   NULL,
 
                 "nextRetryAt" =
-                  ${nextStep === "SEARCHING" && nextStatus === "ACTIVE"
-                    ? new Date(now.getTime() + 120_000)
+                  ${shouldHoldMobilityDispatchLease(nextStep, nextStatus)
+                    ? createMobilityDispatchRecoveryLease(now)
                     : null},
 
                 "completedAt" =
