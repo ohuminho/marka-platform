@@ -265,9 +265,13 @@ export default function MobilityLiveMap({
         });
       }
       onRouteChange?.(resolvedRoute);
-      onRouteStatusChange?.({ state: "ready", message: "Rota calculada. A tarifa foi validada no servidor." });
+      const fareAvailable = Boolean(resolvedRoute.fare);
+      const routeMessage = fareAvailable
+        ? "Rota calculada e tarifa disponível."
+        : "Rota calculada, mas a tarifa deste serviço não está configurada.";
+      onRouteStatusChange?.({ state: "ready", message: routeMessage });
       setRouteError(null);
-      setStatus("Rota calculada.");
+      setStatus(routeMessage);
     } catch (error) {
       if (id === requestRef.current) {
         routeRef.current = null;
