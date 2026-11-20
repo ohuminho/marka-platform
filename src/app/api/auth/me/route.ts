@@ -269,9 +269,15 @@ export async function GET(
       error
     );
 
+    // An infrastructure/database failure is not evidence that a session
+    // is invalid. Preserve the browser cookie and let the client retry.
     return Response.json(
-      { user: null },
-      { status: 401, headers: NO_STORE_HEADERS }
+      {
+        user: null,
+        code: "AUTH_SERVICE_UNAVAILABLE",
+        message: "Authentication is temporarily unavailable.",
+      },
+      { status: 503, headers: NO_STORE_HEADERS }
     );
   }
 }
