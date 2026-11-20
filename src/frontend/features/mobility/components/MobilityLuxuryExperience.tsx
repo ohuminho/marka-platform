@@ -45,6 +45,51 @@ type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string
 type Quote = { currency: string; totalMinor: string; totalAOA: number };
 type Place = { label: string; lat: number; lon: number };
 
+async function searchPlacesInAngola(value: string, signal: AbortSignal): Promise<Place[]> {
+  const localRequest = fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
+    signal,
+    credentials: "same-origin",
+    cache: "no-store",
+  }).then(async (response) => {
+    if (!response.ok) return [] as Place[];
+    const data = await response.json() as { places?: Place[] };
+    return (data.places ?? []).filter((place) =>
+      Number.isFinite(place.lat) && Number.isFinite(place.lon)
+      && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
+    );
+  }).catch(() => [] as Place[]);
+
+  const remoteRequest = (async () => {
+    const url = new URL("https://photon.komoot.io/api/");
+    url.searchParams.set("q", value + ", Angola");
+    url.searchParams.set("limit", "8");
+    url.searchParams.set("lang", "pt");
+    const response = await fetch(url, { signal, headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("Pesquisa externa indisponível");
+    const data = await response.json() as {
+      features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
+    };
+    return (data.features ?? []).flatMap((feature) => {
+      const coordinates = feature.geometry?.coordinates;
+      const properties = feature.properties ?? {};
+      if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
+      const country = typeof properties.country === "string" ? properties.country : "";
+      if (country && !/angola/i.test(country)) return [];
+      const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
+        .filter((part): part is string => typeof part === "string" && part.length > 0)
+        .filter((part, index, all) => all.indexOf(part) === index)
+        .join(", ");
+      return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
+    });
+  })().catch(() => [] as Place[]);
+
+  const [localPlaces, remotePlaces] = await Promise.all([localRequest, remoteRequest]);
+  const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
+  return [...localPlaces, ...remotePlaces.filter((place) =>
+    !seen.has(place.label.toLocaleLowerCase("pt-AO")),
+  )].slice(0, 6);
+}
+
 const choices: Record<Group, Array<{ id: string; title: string; detail: string; icon: string }>> = {
   EXECUTIVE: [
     { id: "TAXI", title: "Táxi normal", detail: "Viatura ligeira · até 4 passageiros", icon: "sedan" },
@@ -288,54 +333,9 @@ export default function MobilityLuxuryExperience() {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setOriginSearchBusy(true);
-      let localPlaces: Place[] = [];
       try {
-        try {
-          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
-            signal: controller.signal,
-            credentials: "same-origin",
-            cache: "no-store",
-          });
-          if (localResponse.ok) {
-            const localData = await localResponse.json() as { places?: Place[] };
-            localPlaces = (localData.places ?? []).filter((place) =>
-              Number.isFinite(place.lat) && Number.isFinite(place.lon)
-              && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
-            );
-          }
-        } catch {
-          if (controller.signal.aborted) return;
-        }
-
-        const url = new URL("https://photon.komoot.io/api/");
-        url.searchParams.set("q", value + ", Angola");
-        url.searchParams.set("limit", "8");
-        url.searchParams.set("lang", "pt");
-        const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
-        if (!response.ok) throw new Error("Pesquisa indisponível");
-        const data = await response.json() as {
-          features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
-        };
-        const remotePlaces = (data.features ?? []).flatMap((feature) => {
-          const coordinates = feature.geometry?.coordinates;
-          const properties = feature.properties ?? {};
-          if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
-          const country = typeof properties.country === "string" ? properties.country : "";
-          if (country && !/angola/i.test(country)) return [];
-          const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
-            .filter((part): part is string => typeof part === "string" && part.length > 0)
-            .filter((part, index, all) => all.indexOf(part) === index)
-            .join(", ");
-          return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
-        });
-        const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
-        if (!controller.signal.aborted) {
-          setOriginSuggestions([...localPlaces, ...remotePlaces.filter((place) =>
-            !seen.has(place.label.toLocaleLowerCase("pt-AO")),
-          )].slice(0, 6));
-        }
-      } catch {
-        if (!controller.signal.aborted) setOriginSuggestions(localPlaces.slice(0, 6));
+        const places = await searchPlacesInAngola(value, controller.signal);
+        if (!controller.signal.aborted) setOriginSuggestions(places);
       } finally {
         if (!controller.signal.aborted) setOriginSearchBusy(false);
       }
@@ -352,54 +352,13 @@ export default function MobilityLuxuryExperience() {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setSearchBusy(true);
-      let localPlaces: Place[] = [];
       try {
-        try {
-          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
-            signal: controller.signal,
-            credentials: "same-origin",
-            cache: "no-store",
-          });
-          if (localResponse.ok) {
-            const localData = await localResponse.json() as { places?: Place[] };
-            localPlaces = (localData.places ?? []).filter((place) =>
-              Number.isFinite(place.lat) && Number.isFinite(place.lon)
-              && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
-            );
-          }
-        } catch {
-          if (controller.signal.aborted) return;
-        }
-
-        const url = new URL("https://photon.komoot.io/api/");
-        url.searchParams.set("q", value + ", Angola");
-        url.searchParams.set("limit", "8");
-        url.searchParams.set("lang", "pt");
-        const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
-        if (!response.ok) throw new Error("Pesquisa indisponível");
-        const data = await response.json() as {
-          features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
-        };
-        const remotePlaces = (data.features ?? []).flatMap((feature) => {
-          const coordinates = feature.geometry?.coordinates;
-          const properties = feature.properties ?? {};
-          if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
-          const country = typeof properties.country === "string" ? properties.country : "";
-          if (country && !/angola/i.test(country)) return [];
-          const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
-            .filter((part): part is string => typeof part === "string" && part.length > 0)
-            .filter((part, index, all) => all.indexOf(part) === index)
-            .join(", ");
-          return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
-        });
-        const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
-        setSuggestions([...localPlaces, ...remotePlaces.filter((place) => !seen.has(place.label.toLocaleLowerCase("pt-AO")))].slice(0, 6));
-      } catch {
-        if (!controller.signal.aborted) setSuggestions(localPlaces.slice(0, 6));
+        const places = await searchPlacesInAngola(value, controller.signal);
+        if (!controller.signal.aborted) setSuggestions(places);
       } finally {
         if (!controller.signal.aborted) setSearchBusy(false);
       }
-    }, 320);
+    }, 220);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
