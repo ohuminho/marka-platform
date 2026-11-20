@@ -29,7 +29,7 @@ export function resolveMobilitySplitServiceType(serviceType: string): MobilitySp
   const normalized = serviceType.trim().toUpperCase().replace(/[\s-]+/g, "_");
 
   if (["TAXI", "CAR", "STANDARD_TAXI", "NORMAL_TAXI"].includes(normalized)) return "taxi";
-  if (["MOTO", "MOTO_TAXI", "MOTOTAXI", "MOTOTAXI"].includes(normalized)) return "moto";
+  if (["MOTO", "MOTO_TAXI", "MOTOTAXI"].includes(normalized)) return "moto";
   if ([
     "CARGA",
     "CARGO",
