@@ -30,7 +30,7 @@ export default function MobilityServiceFrame({ title, children }: Props) {
 
   return (
     <main className="fixed inset-0 z-40 isolate h-[100dvh] w-full overflow-hidden bg-[#09090b] text-white">
-      <div className="absolute inset-0 z-0 h-full w-full" aria-hidden="true">
+      <div className="absolute inset-0 z-0 h-full w-full">
         <MobilityLiveMap showStatus={false} onMapDestinationSelect={handleMapPoint} />
       </div>
       {selectingMapPoint && <div className="pointer-events-none absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-full border border-[#c8a24a]/35 bg-[#0d0d0f]/85 px-4 py-2 text-[11px] font-medium text-[#e8c77c] shadow-lg backdrop-blur-xl">{mapTarget === "origin" ? "Toque no mapa para marcar a recolha" : "Toque no mapa para marcar o destino"}</div>}
