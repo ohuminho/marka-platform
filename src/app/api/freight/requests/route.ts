@@ -122,6 +122,14 @@ function publicRequest(record: {
   createdAt: Date;
   updatedAt: Date;
 }) {
+  const publicDetails =
+    record.details && typeof record.details === "object" && !Array.isArray(record.details)
+      ? { ...(record.details as Record<string, unknown>) }
+      : record.details;
+  if (publicDetails && typeof publicDetails === "object" && !Array.isArray(publicDetails)) {
+    delete (publicDetails as Record<string, unknown>).quoteSplitSnapshot;
+  }
+
   return {
     id: record.id,
     reference: record.reference,
@@ -144,7 +152,7 @@ function publicRequest(record: {
     quoteExpiresAt: record.quoteExpiresAt,
     paymentReference: record.paymentReference,
     paidAt: record.paidAt,
-    details: record.details,
+    details: publicDetails,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
