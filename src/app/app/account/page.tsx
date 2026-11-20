@@ -31,6 +31,7 @@ export default function AccountPage() {
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- hydrate editable account fields when the async auth profile changes. */
   useEffect(() => {
     if (!user) return;
     setDisplayName(user.profile?.displayName || user.name || "");
@@ -39,6 +40,7 @@ export default function AccountPage() {
     setLocale(user.profile?.locale || "pt-AO");
     setTimezone(user.profile?.timezone || "Africa/Luanda");
   }, [user]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
