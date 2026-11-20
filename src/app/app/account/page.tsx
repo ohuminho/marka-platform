@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 function formatDate(value?: string) {
@@ -21,7 +21,50 @@ function initials(name?: string) {
 }
 
 export default function AccountPage() {
-  const { user, session, organizations, activeOrganization, authorization, loading } = useAuth();
+  const { user, session, organizations, activeOrganization, authorization, loading, refreshUser } = useAuth();
+  const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("AO");
+  const [locale, setLocale] = useState("pt-AO");
+  const [timezone, setTimezone] = useState("Africa/Luanda");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setDisplayName(user.profile?.displayName || user.name || "");
+    setPhone(user.profile?.phone || "");
+    setCountryCode(user.profile?.countryCode || "AO");
+    setLocale(user.profile?.locale || "pt-AO");
+    setTimezone(user.profile?.timezone || "Africa/Luanda");
+  }, [user]);
+
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingProfile(true);
+    setProfileMessage(null);
+    setProfileError(null);
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        credentials: "include",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName, phone, countryCode, locale, timezone }),
+      });
+      const data = await response.json() as { message?: string; phoneVerificationRequired?: boolean };
+      if (!response.ok) throw new Error(data.message || "Não foi possível guardar os dados.");
+      await refreshUser();
+      setProfileMessage(data.phoneVerificationRequired
+        ? "Dados guardados. O novo número de telefone ainda precisa de verificação."
+        : "Dados da conta guardados com sucesso.");
+    } catch (saveError) {
+      setProfileError(saveError instanceof Error ? saveError.message : "Falha ao guardar os dados.");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   const permissionGroups = useMemo(() => {
     const grouped = new Map<string, string[]>();
@@ -110,6 +153,40 @@ export default function AccountPage() {
               </div>
             ))}
           </dl>
+        </article>
+
+        <article className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">
+          <h2 className="text-sm font-semibold text-[var(--theme-text)]">Editar dados pessoais</h2>
+          <p className="mt-1 text-xs text-[var(--theme-text-muted)]">Altera os dados do perfil. O e-mail de acesso não é alterado aqui.</p>
+          <form onSubmit={saveProfile} className="mt-5 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-xs text-[var(--theme-text-muted)]">
+                Nome apresentado
+                <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required minLength={2} maxLength={80} className="mt-1.5 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="block text-xs text-[var(--theme-text-muted)]">
+                Número de telefone
+                <input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+244 9xx xxx xxx" maxLength={24} className="mt-1.5 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="block text-xs text-[var(--theme-text-muted)]">
+                País (código ISO)
+                <input value={countryCode} onChange={(event) => setCountryCode(event.target.value.toUpperCase())} required minLength={2} maxLength={2} pattern="[A-Z]{2}" className="mt-1.5 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-sm uppercase text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="block text-xs text-[var(--theme-text-muted)]">
+                Idioma / região
+                <input value={locale} onChange={(event) => setLocale(event.target.value)} required maxLength={20} className="mt-1.5 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+              <label className="block text-xs text-[var(--theme-text-muted)] sm:col-span-2">
+                Fuso horário
+                <input value={timezone} onChange={(event) => setTimezone(event.target.value)} required maxLength={64} className="mt-1.5 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]" />
+              </label>
+            </div>
+            {profileMessage && <p role="status" className="text-xs text-emerald-500">{profileMessage}</p>}
+            {profileError && <p role="alert" className="text-xs text-rose-500">{profileError}</p>}
+            <button type="submit" disabled={savingProfile} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--theme-accent)] px-5 text-xs font-semibold text-black transition-opacity disabled:cursor-wait disabled:opacity-50">
+              {savingProfile ? "A guardar…" : "Guardar alterações"}
+            </button>
+          </form>
         </article>
 
         <article className="rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6">

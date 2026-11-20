@@ -151,7 +151,12 @@ export async function GET(request: Request) {
           ? 422
           : 503;
     return NextResponse.json(
-      { message: "The MARKA route service is not available for this journey.", code },
+      {
+        message: error instanceof MobilityRoutingError
+          ? error.message
+          : "O serviço de rotas da MARKA está temporariamente indisponível. Tente novamente.",
+        code,
+      },
       { status, headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }
