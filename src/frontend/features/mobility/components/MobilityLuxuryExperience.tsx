@@ -434,6 +434,29 @@ export default function MobilityLuxuryExperience() {
     setError(null);
   };
 
+  const chooseMapDestination = useCallback(async (point: { lat: number; lon: number }) => {
+    let label = "Ponto seleccionado no mapa";
+    try {
+      const url = new URL("https://photon.komoot.io/reverse");
+      url.searchParams.set("lat", String(point.lat));
+      url.searchParams.set("lon", String(point.lon));
+      url.searchParams.set("lang", "pt");
+      const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json() as { features?: Array<{ properties?: Record<string, unknown> }> };
+        const properties = data.features?.[0]?.properties ?? {};
+        const parts = [properties.name, properties.street, properties.district, properties.city, properties.state]
+          .filter((part): part is string => typeof part === "string" && part.length > 0)
+          .filter((part, index, all) => all.indexOf(part) === index);
+        if (parts.length) label = parts.join(", ");
+      }
+    } catch {
+      // The selected coordinates remain usable when reverse geocoding is unavailable.
+    }
+    chooseDestination({ lat: point.lat, lon: point.lon, label });
+    setLocationStatus("Destino seleccionado directamente no mapa.");
+  }, [serviceType]);
+
   const chooseDestination = (place: Place) => {
     setDestination(place);
     setDestinationText(place.label);
@@ -708,6 +731,7 @@ export default function MobilityLuxuryExperience() {
     <main className="fixed inset-0 z-40 h-[100dvh] overflow-hidden bg-[#09090B] text-white">
       <MobilityLiveMap
         onRouteChange={onRoute}
+        onMapDestinationSelect={(point) => void chooseMapDestination(point)}
         onRouteStatusChange={onRouteStatus}
         serviceType={serviceType}
         serviceTypes={serviceTypes}
@@ -780,10 +804,10 @@ export default function MobilityLuxuryExperience() {
 
       <form
         onSubmit={submit}
-        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[64dvh] sm:max-h-[76dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.12] bg-[linear-gradient(160deg,rgba(29,29,32,.98),rgba(12,12,14,.985))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.72)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
+        className={"absolute inset-x-0 bottom-0 z-20 mx-auto " + (active ? "max-h-[42dvh] sm:max-h-[58dvh] " : "max-h-[54dvh] sm:max-h-[70dvh] ") + "w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.16] bg-[linear-gradient(160deg,rgba(29,29,32,.82),rgba(12,12,14,.78))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.52)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"}
       >
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gradient-to-r from-white/15 via-[#E5B84B]/80 to-white/15" />
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] px-3 py-2.5">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[.10] bg-white/[.055] px-3 py-2.5">
           <div className="flex items-center gap-2.5"><span className="relative grid h-8 w-8 place-items-center rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/[.08] text-sm text-[#E5B84B]">✦<span className="absolute inset-0 animate-pulse rounded-full border border-[#E5B84B]/20" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#E5B84B]">MARKA Mobility</p><p className="mt-0.5 text-[10px] text-white/45">Uma viagem simples. Uma experiência superior.</p></div></div>
           <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[.06] px-2.5 py-1 text-[8px] font-semibold tracking-wide text-emerald-200/80">ANGOLA</span>
         </div>
@@ -1124,7 +1148,7 @@ export default function MobilityLuxuryExperience() {
               </div>
             )}
 
-            <div className="sticky bottom-0 z-20 -mx-4 mt-4 border-t border-white/10 bg-[#0D0D10]/95 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_rgba(0,0,0,.35)] backdrop-blur-xl">
+            <div className="sticky bottom-0 z-20 -mx-4 mt-4 border-t border-white/10 bg-[#0D0D10]/78 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_rgba(0,0,0,.35)] backdrop-blur-xl">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 text-[10px] font-medium text-white/65" role="status" aria-live="polite">
