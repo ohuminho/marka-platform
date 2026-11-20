@@ -7,8 +7,8 @@ declare module "leaflet" {
   }
 
   export interface LeafletTileLayer extends LeafletLayer {
-    on(event: "tileerror", handler: () => void): this;
-    off(event: "tileerror", handler: () => void): this;
+    on(event: "tileerror" | "tileload", handler: () => void): this;
+    off(event: "tileerror" | "tileload", handler: () => void): this;
   }
 
   export type LeafletMarker = LeafletLayer;
