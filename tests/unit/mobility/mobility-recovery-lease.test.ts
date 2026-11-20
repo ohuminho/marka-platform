@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   createMobilityDispatchRecoveryLease,
   isMobilityDispatchRecoveryLeaseActive,
+  shouldHoldMobilityDispatchLease,
   MOBILITY_DISPATCH_RECOVERY_LEASE_MS,
 } from "../../../src/services/mobility/orchestration/mobility-recovery-lease";
 
@@ -49,6 +50,25 @@ assert.equal(
   ),
   true,
   "A future lease must block concurrent recovery.",
+);
+
+
+assert.equal(
+  shouldHoldMobilityDispatchLease("RECOVERY_REQUIRED", "RECOVERY_REQUIRED"),
+  false,
+  "A recovery-required ride must be eligible for an immediate recovery attempt.",
+);
+
+assert.equal(
+  shouldHoldMobilityDispatchLease("SEARCHING", "ACTIVE"),
+  true,
+  "The lease must protect an active dispatch attempt.",
+);
+
+assert.equal(
+  shouldHoldMobilityDispatchLease("DRIVER_ASSIGNED", "ACTIVE"),
+  false,
+  "A completed driver assignment must not retain a dispatch lease.",
 );
 
 console.log("Mobility dispatch recovery lease tests passed.");
