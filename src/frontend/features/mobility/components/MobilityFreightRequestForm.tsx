@@ -242,6 +242,11 @@ export default function MobilityFreightRequestForm({ mapPoint = null, onRequestM
       setQuantity("");
       setVehicleDescription("");
       setNotes("");
+      setRecipientName("");
+      setRecipientPhone("");
+      setIncludeHelper(false);
+      setDriverNote("");
+      setLoadSize("MOTO_BOX");
       setOrigin({ address: "", point: null, searching: false });
       setDestination({ address: "", point: null, searching: false });
       window.dispatchEvent(new Event("marka:freight-request-created"));
