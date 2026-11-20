@@ -39,15 +39,15 @@ type Ride = {
     location?: { latitude?: number | string | null; longitude?: number | string | null; heading?: number | string | null } | null;
   } | null;
   vehicle?: { make?: string | null; model?: string | null; plateNumber?: string | null; registrationNumber?: string | null } | null;
+  metadata?: { estimatedFareMinor?: string | null } | null;
 };
-type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string | null; recoveryRequired?: boolean } | null; message?: string };
+type RideResponse = { ride?: Ride | null; orchestration?: { currentStep?: string | null; recoveryRequired?: boolean } | null; recoveryRequired?: boolean; pricing?: { finalFareMinor?: string; promotionApplied?: boolean; promotionDiscountMinor?: string } | null; message?: string };
 type Quote = { currency: string; totalMinor: string; totalAOA: number };
 type Place = { label: string; lat: number; lon: number };
 
 const choices: Record<Group, Array<{ id: string; title: string; detail: string; icon: string }>> = {
   EXECUTIVE: [
-    { id: "TAXI", title: "MARKA Black", detail: "Sedan executivo · até 4 passageiros", icon: "sedan" },
-    { id: "EXECUTIVE", title: "Executivo", detail: "Conforto premium", icon: "sedan" },
+    { id: "TAXI", title: "Táxi normal", detail: "Viatura ligeira · até 4 passageiros", icon: "sedan" },
   ],
   MOTO: [{ id: "MOTO_TAXI", title: "Moto", detail: "Moto-táxi · 1 passageiro", icon: "motorcycle" }],
 };
@@ -90,12 +90,15 @@ export default function MobilityLuxuryExperience() {
   const [group, setGroup] = useState<Group>("EXECUTIVE");
   const [serviceType, setServiceType] = useState("TAXI");
   const [origin, setOrigin] = useState<MobilityMapPoint | null>(null);
+  const [originText, setOriginText] = useState("");
+  const [originSuggestions, setOriginSuggestions] = useState<Place[]>([]);
+  const [originSearchBusy, setOriginSearchBusy] = useState(false);
   const [destination, setDestination] = useState<MobilityMapPoint | null>(null);
   const [route, setRoute] = useState<MobilityRoute | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fareStatus, setFareStatus] = useState("NO_ROUTE");
   const [fareByService, setFareByService] = useState<Record<string, Quote | null>>({});
-  const [passengers, setPassengers] = useState(1);
+  const [passengers, setPassengers] = useState<number | "">("");
   const [safety, setSafety] = useState("STANDARD");
   const [destinationText, setDestinationText] = useState("");
   const [suggestions, setSuggestions] = useState<Place[]>([]);
@@ -105,6 +108,7 @@ export default function MobilityLuxuryExperience() {
   const [retryingRide, setRetryingRide] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ride, setRide] = useState<Ride | null>(null);
+  const [confirmedFareMinor, setConfirmedFareMinor] = useState<string | null>(null);
   const [rideMessage, setRideMessage] = useState<string | null>(null);
   const [communicationLoading, setCommunicationLoading] = useState(false);
   const [communicationError, setCommunicationError] = useState<string | null>(null);
@@ -112,6 +116,9 @@ export default function MobilityLuxuryExperience() {
   const [callPanelOpen, setCallPanelOpen] = useState(false);
   const [driverEta, setDriverEta] = useState<{ rideId: string; minutes: number } | null>(null);
   const [driverApproachGeometry, setDriverApproachGeometry] = useState<{ rideId: string; geometry: MobilityRoute["geometry"] } | null>(null);
+  const recoveryAttemptCountRef = useRef<Map<string, number>>(new Map());
+  const recoveryNextAttemptAtRef = useRef<Map<string, number>>(new Map());
+  const recoveryInFlightRef = useRef<Set<string>>(new Set());
 
   const driver = useMemo(() => {
     const lat = Number(ride?.driver?.location?.latitude ?? ride?.driver?.latitude);
@@ -161,6 +168,7 @@ export default function MobilityLuxuryExperience() {
       .then((data: RideResponse | null) => {
         if (!mounted || !data?.ride) return;
         setRide(data.ride);
+        setConfirmedFareMinor(typeof data.ride.metadata?.estimatedFareMinor === "string" ? data.ride.metadata.estimatedFareMinor : null);
         if (data.ride.status === "NO_DRIVER_FOUND") {
           setRideMessage("Não encontrámos motoristas disponíveis para esta solicitação. Pode ajustar o pedido ou tentar novamente mais tarde.");
         }
@@ -192,25 +200,97 @@ export default function MobilityLuxuryExperience() {
         });
         if (!response.ok) return;
         const data = await response.json() as RideResponse;
-        if (mounted && data.ride) setRide(data.ride);
+        if (!mounted || !data.ride) return;
+        setRide(data.ride);
+
+        // Bounded recovery retries cover transient client/network failures.
+        // Each attempt has a distinct idempotency key; backend state transitions
+        // and optimistic version checks prevent concurrent dispatch assignment.
+        const recoveryAttempts = recoveryAttemptCountRef.current.get(data.ride.id) ?? 0;
+        const recoveryNextAttemptAt = recoveryNextAttemptAtRef.current.get(data.ride.id) ?? 0;
+        if (
+          data.orchestration?.recoveryRequired &&
+          (data.ride.status === "SEARCHING" || data.ride.status === "DRIVER_ASSIGNED") &&
+          recoveryAttempts < 3 &&
+          Date.now() >= recoveryNextAttemptAt &&
+          !recoveryInFlightRef.current.has(data.ride.id)
+        ) {
+          recoveryInFlightRef.current.add(data.ride.id);
+          const attemptNumber = recoveryAttempts + 1;
+          try {
+            const recoveryResponse = await fetch("/api/mobility/rides/" + encodeURIComponent(data.ride.id), {
+              method: "PATCH",
+              credentials: "include",
+              cache: "no-store",
+              headers: {
+                "Content-Type": "application/json",
+                // A distinct key prevents replaying an earlier recovery event.
+                "Idempotency-Key": "marka-ride-auto-recovery-" + data.ride.id + "-" + attemptNumber,
+                "X-Organization-Id": organizationId || "",
+              },
+              body: JSON.stringify({ action: "RETRY_DISPATCH" }),
+            });
+
+            if (recoveryResponse.status === 409) {
+              // The server's dispatch lease is 120 seconds. Do not burn an
+              // automatic attempt or hammer the endpoint while that lease is active.
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + 120_000);
+              return;
+            }
+
+            if (recoveryResponse.status === 429) {
+              const retryAfter = Number(recoveryResponse.headers.get("Retry-After"));
+              const delay = Number.isFinite(retryAfter) && retryAfter > 0
+                ? Math.min(120_000, retryAfter * 1000)
+                : 30_000;
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + delay);
+              return;
+            }
+
+            const recoveryData = await recoveryResponse.json() as RideResponse;
+            if (!recoveryResponse.ok) {
+              recoveryAttemptCountRef.current.set(data.ride.id, attemptNumber);
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + Math.min(30_000, 2_500 * (2 ** recoveryAttempts)));
+              return;
+            }
+
+            recoveryAttemptCountRef.current.set(data.ride.id, attemptNumber);
+            if (mounted && recoveryData.ride) {
+              setRide(recoveryData.ride);
+              setRideMessage(recoveryData.orchestration?.recoveryRequired
+                ? "Pedido registado. A procura de motorista continua em recuperação."
+                : "A procura de motorista foi retomada para a mesma viagem.");
+            }
+            if (recoveryData.orchestration?.recoveryRequired) {
+              recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + Math.min(30_000, 2_500 * (2 ** recoveryAttempts)));
+            } else {
+              recoveryNextAttemptAtRef.current.delete(data.ride.id);
+            }
+          } catch {
+            recoveryAttemptCountRef.current.set(data.ride.id, attemptNumber);
+            recoveryNextAttemptAtRef.current.set(data.ride.id, Date.now() + Math.min(30_000, 2_500 * (2 ** recoveryAttempts)));
+          } finally {
+            recoveryInFlightRef.current.delete(data.ride.id);
+          }
+        }
       } catch {
-        // Retry on the next polling cycle.
+        // Retry status retrieval on the next polling cycle.
       }
     };
-    const timer = window.setInterval(() => void poll(), 7000);
+    const timer = window.setInterval(() => void poll(), 2500);
     return () => { mounted = false; window.clearInterval(timer); };
   }, [ride?.id, ride?.status, organizationId]);
 
   useEffect(() => {
-    const value = destinationText.trim();
-    if (value.length < 3 || active) return;
+    const value = originText.trim();
+    if (value.length < 3 || value === "A minha localização GPS" || (origin && value === origin.label) || active) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      setSearchBusy(true);
+      setOriginSearchBusy(true);
       let localPlaces: Place[] = [];
       try {
         try {
-          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value), {
+          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
             signal: controller.signal,
             credentials: "same-origin",
             cache: "no-store",
@@ -227,12 +307,73 @@ export default function MobilityLuxuryExperience() {
         }
 
         const url = new URL("https://photon.komoot.io/api/");
-        url.searchParams.set("q", value);
+        url.searchParams.set("q", value + ", Angola");
         url.searchParams.set("limit", "8");
         url.searchParams.set("lang", "pt");
-        url.searchParams.set("lat", "-8.83");
-        url.searchParams.set("lon", "13.23");
-        url.searchParams.set("zoom", "7");
+        const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error("Pesquisa indisponível");
+        const data = await response.json() as {
+          features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, unknown> }>;
+        };
+        const remotePlaces = (data.features ?? []).flatMap((feature) => {
+          const coordinates = feature.geometry?.coordinates;
+          const properties = feature.properties ?? {};
+          if (!coordinates || !Number.isFinite(coordinates[0]) || !Number.isFinite(coordinates[1])) return [];
+          const country = typeof properties.country === "string" ? properties.country : "";
+          if (country && !/angola/i.test(country)) return [];
+          const label = [properties.name, properties.street, properties.district, properties.city, properties.state, country]
+            .filter((part): part is string => typeof part === "string" && part.length > 0)
+            .filter((part, index, all) => all.indexOf(part) === index)
+            .join(", ");
+          return label ? [{ label, lon: coordinates[0], lat: coordinates[1] }] : [];
+        });
+        const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
+        if (!controller.signal.aborted) {
+          setOriginSuggestions([...localPlaces, ...remotePlaces.filter((place) =>
+            !seen.has(place.label.toLocaleLowerCase("pt-AO")),
+          )].slice(0, 6));
+        }
+      } catch {
+        if (!controller.signal.aborted) setOriginSuggestions(localPlaces.slice(0, 6));
+      } finally {
+        if (!controller.signal.aborted) setOriginSearchBusy(false);
+      }
+    }, 180);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [originText, origin, active]);
+
+  useEffect(() => {
+    const value = destinationText.trim();
+    if (value.length < 3 || active) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearchBusy(true);
+      let localPlaces: Place[] = [];
+      try {
+        try {
+          const localResponse = await fetch("/api/mobility/places/search?q=" + encodeURIComponent(value) + "&country=AO", {
+            signal: controller.signal,
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          if (localResponse.ok) {
+            const localData = await localResponse.json() as { places?: Place[] };
+            localPlaces = (localData.places ?? []).filter((place) =>
+              Number.isFinite(place.lat) && Number.isFinite(place.lon)
+              && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180,
+            );
+          }
+        } catch {
+          if (controller.signal.aborted) return;
+        }
+
+        const url = new URL("https://photon.komoot.io/api/");
+        url.searchParams.set("q", value + ", Angola");
+        url.searchParams.set("limit", "8");
+        url.searchParams.set("lang", "pt");
         const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
         if (!response.ok) throw new Error("Pesquisa indisponível");
         const data = await response.json() as {
@@ -319,6 +460,17 @@ export default function MobilityLuxuryExperience() {
     setError(null);
   };
 
+  const chooseOrigin = (place: Place) => {
+    setOrigin(place);
+    setOriginText(place.label);
+    setOriginSuggestions([]);
+    setRoute(null);
+    setQuote(null);
+    setFareByService({});
+    setFareStatus("NO_ROUTE");
+    setError(null);
+  };
+
   const chooseDestination = (place: Place) => {
     setDestination(place);
     setDestinationText(place.label);
@@ -332,31 +484,48 @@ export default function MobilityLuxuryExperience() {
 
   const locateMe = () => {
     if (!navigator.geolocation) {
-      setError("Este dispositivo não disponibiliza GPS.");
+      setError(window.isSecureContext
+        ? "Este dispositivo ou navegador não disponibiliza geolocalização. Escolha a partida pela pesquisa."
+        : "O GPS só pode ser usado numa ligação segura HTTPS. Abra a MARKA pelo endereço oficial e escolha a partida pela pesquisa enquanto isso.");
       return;
     }
     setGpsBusy(true);
     setError(null);
+    const applyPosition = (position: GeolocationPosition) => {
+      setOrigin({
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        label: "A minha localização GPS",
+      });
+      setOriginText("A minha localização GPS");
+      setOriginSuggestions([]);
+      setRoute(null);
+      setQuote(null);
+      setFareByService({});
+      setFareStatus("NO_ROUTE");
+      setGpsBusy(false);
+    };
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setOrigin({
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-          label: "A minha localização GPS",
-        });
-        setRoute(null);
-        setQuote(null);
-        setFareByService({});
-        setFareStatus("NO_ROUTE");
-        setGpsBusy(false);
-      },
+      applyPosition,
       (geoError) => {
-        setError(geoError.code === geoError.PERMISSION_DENIED
-          ? "Permita o acesso à localização nas definições do dispositivo."
-          : "Não foi possível obter a localização GPS.");
-        setGpsBusy(false);
+        if (geoError.code === geoError.PERMISSION_DENIED) {
+          setError("A permissão de localização foi recusada. Active a localização para o navegador nas definições do dispositivo.");
+          setGpsBusy(false);
+          return;
+        }
+        // Retry with network-assisted/coarse location for devices where GPS is slow or unavailable.
+        navigator.geolocation.getCurrentPosition(
+          applyPosition,
+          (fallbackError) => {
+            setError(fallbackError.code === fallbackError.PERMISSION_DENIED
+              ? "A permissão de localização foi recusada. Escolha a partida manualmente."
+              : "Não foi possível obter a localização. Confirme o GPS, a ligação e tente novamente ou escolha a partida no mapa/pesquisa.");
+            setGpsBusy(false);
+          },
+          { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 },
+        );
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 10000 },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 },
     );
   };
 
@@ -415,6 +584,10 @@ export default function MobilityLuxuryExperience() {
       setError("Defina a partida e o destino e aguarde o cálculo da rota.");
       return;
     }
+    if (origin.lat === destination.lat && origin.lon === destination.lon) {
+      setError("A partida e o destino não podem ser o mesmo local.");
+      return;
+    }
     if (!quote) {
       setError("A tarifa desta categoria ainda não está configurada. Não vamos apresentar um preço inventado.");
       return;
@@ -422,7 +595,7 @@ export default function MobilityLuxuryExperience() {
     setCreating(true);
     const payload = {
       serviceType,
-      passengerCount: serviceType === "MOTO_TAXI" ? 1 : passengers,
+      ...(serviceType !== "MOTO_TAXI" && passengers !== "" ? { passengerCount: passengers } : {}),
       currency: "AOA",
       pickupLatitude: origin.lat,
       pickupLongitude: origin.lon,
@@ -433,11 +606,21 @@ export default function MobilityLuxuryExperience() {
       safetyMode: safety,
       metadata: {
         requestSource: "MARKA_MOBILITY_LUXURY_APP",
-        quotedFareMinor: quote.totalMinor,
-        estimatedDistanceMeters: route.distanceMeters,
-        estimatedDurationSeconds: route.durationSeconds,
       },
     };
+    const requestFingerprint = JSON.stringify(payload);
+    const storageKey = "marka:mobility:pending-ride:" + organizationId;
+    let idempotencyKey: string;
+    try {
+      const pendingRaw = window.sessionStorage.getItem(storageKey);
+      const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string; fingerprint?: string } : null;
+      idempotencyKey = pending?.fingerprint === requestFingerprint && typeof pending.key === "string"
+        ? pending.key
+        : "marka-ride-" + crypto.randomUUID();
+      window.sessionStorage.setItem(storageKey, JSON.stringify({ key: idempotencyKey, fingerprint: requestFingerprint }));
+    } catch {
+      idempotencyKey = "marka-ride-" + crypto.randomUUID();
+    }
     try {
       const response = await fetch("/api/mobility/rides", {
         method: "POST",
@@ -445,21 +628,34 @@ export default function MobilityLuxuryExperience() {
         cache: "no-store",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": "marka-ride-" + crypto.randomUUID(),
+          "Idempotency-Key": idempotencyKey,
           "X-Organization-Id": organizationId,
         },
         body: JSON.stringify(payload),
       });
       const data = await response.json() as RideResponse;
-      if (!response.ok || !data.ride) throw new Error(data.message || "Não foi possível registar o pedido.");
+      if (!response.ok || !data.ride) {
+        const message = response.status === 409 && data.message
+          ? data.message
+          : data.message || "Não foi possível registar o pedido. A mesma tentativa pode ser repetida sem criar uma viagem duplicada.";
+        throw new Error(message);
+      }
+      try {
+        const pendingRaw = window.sessionStorage.getItem(storageKey);
+        const pending = pendingRaw ? JSON.parse(pendingRaw) as { key?: string } : null;
+        if (pending?.key === idempotencyKey) window.sessionStorage.removeItem(storageKey);
+      } catch {
+        // A chave de idempotência é apenas um apoio local; o servidor mantém a autoridade.
+      }
       setRide(data.ride);
+      setConfirmedFareMinor(data.pricing?.finalFareMinor ?? (typeof data.ride.metadata?.estimatedFareMinor === "string" ? data.ride.metadata.estimatedFareMinor : null));
       setCommunicationThreadId(null);
       setCallPanelOpen(false);
       setCommunicationError(null);
       setRideMessage(data.ride.status === "NO_DRIVER_FOUND"
         ? "Não encontrámos motoristas disponíveis para esta solicitação. Pode ajustar o pedido ou tentar novamente mais tarde."
-        : data.orchestration?.recoveryRequired
-          ? "Pedido registado; estamos a recuperar uma etapa operacional."
+        : (data.recoveryRequired || data.orchestration?.recoveryRequired)
+          ? "Pedido registado; estamos a recuperar uma etapa operacional. Não crie outro pedido."
           : "Pedido enviado aos motoristas elegíveis.");
     } catch (requestFailure) {
       setError(requestFailure instanceof Error ? requestFailure.message : "Falha ao criar o pedido.");
@@ -581,9 +777,13 @@ export default function MobilityLuxuryExperience() {
 
       <form
         onSubmit={submit}
-        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[72dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[30px] border border-white/10 bg-[#141417]/[.97] px-4 pb-[max(18px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-25px_90px_rgba(0,0,0,.62)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
+        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[76dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.12] bg-[linear-gradient(160deg,rgba(29,29,32,.98),rgba(12,12,14,.985))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.72)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gradient-to-r from-white/15 via-[#E5B84B]/80 to-white/15" />
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] px-3 py-2.5">
+          <div className="flex items-center gap-2.5"><span className="relative grid h-8 w-8 place-items-center rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/[.08] text-sm text-[#E5B84B]">✦<span className="absolute inset-0 animate-pulse rounded-full border border-[#E5B84B]/20" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#E5B84B]">MARKA Mobility</p><p className="mt-0.5 text-[10px] text-white/45">Uma viagem simples. Uma experiência superior.</p></div></div>
+          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[.06] px-2.5 py-1 text-[8px] font-semibold tracking-wide text-emerald-200/80">ANGOLA</span>
+        </div>
 
         {active ? (
           <section className="pb-3" aria-live="polite">
@@ -591,6 +791,12 @@ export default function MobilityLuxuryExperience() {
               <p className="text-[9px] font-bold uppercase tracking-[.2em] text-[#E5B84B]">Viagem em tempo real</p>
               <span className="rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/10 px-3 py-1.5 text-[9px] text-[#E5B84B]">{labels[ride?.status || ""] || ride?.status}</span>
             </div>
+            {confirmedFareMinor && /^\d+$/.test(confirmedFareMinor) && (
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-[#E5B84B]/20 bg-[#E5B84B]/[.06] px-3 py-2.5">
+                <span className="text-[10px] text-white/55">Preço confirmado pela MARKA</span>
+                <strong className="text-sm text-[#F2CF78]">{fmt(Number(BigInt(confirmedFareMinor)) / 100)}</strong>
+              </div>
+            )}
             {!assigned ? (
               <div className="mt-4 flex items-center gap-4 rounded-2xl bg-black/25 p-4">
                 <div className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full border border-[#E5B84B]/35 bg-[#E5B84B]/10">
@@ -666,6 +872,9 @@ export default function MobilityLuxuryExperience() {
                 <p className="mt-1 text-xs leading-5 text-white/65">
                   O pedido anterior foi registado, mas nenhum motorista elegível foi encontrado. Pode alterar o destino ou a categoria e enviar um novo pedido.
                 </p>
+                {confirmedFareMinor && /^\d+$/.test(confirmedFareMinor) && (
+                  <p className="mt-2 text-xs font-semibold text-[#F2CF78]">Preço calculado: {fmt(Number(BigInt(confirmedFareMinor)) / 100)}</p>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -697,9 +906,9 @@ export default function MobilityLuxuryExperience() {
               <span className="rounded-full border border-white/10 px-3 py-1.5 text-[9px] text-white/40">AOA · Kz</span>
             </div>
 
-            <div role="tablist" aria-label="Tipo de serviço" className="mt-4 grid grid-cols-3 gap-2">
+            <div role="tablist" aria-label="Tipo de serviço" className="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/[.07] bg-black/20 p-1.5">
               {([
-                { id: "EXECUTIVE", label: "Executivo" },
+                { id: "EXECUTIVE", label: "Táxi" },
                 { id: "MOTO", label: "Moto" },
                 { id: "CARGO", label: "Carga" },
               ] as const).map((tab) => {
@@ -717,9 +926,9 @@ export default function MobilityLuxuryExperience() {
                       }
                       changeGroup(tab.id);
                     }}
-                    className={"min-h-10 rounded-xl border text-[11px] font-semibold " + (selected
-                      ? "border-[#E5B84B]/60 bg-[#E5B84B]/10 text-[#E5B84B]"
-                      : "border-white/10 bg-white/[.025] text-white/50")}
+                    className={"min-h-11 rounded-[14px] border text-[11px] font-semibold transition-all duration-200 active:scale-[.98] " + (selected
+                      ? "border-[#E5B84B]/65 bg-gradient-to-b from-[#E5B84B]/15 to-[#E5B84B]/[.04] text-[#F2CF78] shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_5px_20px_rgba(229,184,75,.08)]"
+                      : "border-transparent bg-white/[.025] text-white/50 hover:bg-white/[.06]")}
                   >
                     {tab.label}
                   </button>
@@ -727,17 +936,53 @@ export default function MobilityLuxuryExperience() {
               })}
             </div>
 
-            <div className="mt-3 rounded-2xl border border-white/[.09] bg-black/25 p-2">
+            <div className="mt-3 space-y-2 rounded-2xl border border-white/[.09] bg-black/25 p-2">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={locateMe}
                   disabled={gpsBusy}
-                  aria-label="Definir partida pela localização GPS"
+                  aria-label="Usar a minha localização como partida"
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-lg text-[#E5B84B] disabled:opacity-50"
                 >
                   {gpsBusy ? "…" : "⌖"}
                 </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Partida</p>
+                  <input
+                    value={originText}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setOriginText(value);
+                      setOriginSuggestions([]);
+                      if (origin && value !== origin.label) {
+                        setOrigin(null);
+                        setRoute(null);
+                        setQuote(null);
+                        setFareByService({});
+                        setFareStatus("NO_ROUTE");
+                      }
+                    }}
+                    placeholder="GPS ou pesquisar bairro/rua"
+                    aria-label="Pesquisar local de partida em Angola"
+                    autoComplete="off"
+                    className="h-8 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                  />
+                </div>
+                {originSearchBusy && originText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
+              </div>
+              {originSuggestions.length > 0 && !active && (
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
+                  {originSuggestions.map((place, index) => (
+                    <button key={place.label + index} type="button" onClick={() => chooseOrigin(place)} className="flex min-h-11 w-full items-center gap-3 border-b border-white/[.06] px-3 text-left text-xs text-white/80 last:border-0 hover:bg-white/[.05]">
+                      <span className="text-[#E5B84B]">A</span>
+                      <span className="line-clamp-2">{place.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2 border-t border-white/[.07] pt-2">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[.04] text-xs text-[#E5B84B]">B</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Destino</p>
                   <input
@@ -752,6 +997,7 @@ export default function MobilityLuxuryExperience() {
                         setRoute(null);
                         setQuote(null);
                         setFareByService({});
+                        setFareStatus("NO_ROUTE");
                       }
                     }}
                     placeholder="Para onde vamos?"
@@ -763,15 +1009,10 @@ export default function MobilityLuxuryExperience() {
                 {searchBusy && destinationText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
               </div>
               {suggestions.length > 0 && destinationText.trim().length >= 3 && !active && (
-                <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-[#101013]">
                   {suggestions.map((place, index) => (
-                    <button
-                      key={place.label + index}
-                      type="button"
-                      onClick={() => chooseDestination(place)}
-                      className="flex min-h-11 w-full items-center gap-3 border-b border-white/[.06] px-3 text-left text-xs text-white/80 last:border-0 hover:bg-white/[.05]"
-                    >
-                      <span className="text-[#E5B84B]">⌖</span>
+                    <button key={place.label + index} type="button" onClick={() => chooseDestination(place)} className="flex min-h-11 w-full items-center gap-3 border-b border-white/[.06] px-3 text-left text-xs text-white/80 last:border-0 hover:bg-white/[.05]">
+                      <span className="text-[#E5B84B]">B</span>
                       <span className="line-clamp-2">{place.label}</span>
                     </button>
                   ))}
@@ -804,9 +1045,9 @@ export default function MobilityLuxuryExperience() {
                       setError(null);
                     }}
                     aria-pressed={serviceType === item.id}
-                    className={"flex min-w-[154px] flex-col items-center rounded-2xl border p-3 text-center transition " + (serviceType === item.id
-                      ? "border-[#E5B84B]/55 bg-[#E5B84B]/[.08]"
-                      : "border-white/[.08] bg-black/15")}
+                    className={"group flex min-w-[154px] flex-col items-center rounded-[22px] border p-3.5 text-center transition-all duration-300 active:scale-[.98] " + (serviceType === item.id
+                      ? "border-[#E5B84B]/65 bg-[linear-gradient(145deg,rgba(229,184,75,.14),rgba(229,184,75,.035)_58%,rgba(255,255,255,.015))] shadow-[0_12px_34px_rgba(229,184,75,.09),inset_0_1px_0_rgba(255,255,255,.10)]"
+                      : "border-white/[.08] bg-white/[.018] hover:border-white/20 hover:bg-white/[.04]")}
                   >
                     <VehicleArt kind={item.icon} />
                     <span className="mt-2 text-[11px] font-semibold">{item.title}</span>
@@ -822,7 +1063,7 @@ export default function MobilityLuxuryExperience() {
               })}
             </div>
 
-            <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/[.08] bg-black/20 px-3 py-3">
+            <div className="mt-2 flex items-center justify-between gap-3 rounded-2xl border border-white/[.09] bg-[linear-gradient(110deg,rgba(255,255,255,.045),rgba(255,255,255,.015))] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,.035)]">
               <div>
                 <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Distância · duração rodoviária</p>
                 <p className="mt-1 text-xs font-semibold">{route
@@ -837,14 +1078,18 @@ export default function MobilityLuxuryExperience() {
 
             {group !== "MOTO" && (
               <div className="mt-3 flex items-center justify-between gap-3">
-                <label htmlFor="marka-passengers" className="text-[10px] text-white/55">Passageiros</label>
+                <label htmlFor="marka-passengers" className="text-[10px] text-white/55">Passageiros (opcional)</label>
                 <input
                   id="marka-passengers"
                   type="number"
                   min={1}
                   max={4}
                   value={passengers}
-                  onChange={(event) => setPassengers(Math.max(1, Math.min(4, Number(event.target.value) || 1)))}
+                  placeholder="1"
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setPassengers(value === "" ? "" : Math.max(1, Math.min(4, Number(value) || 1)));
+                  }}
                   className="w-20 rounded-lg border border-white/10 bg-black/30 px-2 py-2 text-center text-xs text-white"
                 />
               </div>
@@ -865,13 +1110,19 @@ export default function MobilityLuxuryExperience() {
             </div>
 
             {error && <p role="alert" className="mt-3 rounded-lg border border-rose-300/20 bg-rose-300/[.05] p-3 text-[10px] text-rose-100">{error}</p>}
+            {route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" && (
+              <div role="status" className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/[.06] p-3 text-[10px] leading-5 text-amber-100/90">
+                <strong className="block text-amber-100">Tarifa ainda não disponível</strong>
+                A rota foi calculada, mas a tabela oficial desta categoria ainda não está configurada pela MARKA. O pedido fica temporariamente bloqueado para não apresentar um preço inventado. Tente outra categoria ou volte mais tarde.
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={!route || !quote || creating}
-              className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#F3D27A] via-[#E5B84B] to-[#C99632] px-4 text-xs font-extrabold text-[#09090B] shadow-[0_8px_26px_rgba(229,184,75,.18)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-35"
+              className="mt-4 flex min-h-14 w-full items-center justify-center rounded-2xl border border-[#F5D98D]/40 bg-[linear-gradient(110deg,#F5D98D_0%,#E5B84B_48%,#C99632_100%)] px-4 text-[13px] font-extrabold tracking-[.01em] text-[#09090B] shadow-[0_12px_34px_rgba(229,184,75,.22),inset_0_1px_0_rgba(255,255,255,.45)] transition-all duration-200 hover:brightness-110 hover:shadow-[0_16px_42px_rgba(229,184,75,.28)] active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {creating ? "A enviar pedido…" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar MARKA Black"}
+              {creating ? "A enviar pedido…" : route && !quote && fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa indisponível" : serviceType === "MOTO_TAXI" ? "Confirmar moto-táxi" : serviceType === "EXECUTIVE" ? "Confirmar Executivo" : "Confirmar táxi"}
             </button>
             <p className="mt-2 text-center text-[8px] text-white/30">A tarifa é calculada pela tabela MARKA e confirmada no servidor. Moeda: AOA (Kz).</p>
           </>
