@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 import MarkaVehicleIllustration from "./MarkaVehicleIllustration";
 
 type ServiceType = "CARGO_SHIPMENT" | "WATER_DELIVERY" | "ROADSIDE_ASSISTANCE";
 type Point = { latitude: number; longitude: number; address: string };
 type PointField = { address: string; point: Point | null; searching: boolean };
+type MapPoint = { lat: number; lon: number };
+type MapTarget = "origin" | "destination";
+type Props = { mapPoint?: MapPoint | null; onRequestMapPoint?: (target: MapTarget) => void };
 
 const assistanceOptions = [
   ["TOW", "Reboque"],
@@ -32,7 +35,7 @@ async function locateAddress(address: string): Promise<Point> {
   return { latitude: Number(match.lat), longitude: Number(match.lon), address: match.display_name };
 }
 
-export default function MobilityFreightRequestForm() {
+export default function MobilityFreightRequestForm({ mapPoint = null, onRequestMapPoint }: Props) {
   const { activeOrganization } = useAuth();
   const organizationId = activeOrganization?.id;
   const [service, setService] = useState<ServiceType>("CARGO_SHIPMENT");
@@ -49,6 +52,40 @@ export default function MobilityFreightRequestForm() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mapTarget, setMapTarget] = useState<MapTarget>("destination");
+
+  useEffect(() => {
+    if (!mapPoint) return;
+    let current = true;
+    const applyMapPoint = async () => {
+      let address = `Ponto no mapa (${mapPoint.lat.toFixed(5)}, ${mapPoint.lon.toFixed(5)})`;
+      try {
+        const url = new URL("https://photon.komoot.io/reverse");
+        url.searchParams.set("lat", String(mapPoint.lat));
+        url.searchParams.set("lon", String(mapPoint.lon));
+        url.searchParams.set("lang", "pt");
+        const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json() as { features?: Array<{ properties?: Record<string, unknown> }> };
+          const properties = data.features?.[0]?.properties ?? {};
+          const parts = [properties.name, properties.street, properties.district, properties.city, properties.state]
+            .filter((part): part is string => typeof part === "string" && part.length > 0)
+            .filter((part, index, all) => all.indexOf(part) === index);
+          if (parts.length) address = parts.join(", ");
+        }
+      } catch {
+        // Coordinates remain valid even when reverse geocoding is unavailable.
+      }
+      if (!current) return;
+      const point = { latitude: mapPoint.lat, longitude: mapPoint.lon, address };
+      const nextField = { address, point, searching: false };
+      if (mapTarget === "origin") setOrigin(nextField);
+      else setDestination(nextField);
+      setError(null);
+    };
+    void applyMapPoint();
+    return () => { current = false; };
+  }, [mapPoint, mapTarget]);
 
   const updatePoint = (setter: typeof setOrigin, field: PointField, address: string) => {
     setter({ ...field, address, point: null });
@@ -90,13 +127,14 @@ export default function MobilityFreightRequestForm() {
     );
   };
 
-  const pointInput = (label: string, field: PointField, setter: typeof setOrigin, required = true) => (
+  const pointInput = (label: string, field: PointField, setter: typeof setOrigin, required = true, target: MapTarget = "destination") => (
     <div className="space-y-2">
       <label className="block text-xs font-medium text-[var(--theme-text)]">{label}{!required && <span className="ml-1 text-[var(--theme-text-faint)]">(opcional)</span>}</label>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input value={field.address} onChange={(event) => updatePoint(setter, field, event.target.value)} placeholder="Bairro, rua ou município" className="min-h-11 min-w-0 flex-1 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" />
         <button type="button" disabled={field.searching || !field.address.trim()} onClick={() => void findPoint(field, setter)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text)] disabled:opacity-40">{field.searching ? "A localizar…" : "Localizar"}</button>
         <button type="button" disabled={field.searching} onClick={() => requestGpsLocation(setter, field)} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-4 text-xs font-medium text-[var(--theme-text-muted)] disabled:opacity-40">Usar GPS</button>
+        {onRequestMapPoint && <button type="button" onClick={() => { setMapTarget(target); onRequestMapPoint(target); }} className="min-h-11 rounded-xl border border-[#c8a24a]/35 bg-[#c8a24a]/10 px-4 text-xs font-semibold text-[#e8c77c]">Mapa</button>}
       </div>
       {field.point && <p className="text-[11px] text-emerald-700 dark:text-emerald-300">Local confirmado</p>}
     </div>
@@ -216,8 +254,8 @@ export default function MobilityFreightRequestForm() {
 
       <form onSubmit={submit} className="mt-5 space-y-5">
         {service === "CARGO_SHIPMENT" && <>
-          {pointInput("Local de recolha", origin, setOrigin)}
-          {pointInput("Destino", destination, setDestination)}
+          {pointInput("Local de recolha", origin, setOrigin, true, "origin")}
+          {pointInput("Destino", destination, setDestination, true, "destination")}
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">O que pretende transportar?</span><input value={cargoDescription} onChange={(event) => setCargoDescription(event.target.value)} placeholder="Ex.: 20 sacos de cimento, mobiliário…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-text-muted)]" /></label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade da carga</span><input type="number" min="0.01" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
@@ -226,7 +264,7 @@ export default function MobilityFreightRequestForm() {
           <fieldset className="space-y-3"><legend className="text-xs font-medium text-[var(--theme-text)]">Tipo de viatura preferida</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{([{value:"ANY",label:"Qualquer adequada",hint:"Mais opções",illustration:null},{value:"CARGO_TRICYCLE",label:"Carrinho tipo MyLads",hint:"Carga ligeira",illustration:"CARGO_TRICYCLE"},{value:"PICKUP",label:"Pick-up aberta",hint:"Caixa aberta",illustration:"PICKUP"},{value:"LIGHT_TRUCK",label:"Canter / Dyna",hint:"Caixa aberta",illustration:"LIGHT_TRUCK"},{value:"FLATBED_TRUCK",label:"Plataforma aberta",hint:"Carga volumosa",illustration:"FLATBED_TRUCK"},{value:"CARGO_VAN",label:"Carrinha fechada",hint:"Carga protegida",illustration:"CARGO_VAN"},{value:"TIPPER_TRUCK",label:"Basculante",hint:"Areia e inertes",illustration:"TIPPER_TRUCK"},{value:"HEAVY_TRUCK",label:"Camião pesado",hint:"Grande volume",illustration:"HEAVY_TRUCK"}] as const).map((option)=><button key={option.value} type="button" aria-pressed={vehiclePreference===option.value} onClick={()=>setVehiclePreference(option.value)} className={`min-w-0 rounded-xl border p-2 text-left transition ${vehiclePreference===option.value?"border-[var(--theme-text-muted)] bg-[var(--theme-background)] ring-1 ring-[var(--theme-text-muted)]":"border-[var(--theme-border)] hover:bg-[var(--theme-background)]"}`}>{option.illustration?<MarkaVehicleIllustration kind={option.illustration} className="h-14 w-full"/>:<div className="flex h-14 items-center justify-center text-[11px] font-semibold text-[var(--theme-text-muted)]">MARKA Mobility</div>}<span className="mt-1 block text-[11px] font-semibold text-[var(--theme-text)]">{option.label}</span><span className="block text-[10px] text-[var(--theme-text-muted)]">{option.hint}</span></button>)}</div><p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Caixa aberta e carrinha fechada são opções distintas. A preferência será usada para encontrar um prestador com a viatura correspondente.</p></fieldset>
         </>}
         {service === "WATER_DELIVERY" && <>
-          {pointInput("Endereço de entrega", destination, setDestination)}
+          {pointInput("Endereço de entrega", destination, setDestination, true, "destination")}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Quantidade</span><input type="number" min="1" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Indique a quantidade" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
             <label className="space-y-2"><span className="block text-xs font-medium text-[var(--theme-text)]">Unidade</span><select value={quantityUnit} onChange={(event) => setQuantityUnit(event.target.value as typeof quantityUnit)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="LITRE">Litros</option><option value="M3">Metros cúbicos (m³)</option></select></label>
@@ -234,7 +272,7 @@ export default function MobilityFreightRequestForm() {
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de água</span><select value={waterType} onChange={(event) => setWaterType(event.target.value as typeof waterType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]"><option value="POTABLE_WATER">Potável</option><option value="NON_POTABLE_WATER">Não potável</option></select></label>
         </>}
         {service === "ROADSIDE_ASSISTANCE" && <>
-          {pointInput("Onde está o veículo?", origin, setOrigin)}
+          {pointInput("Onde está o veículo?", origin, setOrigin, true, "origin")}
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Tipo de assistência</span><select value={assistanceType} onChange={(event) => setAssistanceType(event.target.value as typeof assistanceType)} className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]">{assistanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label className="block space-y-2"><span className="text-xs font-medium text-[var(--theme-text)]">Que veículo é?</span><input value={vehicleDescription} onChange={(event) => setVehicleDescription(event.target.value)} placeholder="Ex.: Toyota Hiace, matrícula…" className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 text-sm text-[var(--theme-text)]" /></label>
         </>}
