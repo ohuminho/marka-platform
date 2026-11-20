@@ -5,10 +5,12 @@ import MobilityFreightRequestHistory from "@/frontend/features/mobility/componen
 export default function MobilityFreightPage() {
   return (
     <MobilityServiceFrame title="Carga e entregas">
-      <div className="mobility-service-content space-y-4">
-        <MobilityFreightRequestForm />
-        <MobilityFreightRequestHistory />
-      </div>
+      {(mapPoint, requestMapPoint) => (
+        <div className="mobility-service-content space-y-4">
+          <MobilityFreightRequestForm mapPoint={mapPoint} onRequestMapPoint={requestMapPoint} />
+          <MobilityFreightRequestHistory />
+        </div>
+      )}
     </MobilityServiceFrame>
   );
 }
