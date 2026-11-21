@@ -88,6 +88,73 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const assigned = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
 
+      // Re-read mutable provider and vehicle state after acquiring the lock.
+      // Preflight checks improve UX; these checks protect the actual claim.
+      const currentProvider = await tx.freightProvider.findFirst({
+        where: {
+          id: provider.id,
+          organizationId: auth.session.organizationId,
+          userId: auth.session.userId,
+          status: "VERIFIED",
+          availability: { in: ["AVAILABLE", "BUSY"] },
+        },
+        select: {
+          id: true,
+          serviceTypes: true,
+          currentLatitude: true,
+          currentLongitude: true,
+          locationAccuracyMeters: true,
+          locationUpdatedAt: true,
+        },
+      });
+      if (!currentProvider) throw new Error("PROVIDER_ALREADY_CLAIMED");
+      if (!isFreshAccurateProviderLocation({
+        latitude: currentProvider.currentLatitude === null ? null : Number(currentProvider.currentLatitude),
+        longitude: currentProvider.currentLongitude === null ? null : Number(currentProvider.currentLongitude),
+        accuracyMeters: currentProvider.locationAccuracyMeters === null ? null : Number(currentProvider.locationAccuracyMeters),
+        updatedAt: currentProvider.locationUpdatedAt,
+      })) {
+        throw new Error("FREIGHT_PROVIDER_LOCATION_STALE");
+      }
+      if (!currentProvider.serviceTypes.includes(freight.requestType)) {
+        throw new Error("INCOMPATIBLE_FREIGHT_VEHICLE");
+      }
+
+      const currentVehicle = await tx.freightProviderVehicle.findFirst({
+        where: { id: vehicle.id, providerId: currentProvider.id, status: "ACTIVE" },
+        select: { id: true, kind: true, capacity: true, capacityUnit: true, waterType: true },
+      });
+      if (!currentVehicle) throw new Error("FREIGHT_VEHICLE_NOT_ACTIVE");
+      if (
+        !compatibleKinds[freight.requestType].includes(currentVehicle.kind as never) ||
+        (requestedVehicleKind && requestedVehicleKind !== "ANY" && currentVehicle.kind !== requestedVehicleKind)
+      ) {
+        throw new Error("INCOMPATIBLE_FREIGHT_VEHICLE");
+      }
+      if (freight.requestType === "CARGO_SHIPMENT" && !canVehicleCarryQuantity(
+        currentVehicle.capacity === null ? null : Number(currentVehicle.capacity),
+        currentVehicle.capacityUnit,
+        freight.quantity === null ? null : Number(freight.quantity),
+        freight.quantityUnit,
+      )) {
+        throw new Error("CARGO_VEHICLE_CAPACITY_MISMATCH");
+      }
+      if (freight.requestType === "WATER_DELIVERY") {
+        const details = freight.details && typeof freight.details === "object" ? freight.details as Record<string, unknown> : {};
+        if (
+          currentVehicle.kind !== "WATER_TANKER" ||
+          currentVehicle.waterType !== details.waterType ||
+          !canVehicleCarryQuantity(
+            currentVehicle.capacity === null ? null : Number(currentVehicle.capacity),
+            currentVehicle.capacityUnit,
+            freight.quantity === null ? null : Number(freight.quantity),
+            freight.quantityUnit,
+          )
+        ) {
+          throw new Error("WATER_TANKER_CAPACITY_MISMATCH");
+        }
+      }
+
       if (freight.requestType === "CARGO_SHIPMENT" || freight.requestType === "WATER_DELIVERY") {
         const activeVehicleJobs = await tx.freightRequest.findMany({
           where: {
@@ -107,8 +174,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           { quantity: freight.quantity === null ? null : Number(freight.quantity), unit: freight.quantityUnit },
         ];
         const combinedCapacityMatches = canVehicleCarryCombinedQuantities(
-          vehicle.capacity === null ? null : Number(vehicle.capacity),
-          vehicle.capacityUnit,
+          currentVehicle.capacity === null ? null : Number(currentVehicle.capacity),
+          currentVehicle.capacityUnit,
           reservedQuantities,
         );
         if (!combinedCapacityMatches) throw new Error("VEHICLE_COMBINED_CAPACITY_EXCEEDED");
