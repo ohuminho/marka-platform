@@ -88,8 +88,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const assigned = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
 
-      // Re-read mutable provider and vehicle state after acquiring the lock.
-      // Preflight checks improve UX; these checks protect the actual claim.
+      // Lock mutable provider state as well as serializing assignments.
+      // This keeps GPS and availability stable through the assignment commit.
+      const lockedProvider = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "FreightProvider"
+        WHERE "id" = ${provider.id}
+          AND "organizationId" = ${auth.session.organizationId}
+          AND "userId" = ${auth.session.userId}
+        FOR UPDATE
+      `;
+      if (lockedProvider.length !== 1) throw new Error("PROVIDER_ALREADY_CLAIMED");
+
       const currentProvider = await tx.freightProvider.findFirst({
         where: {
           id: provider.id,
@@ -119,6 +129,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (!currentProvider.serviceTypes.includes(freight.requestType)) {
         throw new Error("INCOMPATIBLE_FREIGHT_VEHICLE");
       }
+
+      const lockedVehicle = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "FreightProviderVehicle"
+        WHERE "id" = ${vehicle.id}
+          AND "providerId" = ${currentProvider.id}
+        FOR UPDATE
+      `;
+      if (lockedVehicle.length !== 1) throw new Error("FREIGHT_VEHICLE_NOT_ACTIVE");
 
       const currentVehicle = await tx.freightProviderVehicle.findFirst({
         where: { id: vehicle.id, providerId: currentProvider.id, status: "ACTIVE" },
