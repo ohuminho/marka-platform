@@ -105,7 +105,19 @@ export async function POST(
             decidedAt: now.toISOString(),
             quotedAmount: Number(current.quotedAmount),
             currency: current.currency,
-            splitSnapshot,
+            splitSnapshot: splitSnapshot
+              ? {
+                  version: splitSnapshot.version,
+                  serviceType: splitSnapshot.serviceType,
+                  currency: splitSnapshot.currency,
+                  totalKz: splitSnapshot.totalKz,
+                  commissionRate: splitSnapshot.commissionRate,
+                  platformFeeKz: splitSnapshot.platformFeeKz,
+                  providerAmountKz: splitSnapshot.providerAmountKz,
+                  policyKey: splitSnapshot.policyKey,
+                  policyVersion: splitSnapshot.policyVersion,
+                }
+              : null,
           },
         },
       });
