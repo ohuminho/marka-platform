@@ -217,7 +217,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ request: { id: assigned.id, reference: assigned.reference, status: assigned.status, assignedAt: assigned.assignedAt } });
   } catch (error) {
     const code = error instanceof Error ? error.message : "FREIGHT_ASSIGNMENT_FAILED";
-    const conflict = code === "PROVIDER_ALREADY_CLAIMED" || code === "REQUEST_ALREADY_ASSIGNED_OR_UNPAID" || code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED";
-    return NextResponse.json({ message: code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED" ? "A quantidade deste pedido, somada às cargas activas nesta viatura, ultrapassa a capacidade registada. Escolha outra viatura ou conclua uma entrega antes." : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.", code }, { status: conflict ? 409 : 500 });
+    const conflict = [
+      "PROVIDER_ALREADY_CLAIMED",
+      "REQUEST_ALREADY_ASSIGNED_OR_UNPAID",
+      "VEHICLE_COMBINED_CAPACITY_EXCEEDED",
+      "FREIGHT_PROVIDER_LOCATION_STALE",
+      "FREIGHT_VEHICLE_NOT_ACTIVE",
+      "INCOMPATIBLE_FREIGHT_VEHICLE",
+      "CARGO_VEHICLE_CAPACITY_MISMATCH",
+      "WATER_TANKER_CAPACITY_MISMATCH",
+    ].includes(code);
+    return NextResponse.json({ message: code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED" ? "A quantidade deste pedido, somada às cargas activas nesta viatura, ultrapassa a capacidade registada. Escolha outra viatura ou conclua uma entrega antes." : code === "FREIGHT_PROVIDER_LOCATION_STALE" ? "A localização GPS deixou de ser recente ou precisa. Actualize a localização e tente novamente." : code === "FREIGHT_VEHICLE_NOT_ACTIVE" ? "A viatura já não está activa para este serviço." : code === "INCOMPATIBLE_FREIGHT_VEHICLE" ? "O serviço ou a viatura já não é compatível com esta atribuição." : code === "CARGO_VEHICLE_CAPACITY_MISMATCH" ? "A capacidade actual da viatura não cobre a quantidade solicitada." : code === "WATER_TANKER_CAPACITY_MISMATCH" ? "A cisterna já não corresponde ao tipo de água ou volume solicitado." : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.", code }, { status: conflict ? 409 : 500 });
   }
 }
