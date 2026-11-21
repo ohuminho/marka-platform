@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
-import { canAcceptAdditionalFreightAssignment } from "@/freight-engine/freight-provider-availability";
+import { canReceiveFreightOffers } from "@/freight-engine/freight-provider-availability";
 import { canVehicleCarryQuantity } from "@/freight-engine/freight-capacity";
 import { haversineDistanceKm, isFreshAccurateProviderLocation } from "@/freight-engine/freight-geography";
 
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   // Do not advertise new work when the provider cannot pass the same fresh-GPS
   // eligibility check enforced by the transactional accept endpoint. Existing
   // assignments remain visible and are never cancelled because GPS went stale.
-  const requests = providerHasFreshLocation && canAcceptAdditionalFreightAssignment(provider.availability) && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
+  const requests = canReceiveFreightOffers(provider.availability, providerHasFreshLocation) && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.session.organizationId,
       requestType: { in: eligibleTypes },
