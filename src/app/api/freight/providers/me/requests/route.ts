@@ -22,12 +22,22 @@ export async function GET(request: Request) {
   });
 
   if (!provider) return NextResponse.json({ requests: [], assignedRequests: [], providerRegistrationRequired: true, message: "Registe o seu perfil de prestador para começar a receber pedidos." });
-  if (provider.status !== "VERIFIED") return NextResponse.json({ requests: [], message: "A conta aguarda verificação." });
+  if (provider.status !== "VERIFIED") return NextResponse.json({ requests: [], assignedRequests: [], message: "A conta aguarda verificação." });
+
+  const providerHasFreshLocation = isFreshAccurateProviderLocation({
+    latitude: provider.currentLatitude === null ? null : Number(provider.currentLatitude),
+    longitude: provider.currentLongitude === null ? null : Number(provider.currentLongitude),
+    accuracyMeters: provider.locationAccuracyMeters === null ? null : Number(provider.locationAccuracyMeters),
+    updatedAt: provider.locationUpdatedAt,
+  });
 
   const requestTypes = provider.serviceTypes;
   const eligibleTypes = requestTypes.filter((type) => provider.vehicles.some((vehicle) => compatibleKinds[type].includes(vehicle.kind as never)));
 
-  const requests = canAcceptAdditionalFreightAssignment(provider.availability) && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
+  // Do not advertise new work when the provider cannot pass the same fresh-GPS
+  // eligibility check enforced by the transactional accept endpoint. Existing
+  // assignments remain visible and are never cancelled because GPS went stale.
+  const requests = providerHasFreshLocation && canAcceptAdditionalFreightAssignment(provider.availability) && eligibleTypes.length > 0 ? await prisma.freightRequest.findMany({
     where: {
       organizationId: auth.session.organizationId,
       requestType: { in: eligibleTypes },
@@ -64,15 +74,9 @@ export async function GET(request: Request) {
     return true;
   }));
 
-  const providerHasFreshLocation = isFreshAccurateProviderLocation({
-    latitude: provider.currentLatitude === null ? null : Number(provider.currentLatitude),
-    longitude: provider.currentLongitude === null ? null : Number(provider.currentLongitude),
-    accuracyMeters: provider.locationAccuracyMeters === null ? null : Number(provider.locationAccuracyMeters),
-    updatedAt: provider.locationUpdatedAt,
-  });
   const rankedMatched = matched.map((item) => ({
     item,
-    pickupDistanceKm: providerHasFreshLocation && item.originLatitude !== null && item.originLongitude !== null
+    pickupDistanceKm: item.originLatitude !== null && item.originLongitude !== null
       ? haversineDistanceKm(
           { latitude: Number(provider.currentLatitude), longitude: Number(provider.currentLongitude) },
           { latitude: Number(item.originLatitude), longitude: Number(item.originLongitude) },
@@ -114,5 +118,9 @@ export async function GET(request: Request) {
   return NextResponse.json({
     requests: rankedMatched.map(({ item, pickupDistanceKm }) => serialize(item, pickupDistanceKm)),
     assignedRequests: assignedRequests.map(serialize),
+    ...(providerHasFreshLocation ? {} : {
+      code: "FREIGHT_PROVIDER_LOCATION_STALE",
+      message: "Actualize a sua localização GPS para receber novos pedidos. Os serviços já atribuídos continuam disponíveis.",
+    }),
   });
 }
