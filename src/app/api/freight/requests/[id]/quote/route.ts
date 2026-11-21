@@ -3,56 +3,11 @@ import { z } from "zod";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
-import { calculateSplit } from "@/services/mobility/pricing/mobility-split.service";
+import { validateFreightQuoteSplitSnapshot } from "@/services/mobility/pricing/freight-quote-split-snapshot.service";
 
 const decisionSchema = z.object({
   decision: z.enum(["ACCEPT", "REJECT"]),
 });
-
-type QuoteSplitSnapshot = {
-  version?: unknown;
-  serviceType?: unknown;
-  currency?: unknown;
-  totalKz?: unknown;
-  commissionRate?: unknown;
-  platformFeeKz?: unknown;
-  providerAmountKz?: unknown;
-  policyKey?: unknown;
-  policyVersion?: unknown;
-};
-
-function readCargoSplitSnapshot(details: unknown, quotedAmount: number) {
-  if (!details || typeof details !== "object" || Array.isArray(details)) return null;
-
-  const snapshot = (details as Record<string, unknown>).quoteSplitSnapshot as QuoteSplitSnapshot | undefined;
-  if (!snapshot || typeof snapshot !== "object") return null;
-
-  const expected = calculateSplit(quotedAmount, "carga");
-  const valid =
-    snapshot.version === 1 &&
-    snapshot.serviceType === "carga" &&
-    snapshot.currency === "AOA" &&
-    snapshot.totalKz === expected.totalKz &&
-    snapshot.commissionRate === expected.commissionRate &&
-    snapshot.platformFeeKz === expected.platformFeeKz &&
-    snapshot.providerAmountKz === expected.providerAmountKz &&
-    snapshot.policyKey === "MOBILITY_CARGO_STANDARD" &&
-    snapshot.policyVersion === 1;
-
-  if (!valid) return null;
-
-  return {
-    version: 1,
-    serviceType: "carga",
-    currency: "AOA",
-    totalKz: expected.totalKz,
-    commissionRate: expected.commissionRate,
-    platformFeeKz: expected.platformFeeKz,
-    providerAmountKz: expected.providerAmountKz,
-    policyKey: "MOBILITY_CARGO_STANDARD",
-    policyVersion: 1,
-  };
-}
 
 export async function POST(
   request: Request,
@@ -109,13 +64,13 @@ export async function POST(
         return { ok: false as const, reason: "NOT_ACTIONABLE" as const };
       }
 
-      let splitSnapshot: ReturnType<typeof readCargoSplitSnapshot> = null;
+      let splitSnapshot: ReturnType<typeof validateFreightQuoteSplitSnapshot> = null;
       if (parsed.data.decision === "ACCEPT" && current.requestType === "CARGO_SHIPMENT") {
         const amount = Number(current.quotedAmount);
         if (current.currency !== "AOA" || !Number.isSafeInteger(amount) || amount <= 0) {
           return { ok: false as const, reason: "INVALID_FINANCIAL_SNAPSHOT" as const };
         }
-        splitSnapshot = readCargoSplitSnapshot(current.details, amount);
+        splitSnapshot = validateFreightQuoteSplitSnapshot(current.details, amount);
         if (!splitSnapshot) {
           return { ok: false as const, reason: "INVALID_FINANCIAL_SNAPSHOT" as const };
         }
