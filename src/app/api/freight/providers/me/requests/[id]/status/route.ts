@@ -57,7 +57,7 @@ export async function PATCH(
       },
     },
   });
-  if (!provider || provider.status !== "VERIFIED") {
+  if (!provider || !["VERIFIED", "SUSPENDED"].includes(provider.status)) {
     return NextResponse.json(
       { message: "Apenas prestadores verificados podem actualizar serviços.", code: "FREIGHT_PROVIDER_NOT_VERIFIED" },
       { status: 403 },
@@ -148,7 +148,7 @@ export async function PATCH(
         // after the last active assignment is completed.
         if (shouldReleaseFreightProvider(remainingActiveAssignments)) {
           await tx.freightProvider.updateMany({
-            where: { id: provider.id, availability: "BUSY" },
+            where: { id: provider.id, status: "VERIFIED", availability: "BUSY" },
             data: { availability: "AVAILABLE" },
           });
         }
