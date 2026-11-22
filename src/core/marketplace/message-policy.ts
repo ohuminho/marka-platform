@@ -11,6 +11,9 @@ const rules: Array<{ code: string; reason: string; patterns: RegExp[] }> = [
     reason: "Não é permitido partilhar números de telefone, e-mails, perfis sociais ou contactos externos. Mantém a comunicação e a compra na MARKA.",
     patterns: [
       /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+      /@[A-Z0-9._-]{3,}/i,
+      /(?:fala|fale|conversa|converse|contacta|contacte|chama|chame|liga|ligue|manda|mandes|envia|envie|escreve|escreva|adiciona|adicione|segue|siga)\b.{0,28}\b(?:no|na|pelo|pela|via)\s*(?:whats?app|telegram|instagram|facebook|messenger|signal|tiktok)\b/i,
+      /(?:\+?244[\s().-]*)?9(?:[\s().-]*[1-9])(?:[\s().-]*\d){7}/i,
       /(?:https?:\/\/|www\.)\S+/i,
       /(?:wa\.me\/|api\.whatsapp\.com|t\.me\/|telegram\.me\/|instagram\.com\/|facebook\.com\/|m\.me\/)/i,
       /(?:\+?244[\s().-]*)?(?:9[1-9][\s().-]*\d{3}[\s().-]*\d{3}|2\d{2}[\s().-]*\d{3}[\s().-]*\d{3})/i,
@@ -22,6 +25,7 @@ const rules: Array<{ code: string; reason: string; patterns: RegExp[] }> = [
     reason: "Não é permitido negociar ou concluir pagamentos fora da MARKA. Usa o checkout e os meios oficiais da plataforma para proteger comprador e vendedor.",
     patterns: [
       /(?:paga|pagar|transfer[eê]ncia|transfere|envia|manda)\s+(?:por|para|no)\s+(?:fora|directo|direto|particular|conta pessoal|multicaixa express|express|unitel money)/i,
+      /(?:paga|pagar|pague|transfere|transferência|transferencia|envia|manda|deposita)\b.{0,30}\b(?:conta\s+pessoal|multicaixa\s*express|unitel\s*money|paypal|wise|mbway)\b/i,
       /(?:compra|venda|neg[oó]cio|pagamento)\s+(?:por fora|fora da plataforma|fora da marka)/i,
       /(?:não|nao)\s+(?:uses|utilizes|use)\s+(?:a )?plataforma/i,
       /(?:mbway|multicaixa express|unitel money|paypal|wise)\s*(?:[:#-]|n[uú]mero|conta|chave|id)\s*\S+/i,
@@ -39,6 +43,14 @@ const rules: Array<{ code: string; reason: string; patterns: RegExp[] }> = [
 
 export function inspectMarketplaceMessage(value: string): MessagePolicyResult {
   const normalized = value.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "");
+  const compact = normalized.replace(/\s+/g, "");
+  const compactEmail = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(compact);
+  const compactSocialContact = /(?:fala|fale|conversa|converse|contacta|contacte|chama|chame|liga|ligue|manda|mandes|envia|envie|escreve|escreva|adiciona|adicione|segue|siga)[a-z0-9]{0,24}(?:whats?app|telegram|instagram|facebook|messenger|signal|tiktok)/i.test(compact);
+  const contactRule = rules.find((rule) => rule.code === "CONTACT_SHARING");
+  if ((compactEmail || compactSocialContact) && contactRule) {
+    return { allowed: false, code: contactRule.code, reason: contactRule.reason };
+  }
+
   for (const rule of rules) {
     if (rule.patterns.some((pattern) => pattern.test(normalized))) {
       return { allowed: false, code: rule.code, reason: rule.reason };

@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { sendUserWebPush } from "@/core/communications/web-push";
 import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 import { expireRingingCalls } from "@/core/communications/expire-ringing-calls";
 
@@ -70,6 +71,15 @@ export async function POST(request: Request, context: Context) {
       });
     });
     if (!call) return NextResponse.json({ message: "Já existe uma chamada activa neste contexto." }, { status: 409 });
+    after(async () => {
+      await sendUserWebPush(call.calleeId, {
+        title: "Chamada recebida",
+        body: "Tens uma chamada recebida no MARKA.",
+        url: "/app/messages",
+        tag: `marka-call-incoming-${call.id}`,
+        kind: "INCOMING_CALL",
+      });
+    });
     return NextResponse.json({ call }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
