@@ -10,6 +10,13 @@ export function canAcceptAdditionalFreightAssignment(
   return availability === "AVAILABLE" || availability === "BUSY";
 }
 
+export function canReceiveFreightOffers(
+  availability: FreightProviderAvailabilityState,
+  hasFreshAccurateLocation: boolean,
+): boolean {
+  return hasFreshAccurateLocation && canAcceptAdditionalFreightAssignment(availability);
+}
+
 export function shouldReleaseFreightProvider(
   remainingActiveAssignments: number,
 ): boolean {
