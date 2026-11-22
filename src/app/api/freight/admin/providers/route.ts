@@ -203,9 +203,10 @@ export async function PATCH(request: Request) {
             data: { status: "VERIFIED", availability: "OFFLINE" },
           });
         } else {
+          const providerStatus = status === "SUSPENDED" ? "SUSPENDED" : "BLOCKED";
           await tx.freightProvider.update({
             where: { id: provider.id },
-            data: { status, availability: "OFFLINE" },
+            data: { status: providerStatus, availability: "OFFLINE" },
           });
         }
         await tx.auditLog.create({
@@ -252,9 +253,12 @@ export async function PATCH(request: Request) {
         throw new Error("FREIGHT_VEHICLE_HAS_ACTIVE_ASSIGNMENTS");
       }
 
+      const vehicleStatus = status === "ACTIVE" ? "ACTIVE"
+        : status === "SUSPENDED" ? "SUSPENDED"
+          : status === "BLOCKED" ? "BLOCKED" : "RETIRED";
       await tx.freightProviderVehicle.update({
         where: { id: vehicle.id },
-        data: { status },
+        data: { status: vehicleStatus },
       });
       await tx.auditLog.create({
         data: {
