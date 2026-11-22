@@ -27,6 +27,8 @@ type Props = {
   driverRouteGeometry?: MobilityRoute["geometry"] | null;
   originPoint?: MobilityMapPoint | null;
   destinationPoint?: MobilityMapPoint | null;
+  mapPickMode?: "origin" | "destination" | null;
+  onMapPointSelect?: (point: MobilityMapPoint) => void;
 };
 
 const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -153,6 +155,8 @@ export default function MobilityLiveMap({
   driverRouteGeometry = null,
   originPoint = null,
   destinationPoint = null,
+  mapPickMode = null,
+  onMapPointSelect,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -162,6 +166,8 @@ export default function MobilityLiveMap({
     driver: null,
   });
   const requestRef = useRef(0);
+  const mapPickModeRef = useRef(mapPickMode);
+  const onMapPointSelectRef = useRef(onMapPointSelect);
   const driverAnimationRef = useRef<number | null>(null);
   const routeRef = useRef<MobilityRoute | null>(null);
   const driverRouteRef = useRef<MobilityRoute["geometry"] | null>(null);
@@ -172,6 +178,11 @@ export default function MobilityLiveMap({
   const [mapReady, setMapReady] = useState(false);
   const [displayRoute, setDisplayRoute] = useState<MobilityRoute | null>(null);
   const [leafletFailed, setLeafletFailed] = useState(false);
+
+  useEffect(() => {
+    mapPickModeRef.current = mapPickMode;
+    onMapPointSelectRef.current = onMapPointSelect;
+  }, [mapPickMode, onMapPointSelect]);
 
   useEffect(() => {
     if (!hostRef.current || mapRef.current) return;
@@ -198,6 +209,17 @@ export default function MobilityLiveMap({
       });
       initializedMap = map;
       mapRef.current = map;
+      map.on("click", (event) => {
+        const mode = mapPickModeRef.current;
+        if (!mode) return;
+        const point = {
+          lat: event.lngLat.lat,
+          lon: event.lngLat.lng,
+          label: (mode === "origin" ? "Partida" : "Destino") + " escolhido no mapa (" +
+            event.lngLat.lat.toFixed(5) + ", " + event.lngLat.lng.toFixed(5) + ")",
+        };
+        onMapPointSelectRef.current?.(point);
+      });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       // If the vector style stalls without emitting a useful error, move to
       // the Leaflet renderer instead of leaving the passenger on a blank map.
@@ -522,6 +544,12 @@ export default function MobilityLiveMap({
     markersRef.current.driver.setRotation(Number.isFinite(driverPoint.bearing) ? Number(driverPoint.bearing) : 0);
   }, [driverPoint?.lat, driverPoint?.lon, driverPoint?.bearing, mapReady]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.getCanvas().style.cursor = mapPickMode ? "crosshair" : "";
+  }, [mapPickMode, mapReady]);
+
   return (
     <div className="marka-mobility-map absolute inset-0">
       {mapError && !leafletFailed ? (
@@ -536,7 +564,12 @@ export default function MobilityLiveMap({
       ) : null}
       {leafletFailed ? <RouteSvgFallback route={displayRoute} origin={originPoint} destination={destinationPoint} driverRoute={driverRouteGeometry} driver={driverPoint} /> : null}
       <div ref={hostRef} className={"absolute inset-0 " + (mapError ? "invisible" : "")} role="application" aria-label="Mapa de mobilidade MARKA" />
-      <div className="absolute left-4 right-4 top-[76px] z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg" role={routeError ? "alert" : "status"} aria-live="polite">
+      {mapPickMode && (
+        <div className="pointer-events-none absolute left-4 right-4 top-[76px] z-20 rounded-xl border border-[#E5B84B]/45 bg-[#141417]/95 px-3 py-2.5 text-center text-[11px] font-semibold text-[#F2CF78] shadow-xl backdrop-blur-lg">
+          Toque no mapa para definir {mapPickMode === "origin" ? "o ponto de partida" : "o destino"}
+        </div>
+      )}
+      <div className={"absolute left-4 right-4 z-10 ml-auto max-w-[min(78vw,360px)] rounded-xl border border-white/10 bg-[#141417]/90 px-3 py-2 text-[10px] text-white/65 shadow-xl backdrop-blur-lg " + (mapPickMode ? "top-[126px]" : "top-[76px]")} role={routeError ? "alert" : "status"} aria-live="polite">
         <span className={"mr-1.5 inline-block h-1.5 w-1.5 rounded-full " + (routeError ? "bg-rose-400" : busy ? "animate-pulse bg-amber-300" : "bg-[#E5B84B]")} />
         {busy ? "A calcular rota…" : status}
         {routeError && originPoint && destinationPoint && (
