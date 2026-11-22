@@ -139,6 +139,7 @@ export default function MobilityLuxuryExperience() {
   const [originSuggestions, setOriginSuggestions] = useState<Place[]>([]);
   const [originSearchBusy, setOriginSearchBusy] = useState(false);
   const [destination, setDestination] = useState<MobilityMapPoint | null>(null);
+  const [mapPickMode, setMapPickMode] = useState<"origin" | "destination" | null>(null);
   const [route, setRoute] = useState<MobilityRoute | null>(null);
   const [routeStatus, setRouteStatus] = useState<MobilityRouteStatus>({ state: "idle", message: "Defina a partida e o destino." });
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -196,6 +197,27 @@ export default function MobilityLuxuryExperience() {
     : null;
 
   const onRouteStatus = useCallback((value: MobilityRouteStatus) => setRouteStatus(value), []);
+
+  const handleMapPointSelect = useCallback((point: MobilityMapPoint) => {
+    if (mapPickMode === "origin") {
+      setOrigin(point);
+      setOriginText(point.label);
+      setOriginSuggestions([]);
+      setLocationStatus("Ponto de partida definido no mapa.");
+    } else if (mapPickMode === "destination") {
+      setDestination(point);
+      setDestinationText(point.label);
+      setSuggestions([]);
+    } else {
+      return;
+    }
+    setMapPickMode(null);
+    setRoute(null);
+    setQuote(null);
+    setFareByService({});
+    setFareStatus("NO_ROUTE");
+    setError(null);
+  }, [mapPickMode]);
 
   const onRoute = useCallback((value: MobilityRoute | null) => {
     setRoute(value);
@@ -715,6 +737,8 @@ export default function MobilityLuxuryExperience() {
         driverRouteGeometry={visibleDriverApproachGeometry}
         originPoint={origin}
         destinationPoint={destination}
+        mapPickMode={mapPickMode}
+        onMapPointSelect={handleMapPointSelect}
       />
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[max(14px,env(safe-area-inset-top))] sm:px-6">
@@ -947,11 +971,20 @@ export default function MobilityLuxuryExperience() {
                   disabled={gpsBusy}
                   aria-label="Usar a minha localização como partida"
                   title="Usar a localização do telemóvel como partida"
-                  className="grid h-11 w-[60px] shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-[#E5B84B] disabled:opacity-50"
+                  className="grid h-11 w-[54px] shrink-0 place-items-center rounded-xl border border-[#E5B84B]/30 bg-[#E5B84B]/10 text-[#E5B84B] disabled:opacity-50"
                 >
                   {gpsBusy
                     ? <span className="text-sm">…</span>
                     : <span className="flex flex-col items-center leading-none"><span className="text-base">⌖</span><span className="mt-0.5 text-[8px] font-bold tracking-wide">GPS</span></span>}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapPickMode((current) => current === "origin" ? null : "origin")}
+                  aria-pressed={mapPickMode === "origin"}
+                  aria-label="Escolher ponto de partida no mapa"
+                  className={"grid h-11 w-[54px] shrink-0 place-items-center rounded-xl border text-[9px] font-bold transition-colors " + (mapPickMode === "origin" ? "border-[#E5B84B] bg-[#E5B84B] text-black" : "border-white/10 bg-white/[.04] text-white/75")}
+                >
+                  MAPA
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Partida</p>
@@ -1013,6 +1046,15 @@ export default function MobilityLuxuryExperience() {
                     className="h-8 w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setMapPickMode((current) => current === "destination" ? null : "destination")}
+                  aria-pressed={mapPickMode === "destination"}
+                  aria-label="Escolher destino no mapa"
+                  className={"grid h-10 w-[54px] shrink-0 place-items-center rounded-xl border text-[9px] font-bold transition-colors " + (mapPickMode === "destination" ? "border-[#E5B84B] bg-[#E5B84B] text-black" : "border-white/10 bg-white/[.04] text-white/75")}
+                >
+                  MAPA
+                </button>
                 {searchBusy && destinationText.trim().length >= 3 && !active && <span className="pr-2 text-[9px] text-white/35">A pesquisar…</span>}
               </div>
               {suggestions.length > 0 && destinationText.trim().length >= 3 && !active && (
