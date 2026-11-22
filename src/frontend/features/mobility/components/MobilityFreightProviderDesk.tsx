@@ -148,6 +148,10 @@ export default function MobilityFreightProviderDesk() {
                         </div>
                         <span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[9px] text-[var(--theme-text-muted)]">{label(vehicle.status)}</span>
                       </div>
+                      <label className="mt-3 block">
+                        <span className="mb-1 block text-[8px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">Motivo da decisão sobre a viatura</span>
+                        <input value={reasons[vehicle.id] ?? ""} onChange={(event) => setReasons((current) => ({ ...current, [vehicle.id]: event.target.value }))} maxLength={2000} className="h-9 w-full rounded-lg border border-[var(--theme-border)] bg-transparent px-3 text-[10px] text-[var(--theme-text)] outline-none" placeholder="Obrigatório para suspender, bloquear ou retirar" />
+                      </label>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="mr-auto text-[9px] text-[var(--theme-text-faint)]">{vehicle.activeAssignments} serviço(s) atribuídos</span>
                         {vehicleActions.map((action) => <button key={action.status} type="button" disabled={saving === vehicle.id || vehicle.status === action.status} onClick={() => void changeStatus("VEHICLE", vehicle.id, action.status)} className="min-h-8 rounded-full border border-[var(--theme-border)] px-3 text-[8px] font-semibold uppercase tracking-[0.08em] text-[var(--theme-text-muted)] disabled:opacity-40">{saving === vehicle.id ? "A guardar…" : action.label}</button>)}
