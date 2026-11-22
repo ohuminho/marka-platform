@@ -384,22 +384,27 @@ export default function MobilityLiveMap({
   }, [onRouteChange, onRouteStatusChange, serviceType, serviceTypes]);
 
   useEffect(() => {
-    // Route and fare calculation is independent from map initialization and WebGL.
+    // Invalidate stale geometry immediately when either selected point changes.
+    // Route calculation remains independent from map initialization and WebGL.
     requestRef.current += 1;
+    routeRef.current = null;
+    setDisplayRoute(null);
+    (mapRef.current?.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
+      type: "FeatureCollection",
+      features: [],
+    });
     if (originPoint && destinationPoint) {
       const routeTimer = window.setTimeout(() => {
         void calculateRoute(originPoint, destinationPoint);
       }, 0);
       return () => window.clearTimeout(routeTimer);
     }
-    routeRef.current = null;
     onRouteChange?.(null);
     onRouteStatusChange?.({
       state: "idle",
       message: !originPoint ? "Defina o ponto de partida." : "Selecione um destino para calcular a rota.",
     });
     const resetTimer = window.setTimeout(() => {
-      setDisplayRoute(null);
       setBusy(false);
       setStatus("Defina a partida e o destino para calcular a rota.");
     }, 0);
@@ -427,7 +432,32 @@ export default function MobilityLiveMap({
     markersRef.current.dropoff = destinationPoint
       ? new maplibregl.Marker({ element: markerElement("dropoff") }).setLngLat([destinationPoint.lon, destinationPoint.lat]).addTo(map)
       : null;
-    if (!originPoint || !destinationPoint) {
+    if (originPoint && destinationPoint) {
+      // If routing completed before MapLibre became ready, fit the camera now.
+      // Prefer the road geometry; otherwise frame both selected coordinates.
+      const routeCoordinates = routeRef.current?.geometry.coordinates;
+      const coordinates: [number, number][] = routeCoordinates && routeCoordinates.length >= 2
+        ? routeCoordinates
+        : [
+            [originPoint.lon, originPoint.lat],
+            [destinationPoint.lon, destinationPoint.lat],
+          ];
+      const first = coordinates[0];
+      const last = coordinates[coordinates.length - 1];
+      if (Math.abs(first[0] - last[0]) < 0.00001 && Math.abs(first[1] - last[1]) < 0.00001) {
+        map.flyTo({ center: [originPoint.lon, originPoint.lat], zoom: 15, duration: 650 });
+      } else {
+        const bounds = coordinates.reduce(
+          (value, coordinate) => value.extend(coordinate),
+          new maplibregl.LngLatBounds(coordinates[0], coordinates[0]),
+        );
+        map.fitBounds(bounds, {
+          padding: { top: 104, right: 44, bottom: Math.min(260, Math.round(window.innerHeight * 0.32)), left: 44 },
+          maxZoom: 16,
+          duration: 650,
+        });
+      }
+    } else {
       (map.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
         type: "FeatureCollection",
         features: [],
