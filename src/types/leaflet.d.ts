@@ -14,6 +14,8 @@ declare module "leaflet" {
   export type LeafletMarker = LeafletLayer;
 
   export interface LeafletMap {
+    getContainer(): HTMLElement;
+    on(event: "click", handler: (event: { latlng: { lat: number; lng: number } }) => void): this;
     setView(center: LatLngTuple, zoom: number): this;
     addControl(control: unknown): this;
     removeLayer(layer: LeafletLayer): this;
