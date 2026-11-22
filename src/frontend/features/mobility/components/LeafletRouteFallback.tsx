@@ -13,13 +13,17 @@ type Props = {
   driverRoute: Geometry | null;
   driver: { lat: number; lon: number; bearing?: number | null } | null;
   onFailure: () => void;
+  mapPickMode?: "origin" | "destination" | null;
+  onMapPointSelect?: (point: Point) => void;
 };
 
 const CARTO_TILES = "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
 const OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-export default function LeafletRouteFallback({ route, origin, destination, driverRoute, driver, onFailure }: Props) {
+export default function LeafletRouteFallback({ route, origin, destination, driverRoute, driver, onFailure, mapPickMode = null, onMapPointSelect }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const mapPickModeRef = useRef(mapPickMode);
+  const onMapPointSelectRef = useRef(onMapPointSelect);
   const mapRef = useRef<LeafletMap | null>(null);
   const leafletRef = useRef<LeafletApi | null>(null);
   const overlaysRef = useRef<LeafletLayer[]>([]);
@@ -27,6 +31,11 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
   const [ready, setReady] = useState(false);
 
   useEffect(() => { onFailureRef.current = onFailure; }, [onFailure]);
+  useEffect(() => {
+    mapPickModeRef.current = mapPickMode;
+    onMapPointSelectRef.current = onMapPointSelect;
+    if (mapRef.current) mapRef.current.getContainer().style.cursor = mapPickMode ? "crosshair" : "";
+  }, [mapPickMode, onMapPointSelect]);
 
   useEffect(() => {
     let active = true;
@@ -49,6 +58,17 @@ export default function LeafletRouteFallback({ route, origin, destination, drive
         scrollWheelZoom: true,
       }).setView([-8.8383, 13.2344], 12);
       mapRef.current = map;
+      map.on("click", (event) => {
+        const mode = mapPickModeRef.current;
+        if (!mode) return;
+        onMapPointSelectRef.current?.({
+          lat: event.latlng.lat,
+          lon: event.latlng.lng,
+          label: (mode === "origin" ? "Partida" : "Destino") + " escolhido no mapa (" +
+            event.latlng.lat.toFixed(5) + ", " + event.latlng.lng.toFixed(5) + ")",
+        });
+      });
+      map.getContainer().style.cursor = mapPickModeRef.current ? "crosshair" : "";
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       // Prefer the canonical OSM raster endpoint for the recovery renderer;
