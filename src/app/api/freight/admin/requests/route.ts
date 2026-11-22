@@ -57,7 +57,14 @@ export async function GET() {
   if ("error" in auth) return auth.error;
 
   const now = new Date();
-  const requests = await prisma.freightRequest.findMany({
+  const paidUnassignedWhere = {
+    organizationId: auth.organizationId,
+    status: { in: ["PAID", "SEARCHING_PROVIDER"] as const },
+    paidAt: { not: null },
+    assignedProviderId: null,
+  };
+  const [requests, paidUnassignedCount, oldestPaidUnassigned] = await Promise.all([
+    prisma.freightRequest.findMany({
     where: {
       organizationId: auth.organizationId,
       status: {
@@ -92,7 +99,13 @@ export async function GET() {
     },
     orderBy: { updatedAt: "desc" },
     take: 100,
-  });
+    }),
+    prisma.freightRequest.count({ where: paidUnassignedWhere }),
+    prisma.freightRequest.aggregate({
+      where: paidUnassignedWhere,
+      _min: { paidAt: true },
+    }),
+  ]);
 
   const exceptionEvents = requests.length > 0 ? await prisma.auditLog.findMany({
     where: {
@@ -165,6 +178,10 @@ export async function GET() {
   }
 
   return NextResponse.json({
+    operationsBacklog: {
+      paidUnassignedCount,
+      oldestPaidUnassignedAt: oldestPaidUnassigned._min.paidAt?.toISOString() ?? null,
+    },
     requests: requests.map((item) => ({
       ...item,
       latestException: latestExceptionByRequest.get(item.id) ?? null,
