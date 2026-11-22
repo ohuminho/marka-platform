@@ -57,9 +57,9 @@ export async function GET() {
   if ("error" in auth) return auth.error;
 
   const now = new Date();
-  const paidUnassignedWhere = {
+  const paidUnassignedWhere: Prisma.FreightRequestWhereInput = {
     organizationId: auth.organizationId,
-    status: { in: ["PAID", "SEARCHING_PROVIDER"] as const },
+    status: { in: ["PAID", "SEARCHING_PROVIDER"] },
     paidAt: { not: null },
     assignedProviderId: null,
   };
@@ -180,7 +180,7 @@ export async function GET() {
   return NextResponse.json({
     operationsBacklog: {
       paidUnassignedCount,
-      oldestPaidUnassignedAt: oldestPaidUnassigned._min.paidAt?.toISOString() ?? null,
+      oldestPaidUnassignedAt: oldestPaidUnassigned._min?.paidAt?.toISOString() ?? null,
     },
     requests: requests.map((item) => ({
       ...item,
