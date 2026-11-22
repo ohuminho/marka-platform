@@ -307,6 +307,7 @@ export default function MobilityLiveMap({
   const calculateRoute = useCallback(async (from: MobilityMapPoint, to: MobilityMapPoint) => {
     const id = ++requestRef.current;
     setBusy(true);
+    setDisplayRoute(null);
     setRouteError(null);
     setStatus("A calcular a rota rodoviária…");
     onRouteStatusChange?.({ state: "calculating", message: "A calcular a rota rodoviária…" });
@@ -388,7 +389,6 @@ export default function MobilityLiveMap({
     // Route calculation remains independent from map initialization and WebGL.
     requestRef.current += 1;
     routeRef.current = null;
-    setDisplayRoute(null);
     (mapRef.current?.getSource("marka-route") as GeoJSONSource | undefined)?.setData({
       type: "FeatureCollection",
       features: [],
