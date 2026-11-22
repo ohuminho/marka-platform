@@ -88,6 +88,92 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const assigned = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${provider.id}))`;
 
+      // Lock mutable provider state as well as serializing assignments.
+      // This keeps GPS and availability stable through the assignment commit.
+      const lockedProvider = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "FreightProvider"
+        WHERE "id" = ${provider.id}
+          AND "organizationId" = ${auth.session.organizationId}
+          AND "userId" = ${auth.session.userId}
+        FOR UPDATE
+      `;
+      if (lockedProvider.length !== 1) throw new Error("PROVIDER_ALREADY_CLAIMED");
+
+      const currentProvider = await tx.freightProvider.findFirst({
+        where: {
+          id: provider.id,
+          organizationId: auth.session.organizationId,
+          userId: auth.session.userId,
+          status: "VERIFIED",
+          availability: { in: ["AVAILABLE", "BUSY"] },
+        },
+        select: {
+          id: true,
+          serviceTypes: true,
+          currentLatitude: true,
+          currentLongitude: true,
+          locationAccuracyMeters: true,
+          locationUpdatedAt: true,
+        },
+      });
+      if (!currentProvider) throw new Error("PROVIDER_ALREADY_CLAIMED");
+      if (!isFreshAccurateProviderLocation({
+        latitude: currentProvider.currentLatitude === null ? null : Number(currentProvider.currentLatitude),
+        longitude: currentProvider.currentLongitude === null ? null : Number(currentProvider.currentLongitude),
+        accuracyMeters: currentProvider.locationAccuracyMeters === null ? null : Number(currentProvider.locationAccuracyMeters),
+        updatedAt: currentProvider.locationUpdatedAt,
+      })) {
+        throw new Error("FREIGHT_PROVIDER_LOCATION_STALE");
+      }
+      if (!currentProvider.serviceTypes.includes(freight.requestType)) {
+        throw new Error("INCOMPATIBLE_FREIGHT_VEHICLE");
+      }
+
+      const lockedVehicle = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "FreightProviderVehicle"
+        WHERE "id" = ${vehicle.id}
+          AND "providerId" = ${currentProvider.id}
+        FOR UPDATE
+      `;
+      if (lockedVehicle.length !== 1) throw new Error("FREIGHT_VEHICLE_NOT_ACTIVE");
+
+      const currentVehicle = await tx.freightProviderVehicle.findFirst({
+        where: { id: vehicle.id, providerId: currentProvider.id, status: "ACTIVE" },
+        select: { id: true, kind: true, capacity: true, capacityUnit: true, waterType: true },
+      });
+      if (!currentVehicle) throw new Error("FREIGHT_VEHICLE_NOT_ACTIVE");
+      if (
+        !compatibleKinds[freight.requestType].includes(currentVehicle.kind as never) ||
+        (requestedVehicleKind && requestedVehicleKind !== "ANY" && currentVehicle.kind !== requestedVehicleKind)
+      ) {
+        throw new Error("INCOMPATIBLE_FREIGHT_VEHICLE");
+      }
+      if (freight.requestType === "CARGO_SHIPMENT" && !canVehicleCarryQuantity(
+        currentVehicle.capacity === null ? null : Number(currentVehicle.capacity),
+        currentVehicle.capacityUnit,
+        freight.quantity === null ? null : Number(freight.quantity),
+        freight.quantityUnit,
+      )) {
+        throw new Error("CARGO_VEHICLE_CAPACITY_MISMATCH");
+      }
+      if (freight.requestType === "WATER_DELIVERY") {
+        const details = freight.details && typeof freight.details === "object" ? freight.details as Record<string, unknown> : {};
+        if (
+          currentVehicle.kind !== "WATER_TANKER" ||
+          currentVehicle.waterType !== details.waterType ||
+          !canVehicleCarryQuantity(
+            currentVehicle.capacity === null ? null : Number(currentVehicle.capacity),
+            currentVehicle.capacityUnit,
+            freight.quantity === null ? null : Number(freight.quantity),
+            freight.quantityUnit,
+          )
+        ) {
+          throw new Error("WATER_TANKER_CAPACITY_MISMATCH");
+        }
+      }
+
       if (freight.requestType === "CARGO_SHIPMENT" || freight.requestType === "WATER_DELIVERY") {
         const activeVehicleJobs = await tx.freightRequest.findMany({
           where: {
@@ -107,8 +193,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           { quantity: freight.quantity === null ? null : Number(freight.quantity), unit: freight.quantityUnit },
         ];
         const combinedCapacityMatches = canVehicleCarryCombinedQuantities(
-          vehicle.capacity === null ? null : Number(vehicle.capacity),
-          vehicle.capacityUnit,
+          currentVehicle.capacity === null ? null : Number(currentVehicle.capacity),
+          currentVehicle.capacityUnit,
           reservedQuantities,
         );
         if (!combinedCapacityMatches) throw new Error("VEHICLE_COMBINED_CAPACITY_EXCEEDED");
@@ -150,7 +236,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ request: { id: assigned.id, reference: assigned.reference, status: assigned.status, assignedAt: assigned.assignedAt } });
   } catch (error) {
     const code = error instanceof Error ? error.message : "FREIGHT_ASSIGNMENT_FAILED";
-    const conflict = code === "PROVIDER_ALREADY_CLAIMED" || code === "REQUEST_ALREADY_ASSIGNED_OR_UNPAID" || code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED";
-    return NextResponse.json({ message: code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED" ? "A quantidade deste pedido, somada às cargas activas nesta viatura, ultrapassa a capacidade registada. Escolha outra viatura ou conclua uma entrega antes." : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.", code }, { status: conflict ? 409 : 500 });
+    const conflict = [
+      "PROVIDER_ALREADY_CLAIMED",
+      "REQUEST_ALREADY_ASSIGNED_OR_UNPAID",
+      "VEHICLE_COMBINED_CAPACITY_EXCEEDED",
+      "FREIGHT_PROVIDER_LOCATION_STALE",
+      "FREIGHT_VEHICLE_NOT_ACTIVE",
+      "INCOMPATIBLE_FREIGHT_VEHICLE",
+      "CARGO_VEHICLE_CAPACITY_MISMATCH",
+      "WATER_TANKER_CAPACITY_MISMATCH",
+    ].includes(code);
+    return NextResponse.json({ message: code === "VEHICLE_COMBINED_CAPACITY_EXCEEDED" ? "A quantidade deste pedido, somada às cargas activas nesta viatura, ultrapassa a capacidade registada. Escolha outra viatura ou conclua uma entrega antes." : code === "FREIGHT_PROVIDER_LOCATION_STALE" ? "A localização GPS deixou de ser recente ou precisa. Actualize a localização e tente novamente." : code === "FREIGHT_VEHICLE_NOT_ACTIVE" ? "A viatura já não está activa para este serviço." : code === "INCOMPATIBLE_FREIGHT_VEHICLE" ? "O serviço ou a viatura já não é compatível com esta atribuição." : code === "CARGO_VEHICLE_CAPACITY_MISMATCH" ? "A capacidade actual da viatura não cobre a quantidade solicitada." : code === "WATER_TANKER_CAPACITY_MISMATCH" ? "A cisterna já não corresponde ao tipo de água ou volume solicitado." : conflict ? "Este pedido ou prestador já foi atribuído. Actualize a lista." : "Não foi possível atribuir o pedido.", code }, { status: conflict ? 409 : 500 });
   }
 }
