@@ -68,6 +68,8 @@ export default function MobilityFreightQuoteDesk() {
   const { activeOrganization } = useAuth();
   const organizationId = activeOrganization?.id;
   const [requests, setRequests] = useState<FreightQuoteRequest[]>([]);
+  const [paidUnassignedCount, setPaidUnassignedCount] = useState(0);
+  const [oldestPaidUnassignedAt, setOldestPaidUnassignedAt] = useState<string | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -81,6 +83,8 @@ export default function MobilityFreightQuoteDesk() {
   const load = useCallback(async () => {
     if (!organizationId) {
       setRequests([]);
+      setPaidUnassignedCount(0);
+      setOldestPaidUnassignedAt(null);
       setError("Selecione uma organização ativa.");
       setLoading(false);
       return;
@@ -94,6 +98,8 @@ export default function MobilityFreightQuoteDesk() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível carregar os pedidos.");
       setRequests(data.requests as FreightQuoteRequest[]);
+      setPaidUnassignedCount(Number(data.operationsBacklog?.paidUnassignedCount ?? 0));
+      setOldestPaidUnassignedAt(typeof data.operationsBacklog?.oldestPaidUnassignedAt === "string" ? data.operationsBacklog.oldestPaidUnassignedAt : null);
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao carregar pedidos.");
@@ -119,6 +125,7 @@ export default function MobilityFreightQuoteDesk() {
     activeServices: requests.filter((item) => ["PAID", "SEARCHING_PROVIDER", "ASSIGNED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "PICKED_UP", "IN_TRANSIT", "EXCEPTION"].includes(item.status)).length,
     awaitingConfirmation: requests.filter((item) => item.status === "PROVIDER_COMPLETED_PENDING_CONFIRMATION").length,
     completed: requests.filter((item) => item.status === "COMPLETED").length,
+    paidUnassigned: paidUnassignedCount,
   };
 
   const issueQuote = async (requestId: string) => {
@@ -230,13 +237,14 @@ export default function MobilityFreightQuoteDesk() {
       {error && <p role="alert" className="mt-4 rounded-xl border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text-muted)]">{error}</p>}
       {notice && <p role="status" className="mt-4 rounded-xl border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text-muted)]">{notice}</p>}
 
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
         {[
           { label: "Novos pedidos", value: operationalCounts.newRequests },
           { label: "A aguardar pagamento", value: operationalCounts.awaitingPayment },
           { label: "Serviços activos", value: operationalCounts.activeServices },
           { label: "Aguarda confirmação", value: operationalCounts.awaitingConfirmation },
           { label: "Concluídos", value: operationalCounts.completed },
+        { label: "Pagos sem prestador", value: operationalCounts.paidUnassigned },
         ].map((metric) => (
           <div key={metric.label} className="rounded-xl border border-[var(--theme-border)] px-3 py-3">
             <p className="text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-faint)]">{metric.label}</p>
@@ -244,6 +252,14 @@ export default function MobilityFreightQuoteDesk() {
           </div>
         ))}
       </div>
+
+      {paidUnassignedCount > 0 && (
+        <p className="mt-3 text-[10px] leading-5 text-[var(--theme-text-muted)]">
+          {paidUnassignedCount} serviço(s) pago(s) ainda sem prestador atribuído.
+          {oldestPaidUnassignedAt ? ` O mais antigo aguarda desde ${dateTime(oldestPaidUnassignedAt)}.` : ""}
+          A fila completa é contabilizada independentemente dos 100 pedidos apresentados abaixo.
+        </p>
+      )}
 
       <div className="mt-5 space-y-3">
         {loading ? (
