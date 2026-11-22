@@ -560,6 +560,8 @@ export default function MobilityLiveMap({
           driverRoute={driverRouteGeometry}
           driver={driverPoint}
           onFailure={() => setLeafletFailed(true)}
+          mapPickMode={mapPickMode}
+          onMapPointSelect={onMapPointSelect}
         />
       ) : null}
       {leafletFailed ? <RouteSvgFallback route={displayRoute} origin={originPoint} destination={destinationPoint} driverRoute={driverRouteGeometry} driver={driverPoint} /> : null}
