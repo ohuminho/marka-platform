@@ -75,6 +75,7 @@ export async function POST(request: Request) {
           ...(region ? { OR: [{ region }, { region: null }] } : {}),
         },
         select: { id: true, userId: true },
+        orderBy: { createdAt: "asc" },
         take: 8,
       });
 
@@ -85,6 +86,18 @@ export async function POST(request: Request) {
           status: professionals.length ? "OFFERED" : "MATCHING",
         },
         select: { id: true, reference: true, status: true, specialty: true },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: user.id,
+          type: "PRIVATE_SERVICE_SUBMITTED",
+          title: "Pedido privado recebido",
+          message: professionals.length
+            ? "O teu pedido foi encaminhado a profissionais verificados. Vais receber uma notificação quando houver respostas."
+            : "O teu pedido foi recebido. A MARKA está à procura de profissionais elegíveis.",
+          data: { requestId: created.id, reference: created.reference },
+        },
       });
 
       if (professionals.length) {
