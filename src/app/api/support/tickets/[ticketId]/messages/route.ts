@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { markaSupportEmailService } from "@/core/communications/marka-support-email.service";
 
 async function readJson(request: Request): Promise<unknown | null> {
   try {
@@ -33,7 +34,13 @@ export async function POST(request: Request, context: { params: Promise<{ ticket
     const { ticketId } = await context.params;
     const ticket = await prisma.supportTicket.findUnique({
       where: { id: ticketId },
-      select: { id: true, userId: true, status: true },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        reference: true,
+        requester: { select: { name: true, email: true } },
+      },
     });
     if (!ticket || (!isStaff && ticket.userId !== user.id)) {
       return NextResponse.json({ message: "Pedido não encontrado." }, { status: 404 });
@@ -73,6 +80,25 @@ export async function POST(request: Request, context: { params: Promise<{ ticket
         data: { ticketId, authorId: user.id, body: message, isStaff },
       });
     });
+
+    if (isStaff && ticket.requester.email) {
+      try {
+        await markaSupportEmailService.send({
+          to: ticket.requester.email,
+          recipientName: ticket.requester.name,
+          subject: `Nova resposta no seu processo — MARKA ${ticket.reference}`,
+          title: "Foi adicionada uma resposta ao seu processo",
+          preheader: `A equipa MARKA respondeu ao processo ${ticket.reference}.`,
+          message: "A equipa MARKA adicionou uma nova resposta ao seu pedido. Inicie sessão para consultar a mensagem e continuar a comunicação em segurança.",
+          reference: ticket.reference,
+          statusLabel: "Resposta disponível",
+          actionUrl: `/app/support?ticket=${ticket.id}`,
+          idempotencyKey: `support-ticket-staff-reply:${result.id}`,
+        });
+      } catch (emailError) {
+        console.error("[SUPPORT_TICKET_REPLY_EMAIL]", { ticketId, messageId: result.id, error: emailError });
+      }
+    }
 
     return NextResponse.json(
       { message: result, isStaff },
