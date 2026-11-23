@@ -73,3 +73,9 @@ ALTER TABLE "PrivateServiceOffer"
 ALTER TABLE "PrivateServiceOffer"
   ADD CONSTRAINT "PrivateServiceOffer_professionalId_fkey"
   FOREIGN KEY ("professionalId") REFERENCES "PrivateProfessionalProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "PrivateServiceOffer"
+  ADD COLUMN "proposedFeeKz" INTEGER,
+  ADD COLUMN "proposalAvailability" VARCHAR(500),
+  ADD COLUMN "proposalApproach" VARCHAR(1500),
+  ADD COLUMN "proposalSubmittedAt" TIMESTAMPTZ(3);
