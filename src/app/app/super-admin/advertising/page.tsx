@@ -96,6 +96,12 @@ export default function AdvertisingAdminPage() {
     }
   }
 
+  const approvedCount = campaigns.filter((campaign) => campaign.status === "APPROVED").length;
+  const pendingCount = campaigns.filter((campaign) => campaign.status === "PENDING_REVIEW").length;
+  const totalImpressions = campaigns.reduce((sum, campaign) => sum + campaign.impressions, 0);
+  const totalClicks = campaigns.reduce((sum, campaign) => sum + campaign.clicks, 0);
+  const overallCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+
   async function updateStatus(id: string, status: string) {
     setBusy(true);
     setMessage("");
@@ -123,12 +129,12 @@ export default function AdvertisingAdminPage() {
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--theme-text-faint)]">MARKA · Ads & Commerce</p>
           <h1 className="marka-editorial mt-2 text-4xl sm:text-5xl">Gestão de campanhas</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Crie campanhas, reveja o inventário e aprove apenas publicidade que cumpra as regras da MARKA. As campanhas novas começam sempre pendentes.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--theme-text-muted)]">Controle campanhas, distribuição, calendário e limites de entrega. Toda a campanha externa começa pendente e só entra no inventário depois de aprovação.</p>
         </div>
         <Link href="/app/super-admin" className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs">Voltar ao controlo global</Link>
       </header>
 
-      {message && <p role="status" className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm">{message}</p>}
+      <section aria-label="Resumo de desempenho publicitário" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">\n        {[\n          { label: "Campanhas activas", value: approvedCount.toLocaleString("pt-PT"), detail: "Aprovadas para distribuição" },\n          { label: "A aguardar revisão", value: pendingCount.toLocaleString("pt-PT"), detail: "Exigem decisão administrativa" },\n          { label: "Impressões registadas", value: totalImpressions.toLocaleString("pt-PT"), detail: "Eventos deduplicados por utilizador/dia" },\n          { label: "Taxa de clique", value: `${overallCtr.toFixed(2)}%`, detail: `${totalClicks.toLocaleString("pt-PT")} cliques registados` },\n        ].map((metric) => <article key={metric.label} className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5"><p className="text-[10px] uppercase tracking-[0.18em] text-[var(--theme-text-faint)]">{metric.label}</p><p className="mt-3 text-3xl font-semibold tracking-tight">{metric.value}</p><p className="mt-2 text-[11px] text-[var(--theme-text-muted)]">{metric.detail}</p></article>)}\n      </section>\n\n      {message && <p role="status" className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm">{message}</p>}
 
       <form onSubmit={createCampaign} className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:grid-cols-2 sm:p-7">
         <div className="sm:col-span-2"><h2 className="text-xl font-semibold">Nova campanha</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">A criação não ativa automaticamente os anúncios.</p></div>
@@ -144,7 +150,7 @@ export default function AdvertisingAdminPage() {
       </form>
 
       <section className="space-y-4">
-        <div><h2 className="text-xl font-semibold">Campanhas registadas</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Apenas campanhas aprovadas e dentro do período configurado são distribuídas.</p></div>
+        <div><h2 className="text-xl font-semibold">Campanhas registadas</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">A distribuição respeita aprovação, período e limite de impressões. Os indicadores apresentados são eventos registados, não estimativas de alcance.</p></div>
         {campaigns.length === 0 ? <div className="rounded-2xl border border-[var(--theme-border)] p-6 text-sm text-[var(--theme-text-muted)]">Nenhuma campanha disponível ou acesso à API indisponível.</div> : campaigns.map(campaign => (
           <article key={campaign.id} className="flex flex-col gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{campaign.headline}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase tracking-wider">{campaign.status}</span></div><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{campaign.advertiserName} · {campaign.placement} · {campaign.creativeType}</p><p className="mt-2 text-[10px] text-[var(--theme-text-faint)]">{campaign.impressions} impressões · {campaign.clicks} cliques · CTR {campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : "0.00"}%{campaign.maxImpressions ? ` · limite ${campaign.maxImpressions.toLocaleString("pt-PT")}` : ""}</p><p className="mt-1 text-[10px] text-[var(--theme-text-faint)]">Início: {campaign.startsAt ? new Date(campaign.startsAt).toLocaleString("pt-PT") : "Imediato"} · Fim: {campaign.endsAt ? new Date(campaign.endsAt).toLocaleString("pt-PT") : "Sem data definida"}</p></div>
