@@ -81,9 +81,87 @@ export async function PATCH(
     if (!user) return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     const { requestId } = await context.params;
     const body = await request.json().catch(() => null) as { action?: unknown; offerId?: unknown } | null;
+
+    if (body?.action === "ACCEPT_PROPOSAL") {
+      const result = await prisma.$transaction(async (tx) => {
+        const serviceRequest = await tx.privateServiceRequest.findFirst({
+          where: { id: requestId, requesterId: user.id, status: "PROFESSIONAL_SELECTED", selectedProfessionalId: { not: null } },
+          select: { id: true, reference: true, selectedProfessionalId: true },
+        });
+        if (!serviceRequest?.selectedProfessionalId) return { error: "REQUEST_UNAVAILABLE" as const };
+
+        const offer = await tx.privateServiceOffer.findFirst({
+          where: {
+            requestId,
+            professionalId: serviceRequest.selectedProfessionalId,
+            status: "SELECTED",
+            proposedFeeKz: { not: null },
+            proposalAvailability: { not: null },
+            proposalApproach: { not: null },
+            professional: { is: { status: "VERIFIED", user: { is: { status: "ACTIVE" } } } },
+          },
+          select: {
+            id: true, proposedFeeKz: true, proposalAvailability: true, proposalApproach: true,
+            professional: { select: { userId: true, publicName: true } },
+          },
+        });
+        if (!offer || offer.proposedFeeKz === null || !offer.proposalAvailability || !offer.proposalApproach) {
+          return { error: "PROPOSAL_UNAVAILABLE" as const };
+        }
+
+        const changed = await tx.privateServiceRequest.updateMany({
+          where: { id: requestId, requesterId: user.id, status: "PROFESSIONAL_SELECTED", selectedProfessionalId: serviceRequest.selectedProfessionalId },
+          data: { status: "ENGAGED" },
+        });
+        if (changed.count !== 1) return { error: "REQUEST_UNAVAILABLE" as const };
+
+        const acceptedAt = new Date();
+        await tx.auditLog.create({
+          data: {
+            actorUserId: user.id,
+            actorType: "USER",
+            action: "PRIVATE_SERVICE_PROPOSAL_ACCEPTED",
+            entityType: "PrivateServiceRequest",
+            entityId: requestId,
+            metadata: {
+              reference: serviceRequest.reference,
+              offerId: offer.id,
+              professionalId: serviceRequest.selectedProfessionalId,
+              professionalName: offer.professional.publicName,
+              agreedFeeKz: offer.proposedFeeKz,
+              agreedAvailability: offer.proposalAvailability,
+              agreedApproach: offer.proposalApproach,
+              acceptedAt: acceptedAt.toISOString(),
+              proposalVersion: "private-service-proposal-v1",
+              legalContractStatus: "NOT_CREATED",
+            },
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: offer.professional.userId,
+            type: "PRIVATE_SERVICE_ENGAGED",
+            title: "Proposta aceite pelo cliente",
+            message: "O cliente aceitou a tua proposta. O acompanhamento pode agora ser iniciado através do processo privado.",
+            data: { requestId, reference: serviceRequest.reference },
+          },
+        });
+        return { success: true as const, status: "ENGAGED" as const };
+      });
+
+      if ("error" in result) {
+        return NextResponse.json({
+          message: result.error === "PROPOSAL_UNAVAILABLE"
+            ? "A proposta seleccionada já não está disponível."
+            : "Este pedido já não pode aceitar propostas.",
+        }, { status: 409 });
+      }
+      return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+    }
+
     if (body?.action !== "SELECT_PROFESSIONAL" ||
         typeof body.offerId !== "string" || body.offerId.length > 128) {
-      return NextResponse.json({ message: "Selecção de profissional inválida." }, { status: 400 });
+      return NextResponse.json({ message: "Acção ou selecção de profissional inválida." }, { status: 400 });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -146,7 +224,7 @@ export async function PATCH(
     }
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("[PRIVATE_SERVICE_SELECTION]", error);
-    return NextResponse.json({ message: "Não foi possível seleccionar o profissional." }, { status: 500 });
+    console.error("[PRIVATE_SERVICE_LIFECYCLE]", error);
+    return NextResponse.json({ message: "Não foi possível actualizar o processo privado." }, { status: 500 });
   }
 }
