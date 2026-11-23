@@ -12,7 +12,7 @@ type Signal = {
   source: string;
   reason: string | null;
   createdAt: string;
-  metadata: { productId?: string; productName?: string; orderId?: string; reason?: string; details?: string | null } | null;
+  metadata: { productId?: string; productName?: string; orderId?: string; reason?: string; details?: string | null; vendorResponse?: { response: string; createdAt: string; vendorUserId: string | null } | null } | null;
   subject: { id: string; name: string; email: string; role: string; status: string } | null;
 };
 
@@ -104,7 +104,8 @@ export default function TrustCenterPage() {
               <div><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{signal.type.replace("CONDUCT_", "").replaceAll("_", " ")}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{severityLabel(signal.score)}</span><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{statusLabels[signal.status]}</span></div><p className="mt-2 text-xs text-[var(--theme-text-muted)]">{signal.reason || "Violação bloqueada pela política de conduta."}</p>
                 {signal.metadata?.productId && <p className="mt-2 text-xs"><span className="text-[var(--theme-text-faint)]">Anúncio: </span><Link className="underline underline-offset-2" href={`/app/marketplace/products/${encodeURIComponent(signal.metadata.productId)}`}>{signal.metadata.productName || signal.metadata.productId}</Link></p>}
                 {signal.metadata?.orderId && <p className="mt-2 text-xs"><span className="text-[var(--theme-text-faint)]">Encomenda: </span><Link className="underline underline-offset-2" href={`/app/orders/${encodeURIComponent(signal.metadata.orderId)}`}>{signal.metadata.orderId}</Link></p>}
-                {signal.metadata?.details && <p className="mt-3 rounded-xl border border-[var(--theme-border)] p-3 text-xs leading-5"><span className="font-semibold">Elementos fornecidos pelo denunciante: </span>{signal.metadata.details}</p>}</div>
+                {signal.metadata?.details && <p className="mt-3 rounded-xl border border-[var(--theme-border)] p-3 text-xs leading-5"><span className="font-semibold">Elementos fornecidos pelo denunciante: </span>{signal.metadata.details}</p>}
+                {signal.metadata?.vendorResponse && <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs leading-5"><p className="font-semibold">Resposta do vendedor · {new Date(signal.metadata.vendorResponse.createdAt).toLocaleString("pt-PT")}</p><p className="mt-2 whitespace-pre-wrap">{signal.metadata.vendorResponse.response}</p></div>}</div>
               <p className="text-[10px] text-[var(--theme-text-faint)]">{new Date(signal.createdAt).toLocaleString("pt-PT")}</p>
             </div>
             <div className="grid gap-2 text-xs sm:grid-cols-3">
