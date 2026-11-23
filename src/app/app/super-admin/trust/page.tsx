@@ -12,7 +12,7 @@ type Signal = {
   source: string;
   reason: string | null;
   createdAt: string;
-  metadata: { productId?: string; productName?: string; reason?: string; details?: string | null } | null;
+  metadata: { productId?: string; productName?: string; orderId?: string; reason?: string; details?: string | null } | null;
   subject: { id: string; name: string; email: string; role: string; status: string } | null;
 };
 
@@ -103,6 +103,7 @@ export default function TrustCenterPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{signal.type.replace("CONDUCT_", "").replaceAll("_", " ")}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{severityLabel(signal.score)}</span><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{statusLabels[signal.status]}</span></div><p className="mt-2 text-xs text-[var(--theme-text-muted)]">{signal.reason || "Violação bloqueada pela política de conduta."}</p>
                 {signal.metadata?.productId && <p className="mt-2 text-xs"><span className="text-[var(--theme-text-faint)]">Anúncio: </span><Link className="underline underline-offset-2" href={`/app/marketplace/products/${encodeURIComponent(signal.metadata.productId)}`}>{signal.metadata.productName || signal.metadata.productId}</Link></p>}
+                {signal.metadata?.orderId && <p className="mt-2 text-xs"><span className="text-[var(--theme-text-faint)]">Encomenda: </span><Link className="underline underline-offset-2" href={`/app/orders/${encodeURIComponent(signal.metadata.orderId)}`}>{signal.metadata.orderId}</Link></p>}
                 {signal.metadata?.details && <p className="mt-3 rounded-xl border border-[var(--theme-border)] p-3 text-xs leading-5"><span className="font-semibold">Elementos fornecidos pelo denunciante: </span>{signal.metadata.details}</p>}</div>
               <p className="text-[10px] text-[var(--theme-text-faint)]">{new Date(signal.createdAt).toLocaleString("pt-PT")}</p>
             </div>
