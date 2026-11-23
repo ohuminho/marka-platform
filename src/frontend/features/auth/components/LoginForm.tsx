@@ -15,6 +15,8 @@ export default function LoginForm() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
   const [password, setPassword] =
     useState("");
   const [confirmPassword, setConfirmPassword] =
@@ -43,6 +45,11 @@ export default function LoginForm() {
 
     setMessage("");
     setShowResend(false);
+
+    if (authMethod === "phone") {
+      setMessage("A opção por telefone está preparada. A verificação SMS será activada quando a integração oficial com a MIMO estiver concluída. Por enquanto, utiliza o e-mail.");
+      return;
+    }
 
     if (isRegistering) {
       if (password !== confirmPassword) {
@@ -256,22 +263,52 @@ export default function LoginForm() {
           />
         )}
 
-        <label htmlFor="marka-auth-email" className="sr-only">E-mail</label>
-        <input
-          id="marka-auth-email"
-          type="email"
-          inputMode="email"
-          autoCapitalize="none"
-          spellCheck={false}
-          placeholder="E-mail"
-          value={email}
-          onChange={(event) =>
-            setEmail(event.target.value)
-          }
-          required
-          autoComplete="email"
-          className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
-        />
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-1" role="group" aria-label="Método de autenticação">
+            <button type="button" onClick={() => { setAuthMethod("email"); setMessage(""); setShowResend(false); }} aria-pressed={authMethod === "email"} className={`rounded-xl px-3 py-3 text-sm font-medium transition ${authMethod === "email" ? "bg-[var(--theme-text)] text-[var(--theme-background)]" : "text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"}`}>
+              E-mail
+            </button>
+            <button type="button" onClick={() => { setAuthMethod("phone"); setMessage(""); setShowResend(false); }} aria-pressed={authMethod === "phone"} className={`rounded-xl px-3 py-3 text-sm font-medium transition ${authMethod === "phone" ? "bg-[var(--theme-text)] text-[var(--theme-background)]" : "text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"}`}>
+              Telefone
+            </button>
+          </div>
+          {authMethod === "email" ? (
+            <>
+              <label htmlFor="marka-auth-email" className="sr-only">E-mail</label>
+              <input
+                id="marka-auth-email"
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="E-mail"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                autoComplete="email"
+                className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
+              />
+            </>
+          ) : (
+            <>
+              <label htmlFor="marka-auth-phone" className="sr-only">Número de telefone</label>
+              <input
+                id="marka-auth-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+244 9XX XXX XXX"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className="w-full rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)] px-6 py-4 text-[var(--theme-text)] placeholder:text-[var(--theme-text-faint)] outline-none transition focus:border-[var(--theme-accent-strong)]"
+                aria-describedby="marka-phone-auth-status"
+              />
+              <p id="marka-phone-auth-status" className="px-1 text-xs leading-5 text-[var(--theme-text-muted)]">
+                Autenticação por telefone disponível após activação do serviço SMS oficial. Não será enviado nenhum código enquanto a integração MIMO estiver pendente.
+              </p>
+            </>
+          )}
+        </div>
 
         <label htmlFor="marka-auth-password" className="sr-only">Palavra-passe</label>
         <div className="relative">
