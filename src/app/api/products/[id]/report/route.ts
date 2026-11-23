@@ -30,7 +30,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       });
       if (recent) return false;
       await tx.securityEvent.create({
-        data: { actorUserId: session.userId, type: "MARKETPLACE_PRODUCT_REPORTED", severity: input.reason === "PROHIBITED_OR_ILLEGAL" ? "HIGH" : "INFO", correlationId: productId, metadata: { productId, sellerId, reason: input.reason, reasonLabel: productReportReasonLabel(input.reason as Parameters<typeof productReportReasonLabel>[0]), detailsProvided: Boolean(input.details.trim()) } },
+        data: { actorUserId: session.userId, type: "MARKETPLACE_PRODUCT_REPORTED", severity: input.reason === "PROHIBITED_OR_ILLEGAL" ? "HIGH" : "INFO", correlationId: productId, metadata: { productId, productName: product.name, sellerId, reason: input.reason, reasonLabel: productReportReasonLabel(input.reason as Parameters<typeof productReportReasonLabel>[0]), detailsProvided: Boolean(input.details.trim()) } },
       });
       await tx.riskSignal.create({
         data: { userId: sellerId, type: "CONDUCT_PRODUCT_LISTING_REPORTED", score: input.reason === "PROHIBITED_OR_ILLEGAL" ? 65 : 35, source: "MARKETPLACE_PRODUCT_REPORT", entityType: "PRODUCT", entityId: productId, reason: `Anúncio denunciado: ${productReportReasonLabel(input.reason as Parameters<typeof productReportReasonLabel>[0])}. Exige análise humana; denúncia isolada não comprova infracção.`, metadata: { productId, reporterId: session.userId, reason: input.reason, detailsProvided: Boolean(input.details.trim()) } },
