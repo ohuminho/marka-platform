@@ -290,6 +290,33 @@ export const NavigationConfig = {
       ],
     },
   ],
+  PROFESSIONAL: [
+    {
+      group: "Professional Services",
+      items: [
+        {
+          title: "Private Requests",
+          route: "/app/private-services",
+          description: "Review, accept and manage confidential service requests",
+        },
+        {
+          title: "Messages",
+          route: "/app/messages",
+          description: "Private professional communications",
+        },
+        {
+          title: "Account",
+          route: "/app/account",
+          description: "Identity, session and access context",
+        },
+        {
+          title: "Compliance",
+          route: "/app/compliance",
+          description: "Professional verification and compliance status",
+        },
+      ],
+    },
+  ],
   SUPER_ADMIN: [
     {
       group: "Control Center",
