@@ -36,10 +36,10 @@ export async function GET(
 
     const isRequester = serviceRequest.requesterId === user.id;
     const profile = !isRequester
-      ? await prisma.privateProfessionalProfile.findUnique({ where: { userId: user.id }, select: { id: true } })
+      ? await prisma.privateProfessionalProfile.findUnique({ where: { userId: user.id }, select: { id: true, status: true } })
       : null;
     const isSelectedProfessional = Boolean(
-      profile && serviceRequest.selectedProfessionalId === profile.id &&
+      profile && profile.status === "VERIFIED" && serviceRequest.selectedProfessionalId === profile.id &&
       ["PROFESSIONAL_SELECTED", "ENGAGED"].includes(serviceRequest.status),
     );
     if (!isRequester && !isSelectedProfessional) {
@@ -94,7 +94,7 @@ export async function PATCH(
       if (!serviceRequest) return { error: "REQUEST_UNAVAILABLE" as const };
 
       const selectedOffer = await tx.privateServiceOffer.findFirst({
-        where: { id: body.offerId as string, requestId, status: "ACCEPTED" },
+        where: { id: body.offerId as string, requestId, status: "ACCEPTED", professional: { is: { status: "VERIFIED", user: { is: { status: "ACTIVE" } } } } },
         select: { id: true, professionalId: true, professional: { select: { userId: true } } },
       });
       if (!selectedOffer) return { error: "OFFER_UNAVAILABLE" as const };
