@@ -2442,6 +2442,7 @@ model CommunicationCallSignal {
 enum CommunicationContextType {
   MOBILITY
   DELIVERY
+  PRIVATE_SERVICE
 }
 
 enum CommunicationThreadStatus {
@@ -2454,6 +2455,7 @@ enum CommunicationParticipantRole {
   DRIVER
   MERCHANT
   COURIER
+  PROFESSIONAL
 }
 
 model CommunicationThread {
