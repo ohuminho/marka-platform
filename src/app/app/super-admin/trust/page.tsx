@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import TrustSanctionActions from "@/frontend/features/trust/components/TrustSanctionActions";
 
 type Signal = {
   id: string;
@@ -134,6 +135,7 @@ export default function TrustCenterPage() {
                 {entry.note && <p className="mt-1 whitespace-pre-wrap">{entry.note}</p>}
               </li>)}</ol>
             </div>}
+            {signal.status === "REVIEWED" && signal.userId && signal.subject && !signal.subject.role.toUpperCase().includes("ADMIN") && <TrustSanctionActions signalId={signal.id} accountStatus={signal.subject.status} onComplete={load} />}
             <div className="flex flex-wrap gap-2 border-t border-[var(--theme-border)] pt-3">
               {signal.status === "OPEN" && <button disabled={busyId === signal.id} onClick={() => void updateStatus(signal.id, "REVIEWED")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-xs disabled:opacity-50">Iniciar análise</button>}
               {(signal.status === "OPEN" || signal.status === "REVIEWED") && <><button disabled={busyId === signal.id} onClick={() => void updateStatus(signal.id, "RESOLVED")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-xs disabled:opacity-50">Marcar resolvida</button><button disabled={busyId === signal.id} onClick={() => void updateStatus(signal.id, "DISMISSED")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-xs disabled:opacity-50">Descartar ocorrência</button></>}
