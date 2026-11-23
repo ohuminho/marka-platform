@@ -73,7 +73,7 @@ const rules: Array<{ code: string; reason: string; severity: "MEDIUM" | "HIGH" |
     severity: "MEDIUM",
     reason: "Publicidade repetitiva, correntes e solicitações em massa não são permitidas nas conversas de serviço.",
     patterns: [
-      /(?:encaminha|partilha|envia)\s+(?:esta mensagem|para todos|a todos)\s+(?:os teus|seus)?\s*(?:contactos|amigos)/i,
+      /(?:encaminha|partilha|envia)\s+(?:(?:esta mensagem|isto)\s+)?(?:para\s+)?(?:todos|a todos|os teus contactos|os seus contactos|contactos|amigos)\b/i,
       /\b(?:ganha dinheiro fácil|renda garantida sem trabalhar|oportunidade única imperdível)\b/i,
     ],
   },
