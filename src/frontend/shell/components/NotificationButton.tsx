@@ -18,6 +18,19 @@ function timeLabel(value: string) {
   return new Intl.DateTimeFormat("pt-PT", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
+function notificationDestination(item: NotificationItem): string | null {
+  const data = item.data && typeof item.data === "object" ? item.data as Record<string, unknown> : {};
+  const requestId = typeof data.requestId === "string" && /^[0-9a-f-]{36}$/i.test(data.requestId) ? data.requestId : null;
+  switch (item.type) {
+    case "PRIVATE_SERVICE_OFFER":
+    case "PRIVATE_SERVICE_CLOSED": return "/app/private-services";
+    case "PRIVATE_SERVICE_INTEREST":
+    case "PRIVATE_SERVICE_SELECTED": return requestId ? "/app/private-services/" + encodeURIComponent(requestId) : "/app/private-services";
+    case "PRIVATE_PROFESSIONAL_REVIEW": return "/app/private-services/profile";
+    default: return null;
+  }
+}
+
 export default function NotificationButton() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -111,7 +124,11 @@ export default function NotificationButton() {
             {error && <p role="alert" className="px-4 py-5 text-center text-xs text-rose-500">{error}</p>}
             {!loading && !error && items.length === 0 && <div className="px-5 py-10 text-center"><div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--theme-border)]/50 text-[var(--theme-text-muted)]">♧</div><p className="text-sm font-medium text-[var(--theme-text)]">Tudo em dia</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">As tuas notificações aparecerão aqui.</p></div>}
             {items.map(item => (
-              <button key={item.id} type="button" onClick={() => { if (!item.readAt) void markRead(item.id); }} className="flex w-full gap-3 border-b border-[var(--theme-border)]/70 px-4 py-3 text-left transition-colors hover:bg-[var(--theme-border)]/20">
+              <button key={item.id} type="button" onClick={() => {
+                if (!item.readAt) void markRead(item.id);
+                const destination = notificationDestination(item);
+                if (destination) window.location.assign(destination);
+              }} className="flex w-full gap-3 border-b border-[var(--theme-border)]/70 px-4 py-3 text-left transition-colors hover:bg-[var(--theme-border)]/20">
                 <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.readAt ? "bg-transparent" : "bg-[var(--theme-accent-strong)]"}`} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs font-semibold text-[var(--theme-text)]">{item.title}</span>
