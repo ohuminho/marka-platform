@@ -37,6 +37,10 @@ export default function PrivateServicesInboxPage() {
   const [items, setItems] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
+  const [proposalOfferId, setProposalOfferId] = useState("");
+  const [proposedFeeKz, setProposedFeeKz] = useState("");
+  const [proposalAvailability, setProposalAvailability] = useState("");
+  const [proposalApproach, setProposalApproach] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -72,7 +76,7 @@ export default function PrivateServicesInboxPage() {
           method: "PATCH",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify(action === "ACCEPT" ? { action, proposedFeeKz: Number(proposedFeeKz), proposalAvailability, proposalApproach } : { action }),
         },
       );
       const data = await response.json();
@@ -125,10 +129,19 @@ export default function PrivateServicesInboxPage() {
                   <span>Recebido {dateLabel(item.createdAt)}</span>
                 </div>
                 <p className="mt-3 text-xs text-[var(--theme-text-faint)]">O conteúdo confidencial do caso não é apresentado neste convite.</p>
+                {item.status === "PENDING" && proposalOfferId === item.id && (
+                  <form onSubmit={(event) => { event.preventDefault(); void respond(item, "ACCEPT"); }} className="mt-5 space-y-3 rounded-xl border border-[var(--theme-border)] p-4">
+                    <p className="text-xs font-semibold text-[var(--theme-text)]">A tua proposta profissional</p>
+                    <div><label className="mb-1 block text-xs text-[var(--theme-text-muted)]">Honorários (Kz)</label><input required type="number" min="0" max="1000000000" step="1" value={proposedFeeKz} onChange={(event) => setProposedFeeKz(event.target.value)} className="min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-transparent px-3 text-sm text-[var(--theme-text)]" placeholder="Ex.: 25000" /></div>
+                    <div><label className="mb-1 block text-xs text-[var(--theme-text-muted)]">Disponibilidade</label><input required minLength={3} maxLength={500} value={proposalAvailability} onChange={(event) => setProposalAvailability(event.target.value)} className="min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-transparent px-3 text-sm text-[var(--theme-text)]" placeholder="Ex.: Segunda a sexta, mediante marcação" /></div>
+                    <div><label className="mb-1 block text-xs text-[var(--theme-text-muted)]">Abordagem / âmbito do serviço</label><textarea required minLength={20} maxLength={1500} rows={4} value={proposalApproach} onChange={(event) => setProposalApproach(event.target.value)} className="w-full rounded-lg border border-[var(--theme-border)] bg-transparent p-3 text-sm text-[var(--theme-text)]" placeholder="Descreve como prestas o serviço. Não incluas diagnóstico clínico nem dados sensíveis." /></div>
+                    <div className="flex flex-wrap gap-2"><button disabled={busyId === item.id || proposedFeeKz === "" || proposalAvailability.trim().length < 3 || proposalApproach.trim().length < 20} className="min-h-10 rounded-lg bg-[var(--theme-accent)] px-4 text-xs font-semibold text-white disabled:opacity-50">{busyId === item.id ? "A enviar…" : "Enviar proposta e aceitar"}</button><button type="button" onClick={() => setProposalOfferId("")} className="min-h-10 rounded-lg border border-[var(--theme-border)] px-4 text-xs text-[var(--theme-text-muted)]">Cancelar</button></div>
+                  </form>
+                )}
                 {item.status === "PENDING" && (
                   <div className="mt-5 flex flex-wrap gap-2">
                     <button type="button" disabled={busyId === item.id} onClick={() => void respond(item, "DECLINE")} className="min-h-11 rounded-xl border border-[var(--theme-border)] px-5 text-xs font-semibold text-[var(--theme-text-muted)] transition hover:bg-[var(--theme-background)] disabled:opacity-50">Recusar</button>
-                    <button type="button" disabled={busyId === item.id} onClick={() => void respond(item, "ACCEPT")} className="min-h-11 rounded-xl bg-[var(--theme-accent)] px-5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50">{busyId === item.id ? "A processar…" : "Aceitar pedido"}</button>
+                    <button type="button" disabled={busyId === item.id} onClick={() => { setProposalOfferId(item.id); setProposedFeeKz(""); setProposalAvailability(""); setProposalApproach(""); }} className="min-h-11 rounded-xl bg-[var(--theme-accent)] px-5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50">Preparar proposta</button>
                   </div>
                 )}
                 {item.status === "SELECTED" && (
