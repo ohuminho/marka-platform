@@ -4,21 +4,12 @@ import { z } from "zod";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { ORDER_QUALITY_REPORT_REASONS, orderQualityReportReasonLabel } from "@/core/trust/order-quality-report-policy";
 
-const reasons = ["ITEM_NOT_AS_DESCRIBED", "WRONG_OR_MISSING_ITEM", "DAMAGED_OR_DEFECTIVE", "QUANTITY_MISMATCH", "DELIVERY_DISCREPANCY", "OTHER"] as const;
 const schema = z.object({
-  reason: z.enum(reasons),
+  reason: z.enum(ORDER_QUALITY_REPORT_REASONS),
   details: z.string().trim().max(1200).optional().default(""),
 });
-
-const labels: Record<(typeof reasons)[number], string> = {
-  ITEM_NOT_AS_DESCRIBED: "Produto diferente da descrição",
-  WRONG_OR_MISSING_ITEM: "Produto errado ou em falta",
-  DAMAGED_OR_DEFECTIVE: "Produto danificado ou defeituoso",
-  QUANTITY_MISMATCH: "Quantidade incorrecta",
-  DELIVERY_DISCREPANCY: "Problema com a entrega",
-  OTHER: "Outro problema",
-};
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -54,7 +45,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           metadata: {
             orderId,
             reason: input.reason,
-            reasonLabel: labels[input.reason],
+            reasonLabel: orderQualityReportReasonLabel(input.reason),
             details: input.details || null,
             productIds: order.items.map((item) => item.productId),
             itemCount: order.items.length,
@@ -70,7 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             source: "MARKETPLACE_ORDER_QUALITY_REPORT",
             entityType: "ORDER",
             entityId: orderId,
-            reason: `Comprador comunicou: ${labels[input.reason]}. Requer análise e resposta do vendedor; não constitui prova de infracção.`,
+            reason: `Comprador comunicou: ${orderQualityReportReasonLabel(input.reason)}. Requer análise e resposta do vendedor; não constitui prova de infracção.`,
             metadata: {
               orderId,
               vendorId: vendor.id,
@@ -81,6 +72,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
               responseRequested: true,
               automaticSanction: false,
             },
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: vendor.ownerId,
+            type: "MARKETPLACE_ORDER_QUALITY_RESPONSE_REQUIRED",
+            title: "Pedido de esclarecimento sobre uma encomenda",
+            message: "Um comprador comunicou um problema numa encomenda. Consulte a área de confiança da MARKA e envie a sua resposta.",
+            data: { orderId, vendorId: vendor.id, responseRequested: true },
           },
         });
       }
