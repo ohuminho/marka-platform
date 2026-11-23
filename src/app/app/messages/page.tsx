@@ -147,7 +147,7 @@ function MessagesWorkspace() {
     <AppShell>
       <section className="mx-auto max-w-[1500px] space-y-6">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
-          <div><p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--theme-text-faint)]">MARKA / COMUNICAÇÃO</p><h1 className="marka-editorial mt-2 text-4xl text-[var(--theme-text)] sm:text-5xl">Mensagens</h1><p className="mt-2 max-w-xl text-sm text-[var(--theme-text-muted)]">Converse diretamente com compradores e vendedores. Negocie detalhes, esclareça dúvidas e acompanhe pedidos.</p></div>
+          <div><p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--theme-text-faint)]">MARKA / COMUNICAÇÃO</p><h1 className="marka-editorial mt-2 text-4xl text-[var(--theme-text)] sm:text-5xl">Mensagens</h1><p className="mt-2 max-w-xl text-sm text-[var(--theme-text-muted)]">Converse com compradores, vendedores, motoristas e profissionais seleccionados em canais privados autorizados.</p></div>
           <span className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-[10px] uppercase tracking-[0.16em] text-[var(--theme-text-muted)]">{conversations.length} conversas</span>
         </header>
 
