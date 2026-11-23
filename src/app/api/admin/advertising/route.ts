@@ -26,6 +26,7 @@ const createSchema = z.object({
   destinationUrl: optionalSafeHttpUrl,
   startsAt: z.string().datetime().optional(),
   endsAt: z.string().datetime().optional(),
+  maxImpressions: z.number().int().min(1).max(100000000).nullable().optional(),
 }).refine((value) => value.creativeType === "NATIVE" || Boolean(value.creativeUrl), {
   message: "Imagem e vídeo precisam de um URL de conteúdo.",
   path: ["creativeUrl"],
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
         destinationUrl: input.destinationUrl || null,
         startsAt,
         endsAt,
+        maxImpressions: input.maxImpressions ?? null,
         status: "PENDING_REVIEW",
       },
     });
