@@ -16,6 +16,32 @@ enum UserStatus {
   DELETED
 }
 
+enum PrivateProfessionalStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+}
+
+enum PrivateServiceRequestStatus {
+  SUBMITTED
+  MATCHING
+  OFFERED
+  IN_REVIEW
+  PROFESSIONAL_SELECTED
+  ENGAGED
+  CLOSED
+  CANCELLED
+}
+
+enum PrivateServiceOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  SELECTED
+  WITHDRAWN
+}
+
 enum TenantStatus {
   ACTIVE
   SUSPENDED
@@ -864,6 +890,8 @@ model User {
   freightProviders FreightProvider[]
   supportMessages SupportMessage[] @relation("SupportMessageAuthor")
   notifications   Notification[]
+  privateProfessionalProfile PrivateProfessionalProfile?
+  privateServiceRequests PrivateServiceRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2256,6 +2284,72 @@ model SupportMessage {
 
   @@index([ticketId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model PrivateProfessionalProfile {
+  id          String @id @default(uuid())
+  userId      String @unique
+  publicName  String
+  specialties String[] @default([])
+  region      String?
+  status      PrivateProfessionalStatus @default(PENDING)
+  verifiedAt  DateTime? @db.Timestamptz(3)
+
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offers           PrivateServiceOffer[]
+  selectedRequests PrivateServiceRequest[] @relation("PrivateServiceSelectedProfessional")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([status, region])
+  @@index([specialties], type: Gin)
+}
+
+model PrivateServiceRequest {
+  id          String @id @default(uuid())
+  reference   String @unique
+  requesterId String
+  serviceType String
+  specialty   String
+  title       String
+  summary     String @db.Text
+  region      String?
+  status      PrivateServiceRequestStatus @default(SUBMITTED)
+  consentAt   DateTime @db.Timestamptz(3)
+  expiresAt   DateTime @db.Timestamptz(3)
+  selectedProfessionalId String?
+
+  requester User @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+  selectedProfessional PrivateProfessionalProfile? @relation("PrivateServiceSelectedProfessional", fields: [selectedProfessionalId], references: [id], onDelete: SetNull)
+  offers PrivateServiceOffer[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([requesterId, createdAt])
+  @@index([status, expiresAt])
+  @@index([specialty, region, status])
+}
+
+model PrivateServiceOffer {
+  id             String @id @default(uuid())
+  requestId      String
+  professionalId String
+  status         PrivateServiceOfferStatus @default(PENDING)
+  respondedAt    DateTime? @db.Timestamptz(3)
+  expiresAt      DateTime @db.Timestamptz(3)
+
+  request      PrivateServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  professional PrivateProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([requestId, professionalId])
+  @@index([professionalId, status, createdAt])
+  @@index([requestId, status])
+  @@index([status, expiresAt])
 }
 
 model Notification {
