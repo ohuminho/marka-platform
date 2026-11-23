@@ -49,8 +49,9 @@ export default function PrivateServiceCasePage() {
     setOpeningChat(true);
     setError("");
     try {
-      const response = await fetch(`/api/private-services/${encodeURIComponent(params.requestId)}/communication`, {
+      const response = await fetch("/api/comms/threads", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contextType: "PRIVATE_SERVICE", contextId: params.requestId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível abrir a conversa privada.");
