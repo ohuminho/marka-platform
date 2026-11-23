@@ -79,3 +79,8 @@ ALTER TABLE "PrivateServiceOffer"
   ADD COLUMN "proposalAvailability" VARCHAR(500),
   ADD COLUMN "proposalApproach" VARCHAR(1500),
   ADD COLUMN "proposalSubmittedAt" TIMESTAMPTZ(3);
+
+-- Sensitive case records are not exposed directly to anon/authenticated Data API roles.
+ALTER TABLE "PrivateProfessionalProfile" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "PrivateServiceRequest" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "PrivateServiceOffer" ENABLE ROW LEVEL SECURITY;
