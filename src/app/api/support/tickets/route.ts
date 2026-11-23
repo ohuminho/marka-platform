@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
+import { markaSupportEmailService } from "@/core/communications/marka-support-email.service";
 
 const SUPPORT_CATEGORIES = [
   "Viagens e pedidos",
@@ -36,7 +37,7 @@ async function getActor() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, role: true, isFounder: true, status: true },
+    select: { id: true, name: true, email: true, role: true, isFounder: true, status: true },
   });
   if (!user || ["SUSPENDED", "LOCKED", "DELETED"].includes(user.status)) return null;
 
@@ -137,6 +138,25 @@ export async function POST(request: Request) {
       },
     });
 
+    if (actor.email) {
+      try {
+        await markaSupportEmailService.send({
+          to: actor.email,
+          recipientName: actor.name,
+          subject: `Recebemos o seu pedido — MARKA ${ticket.reference}`,
+          title: "Pedido recebido com sucesso",
+          preheader: `O seu processo ${ticket.reference} foi registado.`,
+          message: "Confirmamos a recepção do seu pedido. A equipa MARKA irá analisá-lo. Guarde a referência abaixo para acompanhar este processo.",
+          reference: ticket.reference,
+          statusLabel: "Recebido",
+          actionUrl: `/app/support?ticket=${ticket.id}`,
+          idempotencyKey: `support-ticket-created:${ticket.id}`,
+        });
+      } catch (emailError) {
+        console.error("[SUPPORT_TICKET_CONFIRMATION_EMAIL]", { ticketId: ticket.id, error: emailError });
+      }
+    }
+
     return NextResponse.json(
       { ticket, message: "Pedido registado no suporte MARKA." },
       { status: 201, headers: { "Cache-Control": "no-store" } },
@@ -174,7 +194,12 @@ export async function PATCH(request: Request) {
 
     const existing = await prisma.supportTicket.findUnique({
       where: { id: ticketId },
-      select: { id: true },
+      select: {
+        id: true,
+        reference: true,
+        userId: true,
+        requester: { select: { name: true, email: true } },
+      },
     });
     if (!existing) {
       return NextResponse.json({ message: "Pedido de suporte não encontrado." }, { status: 404 });
@@ -188,6 +213,32 @@ export async function PATCH(request: Request) {
       },
       select: { id: true, reference: true, status: true, resolvedAt: true },
     });
+
+    if (existing.requester.email) {
+      const statusLabels: Record<string, string> = {
+        OPEN: "Recebido",
+        IN_PROGRESS: "Em análise",
+        WAITING_FOR_USER: "A aguardar informação",
+        RESOLVED: "Resolvido",
+        CLOSED: "Encerrado",
+      };
+      try {
+        await markaSupportEmailService.send({
+          to: existing.requester.email,
+          recipientName: existing.requester.name,
+          subject: `Actualização do processo — MARKA ${existing.reference}`,
+          title: "O estado do seu processo foi actualizado",
+          preheader: `O processo ${existing.reference} tem uma actualização.`,
+          message: "A equipa MARKA actualizou o estado do seu pedido. Consulte o histórico completo na sua conta para ver os detalhes.",
+          reference: existing.reference,
+          statusLabel: statusLabels[status] ?? status,
+          actionUrl: `/app/support?ticket=${ticket.id}`,
+          idempotencyKey: `support-ticket-status:${ticket.id}:${status}:${ticket.resolvedAt?.toISOString() ?? "active"}`,
+        });
+      } catch (emailError) {
+        console.error("[SUPPORT_TICKET_STATUS_EMAIL]", { ticketId: ticket.id, error: emailError });
+      }
+    }
 
     return NextResponse.json(
       { ticket, message: "Estado do pedido actualizado." },
