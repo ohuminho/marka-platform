@@ -52,6 +52,17 @@ export class VendorSalesService {
       prisma.order.count({ where }),
     ]);
 
+    const deliveredOrderIds = orders.filter((order) => order.status === "DELIVERED" || order.fulfillment?.status === "COMPLETED").map((order) => order.id);
+    const qualitySignals = deliveredOrderIds.length ? await prisma.riskSignal.findMany({
+      where: { userId, type: "CONDUCT_ORDER_PRODUCT_DISPUTE", status: { in: ["OPEN", "REVIEWED"] } },
+      select: { metadata: true },
+    }) : [];
+    const openQualityOrderIds = new Set<string>();
+    for (const signal of qualitySignals) {
+      const metadata = signal.metadata && typeof signal.metadata === "object" ? signal.metadata as Record<string, unknown> : {};
+      if (typeof metadata.orderId === "string" && deliveredOrderIds.includes(metadata.orderId)) openQualityOrderIds.add(metadata.orderId);
+    }
+
     return {
       items: orders.map((order) => ({
         id: order.id,
@@ -61,6 +72,7 @@ export class VendorSalesService {
         createdAt: order.createdAt,
         deliveryAddress: order.deliveryAddress,
         fulfillment: order.fulfillment,
+        hasOpenQualityReport: openQualityOrderIds.has(order.id),
         items: order.items.map((item) => ({
           id: item.id,
           productId: item.productId,

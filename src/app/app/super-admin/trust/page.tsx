@@ -14,6 +14,7 @@ type Signal = {
   createdAt: string;
   metadata: { productId?: string; productName?: string; orderId?: string; reason?: string; details?: string | null; vendorResponse?: { response: string; createdAt: string; vendorUserId: string | null } | null } | null;
   subject: { id: string; name: string; email: string; role: string; status: string } | null;
+  history?: Array<{ status: string; note: string | null; createdAt: string; actor: { id: string; name: string; email: string } | null }>;
 };
 
 type Metrics = { total: number; open: number; critical: number };
@@ -28,10 +29,13 @@ export default function TrustCenterPage() {
   const [filter, setFilter] = useState("OPEN");
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/trust", { cache: "no-store", credentials: "include" });
+      const params = new URLSearchParams({ limit: "100", offset: "0" });
+      if (search.trim()) params.set("search", search.trim());
+      const response = await fetch("/api/admin/trust?" + params.toString(), { cache: "no-store", credentials: "include" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Sem acesso ao Centro de Confiança.");
       setSignals(Array.isArray(data.signals) ? data.signals : []);
@@ -39,7 +43,7 @@ export default function TrustCenterPage() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao carregar ocorrências.");
     }
-  }, []);
+  }, [search]);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +54,13 @@ export default function TrustCenterPage() {
   const visible = useMemo(() => filter === "ALL" ? signals : signals.filter(item => item.status === filter), [filter, signals]);
 
   async function updateStatus(id: string, status: Signal["status"]) {
+    const decisionNote = status === "RESOLVED" || status === "DISMISSED"
+      ? window.prompt(status === "RESOLVED" ? "Justifique a resolução (mínimo 10 caracteres):" : "Justifique o descarte (mínimo 10 caracteres):")
+      : undefined;
+    if ((status === "RESOLVED" || status === "DISMISSED") && (!decisionNote || decisionNote.trim().length < 10)) {
+      setMessage("A decisão exige uma justificação com pelo menos 10 caracteres.");
+      return;
+    }
     setBusyId(id);
     setMessage("");
     try {
@@ -57,7 +68,7 @@ export default function TrustCenterPage() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
+        body: JSON.stringify({ id, status, ...(decisionNote ? { decisionNote: decisionNote.trim() } : {}) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Não foi possível actualizar a ocorrência.");
@@ -93,7 +104,8 @@ export default function TrustCenterPage() {
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h2 className="text-xl font-semibold">Fila de ocorrências</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Últimas 100 ocorrências de conduta.</p></div>
+          <div><h2 className="text-xl font-semibold">Fila de ocorrências</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Até 100 ocorrências por consulta, com pesquisa e histórico.</p></div>
+          <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Pesquisar ocorrência ou conta" aria-label="Pesquisar ocorrências" className="min-w-48 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-xs" />
           <select value={filter} onChange={event => setFilter(event.target.value)} className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] px-3 py-2 text-xs">
             <option value="OPEN">Por analisar</option><option value="REVIEWED">Em análise</option><option value="RESOLVED">Resolvidas</option><option value="DISMISSED">Descartadas</option><option value="ALL">Todas</option>
           </select>
@@ -114,6 +126,14 @@ export default function TrustCenterPage() {
               <p><span className="text-[var(--theme-text-faint)]">Canal: </span>{signal.source.replaceAll("_", " ")}</p>
             </div>
             {signal.subject?.email && <p className="text-[11px] text-[var(--theme-text-muted)]">{signal.subject.email}</p>}
+            {signal.history && signal.history.length > 0 && <div className="rounded-xl border border-[var(--theme-border)] p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--theme-text-faint)]">Histórico administrativo</p>
+              <ol className="mt-2 space-y-2">{signal.history.map((entry, index) => <li key={index} className="border-l-2 border-[var(--theme-border)] pl-3 text-xs">
+                <p className="font-medium">{statusLabels[entry.status as Signal["status"]] || entry.status} · {new Date(entry.createdAt).toLocaleString("pt-PT")}</p>
+                <p className="text-[var(--theme-text-muted)]">{entry.actor?.name || entry.actor?.email || "Administrador"}</p>
+                {entry.note && <p className="mt-1 whitespace-pre-wrap">{entry.note}</p>}
+              </li>)}</ol>
+            </div>}
             <div className="flex flex-wrap gap-2 border-t border-[var(--theme-border)] pt-3">
               {signal.status === "OPEN" && <button disabled={busyId === signal.id} onClick={() => void updateStatus(signal.id, "REVIEWED")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-xs disabled:opacity-50">Iniciar análise</button>}
               {(signal.status === "OPEN" || signal.status === "REVIEWED") && <><button disabled={busyId === signal.id} onClick={() => void updateStatus(signal.id, "RESOLVED")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-xs disabled:opacity-50">Marcar resolvida</button><button disabled={busyId === signal.id} onClick={() => void updateStatus(signal.id, "DISMISSED")} className="rounded-full border border-[var(--theme-border)] px-3 py-2 text-xs disabled:opacity-50">Descartar ocorrência</button></>}

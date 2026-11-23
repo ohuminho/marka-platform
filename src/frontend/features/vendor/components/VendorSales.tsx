@@ -12,6 +12,7 @@ type Sale = {
   createdAt: string;
   deliveryAddress: string | null;
   fulfillment: { id: string; status: string; exceptionCode: string | null } | null;
+  hasOpenQualityReport?: boolean;
   items: Array<{ id: string; productName: string; sku: string; quantity: number; subtotal: number }>;
 };
 
@@ -142,7 +143,7 @@ export default function VendorSales() {
                     ) : null}
                   </div>
                 ) : null}
-                {activeOrganization?.id && sale.status === "DELIVERED" ? <VendorQualityResponse orderId={sale.id} organizationId={activeOrganization.id} /> : null}
+                {activeOrganization?.id && sale.status === "DELIVERED" && sale.hasOpenQualityReport ? <VendorQualityResponse orderId={sale.id} organizationId={activeOrganization.id} /> : null}
                 {sale.fulfillment ? (
                   <div className="mt-4 text-sm text-[var(--theme-text)]/50">
                     Fulfillment: {sale.fulfillment.status}
