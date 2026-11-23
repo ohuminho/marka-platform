@@ -18,14 +18,16 @@ type Signal = {
   history?: Array<{ status: string; note: string | null; createdAt: string; actor: { id: string; name: string; email: string } | null }>;
 };
 
-type Appeal = { id:string; userId:string|null; userName:string; userEmail:string; signalId:string; appealText:string; submittedAt:string; decision:"PENDING"|"ACCEPTED"|"REJECTED"; decisionReason:string|null };\ntype Metrics = { total: number; open: number; critical: number };
+type Appeal = { id:string; userId:string|null; userName:string; userEmail:string; signalId:string; appealText:string; submittedAt:string; decision:"PENDING"|"ACCEPTED"|"REJECTED"; decisionReason:string|null };
+type Metrics = { total: number; open: number; critical: number };
 const statusLabels: Record<Signal["status"], string> = {
   OPEN: "Por analisar", REVIEWED: "Em análise", RESOLVED: "Resolvida", DISMISSED: "Descartada",
 };
 const severityLabel = (score: number) => score >= 80 ? "Crítica" : score >= 60 ? "Alta" : score >= 30 ? "Média" : "Baixa";
 
 export default function TrustCenterPage() {
-  const [signals, setSignals] = useState<Signal[]>([]);\n  const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [signals, setSignals] = useState<Signal[]>([]);
+  const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [metrics, setMetrics] = useState<Metrics>({ total: 0, open: 0, critical: 0 });
   const [filter, setFilter] = useState("OPEN");
   const [message, setMessage] = useState("");
@@ -39,7 +41,8 @@ export default function TrustCenterPage() {
       const response = await fetch("/api/admin/trust?" + params.toString(), { cache: "no-store", credentials: "include" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Sem acesso ao Centro de Confiança.");
-      setSignals(Array.isArray(data.signals) ? data.signals : []);\n      setAppeals(Array.isArray(data.appeals) ? data.appeals : []);
+      setSignals(Array.isArray(data.signals) ? data.signals : []);
+      setAppeals(Array.isArray(data.appeals) ? data.appeals : []);
       setMetrics(data.metrics || { total: 0, open: 0, critical: 0 });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao carregar ocorrências.");
