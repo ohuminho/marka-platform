@@ -96,7 +96,22 @@ export async function GET(request: Request) {
       const response = typeof metadata.orderId === "string" ? responseByOrder.get(metadata.orderId) : undefined;
       return { ...signal, metadata: { ...metadata, vendorResponse: response ? { response: response.response, createdAt: response.createdAt, vendorUserId: response.vendorUserId } : null }, history: auditBySignal.get(signal.id) ?? [] };
     });
-    return NextResponse.json({ signals: enrichedSignals, metrics: { total, open, critical }, pagination: { limit, offset, hasMore: offset + signals.length < total } }, {
+    const appealEvents = await prisma.securityEvent.findMany({
+      where: { type: { in: ["TRUST_APPEAL_SUBMITTED", "TRUST_APPEAL_ACCEPTED", "TRUST_APPEAL_REJECTED"] } },
+      orderBy: { createdAt: "desc" }, take: 300,
+      select: { id: true, type: true, actorUserId: true, correlationId: true, metadata: true, createdAt: true, actor: { select: { id: true, name: true, email: true } } },
+    });
+    const appeals = appealEvents.filter(event => event.type === "TRUST_APPEAL_SUBMITTED").map(event => {
+      const meta = event.metadata && typeof event.metadata === "object" ? event.metadata as Record<string, unknown> : {};
+      const decision = appealEvents.find(candidate => {
+        if (candidate.type === "TRUST_APPEAL_SUBMITTED") return false;
+        const candidateMeta = candidate.metadata && typeof candidate.metadata === "object" ? candidate.metadata as Record<string, unknown> : {};
+        return candidateMeta.appealEventId === event.id;
+      });
+      const decisionMeta = decision?.metadata && typeof decision.metadata === "object" ? decision.metadata as Record<string, unknown> : {};
+      return { id: event.id, userId: event.correlationId, userName: event.actor?.name ?? "Conta MARKA", userEmail: event.actor?.email ?? "", signalId: typeof meta.signalId === "string" ? meta.signalId : "", appealText: typeof meta.appealText === "string" ? meta.appealText : "", submittedAt: event.createdAt, decision: !decision ? "PENDING" : decision.type === "TRUST_APPEAL_ACCEPTED" ? "ACCEPTED" : "REJECTED", decisionReason: typeof decisionMeta.reason === "string" ? decisionMeta.reason : null };
+    });
+    return NextResponse.json({ signals: enrichedSignals, appeals, metrics: { total, open, critical }, pagination: { limit, offset, hasMore: offset + signals.length < total } }, {
       headers: { "Cache-Control": "no-store, private" },
     });
   } catch (error) {

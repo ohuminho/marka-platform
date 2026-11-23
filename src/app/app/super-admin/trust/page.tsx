@@ -18,14 +18,14 @@ type Signal = {
   history?: Array<{ status: string; note: string | null; createdAt: string; actor: { id: string; name: string; email: string } | null }>;
 };
 
-type Metrics = { total: number; open: number; critical: number };
+type Appeal = { id:string; userId:string|null; userName:string; userEmail:string; signalId:string; appealText:string; submittedAt:string; decision:"PENDING"|"ACCEPTED"|"REJECTED"; decisionReason:string|null };\ntype Metrics = { total: number; open: number; critical: number };
 const statusLabels: Record<Signal["status"], string> = {
   OPEN: "Por analisar", REVIEWED: "Em análise", RESOLVED: "Resolvida", DISMISSED: "Descartada",
 };
 const severityLabel = (score: number) => score >= 80 ? "Crítica" : score >= 60 ? "Alta" : score >= 30 ? "Média" : "Baixa";
 
 export default function TrustCenterPage() {
-  const [signals, setSignals] = useState<Signal[]>([]);
+  const [signals, setSignals] = useState<Signal[]>([]);\n  const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [metrics, setMetrics] = useState<Metrics>({ total: 0, open: 0, critical: 0 });
   const [filter, setFilter] = useState("OPEN");
   const [message, setMessage] = useState("");
@@ -39,7 +39,7 @@ export default function TrustCenterPage() {
       const response = await fetch("/api/admin/trust?" + params.toString(), { cache: "no-store", credentials: "include" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Sem acesso ao Centro de Confiança.");
-      setSignals(Array.isArray(data.signals) ? data.signals : []);
+      setSignals(Array.isArray(data.signals) ? data.signals : []);\n      setAppeals(Array.isArray(data.appeals) ? data.appeals : []);
       setMetrics(data.metrics || { total: 0, open: 0, critical: 0 });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao carregar ocorrências.");
@@ -53,6 +53,17 @@ export default function TrustCenterPage() {
   }, [load]);
 
   const visible = useMemo(() => filter === "ALL" ? signals : signals.filter(item => item.status === filter), [filter, signals]);
+
+  async function decideAppeal(appeal: Appeal, action: "ACCEPT_APPEAL" | "REJECT_APPEAL") {
+    const reason = window.prompt("Fundamentação da decisão (mínimo 20 caracteres):");
+    if (!reason || reason.trim().length < 20) { setMessage("A decisão exige uma fundamentação com pelo menos 20 caracteres."); return; }
+    setBusyId(appeal.id); setMessage("");
+    try {
+      const response = await fetch("/api/admin/trust/sanctions", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signalId: appeal.signalId, appealEventId: appeal.id, action, reason: reason.trim() }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.message || "Não foi possível decidir o recurso.");
+      setMessage(action === "ACCEPT_APPEAL" ? "Recurso aceite. Conta reintegrada." : "Recurso rejeitado. Conta mantém-se suspensa."); await load();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Falha na decisão."); } finally { setBusyId(""); }
+  }
 
   async function updateStatus(id: string, status: Signal["status"]) {
     const decisionNote = status === "RESOLVED" || status === "DISMISSED"
@@ -102,6 +113,11 @@ export default function TrustCenterPage() {
       </section>
 
       {message && <p role="status" className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-sm">{message}</p>}
+
+      <section className="space-y-4">
+        <div><h2 className="text-xl font-semibold">Recursos de utilizadores</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Acessos verificados por e-mail, decisão humana e histórico auditável.</p></div>
+        {appeals.length===0?<div className="rounded-2xl border border-[var(--theme-border)] p-5 text-sm text-[var(--theme-text-muted)]">Não existem recursos submetidos.</div>:appeals.map(appeal=><article key={appeal.id} className="space-y-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{appeal.userName}</h3><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{appeal.userEmail} · {new Date(appeal.submittedAt).toLocaleString("pt-PT")}</p></div><span className="rounded-full border border-[var(--theme-border)] px-3 py-1 text-[10px] uppercase">{appeal.decision==="PENDING"?"A aguardar decisão":appeal.decision==="ACCEPTED"?"Aceite":"Rejeitado"}</span></div><p className="whitespace-pre-wrap rounded-xl border border-[var(--theme-border)] p-4 text-sm leading-6">{appeal.appealText}</p><p className="text-[10px] text-[var(--theme-text-faint)]">Ocorrência: {appeal.signalId}</p>{appeal.decision==="PENDING"&&<div className="flex flex-wrap gap-2"><button disabled={busyId===appeal.id} onClick={()=>void decideAppeal(appeal,"ACCEPT_APPEAL")} className="rounded-full border border-emerald-500/40 px-4 py-2 text-xs disabled:opacity-50">Aceitar e reintegrar</button><button disabled={busyId===appeal.id} onClick={()=>void decideAppeal(appeal,"REJECT_APPEAL")} className="rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs disabled:opacity-50">Rejeitar recurso</button></div>}{appeal.decisionReason&&<p className="text-xs text-[var(--theme-text-muted)]">Fundamentação: {appeal.decisionReason}</p>}</article>)}
+      </section>
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

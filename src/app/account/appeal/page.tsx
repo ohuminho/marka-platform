@@ -1,0 +1,2 @@
+import TrustAppealForm from "@/frontend/features/trust/components/TrustAppealForm";
+export default async function AccountAppealPage({searchParams}:{searchParams:Promise<{token?:string}>}){const params=await searchParams;return <TrustAppealForm token={typeof params.token==="string"?params.token:""}/>}
