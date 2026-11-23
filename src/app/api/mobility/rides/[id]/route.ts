@@ -737,7 +737,8 @@ export async function PATCH(
 
     if (
       action === "CANCEL" &&
-      finalRide?.status === "CANCELLED"
+      isRecord(finalRide) &&
+      finalRide.status === "CANCELLED"
     ) {
       try {
         await recordMobilityCancellationForReview({
