@@ -12,6 +12,7 @@ type Signal = {
   source: string;
   reason: string | null;
   createdAt: string;
+  metadata: { productId?: string; productName?: string; reason?: string } | null;
   subject: { id: string; name: string; email: string; role: string; status: string } | null;
 };
 
@@ -100,7 +101,8 @@ export default function TrustCenterPage() {
         {visible.length === 0 ? <div className="rounded-2xl border border-[var(--theme-border)] p-7 text-sm text-[var(--theme-text-muted)]">Não existem ocorrências nesta vista.</div> : visible.map(signal => (
           <article key={signal.id} className="space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{signal.type.replace("CONDUCT_", "").replaceAll("_", " ")}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{severityLabel(signal.score)}</span><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{statusLabels[signal.status]}</span></div><p className="mt-2 text-xs text-[var(--theme-text-muted)]">{signal.reason || "Violação bloqueada pela política de conduta."}</p></div>
+              <div><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{signal.type.replace("CONDUCT_", "").replaceAll("_", " ")}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{severityLabel(signal.score)}</span><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase">{statusLabels[signal.status]}</span></div><p className="mt-2 text-xs text-[var(--theme-text-muted)]">{signal.reason || "Violação bloqueada pela política de conduta."}</p>
+                {signal.metadata?.productId && <p className="mt-2 text-xs"><span className="text-[var(--theme-text-faint)]">Anúncio: </span><Link className="underline underline-offset-2" href={`/app/marketplace/products/${encodeURIComponent(signal.metadata.productId)}`}>{signal.metadata.productName || signal.metadata.productId}</Link></p>}</div>
               <p className="text-[10px] text-[var(--theme-text-faint)]">{new Date(signal.createdAt).toLocaleString("pt-PT")}</p>
             </div>
             <div className="grid gap-2 text-xs sm:grid-cols-3">
