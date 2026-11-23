@@ -1,5 +1,8 @@
 import { prisma } from "@/database/client/prisma";
 
+const REVIEW_WINDOW_DAYS = 30;
+const REVIEW_THRESHOLD = 3;
+
 const REVIEWABLE_PRE_ASSIGNMENT_STATES = new Set([
   "DRIVER_ASSIGNED",
   "DRIVER_ARRIVING",
@@ -16,9 +19,6 @@ export function shouldFlagRepeatedMobilityCancellations(count: number) {
 
 const CANCELLATION_EVENT_TYPE = "MOBILITY_RIDER_CANCELLED_AFTER_ASSIGNMENT";
 const REPEATED_CANCELLATION_SIGNAL = "CONDUCT_REPEATED_MOBILITY_CANCELLATIONS";
-const REVIEW_WINDOW_DAYS = 30;
-const REVIEW_THRESHOLD = 3;
-
 /**
  * Records only completed rider cancellations after a driver has been assigned.
  * Three events in 30 days create a review-only signal; no account restriction is applied.
