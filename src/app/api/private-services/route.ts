@@ -28,7 +28,7 @@ export async function GET() {
       select: {
         id: true, reference: true, serviceType: true, specialty: true, title: true,
         summary: true, region: true, status: true, createdAt: true, expiresAt: true,
-        offers: { select: { id: true, status: true, createdAt: true, professional: { select: { publicName: true, region: true } } } },
+        offers: { where: { status: { in: ["ACCEPTED", "SELECTED"] } }, select: { id: true, status: true, createdAt: true, professional: { select: { publicName: true, region: true } } } },
       },
     });
     return NextResponse.json({ items: requests }, { headers: { "Cache-Control": "no-store" } });
