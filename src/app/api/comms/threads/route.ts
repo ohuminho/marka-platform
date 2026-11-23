@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const actor = await getActor();
     if (!actor) return NextResponse.json({ message: "Inicia sessão para abrir a conversa." }, { status: 401 });
     const input = await request.json().catch(() => null) as { contextType?: unknown; contextId?: unknown } | null;
-    const contextType = input?.contextType === "MOBILITY" || input?.contextType === "DELIVERY" ? input.contextType : null;
+    const contextType = input?.contextType === "MOBILITY" || input?.contextType === "DELIVERY" || input?.contextType === "PRIVATE_SERVICE" ? input.contextType : null;
     const contextId = typeof input?.contextId === "string" ? input.contextId.trim() : "";
     if (!contextType || !contextId || contextId.length > 128) return NextResponse.json({ message: "Contexto de comunicação inválido." }, { status: 400 });
     await assertCommunicationContextParticipant(contextType, contextId, actor.id);
