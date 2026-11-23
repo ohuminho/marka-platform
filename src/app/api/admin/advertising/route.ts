@@ -7,11 +7,11 @@ import { prisma } from "@/database/client/prisma";
 const safeHttpUrl = z.string().url().max(2000).refine((value) => {
   try {
     const protocol = new URL(value).protocol;
-    return protocol === "https:" || protocol === "http:";
+    return protocol === "https:";
   } catch {
     return false;
   }
-}, "Apenas URLs HTTP ou HTTPS são permitidos.");
+}, "Apenas URLs HTTPS são permitidos.");
 
 const optionalSafeHttpUrl = safeHttpUrl.optional().or(z.literal(""));
 
