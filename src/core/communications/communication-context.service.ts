@@ -1,7 +1,7 @@
 import { prisma } from "@/database/client/prisma";
 
-export type CommunicationContextType = "MOBILITY" | "DELIVERY";
-export type CommunicationParticipantRole = "CUSTOMER" | "DRIVER" | "MERCHANT" | "COURIER";
+export type CommunicationContextType = "MOBILITY" | "DELIVERY" | "PRIVATE_SERVICE";
+export type CommunicationParticipantRole = "CUSTOMER" | "DRIVER" | "MERCHANT" | "COURIER" | "PROFESSIONAL";
 
 type ResolvedContext = {
   contextType: CommunicationContextType;
@@ -18,6 +18,29 @@ export class CommunicationContextError extends Error {
 }
 
 async function resolveContext(contextType: CommunicationContextType, contextId: string): Promise<ResolvedContext> {
+  if (contextType === "PRIVATE_SERVICE") {
+    const serviceRequest = await prisma.privateServiceRequest.findUnique({
+      where: { id: contextId },
+      select: {
+        id: true, reference: true, status: true, requesterId: true,
+        selectedProfessional: { select: { userId: true, status: true, user: { select: { status: true } } } },
+      },
+    });
+    if (!serviceRequest) throw new CommunicationContextError("Processo privado não encontrado.");
+    if (!["PROFESSIONAL_SELECTED", "ENGAGED"].includes(serviceRequest.status) ||
+        serviceRequest.selectedProfessional?.status !== "VERIFIED" ||
+        serviceRequest.selectedProfessional.user.status !== "ACTIVE") {
+      throw new CommunicationContextError("A comunicação deste processo privado não está disponível.", 403);
+    }
+    return {
+      contextType, contextId, subject: `Processo privado ${serviceRequest.reference}`,
+      participants: [
+        { userId: serviceRequest.requesterId, role: "CUSTOMER" },
+        { userId: serviceRequest.selectedProfessional.userId, role: "PROFESSIONAL" },
+      ],
+    };
+  }
+
   if (contextType === "MOBILITY") {
     const ride = await prisma.mobilityRide.findUnique({
       where: { id: contextId },
