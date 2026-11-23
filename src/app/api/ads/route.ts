@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/database/client/prisma";
 import type { AdvertisementPlacement } from "@/monetization/ads/ad.types";
+import { isAdvertisementCampaignDeliverable } from "@/monetization/ads/ad-delivery";
 
 export const dynamic = "force-dynamic";
 
@@ -77,14 +78,9 @@ export async function GET(request: Request) {
       },
     });
 
-    const eligibleCampaigns = campaigns.filter((campaign) => {
-      const hasRemainingInventory =
-        campaign.maxImpressions === null || campaign.impressions < campaign.maxImpressions;
-      const hasSafeCreative =
-        campaign.creativeType === "NATIVE" ||
-        safeHttpUrl(campaign.creativeUrl) !== null;
-      return hasRemainingInventory && hasSafeCreative;
-    });
+    const eligibleCampaigns = campaigns.filter((campaign) =>
+      isAdvertisementCampaignDeliverable(campaign, now, (url) => safeHttpUrl(url) !== null)
+    );
 
     return NextResponse.json(
       {
