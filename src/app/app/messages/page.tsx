@@ -7,7 +7,7 @@ import MarketplaceCallPanel from "@/frontend/features/communications/components/
 
 type Message = { id: string; body: string; senderId: string; createdAt: string; readAt?: string | null; editedAt?: string | null; sender?: { id: string; name: string } };
 type ContextThread = {
-  id: string; contextId: string; contextType: "MOBILITY" | "DELIVERY"; subject?: string | null; lastMessageAt: string;
+  id: string; contextId: string; contextType: "MOBILITY" | "DELIVERY" | "PRIVATE_SERVICE"; subject?: string | null; lastMessageAt: string;
   participants: Array<{ userId: string; role: string; user?: { id: string; name: string } }>;
   messages: Message[];
 };
@@ -17,7 +17,7 @@ type Conversation = {
   store: { id: string; name: string }; product: { id: string; name: string; image?: string | null };
   messages: Message[];
   communicationThreadId?: string;
-  contextType?: "MOBILITY" | "DELIVERY";
+  contextType?: "MOBILITY" | "DELIVERY" | "PRIVATE_SERVICE";
 };
 
 function stamp(value: string) {
@@ -58,7 +58,7 @@ function MessagesWorkspace() {
           sellerId: other[0]?.userId ?? "",
           buyer: { id: customer?.userId ?? currentActorId, name: customer?.user?.name ?? "Cliente" },
           seller: { id: other[0]?.userId ?? "", name: otherNames.join(", ") || "Participantes" },
-          store: { id: thread.id, name: thread.contextType === "MOBILITY" ? "MARKA Mobility" : "MARKA Delivery" },
+          store: { id: thread.id, name: thread.contextType === "MOBILITY" ? "MARKA Mobility" : thread.contextType === "DELIVERY" ? "MARKA Delivery" : "MARKA Serviços Privados" },
           product: { id: thread.contextId, name: thread.subject ?? "Comunicação" },
           lastMessageAt: thread.lastMessageAt,
           messages: thread.messages ?? [],
