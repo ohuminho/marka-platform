@@ -103,10 +103,9 @@ export async function POST(
         where: {
           id: current.assignedProviderId,
           organizationId,
-          status: "VERIFIED",
-          availability: { in: ["AVAILABLE", "BUSY"] },
+          status: { in: ["VERIFIED", "SUSPENDED"] },
         },
-        select: { id: true, availability: true },
+        select: { id: true, status: true, availability: true },
       });
       if (!provider) throw new Error("FREIGHT_PROVIDER_NOT_RESUMABLE");
 
@@ -114,7 +113,7 @@ export async function POST(
         where: {
           id: current.assignedVehicleId,
           providerId: provider.id,
-          status: "ACTIVE",
+          status: { in: ["ACTIVE", "SUSPENDED"] },
         },
         select: { id: true },
       });
@@ -163,7 +162,7 @@ export async function POST(
       });
       if (changed.count !== 1) throw new Error("FREIGHT_EXCEPTION_RESOLUTION_CONFLICT");
 
-      if (previousStatus !== "PROVIDER_COMPLETED_PENDING_CONFIRMATION" && provider.availability === "AVAILABLE") {
+      if (previousStatus !== "PROVIDER_COMPLETED_PENDING_CONFIRMATION" && provider.status === "VERIFIED" && provider.availability === "AVAILABLE") {
         await tx.freightProvider.updateMany({
           where: { id: provider.id, status: "VERIFIED", availability: "AVAILABLE" },
           data: { availability: "BUSY" },
@@ -226,9 +225,9 @@ export async function POST(
           : code === "FREIGHT_ASSIGNMENT_INCOMPLETE"
             ? "Não existe uma atribuição completa para retomar este serviço."
             : code === "FREIGHT_PROVIDER_NOT_RESUMABLE"
-              ? "O prestador não está verificado ou disponível para retomar o serviço."
+              ? "O prestador está bloqueado ou não existe uma atribuição válida para retomar o serviço."
               : code === "FREIGHT_VEHICLE_NOT_ACTIVE"
-                ? "A viatura atribuída já não está activa."
+                ? "A viatura atribuída está bloqueada/retirada ou não corresponde ao serviço."
                 : code === "FREIGHT_EXCEPTION_REVIEW_REQUIRED"
                   ? "A ocorrência precisa de uma análise administrativa registada antes da aprovação da retoma."
                   : code === "FREIGHT_EXCEPTION_ORIGIN_UNKNOWN"
