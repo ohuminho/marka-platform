@@ -26,6 +26,7 @@ CREATE TABLE "PrivateServiceRequest" (
   "region" TEXT,
   "status" "PrivateServiceRequestStatus" NOT NULL DEFAULT 'SUBMITTED',
   "consentAt" TIMESTAMPTZ(3) NOT NULL,
+  "consentVersion" TEXT NOT NULL DEFAULT 'private-services-v1',
   "expiresAt" TIMESTAMPTZ(3) NOT NULL,
   "selectedProfessionalId" TEXT,
   "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
