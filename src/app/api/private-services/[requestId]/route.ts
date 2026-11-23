@@ -46,6 +46,17 @@ export async function GET(
       return NextResponse.json({ message: "Sem autorização para consultar os detalhes confidenciais." }, { status: 403 });
     }
 
+    await prisma.auditLog.create({
+      data: {
+        actorUserId: user.id,
+        actorType: "USER",
+        action: "PRIVATE_SERVICE_CASE_VIEWED",
+        entityType: "PrivateServiceRequest",
+        entityId: serviceRequest.id,
+        metadata: { accessRole: isRequester ? "REQUESTER" : "SELECTED_PROFESSIONAL" },
+      },
+    });
+
     return NextResponse.json({
       request: {
         id: serviceRequest.id, reference: serviceRequest.reference,
