@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import RoleContextSummary from "@/frontend/features/auth/components/RoleContextSummary";
 import MobilityTripMap from "@/frontend/features/mobility/components/MobilityTripMap";
+import OrderQualityReport from "@/frontend/features/marketplace/components/OrderQualityReport";
 
 interface OrderItem {
   id: string;
@@ -901,6 +902,10 @@ export default function OrderDetailPage({
               </div>
             )}
           </div>
+
+          {(order.status === "DELIVERED" || order.fulfillment?.status === "COMPLETED") && (
+            <OrderQualityReport orderId={order.id} />
+          )}
 
           <div className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/5 p-6">
             <h2 className="text-xl font-semibold">
