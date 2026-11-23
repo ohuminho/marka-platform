@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { privateServiceProposalSchema } from "@/core/private-services/proposal.schema";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
@@ -26,13 +26,7 @@ export async function PATCH(
     if (!user) return NextResponse.json({ message: "Authentication required." }, { status: 401 });
 
     const { requestId, offerId } = await context.params;
-    const bodySchema = z.object({
-      action: z.enum(["ACCEPT", "DECLINE"]),
-      proposedFeeKz: z.number().int().min(0).max(1_000_000_000).optional(),
-      proposalAvailability: z.string().trim().min(3).max(500).optional(),
-      proposalApproach: z.string().trim().min(20).max(1500).optional(),
-    }).strict();
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = privateServiceProposalSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ message: "Dados da resposta inválidos.", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
     const body = parsed.data;
     if (body.action === "ACCEPT" && (body.proposedFeeKz === undefined || !body.proposalAvailability || !body.proposalApproach)) {
