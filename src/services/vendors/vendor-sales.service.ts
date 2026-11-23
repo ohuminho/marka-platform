@@ -1,6 +1,7 @@
 import { prisma } from "@/database/client/prisma";
 import type { OrderStatus } from "@prisma/client";
 import { OrderService } from "@/services/orders/order.service";
+import { recordVendorCancellationForReview } from "@/core/trust/record-vendor-cancellation";
 
 export class VendorSalesService {
   async listSales({
@@ -127,6 +128,16 @@ export class VendorSalesService {
         undefined,
         vendor.id,
       );
+      try {
+        await recordVendorCancellationForReview({
+          vendorUserId: userId,
+          vendorId: vendor.id,
+          orderId: order.id,
+        });
+      } catch (auditError) {
+        // Trust telemetry must never turn a successful order cancellation into a failed response.
+        console.error("[VENDOR_CANCELLATION_REVIEW_SIGNAL_ERROR]", auditError);
+      }
       return {
         id: cancelled.id,
         status: cancelled.status,
