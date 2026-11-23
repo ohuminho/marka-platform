@@ -2317,6 +2317,7 @@ model PrivateServiceRequest {
   region      String?
   status      PrivateServiceRequestStatus @default(SUBMITTED)
   consentAt   DateTime @db.Timestamptz(3)
+  consentVersion String @default("private-services-v1")
   expiresAt   DateTime @db.Timestamptz(3)
   selectedProfessionalId String?
 
