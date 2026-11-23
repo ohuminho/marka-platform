@@ -6,6 +6,14 @@ const REVIEWABLE_PRE_ASSIGNMENT_STATES = new Set([
   "DRIVER_ARRIVED",
 ]);
 
+export function shouldRecordMobilityCancellationForReview(status: string) {
+  return REVIEWABLE_PRE_ASSIGNMENT_STATES.has(status);
+}
+
+export function shouldFlagRepeatedMobilityCancellations(count: number) {
+  return count >= REVIEW_THRESHOLD;
+}
+
 const CANCELLATION_EVENT_TYPE = "MOBILITY_RIDER_CANCELLED_AFTER_ASSIGNMENT";
 const REPEATED_CANCELLATION_SIGNAL = "CONDUCT_REPEATED_MOBILITY_CANCELLATIONS";
 const REVIEW_WINDOW_DAYS = 30;
@@ -22,7 +30,7 @@ export async function recordMobilityCancellationForReview(input: {
   idempotencyKey: string;
   correlationId?: string;
 }) {
-  if (!REVIEWABLE_PRE_ASSIGNMENT_STATES.has(input.previousRideStatus)) return;
+  if (!shouldRecordMobilityCancellationForReview(input.previousRideStatus)) return;
 
   await prisma.$transaction(async (tx) => {
     const existingEvent = await tx.securityEvent.findFirst({
@@ -59,7 +67,7 @@ export async function recordMobilityCancellationForReview(input: {
       },
     });
 
-    if (count < REVIEW_THRESHOLD) return;
+    if (!shouldFlagRepeatedMobilityCancellations(count)) return;
 
     const existingSignal = await tx.riskSignal.findFirst({
       where: {
