@@ -15,7 +15,7 @@ function safeHttpUrl(value: string | null): string | null {
   if (!value) return null;
   try {
     const parsed = new URL(value);
-    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
+    return parsed.protocol === "https:" ? parsed.toString() : null;
   } catch {
     return null;
   }
