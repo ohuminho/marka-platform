@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       const created = await tx.privateServiceRequest.create({
         data: {
           reference, requesterId: user.id, serviceType, specialty, title, summary,
-          region: region || null, consentAt: now, expiresAt,
+          region: region || null, consentAt: now, consentVersion: "private-services-v1", expiresAt,
           status: professionals.length ? "OFFERED" : "MATCHING",
         },
         select: { id: true, reference: true, status: true, specialty: true },
