@@ -18,6 +18,7 @@ import type {
 import {
   MobilityRideService,
 } from "@/services/mobility/rides/mobility-ride.service";
+import { recordMobilityCancellationForReview } from "@/core/trust/record-mobility-cancellation";
 
 interface RouteContext {
   params: Promise<{
@@ -729,22 +730,35 @@ export async function PATCH(
             : undefined,
       });
 
+    const finalRide =
+      action === "CANCEL"
+        ? await mobilityRideService.getById(id)
+        : result.ride ?? await mobilityRideService.getById(id);
+
+    if (
+      action === "CANCEL" &&
+      finalRide?.status === "CANCELLED"
+    ) {
+      try {
+        await recordMobilityCancellationForReview({
+          actorUserId: authentication.session.userId,
+          rideId: id,
+          previousRideStatus: ride.status,
+          idempotencyKey,
+          correlationId: requestContext.correlationId,
+        });
+      } catch (riskError) {
+        console.error("[MOBILITY_CANCELLATION_RISK_RECORD_ERROR]", riskError);
+      }
+    }
+
     return NextResponse.json(
       {
-        ride:
-          result.ride ??
-          await mobilityRideService.getById(
-            id,
-          ),
-
-        orchestration:
-          result,
+        ride: finalRide,
+        orchestration: result,
       },
       {
-        status:
-          result.recoveryRequired
-            ? 202
-            : 200,
+        status: result.recoveryRequired ? 202 : 200,
       },
     );
   } catch (error) {
