@@ -12,6 +12,7 @@ import PremiumCard from "@/design-system/components/cards/PremiumCard";
 
 import VendorTrustBadge from "./VendorTrustBadge";
 import SpaceBookingPanel from "./SpaceBookingPanel";
+import ProductListingReport from "./ProductListingReport";
 
 
 import {
@@ -362,6 +363,8 @@ export default function ProductDetails({
           </div>
 
           {(attributes.spaceBookingEnabled === true || attributes.spaceBookingEnabled === "true") && <div className="mt-8"><SpaceBookingPanel productId={product.id} /></div>}
+
+          <ProductListingReport productId={product.id} />
 
           <div className="mt-8 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Falar com o vendedor</p>
