@@ -22,6 +22,7 @@ export default function PrivateServiceCasePage() {
   const [item, setItem] = useState<PrivateCase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [openingChat, setOpeningChat] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -44,6 +45,22 @@ export default function PrivateServiceCasePage() {
     return () => { active = false; };
   }, [params.requestId]);
 
+  async function openPrivateConversation() {
+    setOpeningChat(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/private-services/${encodeURIComponent(params.requestId)}/communication`, {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível abrir a conversa privada.");
+      window.location.assign(`/app/messages?conversationId=${encodeURIComponent(data.threadId)}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao abrir conversa privada.");
+      setOpeningChat(false);
+    }
+  }
+
   return (
     <AppShell>
       <section className="mx-auto max-w-4xl space-y-5">
@@ -63,6 +80,7 @@ export default function PrivateServiceCasePage() {
               <h2 className="text-[10px] font-semibold uppercase tracking-[.2em] text-[var(--theme-text-faint)]">Descrição confidencial do pedido</h2>
               <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[var(--theme-text)]">{item.summary}</p>
               <p className="mt-7 rounded-xl border border-[var(--theme-border)] p-4 text-xs leading-5 text-[var(--theme-text-muted)]">Este conteúdo só é apresentado ao cliente e ao profissional seleccionado. Mantém a confidencialidade e utiliza os canais privados da MARKA para qualquer comunicação relacionada com este processo.</p>
+              {["PROFESSIONAL_SELECTED", "ENGAGED"].includes(item.status) && <button type="button" onClick={() => void openPrivateConversation()} disabled={openingChat} className="mt-4 min-h-12 rounded-xl bg-[var(--theme-accent)] px-5 text-sm font-semibold text-white disabled:opacity-50">{openingChat ? "A abrir conversa…" : "Abrir conversa privada"}</button>}
             </div>
           </article>
         ) : null}
