@@ -73,6 +73,11 @@ export const NavigationConfig = {
           description: "Apply to receive confidential professional requests",
         },
         {
+          title: "Request Private Support",
+          route: "/app/private-services/new",
+          description: "Submit a confidential request to a verified professional",
+        },
+        {
           title: "Wallet",
           route: "/app/wallet",
           description: "Manage your digital finance",
