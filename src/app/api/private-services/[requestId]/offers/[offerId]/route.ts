@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
@@ -25,9 +26,17 @@ export async function PATCH(
     if (!user) return NextResponse.json({ message: "Authentication required." }, { status: 401 });
 
     const { requestId, offerId } = await context.params;
-    const body = await request.json().catch(() => null) as { action?: unknown } | null;
-    if (body?.action !== "ACCEPT" && body?.action !== "DECLINE") {
-      return NextResponse.json({ message: "Escolhe aceitar ou recusar o convite." }, { status: 400 });
+    const bodySchema = z.object({
+      action: z.enum(["ACCEPT", "DECLINE"]),
+      proposedFeeKz: z.number().int().min(0).max(1_000_000_000).optional(),
+      proposalAvailability: z.string().trim().min(3).max(500).optional(),
+      proposalApproach: z.string().trim().min(20).max(1500).optional(),
+    }).strict();
+    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ message: "Dados da resposta inválidos.", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
+    const body = parsed.data;
+    if (body.action === "ACCEPT" && (body.proposedFeeKz === undefined || !body.proposalAvailability || !body.proposalApproach)) {
+      return NextResponse.json({ message: "Para manifestar interesse, indica o honorário em Kz, disponibilidade e abordagem profissional." }, { status: 422 });
     }
 
     const profile = await prisma.privateProfessionalProfile.findUnique({
@@ -66,7 +75,16 @@ export async function PATCH(
             },
           },
         },
-        data: { status: body.action === "ACCEPT" ? "ACCEPTED" : "DECLINED", respondedAt: now },
+        data: {
+          status: body.action === "ACCEPT" ? "ACCEPTED" : "DECLINED",
+          respondedAt: now,
+          ...(body.action === "ACCEPT" ? {
+            proposedFeeKz: body.proposedFeeKz!,
+            proposalAvailability: body.proposalAvailability!,
+            proposalApproach: body.proposalApproach!,
+            proposalSubmittedAt: now,
+          } : {}),
+        },
       });
       if (updated.count !== 1) return { error: "CONFLICT" as const };
 
