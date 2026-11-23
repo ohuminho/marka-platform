@@ -28,8 +28,13 @@ export async function GET() {
       return NextResponse.json({ message: "Perfil profissional verificado necessário." }, { status: 403 });
     }
 
+    const now = new Date();
+    await prisma.privateServiceOffer.updateMany({
+      where: { professionalId: profile.id, status: "PENDING", expiresAt: { lte: now } },
+      data: { status: "EXPIRED", respondedAt: now },
+    });
     const items = await prisma.privateServiceOffer.findMany({
-      where: { professionalId: profile.id, status: { in: ["PENDING", "ACCEPTED", "DECLINED", "SELECTED", "WITHDRAWN"] } },
+      where: { professionalId: profile.id, status: { in: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED", "SELECTED", "WITHDRAWN"] } },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: {
