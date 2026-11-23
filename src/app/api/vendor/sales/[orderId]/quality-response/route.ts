@@ -70,14 +70,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
       return { success: true };
     }, { isolationLevel: "Serializable", maxWait: 5000, timeout: 10000 });
     if ("error" in result) {
-      const messages: Record<string, string> = {
-        VENDOR_NOT_FOUND: "Loja não encontrada nesta organização.",
-        ORDER_NOT_FOUND: "Encomenda não encontrada ou não pertence à sua loja.",
-        REPORT_NOT_FOUND: "Não existe uma ocorrência aberta para esta encomenda.",
-        ALREADY_RESPONDED: "A sua resposta já foi registada.",
-      };
-      const status = result.error === "VENDOR_NOT_FOUND" || result.error === "ORDER_NOT_FOUND" ? 404 : 409;
-      return NextResponse.json({ message: messages[result.error] }, { status });
+      let message: string;
+      let status: number;
+      switch (result.error) {
+        case "VENDOR_NOT_FOUND":
+          message = "Loja não encontrada nesta organização.";
+          status = 404;
+          break;
+        case "ORDER_NOT_FOUND":
+          message = "Encomenda não encontrada ou não pertence à sua loja.";
+          status = 404;
+          break;
+        case "REPORT_NOT_FOUND":
+          message = "Não existe uma ocorrência aberta para esta encomenda.";
+          status = 409;
+          break;
+        case "ALREADY_RESPONDED":
+          message = "A sua resposta já foi registada.";
+          status = 409;
+          break;
+      }
+      return NextResponse.json({ message }, { status });
     }
     return NextResponse.json({ success: true, message: "Resposta registada e enviada para análise da MARKA." }, { status: 201, headers: { "Cache-Control": "no-store, private" } });
   } catch (error) {
