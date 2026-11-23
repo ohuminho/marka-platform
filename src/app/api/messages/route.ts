@@ -5,6 +5,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { inspectMarketplaceMessage } from "@/core/marketplace/message-policy";
+import { recordPolicyViolation } from "@/core/trust/record-policy-violation";
 import { getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 import { reserveCommunicationWrite } from "@/core/communications/communication-write-limit";
 
@@ -78,7 +79,14 @@ export async function POST(request: Request) {
     }
 
     const policy = inspectMarketplaceMessage(body);
-    if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
+    if (!policy.allowed) {
+      try {
+        await recordPolicyViolation({ userId: actor.id, code: policy.code, severity: policy.severity, source: "MARKETPLACE_MESSAGE" });
+      } catch (error) {
+        console.error("[MARKETPLACE_POLICY_AUDIT_FAILED]", error);
+      }
+      return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
+    }
 
     const product = await prisma.product.findFirst({
       where: { id: productId, status: "ACTIVE", store: { status: "ACTIVE", vendor: { status: "ACTIVE" } } },
