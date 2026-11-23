@@ -39,7 +39,28 @@ export async function GET() {
       prisma.riskSignal.count({ where: { ...conductWhere, status: "OPEN" } }),
       prisma.riskSignal.count({ where: { ...conductWhere, status: "OPEN", score: { gte: 80 } } }),
     ]);
-    return NextResponse.json({ signals, metrics: { total, open, critical } }, {
+    const orderIds = signals.map((signal) => {
+      const metadata = signal.metadata && typeof signal.metadata === "object" ? signal.metadata as Record<string, unknown> : {};
+      return typeof metadata.orderId === "string" ? metadata.orderId : null;
+    }).filter((value): value is string => Boolean(value));
+    const responses = orderIds.length ? await prisma.securityEvent.findMany({
+      where: { type: "MARKETPLACE_ORDER_QUALITY_VENDOR_RESPONSE", correlationId: { in: orderIds } },
+      orderBy: { createdAt: "asc" },
+      select: { correlationId: true, metadata: true, createdAt: true, actorUserId: true },
+    }) : [];
+    const responseByOrder = new Map<string, { response: string; createdAt: Date; vendorUserId: string | null }>();
+    for (const event of responses) {
+      const metadata = event.metadata && typeof event.metadata === "object" ? event.metadata as Record<string, unknown> : {};
+      if (event.correlationId && typeof metadata.response === "string") {
+        responseByOrder.set(event.correlationId, { response: metadata.response, createdAt: event.createdAt, vendorUserId: event.actorUserId });
+      }
+    }
+    const enrichedSignals = signals.map((signal) => {
+      const metadata = signal.metadata && typeof signal.metadata === "object" ? signal.metadata as Record<string, unknown> : {};
+      const response = typeof metadata.orderId === "string" ? responseByOrder.get(metadata.orderId) : undefined;
+      return { ...signal, metadata: { ...metadata, vendorResponse: response ? { response: response.response, createdAt: response.createdAt, vendorUserId: response.vendorUserId } : null } };
+    });
+    return NextResponse.json({ signals: enrichedSignals, metrics: { total, open, critical } }, {
       headers: { "Cache-Control": "no-store, private" },
     });
   } catch (error) {
