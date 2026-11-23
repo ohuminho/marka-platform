@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
+import VendorQualityResponse from "@/frontend/features/vendor/components/VendorQualityResponse";
 
 type Sale = {
   id: string;
@@ -141,6 +142,7 @@ export default function VendorSales() {
                     ) : null}
                   </div>
                 ) : null}
+                {activeOrganization?.id && sale.status === "DELIVERED" ? <VendorQualityResponse orderId={sale.id} organizationId={activeOrganization.id} /> : null}
                 {sale.fulfillment ? (
                   <div className="mt-4 text-sm text-[var(--theme-text)]/50">
                     Fulfillment: {sale.fulfillment.status}
