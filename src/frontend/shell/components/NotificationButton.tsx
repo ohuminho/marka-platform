@@ -81,6 +81,11 @@ export default function NotificationButton() {
     }
   }
 
+  async function openNotification(item: NotificationItem) {
+    if (!item.readAt) await markRead(item.id);
+    const destination = notificationDestination(item);
+    if (destination) window.location.assign(destination);
+  }
   async function markAllRead() {
     const response = await fetch("/api/notifications", {
       method: "PATCH",
@@ -124,11 +129,7 @@ export default function NotificationButton() {
             {error && <p role="alert" className="px-4 py-5 text-center text-xs text-rose-500">{error}</p>}
             {!loading && !error && items.length === 0 && <div className="px-5 py-10 text-center"><div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--theme-border)]/50 text-[var(--theme-text-muted)]">♧</div><p className="text-sm font-medium text-[var(--theme-text)]">Tudo em dia</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">As tuas notificações aparecerão aqui.</p></div>}
             {items.map(item => (
-              <button key={item.id} type="button" onClick={() => {
-                if (!item.readAt) void markRead(item.id);
-                const destination = notificationDestination(item);
-                if (destination) window.location.assign(destination);
-              }} className="flex w-full gap-3 border-b border-[var(--theme-border)]/70 px-4 py-3 text-left transition-colors hover:bg-[var(--theme-border)]/20">
+              <button key={item.id} type="button" onClick={() => { void openNotification(item); }} className="flex w-full gap-3 border-b border-[var(--theme-border)]/70 px-4 py-3 text-left transition-colors hover:bg-[var(--theme-border)]/20">
                 <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.readAt ? "bg-transparent" : "bg-[var(--theme-accent-strong)]"}`} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs font-semibold text-[var(--theme-text)]">{item.title}</span>
