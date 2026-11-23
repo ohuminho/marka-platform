@@ -29,6 +29,9 @@ export default function SuperAdminPage() {
           <Link href="/app/super-admin/advertising" className="flex items-center justify-between rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 transition hover:border-[var(--theme-text)]/40">
             <div><p className="text-xs uppercase tracking-[0.2em] text-[var(--theme-text)]/35">Ads & Commerce</p><h2 className="mt-2 text-xl font-semibold text-[var(--theme-text)]">Gestão de campanhas publicitárias</h2><p className="mt-2 text-sm text-[var(--theme-text)]/50">Criar, rever, aprovar e pausar campanhas para Mobility e Marketplace.</p></div><span aria-hidden="true" className="text-2xl">→</span>
           </Link>
+          <Link href="/app/super-admin/trust" className="flex items-center justify-between rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 transition hover:border-[var(--theme-text)]/40">
+            <div><p className="text-xs uppercase tracking-[0.2em] text-[var(--theme-text)]/35">Trust & Safety</p><h2 className="mt-2 text-xl font-semibold text-[var(--theme-text)]">Centro de Confiança</h2><p className="mt-2 text-sm text-[var(--theme-text)]/50">Analisar ocorrências, acompanhar reincidências e registar decisões de moderação.</p></div><span aria-hidden="true" className="text-2xl">→</span>
+          </Link>
         </main>
       </AppShell>
     </DynamicBackground>
