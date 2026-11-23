@@ -43,7 +43,7 @@ export async function GET() {
           incoming.push({
             id: call.id, callerName: call.caller.name, mode: call.mode, expiresAt: call.expiresAt,
             conversationId: null, threadId: call.thread.id,
-            contextLabel: call.thread.subject ?? (call.thread.contextType === "MOBILITY" ? "MARKA Mobility" : "MARKA Delivery"),
+            contextLabel: call.thread.subject ?? (call.thread.contextType === "MOBILITY" ? "MARKA Mobility" : call.thread.contextType === "DELIVERY" ? "MARKA Delivery" : "MARKA Serviços Privados"),
           });
         } catch {
           // Context access was revoked or the underlying service is no longer active.
