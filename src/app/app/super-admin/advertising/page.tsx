@@ -13,6 +13,9 @@ type Campaign = {
   impressions: number;
   clicks: number;
   createdAt: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  maxImpressions?: number | null;
 };
 
 const placements = [
@@ -34,6 +37,9 @@ export default function AdvertisingAdminPage() {
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [maxImpressions, setMaxImpressions] = useState("");
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -65,6 +71,9 @@ export default function AdvertisingAdminPage() {
           creativeUrl: creativeUrl || undefined,
           thumbnailUrl: thumbnailUrl || undefined,
           destinationUrl: destinationUrl || undefined,
+          startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
+          endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
+          maxImpressions: maxImpressions ? Number(maxImpressions) : undefined,
         }),
       });
       const data = await response.json();
@@ -76,6 +85,9 @@ export default function AdvertisingAdminPage() {
       setCreativeUrl("");
       setThumbnailUrl("");
       setDestinationUrl("");
+      setStartsAt("");
+      setEndsAt("");
+      setMaxImpressions("");
       await loadCampaigns();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao criar campanha.");
@@ -127,7 +139,7 @@ export default function AdvertisingAdminPage() {
         <label className="space-y-2 text-xs sm:col-span-2"><span>URL da imagem/vídeo {creativeType !== "NATIVE" ? "*" : "(opcional)"}</span><input type="url" required={creativeType !== "NATIVE"} value={creativeUrl} onChange={e => setCreativeUrl(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" placeholder="https://..." /></label>
         <label className="space-y-2 text-xs"><span>URL da miniatura (opcional)</span><input type="url" value={thumbnailUrl} onChange={e => setThumbnailUrl(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" placeholder="https://..." /></label>
         <label className="space-y-2 text-xs"><span>Destino do clique (opcional)</span><input type="url" value={destinationUrl} onChange={e => setDestinationUrl(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" placeholder="https://..." /></label>
-        <label className="space-y-2 text-xs sm:col-span-2"><span>Descrição (opcional)</span><textarea maxLength={1000} rows={3} value={description} onChange={e => setDescription(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" placeholder="Detalhes curtos e transparentes da oferta" /></label>
+        <div className="sm:col-span-2 mt-2 border-t border-[var(--theme-border)] pt-4"><h3 className="text-sm font-semibold">Programação e controlo de entrega</h3><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Defina a janela da campanha e, se necessário, um limite de impressões. Campos vazios significam sem limite configurado.</p></div>\n        <label className="space-y-2 text-xs"><span>Início da campanha</span><input type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" /></label>\n        <label className="space-y-2 text-xs"><span>Fim da campanha</span><input type="datetime-local" min={startsAt || undefined} value={endsAt} onChange={e => setEndsAt(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" /></label>\n        <label className="space-y-2 text-xs"><span>Limite de impressões</span><input type="number" min={1} max={100000000} step={1} value={maxImpressions} onChange={e => setMaxImpressions(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" placeholder="Ex.: 25000" /></label>\n        <label className="space-y-2 text-xs sm:col-span-2"><span>Descrição (opcional)</span><textarea maxLength={1000} rows={3} value={description} onChange={e => setDescription(e.target.value)} className="w-full rounded-xl border border-[var(--theme-border)] bg-transparent p-3" placeholder="Detalhes curtos e transparentes da oferta" /></label>
         <div className="sm:col-span-2"><button disabled={busy} className="rounded-full bg-[var(--theme-text)] px-6 py-3 text-xs font-semibold text-[var(--theme-background)] disabled:opacity-50">{busy ? "A processar..." : "Criar campanha para revisão"}</button></div>
       </form>
 
@@ -135,7 +147,7 @@ export default function AdvertisingAdminPage() {
         <div><h2 className="text-xl font-semibold">Campanhas registadas</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Apenas campanhas aprovadas e dentro do período configurado são distribuídas.</p></div>
         {campaigns.length === 0 ? <div className="rounded-2xl border border-[var(--theme-border)] p-6 text-sm text-[var(--theme-text-muted)]">Nenhuma campanha disponível ou acesso à API indisponível.</div> : campaigns.map(campaign => (
           <article key={campaign.id} className="flex flex-col gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{campaign.headline}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase tracking-wider">{campaign.status}</span></div><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{campaign.advertiserName} · {campaign.placement} · {campaign.creativeType}</p><p className="mt-2 text-[10px] text-[var(--theme-text-faint)]">{campaign.impressions} impressões · {campaign.clicks} cliques · CTR {campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : "0.00"}%</p></div>
+            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{campaign.headline}</h3><span className="rounded-full border border-[var(--theme-border)] px-2 py-1 text-[9px] uppercase tracking-wider">{campaign.status}</span></div><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{campaign.advertiserName} · {campaign.placement} · {campaign.creativeType}</p><p className="mt-2 text-[10px] text-[var(--theme-text-faint)]">{campaign.impressions} impressões · {campaign.clicks} cliques · CTR {campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : "0.00"}%{campaign.maxImpressions ? ` · limite ${campaign.maxImpressions.toLocaleString("pt-PT")}` : ""}</p><p className="mt-1 text-[10px] text-[var(--theme-text-faint)]">Início: {campaign.startsAt ? new Date(campaign.startsAt).toLocaleString("pt-PT") : "Imediato"} · Fim: {campaign.endsAt ? new Date(campaign.endsAt).toLocaleString("pt-PT") : "Sem data definida"}</p></div>
             <div className="flex shrink-0 flex-wrap gap-2">{campaign.status !== "APPROVED" && campaign.status !== "ENDED" && <button disabled={busy} onClick={() => void updateStatus(campaign.id, "APPROVED")} className="rounded-full border border-emerald-500/40 px-3 py-2 text-xs">Aprovar</button>}{campaign.status !== "PAUSED" && campaign.status !== "ENDED" && <button disabled={busy} onClick={() => void updateStatus(campaign.id, "PAUSED")} className="rounded-full border border-amber-500/40 px-3 py-2 text-xs">Pausar</button>}{campaign.status !== "REJECTED" && campaign.status !== "ENDED" && <button disabled={busy} onClick={() => void updateStatus(campaign.id, "REJECTED")} className="rounded-full border border-red-500/40 px-3 py-2 text-xs">Rejeitar</button>}</div>
           </article>
         ))}
