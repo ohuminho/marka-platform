@@ -1,14 +1,16 @@
 /**
- * Marketplace messaging safety policy.
- * Deterministic server-side guard: never rely on client validation alone.
- * This is a friction/control layer, not a guarantee against obfuscated evasion.
+ * Deterministic server-side conduct policy shared by customer and partner accounts.
+ * Blocks high-confidence violations; it does not infer guilt from ambiguous language.
  */
-export type MessagePolicyResult = { allowed: true } | { allowed: false; code: string; reason: string };
+export type MessagePolicyResult =
+  | { allowed: true }
+  | { allowed: false; code: string; reason: string; severity: "MEDIUM" | "HIGH" | "CRITICAL" };
 
-const rules: Array<{ code: string; reason: string; patterns: RegExp[] }> = [
+const rules: Array<{ code: string; reason: string; severity: "MEDIUM" | "HIGH" | "CRITICAL"; patterns: RegExp[] }> = [
   {
     code: "CONTACT_SHARING",
-    reason: "Não é permitido partilhar números de telefone, e-mails, perfis sociais ou contactos externos. Mantém a comunicação e a compra na MARKA.",
+    severity: "MEDIUM",
+    reason: "Não é permitido partilhar números de telefone, e-mails, perfis sociais ou contactos externos. Mantém a comunicação na MARKA.",
     patterns: [
       /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
       /(?:https?:\/\/|www\.)\S+/i,
@@ -19,7 +21,8 @@ const rules: Array<{ code: string; reason: string; patterns: RegExp[] }> = [
   },
   {
     code: "OFF_PLATFORM_TRANSACTION",
-    reason: "Não é permitido negociar ou concluir pagamentos fora da MARKA. Usa o checkout e os meios oficiais da plataforma para proteger comprador e vendedor.",
+    severity: "HIGH",
+    reason: "Não é permitido negociar ou concluir pagamentos fora da MARKA. Usa os meios oficiais da plataforma para proteger ambas as partes.",
     patterns: [
       /(?:paga|pagar|transfer[eê]ncia|transfere|envia|manda)\s+(?:por|para|no)\s+(?:fora|directo|direto|particular|conta pessoal|multicaixa express|express|unitel money)/i,
       /(?:compra|venda|neg[oó]cio|pagamento)\s+(?:por fora|fora da plataforma|fora da marka)/i,
@@ -29,10 +32,49 @@ const rules: Array<{ code: string; reason: string; patterns: RegExp[] }> = [
   },
   {
     code: "CREDENTIAL_SHARING",
-    reason: "Nunca partilhes palavras-passe, PIN, códigos OTP/2FA, códigos de recuperação, chaves API ou dados de acesso. A MARKA bloqueia este tipo de conteúdo.",
+    severity: "CRITICAL",
+    reason: "Nunca partilhes palavras-passe, PIN, códigos OTP/2FA, códigos de recuperação ou dados de cartão. Este conteúdo é bloqueado por segurança.",
     patterns: [
       /(?:password|palavra[- ]?passe|senha|passcode|pin|otp|2fa|c[oó]digo\s+(?:de\s+)?(?:verifica[cç][aã]o|acesso|seguran[cç]a|recupera[cç][aã]o)|recovery\s+code|api[_ -]?key|secret[_ -]?key)\s*(?:é|e|:|=|->)?\s*[A-Z0-9@#$%_-]{4,}/i,
       /(?:cart[aã]o|cvv|cvc|validade|iban)\s*(?:é|e|:|=)?\s*[A-Z0-9\s-]{6,}/i,
+    ],
+  },
+  {
+    code: "THREATS_OR_VIOLENCE",
+    severity: "CRITICAL",
+    reason: "Ameaças, intimidação e incitação à violência não são permitidas. A mensagem foi bloqueada e sinalizada para análise de segurança.",
+    patterns: [
+      /\b(?:vou|vamos)\s+(?:te\s+)?(?:matar|agredir|espancar|violar|aleijar)\b/i,
+      /\b(?:ameaço|ameaco|ameaça de morte|vais morrer|vai morrer|vou acabar contigo)\b/i,
+      /\b(?:pagarás|vais pagar)\s+(?:por isto|por isso)\b/i,
+    ],
+  },
+  {
+    code: "HARASSMENT_OR_HATE",
+    severity: "HIGH",
+    reason: "Assédio, perseguição e ataques discriminatórios não são permitidos na MARKA. Reformula a mensagem de forma respeitosa.",
+    patterns: [
+      /\b(?:não te largo|nao te largo|vou perseguir-te|vou te perseguir|sei onde moras|vou expor-te|vou te expor)\b/i,
+      /\b(?:morte a todos|devem ser exterminados|raça inferior|limpar esta raça)\b/i,
+    ],
+  },
+  {
+    code: "SCAM_OR_COERCION",
+    severity: "HIGH",
+    reason: "Pedidos suspeitos de adiantamentos, taxas para desbloquear prémios ou garantias financeiras enganosas são bloqueados para proteger os utilizadores.",
+    patterns: [
+      /\b(?:envia|manda|deposita|transfere)\s+(?:já\s+)?(?:dinheiro|kwanzas|kz)\s+(?:para|a fim de)\s+(?:libertar|desbloquear|receber)\b/i,
+      /\b(?:prémio garantido|lucro garantido|retorno garantido|taxa de desbloqueio|taxa para levantar o prémio)\b/i,
+      /\b(?:sou da marka|sou funcionário da marka|sou funcionario da marka)\b.*\b(?:senha|pin|otp|código|codigo)\b/i,
+    ],
+  },
+  {
+    code: "SPAM_OR_MASS_SOLICITATION",
+    severity: "MEDIUM",
+    reason: "Publicidade repetitiva, correntes e solicitações em massa não são permitidas nas conversas de serviço.",
+    patterns: [
+      /(?:encaminha|partilha|envia)\s+(?:esta mensagem|para todos|a todos)\s+(?:os teus|seus)?\s*(?:contactos|amigos)/i,
+      /\b(?:ganha dinheiro fácil|renda garantida sem trabalhar|oportunidade única imperdível)\b/i,
     ],
   },
 ];
@@ -41,7 +83,7 @@ export function inspectMarketplaceMessage(value: string): MessagePolicyResult {
   const normalized = value.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "");
   for (const rule of rules) {
     if (rule.patterns.some((pattern) => pattern.test(normalized))) {
-      return { allowed: false, code: rule.code, reason: rule.reason };
+      return { allowed: false, code: rule.code, reason: rule.reason, severity: rule.severity };
     }
   }
   return { allowed: true };
