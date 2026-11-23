@@ -211,7 +211,7 @@ export async function PATCH(request: Request) {
         status: status as (typeof SUPPORT_STATUSES)[number],
         resolvedAt: status === "RESOLVED" ? new Date() : null,
       },
-      select: { id: true, reference: true, status: true, resolvedAt: true },
+      select: { id: true, reference: true, status: true, resolvedAt: true, updatedAt: true },
     });
 
     if (existing.requester.email) {
@@ -233,7 +233,7 @@ export async function PATCH(request: Request) {
           reference: existing.reference,
           statusLabel: statusLabels[status] ?? status,
           actionUrl: `/app/support?ticket=${ticket.id}`,
-          idempotencyKey: `support-ticket-status:${ticket.id}:${status}:${ticket.resolvedAt?.toISOString() ?? "active"}`,
+          idempotencyKey: `support-ticket-status:${ticket.id}:${ticket.updatedAt.toISOString()}`,
         });
       } catch (emailError) {
         console.error("[SUPPORT_TICKET_STATUS_EMAIL]", { ticketId: ticket.id, error: emailError });
