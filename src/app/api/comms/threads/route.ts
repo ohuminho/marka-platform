@@ -55,6 +55,18 @@ export async function POST(request: Request) {
     if (!contextType || !contextId || contextId.length > 128) return NextResponse.json({ message: "Contexto de comunicação inválido." }, { status: 400 });
     await assertCommunicationContextParticipant(contextType, contextId, actor.id);
     const thread = await syncCommunicationThread(contextType, contextId);
+    if (contextType === "PRIVATE_SERVICE") {
+      await prisma.auditLog.create({
+        data: {
+          actorUserId: actor.id,
+          actorType: "USER",
+          action: "PRIVATE_SERVICE_COMMUNICATION_OPENED",
+          entityType: "PrivateServiceRequest",
+          entityId: contextId,
+          metadata: { threadId: thread.id },
+        },
+      });
+    }
     return NextResponse.json({ thread }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
