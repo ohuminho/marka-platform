@@ -40,7 +40,11 @@ export default function TrustCenterPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => active ? load() : undefined);
+    return () => { active = false; };
+  }, [load]);
 
   const visible = useMemo(() => filter === "ALL" ? signals : signals.filter(item => item.status === filter), [filter, signals]);
 
