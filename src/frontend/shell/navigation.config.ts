@@ -349,6 +349,12 @@ export const NavigationConfig = {
           permissions: ["SYSTEM_ADMIN"],
         },
         {
+          title: "Trust & Safety",
+          route: "/app/super-admin/trust",
+          description: "Review conduct violations and record moderation decisions",
+          permissions: ["SYSTEM_ADMIN"],
+        },
+        {
           title: "MARKA CV",
           route: "/app/cv",
           description: "Create and manage professional CVs",
