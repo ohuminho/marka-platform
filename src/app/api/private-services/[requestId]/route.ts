@@ -115,7 +115,7 @@ export async function PATCH(
       if (otherOffers.length) {
         await tx.notification.createMany({
           data: otherOffers.map((offer) => ({
-            userId: offer.professional.user.userId,
+            userId: offer.professional.userId,
             type: "PRIVATE_SERVICE_CLOSED",
             title: "Pedido privado atribuído",
             message: "O cliente seleccionou outro profissional para este pedido.",
