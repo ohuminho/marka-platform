@@ -6,6 +6,7 @@ import { AuthConfig } from "@/core/authentication/auth.config";
 import { SessionService } from "@/core/auth/sessions/session.service";
 import { authorizationService } from "@/core/authorization/authorization.service";
 import { prisma } from "@/database/client/prisma";
+import { isFreightPostCompletionStatus } from "@/freight-engine/freight-exception-resolution";
 
 export const dynamic = "force-dynamic";
 
@@ -99,26 +100,6 @@ export async function POST(
 
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(741921, hashtext(${current.assignedProviderId}))`;
 
-      const provider = await tx.freightProvider.findFirst({
-        where: {
-          id: current.assignedProviderId,
-          organizationId,
-          status: { in: ["VERIFIED", "SUSPENDED"] },
-        },
-        select: { id: true, status: true, availability: true },
-      });
-      if (!provider) throw new Error("FREIGHT_PROVIDER_NOT_RESUMABLE");
-
-      const vehicle = await tx.freightProviderVehicle.findFirst({
-        where: {
-          id: current.assignedVehicleId,
-          providerId: provider.id,
-          status: { in: ["ACTIVE", "SUSPENDED"] },
-        },
-        select: { id: true },
-      });
-      if (!vehicle) throw new Error("FREIGHT_VEHICLE_NOT_ACTIVE");
-
       const exceptionEvent = await tx.auditLog.findFirst({
         where: {
           organizationId,
@@ -150,19 +131,43 @@ export async function POST(
         throw new Error("FREIGHT_EXCEPTION_ORIGIN_UNKNOWN");
       }
 
+      const isPostCompletion = isFreightPostCompletionStatus(previousStatus);
+      let provider: { id: string; status: "VERIFIED" | "SUSPENDED"; availability: "OFFLINE" | "AVAILABLE" | "BUSY" | "PAUSED" } | null = null;
+      if (!isPostCompletion) {
+        provider = await tx.freightProvider.findFirst({
+          where: {
+            id: current.assignedProviderId,
+            organizationId,
+            status: { in: ["VERIFIED", "SUSPENDED"] },
+          },
+          select: { id: true, status: true, availability: true },
+        });
+        if (!provider) throw new Error("FREIGHT_PROVIDER_NOT_RESUMABLE");
+
+        const vehicle = await tx.freightProviderVehicle.findFirst({
+          where: {
+            id: current.assignedVehicleId,
+            providerId: provider.id,
+            status: { in: ["ACTIVE", "SUSPENDED"] },
+          },
+          select: { id: true },
+        });
+        if (!vehicle) throw new Error("FREIGHT_VEHICLE_NOT_ACTIVE");
+      }
+
       const changed = await tx.freightRequest.updateMany({
         where: {
           id: current.id,
           organizationId,
           status: "EXCEPTION",
-          assignedProviderId: provider.id,
-          assignedVehicleId: vehicle.id,
+          assignedProviderId: current.assignedProviderId,
+          assignedVehicleId: current.assignedVehicleId,
         },
         data: { status: previousStatus },
       });
       if (changed.count !== 1) throw new Error("FREIGHT_EXCEPTION_RESOLUTION_CONFLICT");
 
-      if (previousStatus !== "PROVIDER_COMPLETED_PENDING_CONFIRMATION" && provider.status === "VERIFIED" && provider.availability === "AVAILABLE") {
+      if (!isPostCompletion && provider?.status === "VERIFIED" && provider.availability === "AVAILABLE") {
         await tx.freightProvider.updateMany({
           where: { id: provider.id, status: "VERIFIED", availability: "AVAILABLE" },
           data: { availability: "BUSY" },
