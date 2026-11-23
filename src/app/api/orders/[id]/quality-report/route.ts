@@ -79,7 +79,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             userId: vendor.ownerId,
             type: "MARKETPLACE_ORDER_QUALITY_RESPONSE_REQUIRED",
             title: "Pedido de esclarecimento sobre uma encomenda",
-            message: "Um comprador comunicou um problema numa encomenda. Consulte a área de confiança da MARKA e envie a sua resposta.",
+            message: "A MARKA recebeu uma comunicação sobre uma encomenda associada à sua loja. A equipa de apoio poderá solicitar esclarecimentos através dos canais da plataforma.",
             data: { orderId, vendorId: vendor.id, responseRequested: true },
           },
         });
