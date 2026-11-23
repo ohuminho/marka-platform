@@ -2339,6 +2339,10 @@ model PrivateServiceOffer {
   professionalId String
   status         PrivateServiceOfferStatus @default(PENDING)
   respondedAt    DateTime? @db.Timestamptz(3)
+  proposedFeeKz  Int?
+  proposalAvailability String? @db.VarChar(500)
+  proposalApproach String? @db.VarChar(1500)
+  proposalSubmittedAt DateTime? @db.Timestamptz(3)
   expiresAt      DateTime @db.Timestamptz(3)
 
   request      PrivateServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
