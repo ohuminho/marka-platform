@@ -89,6 +89,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ord
           message = "A sua resposta já foi registada.";
           status = 409;
           break;
+        default:
+          message = "Não foi possível validar a ocorrência.";
+          status = 409;
+          break;
       }
       return NextResponse.json({ message }, { status });
     }
