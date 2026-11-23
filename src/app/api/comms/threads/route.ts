@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         },
       });
     }
-    return NextResponse.json({ thread }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ thread, threadId: thread.id }, { status: 201, headers: { "Cache-Control": "no-store, private" } });
   } catch (error) {
     if (error instanceof CommunicationContextError) return NextResponse.json({ message: error.message }, { status: error.status });
     console.error("[MARKA_COMMUNICATION_THREAD_CREATE]", error);
