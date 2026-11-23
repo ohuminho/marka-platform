@@ -68,6 +68,11 @@ export const NavigationConfig = {
           description: "Rides, safety, dispatch and financial flow",
         },
         {
+          title: "Professional Services",
+          route: "/app/private-services/profile",
+          description: "Apply to receive confidential professional requests",
+        },
+        {
           title: "Wallet",
           route: "/app/wallet",
           description: "Manage your digital finance",
@@ -243,6 +248,12 @@ export const NavigationConfig = {
           permissions: ["ADMIN_ACCESS"],
         },
         {
+          title: "Professional Verification",
+          route: "/app/admin/private-professionals",
+          description: "Verify lawyers, psychologists and other professionals",
+          permissions: ["ADMIN_ACCESS"],
+        },
+        {
           title: "Compliance",
           route: "/app/admin/compliance",
           description: "Review KYC, KYD, KYB and compliance cases",
@@ -294,6 +305,11 @@ export const NavigationConfig = {
     {
       group: "Professional Services",
       items: [
+        {
+          title: "Professional Profile",
+          route: "/app/private-services/profile",
+          description: "Manage your professional application and verification",
+        },
         {
           title: "Private Requests",
           route: "/app/private-services",
@@ -353,6 +369,12 @@ export const NavigationConfig = {
           title: "Store Approvals",
           route: "/app/admin/vendors",
           description: "Global Marketplace seller and store approvals",
+          permissions: ["SYSTEM_ADMIN"],
+        },
+        {
+          title: "Professional Verification",
+          route: "/app/admin/private-professionals",
+          description: "Global professional verification and eligibility",
           permissions: ["SYSTEM_ADMIN"],
         },
         {
