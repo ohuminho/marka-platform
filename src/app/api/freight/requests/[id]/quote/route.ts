@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { authenticateMobilityRequest } from "@/app/api/mobility/_lib/auth";
 import { prisma } from "@/database/client/prisma";
+import { validateFreightQuoteSplitSnapshot } from "@/services/mobility/pricing/freight-quote-split-snapshot.service";
 
 const decisionSchema = z.object({
   decision: z.enum(["ACCEPT", "REJECT"]),
@@ -29,19 +30,64 @@ export async function POST(
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      // Lock the quote row so acceptance cannot race with an admin re-quote.
+      const locked = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "FreightRequest"
+        WHERE "id" = ${id}
+          AND "organizationId" = ${auth.session.organizationId}
+          AND "requesterId" = ${auth.session.userId}
+          AND "status"::text = 'QUOTED'
+          AND "quoteExpiresAt" > ${now}
+        FOR UPDATE
+      `;
+      if (locked.length !== 1) return { ok: false as const, reason: "NOT_ACTIONABLE" as const };
+
+      const current = await tx.freightRequest.findFirst({
+        where: {
+          id,
+          organizationId: auth.session.organizationId,
+          requesterId: auth.session.userId,
+          status: "QUOTED",
+          quoteExpiresAt: { gt: now },
+        },
+        select: {
+          id: true,
+          requestType: true,
+          currency: true,
+          quotedAmount: true,
+          details: true,
+          quoteExpiresAt: true,
+        },
+      });
+      if (!current || current.quotedAmount === null) {
+        return { ok: false as const, reason: "NOT_ACTIONABLE" as const };
+      }
+
+      let splitSnapshot: ReturnType<typeof validateFreightQuoteSplitSnapshot> = null;
+      if (parsed.data.decision === "ACCEPT" && current.requestType === "CARGO_SHIPMENT") {
+        const amount = Number(current.quotedAmount);
+        if (current.currency !== "AOA" || !Number.isSafeInteger(amount) || amount <= 0) {
+          return { ok: false as const, reason: "INVALID_FINANCIAL_SNAPSHOT" as const };
+        }
+        splitSnapshot = validateFreightQuoteSplitSnapshot(current.details, amount);
+        if (!splitSnapshot) {
+          return { ok: false as const, reason: "INVALID_FINANCIAL_SNAPSHOT" as const };
+        }
+      }
+
       const updated = await tx.freightRequest.updateMany({
         where: {
           id,
           organizationId: auth.session.organizationId,
           requesterId: auth.session.userId,
           status: "QUOTED",
-          quotedAmount: { not: null },
+          quotedAmount: current.quotedAmount,
           quoteExpiresAt: { gt: now },
         },
         data: { status: nextStatus },
       });
-
-      if (updated.count !== 1) return false;
+      if (updated.count !== 1) return { ok: false as const, reason: "NOT_ACTIONABLE" as const };
 
       await tx.auditLog.create({
         data: {
@@ -57,14 +103,36 @@ export async function POST(
             decision: parsed.data.decision,
             resultingStatus: nextStatus,
             decidedAt: now.toISOString(),
+            quotedAmount: Number(current.quotedAmount),
+            currency: current.currency,
+            splitSnapshot: splitSnapshot
+              ? {
+                  version: splitSnapshot.version,
+                  serviceType: splitSnapshot.serviceType,
+                  currency: splitSnapshot.currency,
+                  totalKz: splitSnapshot.totalKz,
+                  commissionRate: splitSnapshot.commissionRate,
+                  platformFeeKz: splitSnapshot.platformFeeKz,
+                  providerAmountKz: splitSnapshot.providerAmountKz,
+                  policyKey: splitSnapshot.policyKey,
+                  policyVersion: splitSnapshot.policyVersion,
+                }
+              : null,
           },
         },
       });
 
-      return true;
+      return { ok: true as const, splitSnapshot };
     });
 
-    if (!result) {
+    if (!result.ok) {
+      if (result.reason === "INVALID_FINANCIAL_SNAPSHOT") {
+        return NextResponse.json({
+          message: "A divisão financeira desta cotação não passou na validação. Solicite uma nova cotação à equipa MARKA.",
+          code: "FREIGHT_QUOTE_FINANCIAL_SNAPSHOT_INVALID",
+        }, { status: 409 });
+      }
+
       const current = await prisma.freightRequest.findFirst({
         where: {
           id,
@@ -92,6 +160,7 @@ export async function POST(
       requestId: id,
       status: nextStatus,
       paymentRequired: parsed.data.decision === "ACCEPT",
+      split: result.splitSnapshot,
       message: parsed.data.decision === "ACCEPT"
         ? "Cotação aceite. O pedido aguarda instruções de pagamento."
         : "Cotação rejeitada. O pedido foi encerrado.",
