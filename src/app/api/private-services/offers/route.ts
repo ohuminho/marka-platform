@@ -29,7 +29,7 @@ export async function GET() {
     }
 
     const items = await prisma.privateServiceOffer.findMany({
-      where: { professionalId: profile.id, status: { in: ["PENDING", "ACCEPTED", "DECLINED"] } },
+      where: { professionalId: profile.id, status: { in: ["PENDING", "ACCEPTED", "DECLINED", "SELECTED", "WITHDRAWN"] } },
       orderBy: { createdAt: "desc" },
       take: 50,
       select: {
