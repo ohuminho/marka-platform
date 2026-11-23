@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     });
     if ("error" in result) {
       const messages: Record<string, string> = { SIGNAL_NOT_FOUND: "Ocorrência de conduta não encontrada.", SIGNAL_NOT_REVIEWED: "A ocorrência tem de estar em análise antes de uma medida disciplinar.", SELF_ACTION_NOT_ALLOWED: "Não é permitido aplicar uma medida à própria conta.", ACCOUNT_NOT_FOUND: "Conta associada à ocorrência não encontrada.", PRIVILEGED_ACCOUNT_PROTECTED: "Contas de fundador e administração exigem um processo excepcional separado.", ACCOUNT_NOT_ACTIVE: "A conta não está activa para receber uma suspensão.", ACCOUNT_NOT_SUSPENDED: "A conta não está suspensa e não precisa de reintegração." };
-      return NextResponse.json({ message: messages[result.error] ?? "Medida não aplicada." }, { status: 409 });
+      return NextResponse.json({ message: messages[result.error as keyof typeof messages] ?? "Medida não aplicada." }, { status: 409 });
     }
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store, private" } });
   } catch (error) {
