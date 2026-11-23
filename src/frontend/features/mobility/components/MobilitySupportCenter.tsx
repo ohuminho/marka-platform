@@ -54,7 +54,12 @@ export default function MobilitySupportCenter() {
       if (!response.ok) throw new Error(data.message || "Não foi possível carregar o suporte.");
       setTickets(data.tickets || []);
       setIsStaff(Boolean(data.isStaff));
-      setActiveId((current) => current || data.tickets?.[0]?.id || "");
+      const requestedTicketId = new URLSearchParams(window.location.search).get("ticket");
+      setActiveId((current) => (
+        requestedTicketId && data.tickets?.some((ticket: SupportTicket) => ticket.id === requestedTicketId)
+          ? requestedTicketId
+          : current || data.tickets?.[0]?.id || ""
+      ));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar o suporte.");
     } finally {
