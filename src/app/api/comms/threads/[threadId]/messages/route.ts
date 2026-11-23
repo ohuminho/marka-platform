@@ -6,6 +6,8 @@ import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { CommunicationContextError, getAuthorizedCommunicationThread } from "@/core/communications/communication-context.service";
 import { reserveCommunicationWrite } from "@/core/communications/communication-write-limit";
+import { inspectMarketplaceMessage } from "@/core/marketplace/message-policy";
+import { recordPolicyViolation } from "@/core/trust/record-policy-violation";
 
 async function getActor() {
   const token = (await cookies()).get(AuthConfig.cookies.name)?.value;
@@ -53,9 +55,15 @@ export async function POST(request: Request, context: Context) {
     const body = typeof input?.message === "string" ? input.message.trim() : "";
     if (body.length < 2 || body.length > 5000) return NextResponse.json({ message: "A mensagem deve ter entre 2 e 5000 caracteres." }, { status: 400 });
 
-    const { inspectMarketplaceMessage } = await import("@/core/marketplace/message-policy");
     const policy = inspectMarketplaceMessage(body);
-    if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
+    if (!policy.allowed) {
+      try {
+        await recordPolicyViolation({ userId: actor.id, code: policy.code, severity: policy.severity, source: "COMMUNICATION_MESSAGE" });
+      } catch (error) {
+        console.error("[COMMUNICATION_POLICY_AUDIT_FAILED]", error);
+      }
+      return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
+    }
     const result = await prisma.$transaction(async (tx) => {
       if (!(await reserveCommunicationWrite(tx, actor.id, "SEND"))) return null;
       const created = await tx.communicationThreadMessage.create({
@@ -92,9 +100,15 @@ export async function PATCH(request: Request, context: Context) {
     if (!messageId || body.length < 2 || body.length > 5000) {
       return NextResponse.json({ message: "Mensagem inválida. O texto deve ter entre 2 e 5000 caracteres." }, { status: 400 });
     }
-    const { inspectMarketplaceMessage } = await import("@/core/marketplace/message-policy");
     const policy = inspectMarketplaceMessage(body);
-    if (!policy.allowed) return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
+    if (!policy.allowed) {
+      try {
+        await recordPolicyViolation({ userId: actor.id, code: policy.code, severity: policy.severity, source: "COMMUNICATION_MESSAGE" });
+      } catch (error) {
+        console.error("[COMMUNICATION_POLICY_AUDIT_FAILED]", error);
+      }
+      return NextResponse.json({ message: policy.reason, code: policy.code }, { status: 422 });
+    }
     const result = await prisma.$transaction(async (tx) => {
       if (!(await reserveCommunicationWrite(tx, actor.id, "EDIT"))) return { limited: true as const };
       const updated = await tx.communicationThreadMessage.updateMany({
