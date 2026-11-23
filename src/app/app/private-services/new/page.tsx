@@ -83,6 +83,28 @@ export default function PrivateServiceRequestPage() {
     finally { setBusyOffer(""); }
   }
 
+  async function acceptProposal(item: ServiceRequest, offer: Offer) {
+    const confirmed = window.confirm(
+      "Confirmas a aceitação da proposta de " + offer.professional.publicName +
+      " por " + new Intl.NumberFormat("pt-AO").format(offer.proposedFeeKz ?? 0) +
+      " Kz? A aceitação fica registada no processo. Não cria, por si só, um contrato jurídico assinado."
+    );
+    if (!confirmed) return;
+    setBusyOffer("accept-" + offer.id); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/private-services/" + encodeURIComponent(item.id), {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "ACCEPT_PROPOSAL" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Não foi possível aceitar a proposta.");
+      setNotice("Proposta aceite. A aceitação e os termos apresentados ficaram registados no processo privado.");
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Falha ao aceitar proposta."); }
+    finally { setBusyOffer(""); }
+  }
+
   return <AppShell><main className="mx-auto max-w-5xl space-y-7">
     <header className="rounded-[26px] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
       <p className="text-[9px] font-semibold uppercase tracking-[.24em] text-[var(--theme-text-faint)]">MARKA · SERVIÇOS PRIVADOS</p>
@@ -111,7 +133,21 @@ export default function PrivateServiceRequestPage() {
         return <article key={item.id} className="space-y-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[9px] uppercase tracking-[.2em] text-[var(--theme-text-faint)]">{item.reference} · {item.specialty}</p><h3 className="mt-2 text-lg font-semibold text-[var(--theme-text)]">{item.title}</h3><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{item.region || "Região não indicada"} · {new Date(item.createdAt).toLocaleString("pt-PT")}</p></div><span className="rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] text-[var(--theme-text-muted)]">{statusLabel[item.status] ?? item.status}</span></div>
           {item.status === "IN_REVIEW" && accepted.length > 0 && <div className="space-y-2 border-t border-[var(--theme-border)] pt-4"><p className="text-xs font-semibold text-[var(--theme-text)]">Profissionais interessados</p>{accepted.map((offer) => <div key={offer.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] p-3"><div><p className="text-sm font-semibold text-[var(--theme-text)]">{offer.professional.publicName}</p><p className="text-xs text-[var(--theme-text-muted)]">{offer.professional.region || "Região não indicada"}</p><p className="mt-2 text-xs text-[var(--theme-text)]">Honorários: <strong>{offer.proposedFeeKz === null ? "Não indicados" : new Intl.NumberFormat("pt-AO").format(offer.proposedFeeKz) + " Kz"}</strong></p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Disponibilidade: {offer.proposalAvailability || "A confirmar"}</p><p className="mt-1 max-w-xl text-xs leading-5 text-[var(--theme-text-muted)]">{offer.proposalApproach || "Sem descrição de abordagem."}</p></div><button disabled={!!busyOffer} onClick={() => void selectProfessional(item, offer)} className="min-h-10 rounded-lg bg-[var(--theme-accent)] px-4 text-xs font-semibold text-white disabled:opacity-50">{busyOffer === offer.id ? "A seleccionar…" : "Seleccionar"}</button></div>)}</div>}
-          {item.status === "PROFESSIONAL_SELECTED" || item.status === "ENGAGED" ? <a href={"/app/private-services/" + encodeURIComponent(item.id)} className="inline-flex min-h-10 items-center rounded-lg border border-[var(--theme-border)] px-4 text-xs font-semibold text-[var(--theme-text)]">Abrir processo confidencial</a> : null}
+          {item.status === "PROFESSIONAL_SELECTED" && (() => {
+            const selected = item.offers.find((offer) => offer.status === "SELECTED");
+            return selected ? <div className="space-y-3 border-t border-[var(--theme-border)] pt-4">
+              <div><p className="text-xs font-semibold text-[var(--theme-text)]">Proposta do profissional seleccionado</p>
+                <p className="mt-2 text-sm font-semibold text-[var(--theme-text)]">{selected.professional.publicName}</p>
+                <p className="mt-1 text-xs text-[var(--theme-text-muted)]">Honorários propostos: {selected.proposedFeeKz === null ? "A confirmar" : new Intl.NumberFormat("pt-AO").format(selected.proposedFeeKz) + " Kz"}</p>
+                <p className="mt-1 text-xs text-[var(--theme-text-muted)]">Disponibilidade: {selected.proposalAvailability || "A confirmar"}</p>
+                <p className="mt-2 text-xs leading-5 text-[var(--theme-text-muted)]">{selected.proposalApproach}</p>
+              </div>
+              <p className="text-[11px] leading-5 text-[var(--theme-text-muted)]">Ao aceitar, confirmas os honorários, a disponibilidade e a abordagem acima. Este registo não substitui um contrato jurídico assinado nem os termos profissionais aplicáveis.</p>
+              <button disabled={!!busyOffer} onClick={() => void acceptProposal(item, selected)} className="min-h-11 rounded-lg bg-[var(--theme-accent)] px-5 text-xs font-semibold text-white disabled:opacity-50">{busyOffer === "accept-" + selected.id ? "A registar aceitação…" : "Aceitar proposta"}</button>
+              <a href={"/app/private-services/" + encodeURIComponent(item.id)} className="ml-3 inline-flex min-h-11 items-center rounded-lg border border-[var(--theme-border)] px-4 text-xs font-semibold text-[var(--theme-text)]">Abrir processo</a>
+            </div> : <p className="text-xs text-[var(--theme-text-muted)]">A proposta seleccionada está a ser confirmada.</p>;
+          })()}
+          {item.status === "ENGAGED" ? <div className="space-y-2 border-t border-[var(--theme-border)] pt-4"><p className="text-sm font-semibold text-[var(--theme-text)]">Proposta aceite e registada</p><p className="text-xs leading-5 text-[var(--theme-text-muted)]">A aceitação foi registada no histórico do processo. O contrato jurídico, quando aplicável, deverá ser formalizado directamente entre as partes.</p><a href={"/app/private-services/" + encodeURIComponent(item.id)} className="inline-flex min-h-10 items-center rounded-lg border border-[var(--theme-border)] px-4 text-xs font-semibold text-[var(--theme-text)]">Abrir processo confidencial</a></div> : null}
           {item.status === "IN_REVIEW" && accepted.length === 0 && <p className="border-t border-[var(--theme-border)] pt-4 text-xs text-[var(--theme-text-muted)]">Ainda não há profissionais disponíveis para selecção. Acompanha as actualizações.</p>}
         </article>;
       })}
