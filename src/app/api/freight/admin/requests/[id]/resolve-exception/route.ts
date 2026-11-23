@@ -132,7 +132,7 @@ export async function POST(
       }
 
       const isPostCompletion = isFreightPostCompletionStatus(previousStatus);
-      let provider: { id: string; status: "VERIFIED" | "SUSPENDED"; availability: "OFFLINE" | "AVAILABLE" | "BUSY" | "PAUSED" } | null = null;
+      let provider: { id: string; status: string; availability: string } | null = null;
       if (!isPostCompletion) {
         provider = await tx.freightProvider.findFirst({
           where: {
