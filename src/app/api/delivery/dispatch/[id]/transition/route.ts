@@ -7,6 +7,7 @@ import { SessionService } from "@/core/auth/sessions/session.service";
 import { prisma } from "@/database/client/prisma";
 import { fulfillmentAdapter } from "@/fulfillment-engine/fulfillment.adapter";
 import type { FulfillmentStatus } from "@/fulfillment-engine/fulfillment.contracts";
+import { recordDeliveryExceptionForReview } from "@/core/trust/record-delivery-exception";
 
 const schema = z.object({
   status: z.enum([
@@ -149,6 +150,18 @@ export async function POST(
       status,
       parsed.data.reason,
     );
+
+    if (status === "EXCEPTION") {
+      try {
+        await recordDeliveryExceptionForReview({
+          agentUserId: session.userId,
+          dispatchId: dispatch.id,
+          fulfillmentId: dispatch.subjectId,
+        });
+      } catch (auditError) {
+        console.error("[DELIVERY_EXCEPTION_REVIEW_SIGNAL_ERROR]", auditError);
+      }
+    }
 
     return NextResponse.json({ fulfillment });
   } catch (error) {
