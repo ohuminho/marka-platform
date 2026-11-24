@@ -17,6 +17,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/advertise`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
   ];
 
+  // Preview deployments may intentionally omit production database credentials.
+  // Keep the public sitemap available without attempting Prisma initialization.
+  if (!process.env.DATABASE_URL) return routes;
+
   try {
     const products = await prisma.product.findMany({
       where: { status: "ACTIVE", stock: { gt: 0 }, store: { status: "ACTIVE", vendor: { status: "ACTIVE" } } },
