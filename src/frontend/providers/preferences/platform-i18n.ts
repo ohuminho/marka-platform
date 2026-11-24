@@ -7,7 +7,7 @@ export const platformTranslations = {
   zh: { executiveWorkspace:"执行工作区", globalPlatform:"全球平台", search:"搜索 MARKA", account:"账户", user:"MARKA 用户", theme:"主题", language:"语言", themeBlue:"大西洋蓝", themeObsidian:"黑曜石", themeGraphite:"石墨", themeSilver:"银色", themeAurora:"极光", themePearl:"珍珠", marketplaceTitle:"MARKA 商城", marketplaceSubtitle:"精选可信数字商户商品。", marketplaceSearch:"搜索商品、商店和分类...", verifiedVendors:"已认证商户", latest:"最新", priceLowHigh:"价格从低到高", priceHighLow:"价格从高到低", noProducts:"未找到商品。", loadingMarketplace:"正在加载商城...", product:"商品", stock:"库存", addToCart:"加入购物车", premiumMarketplace:"全球商业，精选可信。" },
   ar: { executiveWorkspace:"مساحة العمل التنفيذية", globalPlatform:"المنصة العالمية", search:"البحث في MARKA", account:"الحساب", user:"مستخدم MARKA", theme:"المظهر", language:"اللغة", themeBlue:"الأزرق الأطلسي", themeObsidian:"أوبسيديان", themeGraphite:"غرافيت", themeSilver:"فضي", themeAurora:"الشفق", themePearl:"لؤلؤي", marketplaceTitle:"سوق MARKA", marketplaceSubtitle:"منتجات مختارة من تجار رقميين موثوقين.", marketplaceSearch:"ابحث عن المنتجات والمتاجر والفئات...", verifiedVendors:"تجار موثقون", latest:"الأحدث", priceLowHigh:"السعر: من الأقل إلى الأعلى", priceHighLow:"السعر: من الأعلى إلى الأقل", noProducts:"لم يتم العثور على منتجات.", loadingMarketplace:"جارٍ تحميل السوق...", product:"منتج", stock:"المخزون", addToCart:"أضف إلى السلة", premiumMarketplace:"تجارة عالمية، مختارة بثقة." },
   os: { executiveWorkspace:"Omukalo wOshigwana", globalPlatform:"Oshikandjo shOshigwana", search:"Londula MARKA", account:"Akaunti", user:"Omukwatithi wa MARKA", theme:"Omushindo", language:"Olyelyo", themeBlue:"Atlantic Blue", themeObsidian:"Obsidian", themeGraphite:"Graphite", themeSilver:"Silver", themeAurora:"Aurora", themePearl:"Ombili", marketplaceTitle:"MARKA Marketplace", marketplaceSubtitle:"Omitumba dhiinwa poovendor digital va nawa.", marketplaceSearch:"Londula omitumba, omashop na categories...", verifiedVendors:"Omapoovendor wa verified", latest:"Ombinga yape", priceLowHigh:"Oimaliwa: sha pumbwa", priceHighLow:"Oimaliwa: sha dula", noProducts:"Kape na product i li nawa.", loadingMarketplace:"Tate load-a marketplace...", product:"Product", stock:"Stock", addToCart:"Tula koshi cart", premiumMarketplace:"Oshilonga shoshigwana, sha holoka na trust." },
-} satisfies Record<PlatformLanguage, Record<string, string>>;
+};
 
 
 const messageTranslations = {
@@ -25,7 +25,7 @@ export function useMessagesTranslation(language: PlatformLanguage) {
 
 // Extended module vocabulary. Keep UI labels in the selected account language;
 // user-generated product, store and category names remain in their original language.
-const marketplaceExtendedTranslations = {
+const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, string>> = {
   pt: {
     openStore:"Abrir uma loja", sellOnMarka:"Vender na MARKA", curated:"Seleção editorial", curatedDetail:"Seleção editorial",
     verified:"Verificado", verifiedStores:"Lojas verificadas", local:"Local", localDetail:"Experiências em Angola",
@@ -68,6 +68,10 @@ const marketplaceExtendedTranslations = {
     addToCart:"Add to cart", stockLabel:"Stock: {count}",
     contactTemplate:"Hello! I am interested in this product. Could you share more information?", loadingProduct:"Loading product...", productNotFound:"Product not found.", noPhoto:"No photo", productVideos:"Videos and virtual tour", noDescription:"No description available.", storeLabel:"Store", stockLabelText:"Stock", statusLabel:"Status", contactSeller:"Contact the seller", contactSellerHint:"Ask questions, confirm availability or discuss details before buying.", sellerMessage:"Message to the seller", openingConversation:"Opening conversation...", sendSellerMessage:"Send message to seller", addingToCart:"Adding...", addedToCart:"Added to cart successfully.", addToCartFailed:"Could not add the product.", signInToBuy:"Sign in to continue shopping.", signIn:"Sign in to MARKA", tryAgain:"An error occurred. Please try again.",
     contactSellerFailed:"Could not contact the seller.",
+    storesLoadFailed:"Could not load stores.",
+    productsLoadFailed:"Could not load products.",
+    invalidMarketplaceResponse:"The Marketplace response is invalid.",
+    marketplaceLoadFailed:"Could not load the Marketplace.",,
   },
   fr: {
     openStore:"Ouvrir une boutique", sellOnMarka:"Vendre sur MARKA", curated:"Sélection", curatedDetail:"Sélection éditoriale",
@@ -89,6 +93,10 @@ const marketplaceExtendedTranslations = {
     addToCart:"Ajouter au panier", stockLabel:"Stock : {count}",
     contactTemplate:"Bonjour ! Ce produit m’intéresse. Pouvez-vous me donner plus d’informations ?", loadingProduct:"Chargement du produit...", productNotFound:"Produit introuvable.", noPhoto:"Aucune photo", productVideos:"Vidéos et visite virtuelle", noDescription:"Aucune description disponible.", storeLabel:"Boutique", stockLabelText:"Stock", statusLabel:"État", contactSeller:"Contacter le vendeur", contactSellerHint:"Posez vos questions, confirmez la disponibilité ou discutez des détails avant l’achat.", sellerMessage:"Message au vendeur", openingConversation:"Ouverture de la conversation...", sendSellerMessage:"Envoyer un message au vendeur", addingToCart:"Ajout…", addedToCart:"Produit ajouté au panier.", addToCartFailed:"Impossible d’ajouter le produit.", signInToBuy:"Connectez-vous pour poursuivre vos achats.", signIn:"Se connecter à MARKA", tryAgain:"Une erreur est survenue. Réessayez.",
     contactSellerFailed:"Impossible de contacter le vendeur.",
+    storesLoadFailed:"Impossible de charger les boutiques.",
+    productsLoadFailed:"Impossible de charger les produits.",
+    invalidMarketplaceResponse:"La réponse de la Marketplace est invalide.",
+    marketplaceLoadFailed:"Impossible de charger la Marketplace.",,
   },
   zh: {
     openStore:"开设商店", sellOnMarka:"在 MARKA 销售", curated:"精选", curatedDetail:"编辑精选",
@@ -110,6 +118,10 @@ const marketplaceExtendedTranslations = {
     addToCart:"加入购物车", stockLabel:"库存：{count}",
     contactTemplate:"您好！我对这个商品感兴趣。可以提供更多信息吗？", loadingProduct:"正在加载商品…", productNotFound:"未找到商品。", noPhoto:"暂无照片", productVideos:"视频和虚拟参观", noDescription:"暂无描述。", storeLabel:"商店", stockLabelText:"库存", statusLabel:"状态", contactSeller:"联系卖家", contactSellerHint:"购买前可咨询问题、确认库存或沟通细节。", sellerMessage:"给卖家的消息", openingConversation:"正在打开对话…", sendSellerMessage:"发送消息给卖家", addingToCart:"正在添加…", addedToCart:"已成功加入购物车。", addToCartFailed:"无法添加商品。", signInToBuy:"请登录后继续购买。", signIn:"登录 MARKA", tryAgain:"发生错误，请重试。",
     contactSellerFailed:"无法联系卖家。",
+    storesLoadFailed:"无法加载商店。",
+    productsLoadFailed:"无法加载商品。",
+    invalidMarketplaceResponse:"商城响应无效。",
+    marketplaceLoadFailed:"无法加载商城。",,
   },
   ar: {
     openStore:"افتح متجرًا", sellOnMarka:"بع على MARKA", curated:"مختار", curatedDetail:"اختيار تحريري",
@@ -131,6 +143,10 @@ const marketplaceExtendedTranslations = {
     addToCart:"أضف إلى السلة", stockLabel:"المخزون: {count}",
     contactTemplate:"مرحبًا! أنا مهتم بهذا المنتج. هل يمكنك تقديم مزيد من المعلومات؟", loadingProduct:"جارٍ تحميل المنتج...", productNotFound:"المنتج غير موجود.", noPhoto:"لا توجد صورة", productVideos:"مقاطع الفيديو والجولة الافتراضية", noDescription:"لا يوجد وصف متاح.", storeLabel:"المتجر", stockLabelText:"المخزون", statusLabel:"الحالة", contactSeller:"تواصل مع البائع", contactSellerHint:"اطرح الأسئلة أو أكد التوفر أو ناقش التفاصيل قبل الشراء.", sellerMessage:"رسالة إلى البائع", openingConversation:"جارٍ فتح المحادثة...", sendSellerMessage:"إرسال رسالة إلى البائع", addingToCart:"جارٍ الإضافة…", addedToCart:"تمت الإضافة إلى السلة بنجاح.", addToCartFailed:"تعذرت إضافة المنتج.", signInToBuy:"سجّل الدخول لمتابعة الشراء.", signIn:"تسجيل الدخول إلى MARKA", tryAgain:"حدث خطأ. حاول مرة أخرى.",
     contactSellerFailed:"تعذر التواصل مع البائع.",
+    storesLoadFailed:"تعذر تحميل المتاجر.",
+    productsLoadFailed:"تعذر تحميل المنتجات.",
+    invalidMarketplaceResponse:"استجابة السوق غير صالحة.",
+    marketplaceLoadFailed:"تعذر تحميل السوق.",,
   },
   os: {
     openStore:"Opena shop", sellOnMarka:"Landula mo MARKA", curated:"Oshiwedha", curatedDetail:"Oshiwedha shomakanda",
@@ -151,6 +167,10 @@ const marketplaceExtendedTranslations = {
     addToCart:"Tula koshi cart", stockLabel:"Stock: {count}",
     contactTemplate:"Hello! I am interested in this product. Could you share more information?", loadingProduct:"Loading product...", productNotFound:"Product not found.", noPhoto:"No photo", productVideos:"Videos and virtual tour", noDescription:"No description available.", storeLabel:"Store", stockLabelText:"Stock", statusLabel:"Status", contactSeller:"Contact the seller", contactSellerHint:"Ask questions, confirm availability or discuss details before buying.", sellerMessage:"Message to the seller", openingConversation:"Opening conversation...", sendSellerMessage:"Send message to seller", addingToCart:"Adding...", addedToCart:"Added to cart successfully.", addToCartFailed:"Could not add the product.", signInToBuy:"Sign in to continue shopping.", signIn:"Sign in to MARKA", tryAgain:"An error occurred. Please try again.",
     contactSellerFailed:"Could not contact the seller.",
+    storesLoadFailed:"Omapoovendor inakwanika okukwata.",
+    productsLoadFailed:"Omitumba inakwanika okukwata.",
+    invalidMarketplaceResponse:"The Marketplace response is invalid.",
+    marketplaceLoadFailed:"The Marketplace could not be loaded.",,
   },
 } satisfies Record<PlatformLanguage, Record<string, string>>;
 
