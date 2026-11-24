@@ -45,7 +45,7 @@ const requestLabels: Record<FreightRequest["requestType"], string> = {
 };
 
 function money(amount: number, currency: string) {
-  return new Intl.NumberFormat("pt-AO", {
+  return new Intl.NumberFormat("pt-PT", {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
@@ -241,14 +241,14 @@ export default function MobilityFreightRequestHistory() {
                   {item.origin?.address && <p><strong className="text-[var(--theme-text)]">Recolha:</strong> {item.origin.address}</p>}
                   {item.destination?.address && <p><strong className="text-[var(--theme-text)]">Destino:</strong> {item.destination.address}</p>}
                   {item.quantity !== null && <p><strong className="text-[var(--theme-text)]">Quantidade:</strong> {item.quantity} {item.quantityUnit}</p>}
-                  <p><strong className="text-[var(--theme-text)]">Criado:</strong> {new Intl.DateTimeFormat("pt-AO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}</p>
+                  <p><strong className="text-[var(--theme-text)]">Criado:</strong> {new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}</p>
                 </div>
 
                 {item.quotedAmount !== null && (
                   <div className="mt-4 rounded-xl border border-[#b89a5b]/25 bg-[#b89a5b]/[.06] p-3">
                     <p className="text-[9px] font-semibold uppercase tracking-[.16em] text-[#a18449]">Cotação MARKA</p>
                     <p className="mt-1 text-xl font-semibold tracking-tight text-[var(--theme-text)]">{money(item.quotedAmount, item.currency)}</p>
-                    {expiresAt && <p className="mt-1 text-[10px] text-[var(--theme-text-muted)]">{quoteExpired ? "Cotação expirada" : `Válida até ${new Intl.DateTimeFormat("pt-AO", { dateStyle: "medium", timeStyle: "short" }).format(expiresAt)}`}</p>}
+                    {expiresAt && <p className="mt-1 text-[10px] text-[var(--theme-text-muted)]">{quoteExpired ? "Cotação expirada" : `Válida até ${new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium", timeStyle: "short" }).format(expiresAt)}`}</p>}
                   </div>
                 )}
 
