@@ -95,7 +95,6 @@ const organizationStructuredData = {
       "@type": "Organization",
       "@id": `${siteUrl}/#organization`,
       name: "MARKA",
-      legalName: "MARKA",
       alternateName: ["MARKA AO", "MARKA Angola"],
       url: siteUrl,
       logo: {
