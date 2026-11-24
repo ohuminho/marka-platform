@@ -174,6 +174,6 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
   },
 } satisfies Record<PlatformLanguage, Record<string, string>>;
 
-export function usePlatformTranslation(language: PlatformLanguage) {
+export function usePlatformTranslation(language: PlatformLanguage): Record<string, string> {
   return { ...platformTranslations[language], ...marketplaceExtendedTranslations[language] };
 }
