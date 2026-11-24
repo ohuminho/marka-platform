@@ -1,4 +1,4 @@
-# MARKA — Salas, espaços e reservas por período
+# MARKA, Salas, espaços e reservas por período
 
 **Estado:** especificação de produto e execução  
 **Âmbito:** Marketplace existente; sem aplicação, loja ou vertical paralela.  
