@@ -22,8 +22,9 @@ type Conversation = {
   contextType?: "MOBILITY" | "DELIVERY" | "PRIVATE_SERVICE";
 };
 
-function stamp(value: string) {
-  return new Intl.DateTimeFormat("pt-AO", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+function stamp(value: string, language: string) {
+  const locale = language === "pt" || language === "os" ? "pt-AO" : language;
+  return new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
 
 function MessagesWorkspace() {
@@ -166,9 +167,9 @@ function MessagesWorkspace() {
                   const other = item.communicationThreadId ? item.seller : item.buyerId === actorId ? item.seller : item.buyer;
                   const last = item.messages[0];
                   return <button key={item.id} type="button" onClick={() => { setActiveId(item.id); setError(""); }} className={`w-full border-b border-[var(--theme-border)] p-4 text-left transition hover:bg-[var(--theme-background)] ${activeId === item.id ? "bg-[var(--theme-background)]" : ""}`}>
-                    <div className="flex items-start justify-between gap-2"><p className="truncate text-sm font-semibold text-[var(--theme-text)]">{other.name}</p><span className="shrink-0 text-[9px] text-[var(--theme-text-faint)]">{last ? stamp(last.createdAt) : stamp(item.lastMessageAt)}</span></div>
+                    <div className="flex items-start justify-between gap-2"><p className="truncate text-sm font-semibold text-[var(--theme-text)]">{other.name}</p><span className="shrink-0 text-[9px] text-[var(--theme-text-faint)]">{last ? stamp(last.createdAt, language) : stamp(item.lastMessageAt, language)}</span></div>
                     <p className="mt-1 truncate text-xs text-[var(--theme-text-muted)]">{item.product.name} · {item.store.name}</p>
-                    <p className="mt-2 truncate text-xs text-[var(--theme-text-faint)]">{last?.body ?? "{t.start}"}</p>
+                    <p className="mt-2 truncate text-xs text-[var(--theme-text-faint)]">{last?.body ?? t.start}</p>
                   </button>;
                 })}
             </div>
@@ -187,12 +188,12 @@ function MessagesWorkspace() {
                       <textarea value={editDraft} onChange={(event) => setEditDraft(event.target.value)} maxLength={5000} rows={3} className="w-full min-w-[220px] rounded-lg border border-current/20 bg-transparent p-2 text-sm outline-none" aria-label={t.editLabel} />
                       <div className="mt-2 flex justify-end gap-3 text-[10px] font-semibold uppercase tracking-wide">
                         <button type="button" onClick={() => { setEditingMessageId(""); setEditDraft(""); }} disabled={savingEdit}>{t.cancel}</button>
-                        <button type="button" onClick={() => void saveEdit(message.id)} disabled={savingEdit || editDraft.trim().length < 2}>{savingEdit ? "A guardar…" : "Guardar"}</button>
+                        <button type="button" onClick={() => void saveEdit(message.id)} disabled={savingEdit || editDraft.trim().length < 2}>{savingEdit ? t.saving : t.save}</button>
                       </div>
                     </> : <>
                       <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.body}</p>
                       <div className={`mt-2 flex items-center justify-end gap-2 text-[9px] ${message.senderId === actorId ? "opacity-60" : "text-[var(--theme-text-faint)]"}`}>
-                        {message.editedAt && <span>{t.edited}</span>}<span>{stamp(message.createdAt)}</span>
+                        {message.editedAt && <span>{t.edited}</span>}<span>{stamp(message.createdAt, language)}</span>
                         {message.senderId === actorId && <button type="button" onClick={() => { setEditingMessageId(message.id); setEditDraft(message.body); }} className="underline underline-offset-2">{t.edit}</button>}
                       </div>
                     </>}
@@ -213,5 +214,5 @@ function MessagesWorkspace() {
 }
 
 export default function MessagesPage() {
-  return <Suspense fallback={<div className="p-8 text-sm text-[var(--theme-text-muted)]">{t.loadingInbox}</div>}><MessagesWorkspace /></Suspense>;
+  return <Suspense fallback={<div className="p-8 text-sm text-[var(--theme-text-muted)]">A carregar a caixa de entrada…</div>}><MessagesWorkspace /></Suspense>;
 }
