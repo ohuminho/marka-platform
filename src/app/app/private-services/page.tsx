@@ -21,7 +21,7 @@ type Offer = {
 };
 
 function dateLabel(value: string) {
-  return new Intl.DateTimeFormat("pt-AO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 const statusLabels: Record<string, string> = {
