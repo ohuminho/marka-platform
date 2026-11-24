@@ -39,25 +39,49 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
     if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
     setHydrated(true);
 
-    // An authenticated account is authoritative across browsers and devices.
-    void fetch("/api/preferences/language", {
-      method: "GET",
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    }).then(async (response) => {
-      if (!response.ok) return;
-      const payload = await response.json() as { language?: unknown };
-      const serverLanguage = typeof payload.language === "string" ? payload.language : null;
-      if (active && !languageChangedByUser.current && isLanguage(serverLanguage)) {
-        setLanguageState(serverLanguage);
-        window.localStorage.setItem(LANGUAGE_KEY, serverLanguage);
+    const loadAccountLanguage = async (force = false) => {
+      try {
+        const response = await fetch("/api/preferences/language", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok || !active) return;
+        const payload = await response.json() as { language?: unknown; authenticated?: boolean };
+        const serverLanguage = typeof payload.language === "string" ? payload.language : null;
+        if (isLanguage(serverLanguage)) {
+          if (force || !languageChangedByUser.current) {
+            setLanguageState(serverLanguage);
+            window.localStorage.setItem(LANGUAGE_KEY, serverLanguage);
+          }
+          return;
+        }
+        const localLanguage = window.localStorage.getItem(LANGUAGE_KEY);
+        if (payload.authenticated && isLanguage(localLanguage)) {
+          await fetch("/api/preferences/language", {
+            method: "PATCH",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ language: localLanguage }),
+          });
+        }
+      } catch {
+        // Guests and temporary network failures continue using the device preference.
       }
-    }).catch(() => {
-      // Guests and temporary network failures continue using the device preference.
-    });
+    };
 
-    return () => { active = false; };
+    void loadAccountLanguage();
+    const handleAuthChanged = () => {
+      languageChangedByUser.current = false;
+      void loadAccountLanguage(true);
+    };
+    window.addEventListener("marka:auth-changed", handleAuthChanged);
+    return () => {
+      active = false;
+      window.removeEventListener("marka:auth-changed", handleAuthChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -74,9 +98,28 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
     window.localStorage.setItem(LANGUAGE_KEY, language);
   }, [language, hydrated]);
 
+  const setLanguage = useCallback((nextLanguage: PlatformLanguage) => {
+    languageChangedByUser.current = true;
+    setLanguageState(nextLanguage);
+    window.localStorage.setItem(LANGUAGE_KEY, nextLanguage);
+    void fetch("/api/preferences/language", {
+      method: "PATCH",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ language: nextLanguage }),
+    }).then((response) => {
+      if (!response.ok && response.status !== 401) {
+        console.error("[MARKA_LANGUAGE_PREFERENCE_SAVE_FAILED]", response.status);
+      }
+    }).catch((error) => {
+      console.error("[MARKA_LANGUAGE_PREFERENCE_SAVE_FAILED]", error);
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ theme, language, setTheme: setThemeState, setLanguage: setLanguageState }),
-    [theme, language]
+    () => ({ theme, language, setTheme: setThemeState, setLanguage }),
+    [theme, language, setLanguage]
   );
 
   return <context.Provider value={value}>{children}</context.Provider>;
