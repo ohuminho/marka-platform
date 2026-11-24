@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { PlatformLanguage } from "./PlatformPreferencesProvider";
 
 export const platformTranslations = {
@@ -99,7 +100,7 @@ const messageTranslations = {
   ar: { section:"MARKA / الاتصالات", title:"الرسائل", subtitle:"تواصل مع المشترين والبائعين والسائقين والمهنيين المختارين عبر قنوات خاصة مصرح بها.", count:"محادثات", inbox:"صندوق الوارد", loading:"جارٍ تحميل المحادثات…", empty:"لا توجد محادثات بعد.", emptyHint:"افتح منتجًا أو رحلة نشطة أو عملية توصيل لبدء محادثة خاصة مع المشاركين المصرح لهم.", start:"بدء المحادثة", viewProduct:"عرض المنتج", edit:"تعديل", edited:"تم التعديل", cancel:"إلغاء", save:"حفظ", saving:"جارٍ الحفظ…", first:"أرسل أول رسالة في هذه المحادثة.", placeholder:"اكتب رسالة…", sending:"جارٍ الإرسال…", send:"إرسال", safety:"حماية MARKA: يتم حظر جهات الاتصال الخارجية وروابط التواصل الاجتماعي والمدفوعات خارج المنصة وبيانات الاعتماد. لا تشارك كلمات المرور أو PIN أو OTP أو رموز الاسترداد أو البيانات المصرفية. أكمل الشراء دائمًا عبر MARKA.", inboxTitle:"صندوق الوارد", inboxHint:"اختر محادثة Marketplace أو Mobility أو Delivery. الوصول متاح فقط للمشاركين المصرح لهم.", loadingInbox:"جارٍ تحميل صندوق الوارد…", editLabel:"تعديل الرسالة" }
 } as const;
 export function useMessagesTranslation(language: PlatformLanguage) {
-  return messageTranslations[language as keyof typeof messageTranslations] ?? messageTranslations.pt;
+  return useMemo(() => messageTranslations[language as keyof typeof messageTranslations] ?? messageTranslations.pt, [language]);
 }
 
 
@@ -256,5 +257,5 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
 } satisfies Record<PlatformLanguage, Record<string, string>>;
 
 export function usePlatformTranslation(language: PlatformLanguage): Record<string, string> {
-  return { ...platformTranslations[language], ...marketplaceExtendedTranslations[language] };
+  return useMemo(() => ({ ...platformTranslations[language], ...marketplaceExtendedTranslations[language] }), [language]);
 }
