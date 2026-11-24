@@ -143,7 +143,7 @@ export async function POST(request: Request) {
         await markaSupportEmailService.send({
           to: actor.email,
           recipientName: actor.name,
-          subject: `Recebemos o seu pedido — MARKA ${ticket.reference}`,
+          subject: `Recebemos o seu pedido, MARKA ${ticket.reference}`,
           title: "Pedido recebido com sucesso",
           preheader: `O seu processo ${ticket.reference} foi registado.`,
           message: "Confirmamos a recepção do seu pedido. A equipa MARKA irá analisá-lo. Guarde a referência abaixo para acompanhar este processo.",
@@ -226,7 +226,7 @@ export async function PATCH(request: Request) {
         await markaSupportEmailService.send({
           to: existing.requester.email,
           recipientName: existing.requester.name,
-          subject: `Actualização do processo — MARKA ${existing.reference}`,
+          subject: `Actualização do processo, MARKA ${existing.reference}`,
           title: "O estado do seu processo foi actualizado",
           preheader: `O processo ${existing.reference} tem uma actualização.`,
           message: "A equipa MARKA actualizou o estado do seu pedido. Consulte o histórico completo na sua conta para ver os detalhes.",
