@@ -82,7 +82,7 @@ const navigationCopy: Partial<Record<PlatformLanguage, Record<string, string>>> 
     "Global KYC, KYD, KYB and compliance review":"Análise global de KYC, KYD, KYB e conformidade"
   },
   en: {
-    "Command Center":"Command Centre", "Control Center":"Control Centre", "Organization":"Organisation", "MARKA navigation":"MARKA navigation", "Your business command center":"Your business command centre",
+    "Command Center":"Command Centre", "Control Center":"Control Centre", "Organization":"Organisation", "Global Platform":"MARKA Platform", "MARKA navigation":"MARKA navigation", "Your business command center":"Your business command centre",
     "Your MARKA command experience":"Your MARKA command experience",
     "Start a business and manage your product catalogue":"Start a business and manage your product catalogue",
     "Manage your catalogue":"Manage your catalogue",
