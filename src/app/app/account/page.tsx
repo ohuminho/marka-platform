@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 function formatDate(value?: string) {
-  if (!value) return "—";
+  if (!value) return ", ";
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -230,7 +230,7 @@ function AccountContent({
             </div>
             <div>
               <dt className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-muted)]">Organization ID</dt>
-              <dd className="mt-1 break-all font-mono text-xs text-[var(--theme-text-muted)]">{authorization.organizationId || "—"}</dd>
+              <dd className="mt-1 break-all font-mono text-xs text-[var(--theme-text-muted)]">{authorization.organizationId || ", "}</dd>
             </div>
             <div>
               <dt className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-muted)]">Roles</dt>
