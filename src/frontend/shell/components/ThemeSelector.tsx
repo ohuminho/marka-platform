@@ -9,7 +9,7 @@ const themes: { value: PlatformTheme; label: string; labelKey?: "themeObsidian" 
   { value: "sable", label: "Sable" },
   { value: "silver", label: "Silver", labelKey: "themeSilver" },
   { value: "midnight", label: "Midnight" },
-  { value: "blue", label: "Atlantic Blue", labelKey: "themeBlue" },
+  { value: "blue", label: "Facebook Blue", labelKey: "themeBlue" },
   { value: "pearl", label: "Pérola", labelKey: "themePearl" },
 ];
 
