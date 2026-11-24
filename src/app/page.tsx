@@ -157,7 +157,7 @@ export default function HomePage() {
           aria-label="Navegação principal"
           className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6"
         >
-          <Link href="/" aria-label="MARKA AO — página inicial" className="flex items-center gap-2.5">
+          <Link href="/" aria-label="MARKA AO, página inicial" className="flex items-center gap-2.5">
             <span className="text-lg font-extrabold tracking-[0.22em] text-white">
               MARKA<span className="text-[#F5C451]">.</span>
             </span>
@@ -212,7 +212,7 @@ export default function HomePage() {
                 A MARKA é uma plataforma digital em Angola que aproxima pessoas,
                 comerciantes, prestadores de serviços e operadores de transporte.
                 Descubra produtos e lojas, encontre serviços, solicite táxi ou
-                mototáxi e organize o transporte de carga — num único ecossistema.
+                mototáxi e organize o transporte de carga, num único ecossistema.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
