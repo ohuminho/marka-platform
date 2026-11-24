@@ -86,7 +86,7 @@ export async function POST(request: Request, context: { params: Promise<{ ticket
         await markaSupportEmailService.send({
           to: ticket.requester.email,
           recipientName: ticket.requester.name,
-          subject: `Nova resposta no seu processo — MARKA ${ticket.reference}`,
+          subject: `Nova resposta no seu processo, MARKA ${ticket.reference}`,
           title: "Foi adicionada uma resposta ao seu processo",
           preheader: `A equipa MARKA respondeu ao processo ${ticket.reference}.`,
           message: "A equipa MARKA adicionou uma nova resposta ao seu pedido. Inicie sessão para consultar a mensagem e continuar a comunicação em segurança.",
