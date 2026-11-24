@@ -135,7 +135,7 @@ export default async function PublicStorePage({ params }: PageProps) {
                   </div>
                   <div className="p-5">
                     <h3 className="font-semibold">{product.name}</h3>
-                    <p className="mt-2 text-sm font-semibold text-[#f2d18e]">{new Intl.NumberFormat("pt-AO", { style: "currency", currency: product.currency, maximumFractionDigits: 0 }).format(product.price)}</p>
+                    <p className="mt-2 text-sm font-semibold text-[#f2d18e]">{new Intl.NumberFormat("pt-PT", { style: "currency", currency: product.currency, maximumFractionDigits: 0 }).format(product.price)}</p>
                     <p className="mt-2 text-xs text-white/45">Ver produto →</p>
                   </div>
                 </Link>
