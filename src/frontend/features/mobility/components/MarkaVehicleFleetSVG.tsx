@@ -109,23 +109,18 @@ export const MotoTaxiSvg: React.FC<MarkaVehicleSvgProps> = ({ className = 'w-24 
   return (
     <svg viewBox="0 0 220 92" fill="none" className={className} aria-hidden="true">
       <SharedDefs idPrefix={gradientId} />
-      <ellipse cx="112" cy="77" rx="76" ry="5" fill="#000" fillOpacity="0.65" />
-      <Wheel cx={56} cy={64} r={13} strokeGold={gold} />
-      <Wheel cx={166} cy={64} r={13} strokeGold={gold} />
-      <path
-        d="M56 64L84 44H128L152 30L166 64"
-        stroke={gold}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M74 40H116L134 26C141 22 149 24 152 31L132 45H82L74 40Z"
-        fill={`url(#${gradientId}-goldHull)`}
-        stroke={gold}
-        strokeWidth="1.3"
-      />
-      <path d="M148 24L158 29" stroke="#FEF08A" strokeWidth="2.2" strokeLinecap="round" />
+      <ellipse cx="111" cy="78" rx="83" ry="5" fill="#000" fillOpacity="0.62" />
+      <Wheel cx={48} cy={65} r={13.5} strokeGold={gold} />
+      <Wheel cx={171} cy={65} r={13.5} strokeGold={gold} />
+      <path d="M48 65L75 48L111 48L145 65L171 65M111 48L124 65H145M75 48L91 65H124" stroke="#A1A1AA" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M73 43C79 34 92 30 105 33L122 42L112 50H79L67 48L73 43Z" fill={`url(#${gradientId}-goldHull)`} stroke={gold} strokeWidth="1.5" />
+      <path d="M90 33L100 23C106 18 119 18 126 24L138 36L127 43L111 39L101 43L90 33Z" fill={`url(#${gradientId}-hull)`} stroke={gold} strokeWidth="1.4" />
+      <path d="M104 22L111 14L126 15L134 22" stroke={gold} strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M137 36L151 31L159 34" stroke={gold} strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M83 43H101M112 47L106 59" stroke={gold} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M146 42L158 45L165 53" stroke="#A1A1AA" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M70 35L60 31M58 31L54 35" stroke={gold} strokeWidth="2" strokeLinecap="round" />
+      <circle cx="174" cy="38" r="4" fill="#FDE68A" fillOpacity=".9" />
     </svg>
   );
 };
@@ -157,17 +152,16 @@ export const CargoVanSvg: React.FC<MarkaVehicleSvgProps> = ({ className = 'w-24 
   return (
     <svg viewBox="0 0 220 92" fill="none" className={className} aria-hidden="true">
       <SharedDefs idPrefix={gradientId} />
-      <ellipse cx="110" cy="78" rx="95" ry="5.5" fill="#000" fillOpacity="0.7" />
-      <path
-        d="M16 24C16 19 20 16 25 16H146C158 16 169 22 178 34L202 42C206 44 208 48 208 54V64H184C184 52 174 44 162 44C150 44 140 52 140 64H76C76 52 66 44 54 44C42 44 32 52 32 64H16V24Z"
-        fill={`url(#${gradientId}-hull)`}
-        stroke={gold}
-        strokeWidth={active ? '1.8' : '1.3'}
-      />
-      <path d="M150 21H164L178 35H150V21Z" fill={`url(#${gradientId}-glass)`} stroke={gold} strokeWidth="0.8" />
-      <rect x="28" y="24" width="112" height="24" rx="2" stroke={gold} strokeWidth="0.75" strokeOpacity="0.35" strokeDasharray="4 3" />
-      <Wheel cx={54} cy={64} r={13.5} strokeGold={gold} />
-      <Wheel cx={162} cy={64} r={13.5} strokeGold={gold} />
+      <ellipse cx="111" cy="78" rx="96" ry="5.5" fill="#000" fillOpacity=".68" />
+      <path d="M17 22C17 18 20 15 25 15H139C145 15 149 19 149 25V58H17V22Z" fill={`url(#${gradientId}-hull)`} stroke={gold} strokeWidth={active ? "1.8" : "1.3"} />
+      <path d="M149 27H173C183 27 193 33 199 44L207 58H149V27Z" fill={`url(#${gradientId}-goldHull)`} stroke={gold} strokeWidth={active ? "1.8" : "1.3"} />
+      <path d="M158 32H174C182 32 188 37 193 45H158V32Z" fill={`url(#${gradientId}-glass)`} stroke={gold} strokeWidth=".9" />
+      <path d="M28 24H137V51H28V24Z" stroke={gold} strokeWidth=".9" strokeOpacity=".38" />
+      <path d="M137 25V58M17 58H208" stroke={gold} strokeWidth="1.1" strokeOpacity=".65" />
+      <path d="M35 27V48M130 27V48" stroke="#A1A1AA" strokeWidth=".8" strokeOpacity=".35" />
+      <Wheel cx={54} cy={65} r={13.5} strokeGold={gold} />
+      <Wheel cx={174} cy={65} r={13.5} strokeGold={gold} />
+      <path d="M198 49H205" stroke="#FDE68A" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 };
@@ -178,15 +172,16 @@ export const LightTruckDynaSvg: React.FC<MarkaVehicleSvgProps> = ({ className = 
   return (
     <svg viewBox="0 0 220 92" fill="none" className={className} aria-hidden="true">
       <SharedDefs idPrefix={gradientId} />
-      <ellipse cx="110" cy="78" rx="97" ry="5.5" fill="#000" fillOpacity="0.7" />
-      <rect x="13" y="27" width="125" height="31" rx="2" fill={`url(#${gradientId}-hull)`} stroke={gold} strokeWidth={active ? '1.8' : '1.3'} />
-      <line x1="44" y1="27" x2="44" y2="58" stroke={gold} strokeWidth="1" strokeOpacity="0.5" />
-      <line x1="75" y1="27" x2="75" y2="58" stroke={gold} strokeWidth="1" strokeOpacity="0.5" />
-      <line x1="106" y1="27" x2="106" y2="58" stroke={gold} strokeWidth="1" strokeOpacity="0.5" />
-      <path d="M144 15H182C191 15 198 22 202 35L206 58H144V15Z" fill={`url(#${gradientId}-goldHull)`} stroke={gold} strokeWidth={active ? '1.8' : '1.3'} />
-      <path d="M153 20H180L192 36H153V20Z" fill={`url(#${gradientId}-glass)`} stroke={gold} strokeWidth="0.8" />
-      <Wheel cx={48} cy={65} r={13.5} strokeGold={gold} />
+      <ellipse cx="111" cy="78" rx="98" ry="5.5" fill="#000" fillOpacity=".68" />
+      <path d="M12 28H135V57H12V28Z" fill={`url(#${gradientId}-hull)`} stroke={gold} strokeWidth={active ? "1.8" : "1.3"} />
+      <path d="M17 33H130M17 42H130M17 51H130" stroke={gold} strokeOpacity=".32" strokeWidth=".8" />
+      <path d="M138 18H177C188 18 196 25 201 39L207 57H138V18Z" fill={`url(#${gradientId}-goldHull)`} stroke={gold} strokeWidth={active ? "1.8" : "1.3"} />
+      <path d="M148 23H176C183 23 189 28 193 38H148V23Z" fill={`url(#${gradientId}-glass)`} stroke={gold} strokeWidth=".9" />
+      <path d="M137 18V58M132 58H208" stroke={gold} strokeWidth="1.1" strokeOpacity=".65" />
+      <path d="M16 58H208" stroke="#A1A1AA" strokeWidth="2" strokeLinecap="round" />
+      <Wheel cx={46} cy={65} r={13.5} strokeGold={gold} />
       <Wheel cx={174} cy={65} r={13.5} strokeGold={gold} />
+      <path d="M18 29V56M128 29V56" stroke={gold} strokeWidth="1" strokeOpacity=".55" />
     </svg>
   );
 };
