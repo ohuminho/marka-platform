@@ -56,10 +56,10 @@ export class VerificationDeliveryService
       )}`;
 
     const expiresAtLabel =
-      input.expiresAt.toLocaleString("en-US", {
+      input.expiresAt.toLocaleString("pt-AO", {
         dateStyle: "medium",
         timeStyle: "short",
-        timeZone: "UTC",
+        timeZone: "Africa/Luanda",
       });
 
     const html = this.buildHtml({
@@ -94,7 +94,7 @@ export class VerificationDeliveryService
           from: fromEmail,
           to: [input.email],
           subject:
-            "Verify your MARKA account",
+            "Confirme o seu endereço de e-mail — MARKA",
           html,
           text,
         }),
@@ -152,14 +152,14 @@ export class VerificationDeliveryService
 
     return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-AO">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>Verify your MARKA account</title>
+    <title>Confirme o seu e-mail — MARKA</title>
   </head>
 
   <body
@@ -217,7 +217,7 @@ export class VerificationDeliveryService
                     text-transform:uppercase;
                   "
                 >
-                  Global Digital Economy
+                  Ecossistema Digital de Angola
                 </div>
               </td>
             </tr>
@@ -232,7 +232,7 @@ export class VerificationDeliveryService
                     color:#ffffff;
                   "
                 >
-                  Verify your account
+                  Confirme a sua conta
                 </h1>
 
                 <p
@@ -243,7 +243,7 @@ export class VerificationDeliveryService
                     color:#b8b8b8;
                   "
                 >
-                  Hello ${safeName},
+                  Olá ${safeName},
                 </p>
 
                 <p
@@ -271,7 +271,7 @@ export class VerificationDeliveryService
                     font-weight:600;
                   "
                 >
-                  Verify my email
+                  Confirmar o meu e-mail
                 </a>
 
                 <p
@@ -282,7 +282,7 @@ export class VerificationDeliveryService
                     color:#666666;
                   "
                 >
-                  This verification link expires at
+                  Este link de confirmação expira em
                   ${safeExpiresAt} UTC.
                 </p>
 
@@ -324,16 +324,16 @@ export class VerificationDeliveryService
     expiresAtLabel: string;
   }): string {
     return [
-      `Hello ${input.name},`,
+      `Olá ${input.name},`,
       "",
-      "Confirm your email address to activate your MARKA account.",
+      "Confirme o seu endereço de e-mail para ativar a sua conta MARKA.",
       "",
-      "Verify your email:",
+      "Confirmar o seu e-mail:",
       input.verificationUrl,
       "",
-      `This verification link expires at ${input.expiresAtLabel} UTC.`,
+      `Este link de confirmação expira em ${input.expiresAtLabel} (hora de Luanda).`,
       "",
-      "If you did not create this account, you can safely ignore this email.",
+      "Se não criou esta conta, pode ignorar esta mensagem com segurança.",
       "",
       "MARKA · Global Digital Economy",
     ].join("\n");
