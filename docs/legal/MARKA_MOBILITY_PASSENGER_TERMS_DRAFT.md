@@ -1,4 +1,4 @@
-# MARKA Mobility — Termos de Utilização do Passageiro (RASCUNHO)
+# MARKA Mobility, Termos de Utilização do Passageiro (RASCUNHO)
 
 **Estado:** minuta para revisão jurídica em Angola. Não publicar como versão final sem preencher os dados da entidade operadora, verificar o diploma integral aprovado em 27/10/2026 e obter validação jurídica local.
 
