@@ -84,9 +84,9 @@ async function searchPlacesInAngola(value: string, signal: AbortSignal): Promise
   })().catch(() => [] as Place[]);
 
   const [localPlaces, remotePlaces] = await Promise.all([localRequest, remoteRequest]);
-  const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
+  const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-PT")));
   return [...localPlaces, ...remotePlaces.filter((place) =>
-    !seen.has(place.label.toLocaleLowerCase("pt-AO")),
+    !seen.has(place.label.toLocaleLowerCase("pt-PT")),
   )].slice(0, 6);
 }
 
@@ -110,7 +110,7 @@ const labels: Record<string, string> = {
   COMPLETED: "Viagem concluída",
 };
 
-const fmt = (value: number) => new Intl.NumberFormat("pt-AO", {
+const fmt = (value: number) => new Intl.NumberFormat("pt-PT", {
   style: "currency",
   currency: "AOA",
   maximumFractionDigits: 0,
