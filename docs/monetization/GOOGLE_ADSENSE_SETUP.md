@@ -1,4 +1,4 @@
-# Google AdSense — MARKA Marketplace
+# Google AdSense, MARKA Marketplace
 
 ## Current implementation
 
