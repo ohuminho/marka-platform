@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type PlatformTheme = "pearl" | "obsidian" | "noir" | "sable" | "silver" | "midnight" | "blue";
 export type PlatformLanguage = "pt" | "en" | "fr" | "zh" | "ar" | "os";
@@ -29,17 +29,36 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
   const [theme, setThemeState] = useState<PlatformTheme>("pearl");
   const [language, setLanguageState] = useState<PlatformLanguage>("pt");
   const [hydrated, setHydrated] = useState(false);
+  const languageChangedByUser = useRef(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const storedTheme = window.localStorage.getItem(THEME_KEY);
-      const storedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
-      // Read saved preferences before persisting defaults so existing choices are preserved.
-      if (isTheme(storedTheme)) setThemeState(storedTheme);
-      if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
-      setHydrated(true);
-    }, 0);
-    return () => window.clearTimeout(timer);
+    let active = true;
+    const storedTheme = window.localStorage.getItem(THEME_KEY);
+    const storedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
+    if (isTheme(storedTheme)) setThemeState(storedTheme);
+    if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
+    setHydrated(true);
+
+    // An authenticated account is authoritative across browsers and devices.
+    void fetch("/api/preferences/language", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    }).then(async (response) => {
+      if (!response.ok) return;
+      const payload = await response.json() as { language?: unknown };
+      if (active && !languageChangedByUser.current && isLanguage(
+        typeof payload.language === "string" ? payload.language : null
+      )) {
+        setLanguageState(payload.language);
+        window.localStorage.setItem(LANGUAGE_KEY, payload.language);
+      }
+    }).catch(() => {
+      // Guests and temporary network failures continue using the device preference.
+    });
+
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
