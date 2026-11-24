@@ -25,7 +25,7 @@ export function useMessagesTranslation(language: PlatformLanguage) {
 
 // Extended module vocabulary. Keep UI labels in the selected account language;
 // user-generated product, store and category names remain in their original language.
-const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, string>> = {
+const marketplaceExtendedTranslations = {
   pt: {
     openStore:"Abrir uma loja", sellOnMarka:"Vender na MARKA", curated:"Seleção editorial", curatedDetail:"Seleção editorial",
     verified:"Verificado", verifiedStores:"Lojas verificadas", local:"Local", localDetail:"Experiências em Angola",
@@ -152,7 +152,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     contactTemplate:"Hello! I am interested in this product. Could you share more information?", loadingProduct:"Loading product...", productNotFound:"Product not found.", noPhoto:"No photo", productVideos:"Videos and virtual tour", noDescription:"No description available.", storeLabel:"Store", stockLabelText:"Stock", statusLabel:"Status", contactSeller:"Contact the seller", contactSellerHint:"Ask questions, confirm availability or discuss details before buying.", sellerMessage:"Message to the seller", openingConversation:"Opening conversation...", sendSellerMessage:"Send message to seller", addingToCart:"Adding...", addedToCart:"Added to cart successfully.", addToCartFailed:"Could not add the product.", signInToBuy:"Sign in to continue shopping.", signIn:"Sign in to MARKA", tryAgain:"An error occurred. Please try again.",
     contactSellerFailed:"Could not contact the seller.",
   },
-};
+} satisfies Record<PlatformLanguage, Record<string, string>>;
 
 export function usePlatformTranslation(language: PlatformLanguage) {
   return { ...platformTranslations[language], ...marketplaceExtendedTranslations[language] };
