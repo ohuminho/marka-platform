@@ -5,7 +5,7 @@ import MarkaVehicleIllustration from "@/frontend/features/mobility/components/Ma
 const siteUrl = "https://markaao.com";
 
 export const metadata: Metadata = {
-  title: "MARKA AO | Marketplace, Mobilidade e Logística em Angola",
+  title: { absolute: "MARKA AO | Marketplace, Mobilidade e Logística em Angola" },
   description:
     "MARKA AO é uma plataforma digital em Angola para descobrir produtos, lojas e serviços, solicitar táxi e mototáxi e encontrar soluções de transporte de carga.",
   applicationName: "MARKA",
