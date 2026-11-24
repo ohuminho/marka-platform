@@ -3,12 +3,13 @@
 import { usePlatformPreferences, type PlatformTheme } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
-const themes: { value: PlatformTheme; label: string; labelKey?: "themeObsidian" | "themeSilver" | "themePearl" }[] = [
+const themes: { value: PlatformTheme; label: string; labelKey?: "themeObsidian" | "themeSilver" | "themePearl" | "themeBlue" }[] = [
   { value: "obsidian", label: "Obsidian", labelKey: "themeObsidian" },
   { value: "noir", label: "Noir" },
   { value: "sable", label: "Sable" },
   { value: "silver", label: "Silver", labelKey: "themeSilver" },
   { value: "midnight", label: "Midnight" },
+  { value: "blue", label: "Atlantic Blue", labelKey: "themeBlue" },
   { value: "pearl", label: "Pérola", labelKey: "themePearl" },
 ];
 
