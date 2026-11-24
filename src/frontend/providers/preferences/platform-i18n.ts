@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo } from "react";
 import type { PlatformLanguage } from "./PlatformPreferencesProvider";
 
@@ -17,7 +19,7 @@ const navigationCopy: Partial<Record<PlatformLanguage, Record<string, string>>> 
     "Business":"Negócio", "Administration":"Administração", "Mobility":"Mobilidade", "Delivery":"Entregas",
     "Professional Services":"Serviços profissionais", "Control Center":"Centro de controlo",
     "Overview":"Visão geral", "AI Assistant":"Assistente de IA", "Open a Store":"Abrir uma loja",
-    "Messages":"Mensagens", "Cart":"Carrinho", "Professional Services":"Serviços profissionais",
+    "Messages":"Mensagens", "Cart":"Carrinho",
     "Request Private Support":"Solicitar apoio privado", "Wallet":"Carteira", "Support":"Apoio",
     "Account":"Conta", "Compliance":"Conformidade", "Orders":"Encomendas", "Available Deliveries":"Entregas disponíveis",
     "My Deliveries":"As minhas entregas", "Command Center":"Centro de comando", "Products":"Produtos",
