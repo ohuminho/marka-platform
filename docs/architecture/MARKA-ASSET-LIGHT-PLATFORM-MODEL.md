@@ -1,4 +1,4 @@
-# MARKA — Asset-Light Platform Operating Model
+# MARKA, Asset-Light Platform Operating Model
 
 ## Strategic position
 
