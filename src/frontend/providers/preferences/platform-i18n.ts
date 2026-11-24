@@ -71,7 +71,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     storesLoadFailed:"Could not load stores.",
     productsLoadFailed:"Could not load products.",
     invalidMarketplaceResponse:"The Marketplace response is invalid.",
-    marketplaceLoadFailed:"Could not load the Marketplace.",,
+    marketplaceLoadFailed:"Could not load the Marketplace.",
   },
   fr: {
     openStore:"Ouvrir une boutique", sellOnMarka:"Vendre sur MARKA", curated:"Sélection", curatedDetail:"Sélection éditoriale",
@@ -96,7 +96,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     storesLoadFailed:"Impossible de charger les boutiques.",
     productsLoadFailed:"Impossible de charger les produits.",
     invalidMarketplaceResponse:"La réponse de la Marketplace est invalide.",
-    marketplaceLoadFailed:"Impossible de charger la Marketplace.",,
+    marketplaceLoadFailed:"Impossible de charger la Marketplace.",
   },
   zh: {
     openStore:"开设商店", sellOnMarka:"在 MARKA 销售", curated:"精选", curatedDetail:"编辑精选",
@@ -121,7 +121,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     storesLoadFailed:"无法加载商店。",
     productsLoadFailed:"无法加载商品。",
     invalidMarketplaceResponse:"商城响应无效。",
-    marketplaceLoadFailed:"无法加载商城。",,
+    marketplaceLoadFailed:"无法加载商城。",
   },
   ar: {
     openStore:"افتح متجرًا", sellOnMarka:"بع على MARKA", curated:"مختار", curatedDetail:"اختيار تحريري",
@@ -146,7 +146,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     storesLoadFailed:"تعذر تحميل المتاجر.",
     productsLoadFailed:"تعذر تحميل المنتجات.",
     invalidMarketplaceResponse:"استجابة السوق غير صالحة.",
-    marketplaceLoadFailed:"تعذر تحميل السوق.",,
+    marketplaceLoadFailed:"تعذر تحميل السوق.",
   },
   os: {
     openStore:"Opena shop", sellOnMarka:"Landula mo MARKA", curated:"Oshiwedha", curatedDetail:"Oshiwedha shomakanda",
@@ -170,7 +170,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     storesLoadFailed:"Omapoovendor inakwanika okukwata.",
     productsLoadFailed:"Omitumba inakwanika okukwata.",
     invalidMarketplaceResponse:"The Marketplace response is invalid.",
-    marketplaceLoadFailed:"The Marketplace could not be loaded.",,
+    marketplaceLoadFailed:"The Marketplace could not be loaded.",
   },
 } satisfies Record<PlatformLanguage, Record<string, string>>;
 
