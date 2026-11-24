@@ -201,7 +201,7 @@ export default function MarkaCvPage() {
       <div className="no-print grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)]">
         <section className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
-            <div><p className="text-sm font-semibold text-[var(--theme-text)]">Um currículo temporário de cada vez</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{saveLabel}{expiresAt ? ` · Expira em ${new Date(expiresAt).toLocaleString("pt-AO")}` : " · O rascunho será guardado automaticamente quando editar."}</p></div>
+            <div><p className="text-sm font-semibold text-[var(--theme-text)]">Um currículo temporário de cada vez</p><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{saveLabel}{expiresAt ? ` · Expira em ${new Date(expiresAt).toLocaleString("pt-PT")}` : " · O rascunho será guardado automaticamente quando editar."}</p></div>
             <button type="button" onClick={newCV} className="rounded-full border border-[var(--theme-border)] px-4 py-3 text-xs text-[var(--theme-text)]">Criar outro</button>
           </div>
 
