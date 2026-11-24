@@ -1,4 +1,4 @@
-# MARKA CV — Professional Resume Builder
+# MARKA CV, Professional Resume Builder
 
 ## Product position
 
