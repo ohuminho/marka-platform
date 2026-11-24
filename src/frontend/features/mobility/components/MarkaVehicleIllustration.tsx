@@ -1,15 +1,25 @@
 "use client";
-type Props={kind:string;className?:string};
-const GOLD="#E5B84B",BODY="#202126",GLASS="#65717D";
-function Wheel({x,y=43,r=7}:{x:number;y?:number;r?:number}){return <g><circle cx={x} cy={y} r={r} fill="#09090B" stroke={GOLD} strokeWidth="1.6"/><circle cx={x} cy={y} r={r*.48} fill="none" stroke="#89909A" strokeWidth="1"/><circle cx={x} cy={y} r="1.4" fill={GOLD}/></g>;}
-export default function MarkaVehicleIllustration({kind,className="h-12 w-28"}:Props){
- const v=kind.toUpperCase().replaceAll("-","_"),moto=["MOTORCYCLE","BIKE","MOTO_TAXI"].includes(v),pickup=["PICKUP","TRUCK_PICKUP","HILUX","TOYOTA_HILUX"].includes(v),medium=["LIGHT_TRUCK","MEDIUM_TRUCK","CANTER","DYNA","TOYOTA_DYNA"].includes(v),van=["VAN","CARGO_VAN","CLOSED_VAN"].includes(v),tipper=["TIPPER_TRUCK","DUMP_TRUCK","BASCULANTE"].includes(v),heavy=["HEAVY_TRUCK","TRUCK","FLATBED_TRUCK","BUS","COACH"].includes(v);
- return <svg viewBox="0 0 120 56" role="img" aria-label={"Viatura "+v.toLowerCase().replaceAll("_"," ")} className={className} fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="marka-metal" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#55565D"/><stop offset=".55" stopColor={BODY}/><stop offset="1" stopColor="#09090B"/></linearGradient></defs><path d="M5 49H115" stroke="#FFFFFF" strokeOpacity=".12"/>
- {moto?<g stroke={GOLD} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><Wheel x={24} r={6}/><Wheel x={91} r={6}/><path d="M24 43 40 31 58 42 72 25 83 26 91 43M40 31 48 22 62 21 73 27M57 42H76L67 32 52 32"/><path d="M47 21 52 15 66 15 75 23 66 27H50Z" fill="url(#marka-metal)"/><path d="M53 16 59 12H67L73 20H57Z" fill={GLASS}/><path d="M42 31 34 27H28M81 26 88 18H97"/></g>
- :pickup?<g stroke={GOLD} strokeWidth="1.5" strokeLinejoin="round"><path d="M7 39 12 32H42L50 17H72L84 30H109V44H7Z" fill="url(#marka-metal)"/><path d="M53 19H70L79 30H49Z" fill={GLASS}/><path d="M84 32H108V39H84M85 30V39M92 30V39M99 30V39M106 30V39"/><Wheel x={27} r={7}/><Wheel x={91} r={7}/></g>
- :medium?<g stroke={GOLD} strokeWidth="1.45" strokeLinejoin="round"><path d="M7 40V22Q7 18 12 18H35L43 27H112V44H7Z" fill="url(#marka-metal)"/><path d="M13 21H31L39 29H13Z" fill={GLASS}/><path d="M45 29H112V41H45ZM49 29V41M58 29V41M67 29V41M76 29V41M85 29V41M94 29V41M103 29V41"/><Wheel x={24} r={6.5}/><Wheel x={82} r={6.5}/><Wheel x={101} r={6.5}/></g>
- :van?<g stroke={GOLD} strokeWidth="1.5" strokeLinejoin="round"><path d="M10 42V18Q10 13 16 13H88Q99 13 105 24L112 35V44H10Z" fill="url(#marka-metal)"/><path d="M17 17H35V30H17Z" fill={GLASS}/><path d="M39 16H86Q95 16 100 27L103 31H39Z" fill="#24262B"/><path d="M42 18V39M88 17V39M12 34H108" opacity=".7"/><Wheel x={29} r={7}/><Wheel x={91} r={7}/></g>
- :tipper?<g stroke={GOLD} strokeWidth="1.5" strokeLinejoin="round"><path d="M8 39V20Q8 16 13 16H37L45 29H53V44H8Z" fill="url(#marka-metal)"/><path d="M14 19H33L40 29H14Z" fill={GLASS}/><path d="M54 28 109 13 113 31 58 42Z" fill="#303137"/><path d="M57 40 75 31 81 43M50 43 71 42M62 40 73 33" strokeWidth="2"/><Wheel x={24} r={6.5}/><Wheel x={82} r={6.5}/><Wheel x={101} r={6.5}/></g>
- :heavy?<g stroke={GOLD} strokeWidth="1.45" strokeLinejoin="round"><path d="M7 40V15Q7 11 13 11H38L48 28H113V44H7Z" fill="url(#marka-metal)"/><path d="M14 15H34L43 28H14Z" fill={GLASS}/><path d="M49 29H112V39H49ZM53 30V38M61 30V38M69 30V38M77 30V38M85 30V38M93 30V38M101 30V38M109 30V38"/><Wheel x={24} r={6.5}/><Wheel x={81} r={6.5}/><Wheel x={98} r={6.5}/><Wheel x={111} r={6.5}/></g>
- :<g stroke={GOLD} strokeWidth="1.5" strokeLinejoin="round"><path d="M7 39 13 31 28 29 39 17Q42 14 49 14H82Q91 14 98 24L108 31 114 34V44H7Z" fill="url(#marka-metal)"/><path d="M41 18H80Q88 18 94 28H33Z" fill={GLASS}/><path d="M57 18V29M79 18 84 29M10 37H111" opacity=".7"/><Wheel x={27} r={7}/><Wheel x={91} r={7}/></g>}<path d="M8 47H112" stroke={GOLD} strokeOpacity=".35" strokeWidth=".8"/></svg>;
+
+import React from "react";
+import { renderMarkaVehicleSvg, type MarkaVehicleSvgProps } from "./MarkaVehicleFleetSVG";
+
+export interface MarkaVehicleIllustrationProps extends MarkaVehicleSvgProps {
+  /** Current category contract. */
+  category?: string;
+  /** Legacy prop retained for existing Mobility/Freight consumers. */
+  kind?: string;
+}
+
+export default function MarkaVehicleIllustration({
+  category,
+  kind,
+  className = "h-12 w-28",
+  active = false,
+}: MarkaVehicleIllustrationProps) {
+  const vehicleCategory = category ?? kind ?? "TAXI";
+  return (
+    <span className="inline-flex items-center justify-center" role="img" aria-label={`Viatura: ${vehicleCategory.toLowerCase().replace(/[_-]/g, " ")}`}>
+      {renderMarkaVehicleSvg(vehicleCategory, { className, active })}
+    </span>
+  );
 }
