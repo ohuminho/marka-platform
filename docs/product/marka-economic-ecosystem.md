@@ -1,4 +1,4 @@
-# MARKA — Expansão do ecossistema económico
+# MARKA, Expansão do ecossistema económico
 
 ## Direção de produto
 
@@ -44,11 +44,11 @@ Módulos: diretório empresarial, oportunidades de parceria, representação com
 
 Exigir KYB, identidade dos representantes, prova de mandato, divulgação de riscos e revisão jurídica antes de qualquer intermediação financeira ou promessa de retorno.
 
-## 5. Mobilidade — três espaços operacionais
+## 5. Mobilidade, três espaços operacionais
 
-- Passageiro: `/app/mobility` — mapa, origem/destino, táxi e mototáxi, pedido e acompanhamento.
-- Motorista: `/app/driver` — onboarding, disponibilidade, aceitação/recusa, navegação, viagem e histórico.
-- Administração: `/app/mobility/admin` — despacho, mapa operacional, motoristas, corridas, tarifas, incidentes, auditoria e liquidação.
+- Passageiro: `/app/mobility`, mapa, origem/destino, táxi e mototáxi, pedido e acompanhamento.
+- Motorista: `/app/driver`, onboarding, disponibilidade, aceitação/recusa, navegação, viagem e histórico.
+- Administração: `/app/mobility/admin`, despacho, mapa operacional, motoristas, corridas, tarifas, incidentes, auditoria e liquidação.
 
 A interface de passageiro não deve expor o centro de controlo. A interface de motorista não deve expor ferramentas administrativas. A autorização tem de ser aplicada no servidor e em cada endpoint, não apenas por ocultação de links.
 
