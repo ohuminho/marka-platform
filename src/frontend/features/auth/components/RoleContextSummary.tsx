@@ -21,7 +21,7 @@ export default function RoleContextSummary() {
       </div>
       <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
         <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-muted)]">Role</p>
-        <p className="mt-2 text-sm font-medium text-[var(--theme-text)]">{user?.role || authorization.roles[0] || "—"}</p>
+        <p className="mt-2 text-sm font-medium text-[var(--theme-text)]">{user?.role || authorization.roles[0] || ", "}</p>
       </div>
       <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
         <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-muted)]">Organization</p>
@@ -29,7 +29,7 @@ export default function RoleContextSummary() {
       </div>
       <div className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
         <p className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-muted)]">Session</p>
-        <p className="mt-2 text-sm font-medium text-[var(--theme-text)]">{session ? "ACTIVE" : "—"}</p>
+        <p className="mt-2 text-sm font-medium text-[var(--theme-text)]">{session ? "ACTIVE" : ", "}</p>
       </div>
     </section>
   );

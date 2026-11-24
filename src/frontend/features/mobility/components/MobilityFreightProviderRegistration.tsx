@@ -304,7 +304,7 @@ export default function MobilityFreightProviderRegistration() {
             </div>
 
             {activeVehicles.map((vehicle) => <div key={vehicle.id} className="rounded-xl border border-emerald-500/20 bg-emerald-500/[.035] p-3 text-xs text-[var(--theme-text-muted)]">
-              <strong className="text-[var(--theme-text)]">{vehicle.kind.replaceAll("_", " ")}</strong>{vehicle.registrationNumber ? ` · ${vehicle.registrationNumber}` : ""}{vehicle.make || vehicle.model ? ` · ${[vehicle.make, vehicle.model].filter(Boolean).join(" ")}` : ""} — activa
+              <strong className="text-[var(--theme-text)]">{vehicle.kind.replaceAll("_", " ")}</strong>{vehicle.registrationNumber ? ` · ${vehicle.registrationNumber}` : ""}{vehicle.make || vehicle.model ? ` · ${[vehicle.make, vehicle.model].filter(Boolean).join(" ")}` : ""}, activa
               {vehicle.capacity !== null && <span> · capacidade {vehicle.capacity} {vehicle.capacityUnit}</span>}
             </div>)}
 

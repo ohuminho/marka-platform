@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://markaao.com"),
   title: {
-    default: "MARKA — A nova economia digital",
+    default: "MARKA, A nova economia digital",
     template: "%s | MARKA",
   },
   applicationName: "MARKA",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "MARKA — A nova economia digital",
+    title: "MARKA, A nova economia digital",
     description:
       "Descubra produtos, lojas, mobilidade, serviços e oportunidades numa única plataforma.",
     url: "https://markaao.com",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MARKA — A nova economia digital",
+    title: "MARKA, A nova economia digital",
     description:
       "Comércio, mobilidade, serviços e oportunidades numa única plataforma.",
   },
@@ -75,7 +75,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-AO" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="pt-PT" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AppProvider>{children}</AppProvider>
         <PrivacyConsentGrowth />

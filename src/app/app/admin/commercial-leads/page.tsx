@@ -137,7 +137,7 @@ export default function AdminCommercialLeadsPage() {
                       <h2 className="text-lg font-semibold text-[var(--theme-text)]">{lead.name}</h2>
                       <p className="mt-1 text-xs text-[var(--theme-text)]/45">{lead.organizationName || "Sem organização"} · {leadTypeLabels[lead.leadType] || lead.leadType}</p>
                       <p className="mt-2 text-sm text-[var(--theme-text)]">{lead.email || "Sem e-mail"} · {lead.phone || "Sem telefone"}</p>
-                      <p className="mt-1 text-[11px] text-[var(--theme-text)]/35">{new Date(lead.createdAt).toLocaleString("pt-AO")}</p>
+                      <p className="mt-1 text-[11px] text-[var(--theme-text)]/35">{new Date(lead.createdAt).toLocaleString("pt-PT")}</p>
                     </div>
                     <select aria-label={"Estado de " + lead.name} value={lead.status} onChange={(event) => updateLead(lead.id, { status: event.target.value as LeadStatus })} className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-2 text-xs text-[var(--theme-text)]">
                       {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}

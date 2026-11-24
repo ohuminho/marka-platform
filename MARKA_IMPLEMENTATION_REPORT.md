@@ -14,8 +14,8 @@ A minimal compatibility fix was applied to `src/app/layout.tsx`: the undefined `
 |---|---|
 | `npx tsc --noEmit` | PASS |
 | Targeted ESLint on all added structural modules | PASS |
-| `npm run test:unit` | PASS — 3 unit test files |
-| `npm run build` | PASS — Next.js production build |
+| `npm run test:unit` | PASS, 3 unit test files |
+| `npm run build` | PASS, Next.js production build |
 
 The repository-wide lint command still reports pre-existing React hook lint errors in the vendor context and cart components, plus an existing unused parameter warning in the orders service. Those files were not changed because the brief explicitly prohibits unrelated redesign.
 

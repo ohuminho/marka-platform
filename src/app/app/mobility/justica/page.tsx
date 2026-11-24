@@ -61,7 +61,7 @@ export default function MobilityFairnessPage() {
           <section className="grid gap-4 lg:grid-cols-2">
             <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
               <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Para passageiros</p>
-              <h2 className="mt-3 text-xl font-semibold text-[var(--theme-text)]">O seu direito a reclamar — e o seu dever de respeitar.</h2>
+              <h2 className="mt-3 text-xl font-semibold text-[var(--theme-text)]">O seu direito a reclamar, e o seu dever de respeitar.</h2>
               <p className="mt-3 text-sm leading-6 text-[var(--theme-text-muted)]">Pode comunicar atrasos, cobrança incorrecta, condução perigosa ou comportamento inadequado. Ameaças, insultos, assédio, danos, fraude ou falsas denúncias também podem ser analisados e ter consequências.</p>
             </article>
             <article className="rounded-3xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 sm:p-8">
@@ -93,7 +93,7 @@ export default function MobilityFairnessPage() {
             <p className="text-sm font-semibold text-[var(--theme-text)]">Transparência sobre o estado actual</p>
             <p className="mt-2 text-xs leading-6 text-[var(--theme-text-muted)]">Esta página apresenta a política pretendida. O formulário de reclamações, o processo de resposta de ambas as partes, a revisão por um responsável e o registo auditável ainda precisam de estar ligados a um fluxo operacional real antes de serem anunciados como serviço activo. Em caso de perigo imediato, procure os serviços de emergência competentes.</p>
             {supportEmail ? (
-              <a className="mt-4 inline-flex min-h-10 items-center rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]" href={`mailto:${supportEmail}?subject=${encodeURIComponent("Assunto de mobilidade — pedido de orientação")}`}>Contactar o apoio MARKA</a>
+              <a className="mt-4 inline-flex min-h-10 items-center rounded-full border border-[var(--theme-border)] px-4 py-2 text-xs font-semibold text-[var(--theme-text)]" href={`mailto:${supportEmail}?subject=${encodeURIComponent("Assunto de mobilidade, pedido de orientação")}`}>Contactar o apoio MARKA</a>
             ) : (
               <p className="mt-3 text-xs text-[var(--theme-text-faint)]">O contacto oficial de apoio será apresentado quando NEXT_PUBLIC_MARKA_SUPPORT_EMAIL estiver configurado em produção.</p>
             )}

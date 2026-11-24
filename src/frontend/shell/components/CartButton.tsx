@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import CartDrawer from "@/frontend/features/cart/components/CartDrawer";
 import { getCart } from "@/frontend/features/cart/services/cart.client";
+import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
+import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
 export default function CartButton() {
+  const { language } = usePlatformPreferences();
+  const t = usePlatformTranslation(language);
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState(0);
 
@@ -26,8 +30,8 @@ export default function CartButton() {
     <>
       <button
         type="button"
-        aria-label="Cart"
-        title="Cart"
+        aria-label={t.cart}
+        title={t.cart}
         onClick={() => setOpen(true)}
         className="group relative flex h-9 w-9 items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[var(--theme-text-muted)] transition-colors hover:border-[var(--theme-border)] hover:bg-[var(--theme-surface)]/55 hover:text-[var(--theme-text)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-accent)]"
       >

@@ -203,7 +203,7 @@ export default function AdminCompliancePage() {
                         )}
                         {!hasCurrentVerifiedEvidence && <p className="mt-2 max-w-64 text-xs text-amber-600">Self-attested evidence is recorded for the founder but does not count as independent verification. A driver cannot be activated until a different authorized reviewer validates every required document.</p>}
                       </td>
-                      <td className="px-5 py-4 text-xs text-[var(--theme-muted)]">{profile.submittedAt ? new Date(profile.submittedAt).toLocaleString() : "—"}</td>
+                      <td className="px-5 py-4 text-xs text-[var(--theme-muted)]">{profile.submittedAt ? new Date(profile.submittedAt).toLocaleString() : ", "}</td>
                       <td className="px-5 py-4">
                         <div className="flex min-w-32 flex-wrap gap-2">
                           <button disabled={busy || !hasCurrentVerifiedEvidence || profile.status === "VERIFIED"} onClick={() => void review(profile, "VERIFIED")} title={!hasCurrentVerifiedEvidence ? "Current verified evidence is required" : "Approve profile"} className="rounded-lg border border-[var(--theme-border)] px-3 py-2 text-xs text-[var(--theme-text)] disabled:cursor-not-allowed disabled:opacity-40">Verify profile</button>

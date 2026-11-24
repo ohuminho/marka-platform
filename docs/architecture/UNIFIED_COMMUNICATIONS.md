@@ -1,4 +1,4 @@
-# MARKA Unified Communications — Architecture Decision
+# MARKA Unified Communications, Architecture Decision
 
 Status: Accepted architecture; implementation is staged.
 Date: 2026-10-30
@@ -54,7 +54,7 @@ Do not rely on public STUN alone for production. P2P direct media is inexpensive
 
 Release gate: do not label calls production-ready until tested between two real accounts on separate devices and networks (including mobile data), with permissions denied/granted, reconnect, hang-up, unauthorized participant, expired ride/conversation and TURN relay scenarios.
 
-## Implementation status — 2026-10-30
+## Implementation status, 2026-10-30
 
 The first Marketplace calling slice is now present in the repository:
 

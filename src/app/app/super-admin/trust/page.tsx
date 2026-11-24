@@ -142,7 +142,7 @@ export default function TrustCenterPage() {
             </div>
             <div className="grid gap-2 text-xs sm:grid-cols-3">
               <p><span className="text-[var(--theme-text-faint)]">Conta: </span>{signal.subject?.name || "Conta indisponível"}</p>
-              <p><span className="text-[var(--theme-text-faint)]">Tipo: </span>{signal.subject?.role || "—"}</p>
+              <p><span className="text-[var(--theme-text-faint)]">Tipo: </span>{signal.subject?.role || ", "}</p>
               <p><span className="text-[var(--theme-text-faint)]">Canal: </span>{signal.source.replaceAll("_", " ")}</p>
             </div>
             {signal.subject?.email && <p className="text-[11px] text-[var(--theme-text-muted)]">{signal.subject.email}</p>}

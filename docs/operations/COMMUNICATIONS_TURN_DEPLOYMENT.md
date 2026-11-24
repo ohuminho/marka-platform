@@ -1,8 +1,8 @@
-# MARKA Communications — TURN deployment and production gate
+# MARKA Communications, TURN deployment and production gate
 
 The application uses browser-native WebRTC for 1:1 media and authenticated application APIs for signalling. The application does not record audio or video.
 
-## Verified deployment status — 2026-11-05
+## Verified deployment status, 2026-11-05
 
 Repository and connected project checks:
 

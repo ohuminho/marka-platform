@@ -4,8 +4,8 @@ import { usePlatformPreferences, type PlatformLanguage } from "@/frontend/provid
 import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
 const languages: { value: PlatformLanguage; label: string; name: string }[] = [
-  { value: "pt", label: "PT", name: "Português" },
-  { value: "en", label: "EN", name: "English" },
+  { value: "pt", label: "PT", name: "Português (Portugal)" },
+  { value: "en", label: "EN", name: "English (UK)" },
   { value: "fr", label: "FR", name: "Français" },
   { value: "zh", label: "中", name: "中文" },
   { value: "ar", label: "ع", name: "العربية" },
@@ -23,7 +23,7 @@ export default function LanguageSelector() {
       </svg>
       <span className="sr-only">{t.language}</span>
       <select aria-label={t.language} value={language} onChange={(event) => setLanguage(event.target.value as PlatformLanguage)} className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0 outline-none">
-        {languages.map((item) => <option key={item.value} value={item.value}>{item.label} — {item.name}</option>)}
+        {languages.map((item) => <option key={item.value} value={item.value}>{item.label} | {item.name}</option>)}
       </select>
       <span className="pointer-events-none absolute -bottom-0.5 left-1/2 h-px w-2 -translate-x-1/2 bg-[var(--theme-accent)] opacity-0 transition-opacity group-focus-within:opacity-100" />
     </label>

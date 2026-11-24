@@ -227,11 +227,11 @@ export default function PaymentHistory() {
                   </td>
 
                   <td className="px-3 py-4">
-                    {payment.orderId ?? "—"}
+                    {payment.orderId ?? ", "}
                   </td>
 
                   <td className="px-3 py-4">
-                    {payment.provider ?? "—"}
+                    {payment.provider ?? ", "}
                   </td>
 
                   <td className="px-3 py-4">

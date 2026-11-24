@@ -95,7 +95,7 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
 
   useEffect(() => {
     if (!hydrated) return;
-    document.documentElement.lang = language;
+    document.documentElement.lang = language === "pt" ? "pt-PT" : language === "en" ? "en-GB" : language;
     document.documentElement.dir = isRtlLanguage(language) ? "rtl" : "ltr";
     document.documentElement.dataset.language = language;
     window.localStorage.setItem(LANGUAGE_KEY, language);

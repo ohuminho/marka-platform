@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
+import { translateNavigationText } from "@/frontend/providers/preferences/platform-i18n";
 
 import {
   useAuth,
@@ -260,8 +262,9 @@ const icons: Record<
 };
 
 export default function Sidebar() {
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
+  const { language } = usePlatformPreferences();
+  const translate = (value: string) => translateNavigationText(language, value);
 
   const {
     user,
@@ -428,7 +431,7 @@ export default function Sidebar() {
                     text-[color-mix(in_srgb,var(--theme-text)_30%,transparent)]
                   "
                 >
-                  Global Platform
+                  {translate("Global Platform")}
                 </p>
               </div>
             </div>
@@ -449,7 +452,7 @@ export default function Sidebar() {
                 text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
               "
             >
-              Organization
+              {translate("Organization")}
             </label>
 
             <div className="relative">
@@ -536,7 +539,7 @@ export default function Sidebar() {
 
         <nav
           className="flex-1 space-y-6"
-          aria-label="MARKA navigation"
+          aria-label={translate("MARKA navigation")}
         >
           {sections.map(
             (section) => (
@@ -554,7 +557,7 @@ export default function Sidebar() {
                     text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
                   "
                 >
-                  {section.group}
+                  {translate(section.group)}
                 </p>
 
                 <div className="space-y-0.5">
@@ -638,7 +641,7 @@ export default function Sidebar() {
                           >
                             <span className="h-[17px] w-[17px]">
                               {icons[
-                                item.title
+                                translate(item.title)
                               ] ||
                                 icons.Overview}
                             </span>
@@ -675,7 +678,7 @@ export default function Sidebar() {
                               "
                             >
                               {
-                                item.description
+                                translate(item.description)
                               }
                             </span>
                           </span>
@@ -692,9 +695,7 @@ export default function Sidebar() {
             0 && (
             <div className="px-3">
               <p className="text-[11px] leading-5 text-[color-mix(in_srgb,var(--theme-text)_30%,transparent)]">
-                No operational capabilities
-                are available for the active
-                organization.
+                {translate("No operational capabilities are available for the active organization.")}
               </p>
             </div>
           )}
@@ -736,7 +737,7 @@ export default function Sidebar() {
                 text-[color-mix(in_srgb,var(--theme-text)_25%,transparent)]
               "
             >
-              MARKA Status
+              {translate("MARKA Status")}
             </p>
 
             <div className="relative mt-3 flex items-center gap-2">
@@ -751,7 +752,7 @@ export default function Sidebar() {
               />
 
               <span className="text-[11px] text-[color-mix(in_srgb,var(--theme-text)_50%,transparent)]">
-                Platform operational
+                {translate("Platform operational")}
               </span>
             </div>
 

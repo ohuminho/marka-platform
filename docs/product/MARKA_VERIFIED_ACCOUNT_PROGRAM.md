@@ -13,10 +13,10 @@ A buyer must see the seller's verification state clearly before deciding to cont
 
 ## 2. Public identity states
 
-- **Identidade verificada** — blue check; identity review approved, current and account in good standing.
-- **Verificação em análise** — neutral status only where appropriate; never display a blue check.
-- **Ainda não verificada** — clearly state that MARKA has not confirmed the seller's identity.
-- **Verificação expirada / suspensa** — remove the check immediately and show the account owner the private next step.
+- **Identidade verificada**, blue check; identity review approved, current and account in good standing.
+- **Verificação em análise**, neutral status only where appropriate; never display a blue check.
+- **Ainda não verificada**, clearly state that MARKA has not confirmed the seller's identity.
+- **Verificação expirada / suspensa**, remove the check immediately and show the account owner the private next step.
 
 The public badge is derived server-side. It is not a user-editable boolean, profile decoration, vendor approval flag, subscription benefit or client-supplied claim.
 
@@ -52,10 +52,10 @@ Do not reward raw views, clicks, followers, paid advertising, self-reviews, revi
 
 ### Reputation levels
 
-- **Novo vendedor** — new account; no performance claim yet.
-- **Vendedor ativo** — minimum activity and completed transactions.
-- **Vendedor de confiança** — verified identity plus sufficient completed transactions, strong feedback and low substantiated issue rates.
-- **Destaque MARKA** — sustained top performance over a rolling period, with minimum sample size and anti-manipulation checks.
+- **Novo vendedor**, new account; no performance claim yet.
+- **Vendedor ativo**, minimum activity and completed transactions.
+- **Vendedor de confiança**, verified identity plus sufficient completed transactions, strong feedback and low substantiated issue rates.
+- **Destaque MARKA**, sustained top performance over a rolling period, with minimum sample size and anti-manipulation checks.
 
 Calibrate thresholds from real platform data; do not invent public numerical cut-offs before sufficient volume exists. With too few completed transactions, show 'Dados insuficientes', not a misleading 5-star score.
 

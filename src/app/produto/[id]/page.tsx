@@ -103,7 +103,7 @@ export default async function PublicProductPage({ params }: PageProps) {
   const product = await getProduct(id);
   if (!product) notFound();
 
-  const price = new Intl.NumberFormat("pt-AO", {
+  const price = new Intl.NumberFormat("pt-PT", {
     style: "currency",
     currency: product.currency,
     maximumFractionDigits: 0,

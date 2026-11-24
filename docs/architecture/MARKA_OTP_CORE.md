@@ -1,4 +1,4 @@
-# MARKA OTP Core — Provider-Neutral Architecture
+# MARKA OTP Core, Provider-Neutral Architecture
 
 **Status:** Architecture proposal; implementation and provider activation are intentionally disabled.  
 **Scope:** Phone verification, login MFA, account recovery and other explicitly authorised verification purposes.  
@@ -172,26 +172,26 @@ Do not treat `phoneVerifiedAt` as proof that an OTP flow exists. The existing em
 
 ## 10. Rollout plan
 
-### Phase A — Architecture (this change)
+### Phase A, Architecture (this change)
 - Document boundaries, policies, threat controls and API contract.
 - No migration, credentials, provider calls, paid activation or production changes.
 
-### Phase B — Local core implementation
+### Phase B, Local core implementation
 - Add policy resolver, code generator, HMAC digest service, repository interface and atomic verification service.
 - Add unit tests for expiry, replay, concurrency, attempt exhaustion, cooldown, purpose isolation, destination normalization and enumeration resistance.
 - Use fake/in-memory delivery adapters in tests only.
 
-### Phase C — Persistence
+### Phase C, Persistence
 - Add Prisma models and migration on a feature branch.
 - Review RLS, indexes, retention and transactional semantics.
 - Do not apply the migration to production without explicit approval.
 
-### Phase D — Sandbox adapter
+### Phase D, Sandbox adapter
 - Integrate one provider behind the port using sandbox/test recipients only.
 - Credentials remain absent until separately approved and supplied.
 - No paid message is sent during architecture or local-core work.
 
-### Phase E — Controlled production activation
+### Phase E, Controlled production activation
 - Requires explicit approval, confirmed provider pricing, consent copy, operational limits, secret management, monitoring and an end-to-end acceptance test.
 - No production activation is implied by this document.
 

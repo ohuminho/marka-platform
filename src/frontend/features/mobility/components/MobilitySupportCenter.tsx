@@ -205,7 +205,7 @@ export default function MobilitySupportCenter() {
                   </div>
                   <div className="flex-1 space-y-3 p-4 sm:p-5">
                     {(active.messages || []).map((message) => <div key={message.id} className={`max-w-[95%] rounded-2xl p-3 ${message.isStaff ? "border border-[#b89a5b]/30 bg-[#b89a5b]/10" : "bg-[var(--theme-background)]"}`}>
-                      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[10px] font-semibold text-[var(--theme-text)]">{message.isStaff ? "Equipa MARKA" : (message.author?.name || (isStaff ? active.requester?.name : "Tu"))}</p><time className="text-[9px] text-[var(--theme-text-faint)]">{new Date(message.createdAt).toLocaleString("pt-AO")}</time></div>
+                      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[10px] font-semibold text-[var(--theme-text)]">{message.isStaff ? "Equipa MARKA" : (message.author?.name || (isStaff ? active.requester?.name : "Tu"))}</p><time className="text-[9px] text-[var(--theme-text-faint)]">{new Date(message.createdAt).toLocaleString("pt-PT")}</time></div>
                       <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-[var(--theme-text-muted)]">{message.body}</p>
                     </div>)}
                   </div>

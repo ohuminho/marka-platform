@@ -31,10 +31,10 @@ function AnalyticsContent() {
   }, [vendorId, vendorLoading]);
 
   const cards = [
-    ["Revenue", metrics?.revenue?.current != null ? String(metrics.revenue.current) + " " + (metrics.revenue.currency ?? "AOA") : "—"],
-    ["Orders", metrics?.sales?.totalOrders ?? "—"],
-    ["Products", metrics?.inventory?.totalProducts ?? "—"],
-    ["Customers", metrics?.store?.customers ?? "—"],
+    ["Revenue", metrics?.revenue?.current != null ? String(metrics.revenue.current) + " " + (metrics.revenue.currency ?? "AOA") : ", "],
+    ["Orders", metrics?.sales?.totalOrders ?? ", "],
+    ["Products", metrics?.inventory?.totalProducts ?? ", "],
+    ["Customers", metrics?.store?.customers ?? ", "],
   ];
 
   return <main className="space-y-8"><header><p className="text-[10px] uppercase tracking-[0.28em] text-white/30">Vendor</p><h1 className="mt-2 text-3xl font-semibold text-white">Analytics</h1><p className="mt-2 text-sm text-white/45">Live metrics from the existing VendorAnalyticsService.</p></header>{loading ? <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-6 text-sm text-white/40">Loading vendor metrics…</div> : !vendor ? <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-6 text-sm text-white/40">No vendor context is available for the active account.</div> : <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value]) => <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-6"><p className="text-[10px] uppercase tracking-[0.22em] text-white/30">{label}</p><p className="mt-3 text-2xl font-semibold text-white">{value}</p></div>)}</section>}</main>;

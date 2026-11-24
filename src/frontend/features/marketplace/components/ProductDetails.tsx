@@ -287,7 +287,7 @@ export default function ProductDetails({
           <div className="aspect-square rounded-2xl bg-[var(--theme-surface-strong)]/10 flex items-center justify-center overflow-hidden">
             {photos[0] ? <img src={photos[0]} alt={product.name} className="h-full w-full rounded-2xl object-cover" /> : <span className="text-[var(--theme-text)]/40">{t.noPhoto}</span>}
           </div>
-          {photos.length > 1 && <div className="grid grid-cols-4 gap-2">{photos.slice(1).map((url,index)=><img key={url} src={url} alt={`${product.name} — fotografia ${index+2}`} className="aspect-square w-full rounded-xl border border-[var(--theme-border)] object-cover" />)}</div>}
+          {photos.length > 1 && <div className="grid grid-cols-4 gap-2">{photos.slice(1).map((url,index)=><img key={url} src={url} alt={`${product.name}, fotografia ${index+2}`} className="aspect-square w-full rounded-xl border border-[var(--theme-border)] object-cover" />)}</div>}
           {videos.length > 0 && <section className="space-y-3"><h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">{t.productVideos}</h2>{videos.map((url,index)=><video key={url} controls playsInline preload="metadata" className="w-full rounded-2xl bg-black" aria-label={`Vídeo ${index+1} de ${product.name}`}><source src={url} /></video>)}</section>}
         </div>
 
@@ -338,7 +338,7 @@ export default function ProductDetails({
             font-semibold
           ">
 
-            {new Intl.NumberFormat("pt-AO", { style: "currency", currency: product.currency || "AOA", maximumFractionDigits: 0 }).format(product.price)}{unit ? <span className="ml-2 text-base font-normal text-[var(--theme-text)]/60">/ {unit}</span> : null}
+            {new Intl.NumberFormat("pt-PT", { style: "currency", currency: product.currency || "AOA", maximumFractionDigits: 0 }).format(product.price)}{unit ? <span className="ml-2 text-base font-normal text-[var(--theme-text)]/60">/ {unit}</span> : null}
 
           </div>
 

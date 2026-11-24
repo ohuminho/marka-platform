@@ -1,4 +1,4 @@
-# MARKA AI — shared AI Core integration
+# MARKA AI, shared AI Core integration
 
 MARKA uses the shared MARKA × ZION AI Core through a server-side Next.js route. The browser never receives AI Core credentials or the HMAC signing secret.
 

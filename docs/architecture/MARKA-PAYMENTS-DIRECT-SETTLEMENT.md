@@ -1,4 +1,4 @@
-# MARKA — pagamentos com liquidação directa ao prestador
+# MARKA, pagamentos com liquidação directa ao prestador
 
 **Estado:** decisão de arquitectura preliminar; não activar pagamentos reais até validação contratual e sandbox.
 **Âmbito:** Marketplace, Mobility, Delivery, Cargo, Assist e reservas de espaços.
@@ -6,7 +6,7 @@
 
 ## 1. Resultado da análise dos PSPs em Angola
 
-### AppyPay — candidato técnico, ainda não aprovado para marketplace
+### AppyPay, candidato técnico, ainda não aprovado para marketplace
 
 A documentação pública confirma:
 - API para Multicaixa Express/GPO, Referência, Débito Directo e UNITEL Money.
@@ -44,7 +44,7 @@ Referências oficiais consultadas:
 6. A comissão MARKA é recebida como receita própria, por split aprovado pelo PSP ou por cobrança separada ao prestador (por transacção ou factura periódica), conforme o modelo contratual autorizado.
 7. Se o PSP só permitir liquidação para uma conta comerciante única, não usar essa conta para receber fundos pertencentes aos vendedores. Nesse cenário, manter checkout real desactivado até existir solução compatível.
 
-## 3. Integração técnica — requisitos obrigatórios
+## 3. Integração técnica, requisitos obrigatórios
 
 - Criar adapter específico do PSP sem substituir o PaymentService, ledger, auditoria, idempotência e reconciliação existentes.
 - Não reutilizar a conta/credenciais globais MARKA para cobrar por conta de todos os vendedores sem autorização expressa do PSP e enquadramento legal.
@@ -56,7 +56,7 @@ Referências oficiais consultadas:
 - Refunds e reversões devem ser solicitados ao PSP e reconciliados; não simular reembolso por alteração manual do estado.
 - Dinheiro recebido directamente pelo prestador não pode ser apresentado como saldo da MARKA.
 
-## 4. Reservas de espaços — dependências
+## 4. Reservas de espaços, dependências
 
 A camada de reservas já tem pedido, decisão do proprietário, cotação e cancelamento de reservas não pagas. Falta ligar a reserva ao ciclo financeiro sem criar uma ordem fictícia:
 - Payment deve suportar referência de negócio a SpaceBooking sem exigir Order.
@@ -87,17 +87,17 @@ O PSP só pode ser escolhido quando houver resposta escrita para:
 ## 7. Contactos comerciais e diligência (03-11-2026)
 
 Canais publicados nos sites oficiais, para envio do pedido de informação:
-- AppyPay: comercial@appy.co.ao — https://www.appypay.co.ao/contacto
-- IZI Pay: info@izipay.ao — https://izipay.ao/
-- Banco BNI: bnicontactcenter@bni.ao — https://www.bni.ao/pt/contactos
-- FACI-X / FaciConnect: atendimento@faci-x.ao — https://faci-x.ao/
+- AppyPay: comercial@appy.co.ao, https://www.appypay.co.ao/contacto
+- IZI Pay: info@izipay.ao, https://izipay.ao/
+- Banco BNI: bnicontactcenter@bni.ao, https://www.bni.ao/pt/contactos
+- FACI-X / FaciConnect: atendimento@faci-x.ao, https://faci-x.ao/
 
 Notas de diligência:
 - BitPay (bitpay.ao) declara publicamente que ainda não está em produção e aguarda certificação EMIS. Não tratar como gateway pronto para produção; pode ser contactado apenas para acompanhar a certificação e obter informação técnica/comercial.
 - Não foi possível identificar um fornecedor de pagamentos angolano verificável com o nome HappyPay e contacto oficial local. Não enviar dados comerciais para endereços homónimos estrangeiros sem confirmação da entidade pretendida.
 - Os contactos acima são canais institucionais publicados; não significam que o fornecedor tenha confirmado marketplace split settlement, liquidação directa multi-beneficiário ou elegibilidade regulatória para o caso MARKA.
 
-## 8. Carga e assistência — ligação de domínio preparada (16-11-2026)
+## 8. Carga e assistência, ligação de domínio preparada (16-11-2026)
 
 - O modelo `Payment` passa a aceitar uma referência opcional e única a `FreightRequest`, sem criar uma encomenda fictícia.
 - A relação usa `ON DELETE SET NULL` para preservar o registo financeiro se um pedido operacional for removido.

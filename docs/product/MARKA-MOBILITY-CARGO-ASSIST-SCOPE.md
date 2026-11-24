@@ -1,4 +1,4 @@
-# MARKA Mobility — Scope de veículos, carga e assistência
+# MARKA Mobility, Scope de veículos, carga e assistência
 
 **Estado:** especificação funcional aprovada para orientar implementação  
 **Âmbito:** táxi, moto-táxi, triciclos de carga, transporte de mercadorias, pronto-socorro e cisternas de água.  
@@ -49,7 +49,7 @@ Cada oferta deve indicar capacidade/peso máximo, dimensões úteis, tipo de car
 
 Fluxo do cliente: origem, destino, tipo de carga, quantidade/peso/dimensões, fotografias opcionais, requisitos de carga/descarga, cotação, confirmação, pagamento, atribuição do transportador, acompanhamento, prova de recolha e prova de entrega.
 
-## 4. MARKA Assist — pronto-socorro
+## 4. MARKA Assist, pronto-socorro
 
 Serviço de assistência para veículo imobilizado por avaria, acidente ou pneu danificado. O cliente não está a contratar um pneu nem a alugar um veículo: solicita que um prestador se desloque e remova o veículo para o destino escolhido.
 

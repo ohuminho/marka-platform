@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useAuth } from "@/frontend/providers/auth/AuthProvider";
 
 function formatDate(value?: string) {
-  if (!value) return "—";
+  if (!value) return ", ";
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -74,7 +74,7 @@ function AccountContent({
   const [displayName, setDisplayName] = useState(user.profile?.displayName || user.name || "");
   const [phone, setPhone] = useState(user.profile?.phone || "");
   const [countryCode, setCountryCode] = useState(user.profile?.countryCode || "AO");
-  const [locale, setLocale] = useState(user.profile?.locale || "pt-AO");
+  const [locale, setLocale] = useState(user.profile?.locale || "pt-PT");
   const [timezone, setTimezone] = useState(user.profile?.timezone || "Africa/Luanda");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
@@ -230,7 +230,7 @@ function AccountContent({
             </div>
             <div>
               <dt className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-muted)]">Organization ID</dt>
-              <dd className="mt-1 break-all font-mono text-xs text-[var(--theme-text-muted)]">{authorization.organizationId || "—"}</dd>
+              <dd className="mt-1 break-all font-mono text-xs text-[var(--theme-text-muted)]">{authorization.organizationId || ", "}</dd>
             </div>
             <div>
               <dt className="text-[9px] uppercase tracking-[0.18em] text-[var(--theme-text-muted)]">Roles</dt>

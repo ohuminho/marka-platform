@@ -1,4 +1,4 @@
-# MARKA Mobility — self-hosted OSRM for all Angola
+# MARKA Mobility, self-hosted OSRM for all Angola
 
 This directory prepares a MARKA-operated OSRM routing engine from the free OpenStreetMap extract for the **entire territory of Angola**. It is not a Luanda-only setup.
 

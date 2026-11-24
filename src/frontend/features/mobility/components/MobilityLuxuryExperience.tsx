@@ -84,9 +84,9 @@ async function searchPlacesInAngola(value: string, signal: AbortSignal): Promise
   })().catch(() => [] as Place[]);
 
   const [localPlaces, remotePlaces] = await Promise.all([localRequest, remoteRequest]);
-  const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-AO")));
+  const seen = new Set(localPlaces.map((place) => place.label.toLocaleLowerCase("pt-PT")));
   return [...localPlaces, ...remotePlaces.filter((place) =>
-    !seen.has(place.label.toLocaleLowerCase("pt-AO")),
+    !seen.has(place.label.toLocaleLowerCase("pt-PT")),
   )].slice(0, 6);
 }
 
@@ -110,7 +110,7 @@ const labels: Record<string, string> = {
   COMPLETED: "Viagem concluída",
 };
 
-const fmt = (value: number) => new Intl.NumberFormat("pt-AO", {
+const fmt = (value: number) => new Intl.NumberFormat("pt-PT", {
   style: "currency",
   currency: "AOA",
   maximumFractionDigits: 0,
@@ -1121,7 +1121,7 @@ export default function MobilityLuxuryExperience() {
               </div>
               <div className="text-right">
                 <p className="text-[8px] uppercase tracking-[.16em] text-white/35">Preço estimado</p>
-                <p className="mt-1 text-sm font-bold text-[#E5B84B]">{quote ? fmt(quote.totalAOA) : fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa pendente" : "—"}</p>
+                <p className="mt-1 text-sm font-bold text-[#E5B84B]">{quote ? fmt(quote.totalAOA) : fareStatus === "TARIFF_NOT_CONFIGURED" ? "Tarifa pendente" : ", "}</p>
               </div>
             </div>
 
@@ -1176,7 +1176,7 @@ export default function MobilityLuxuryExperience() {
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-[8px] uppercase tracking-[.14em] text-white/35">Preço</p>
-                  <p className="text-sm font-extrabold text-[#F2CF78]">{quote ? fmt(quote.totalAOA) : fareStatus === "TARIFF_NOT_CONFIGURED" ? "Pendente" : "—"}</p>
+                  <p className="text-sm font-extrabold text-[#F2CF78]">{quote ? fmt(quote.totalAOA) : fareStatus === "TARIFF_NOT_CONFIGURED" ? "Pendente" : ", "}</p>
                 </div>
               </div>
               <button

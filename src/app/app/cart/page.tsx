@@ -56,7 +56,7 @@ function formatMoney(
 ): string {
   const amount = Number(value ?? 0);
 
-  return new Intl.NumberFormat("pt-AO", {
+  return new Intl.NumberFormat("pt-PT", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

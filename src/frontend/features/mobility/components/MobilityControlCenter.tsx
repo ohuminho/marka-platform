@@ -89,7 +89,7 @@ const LIFECYCLE_STEPS = [
 
 function formatStep(value: string | null | undefined) {
   if (!value) {
-    return "—";
+    return ", ";
   }
 
   return value
@@ -459,7 +459,7 @@ export default function MobilityControlCenter() {
             label="Rides"
             value={
               loading
-                ? "—"
+                ? ", "
                 : overview?.metrics.rides.total ??
                   0
             }
@@ -470,7 +470,7 @@ export default function MobilityControlCenter() {
             label="Active"
             value={
               loading
-                ? "—"
+                ? ", "
                 : overview?.metrics.rides.active ??
                   0
             }
@@ -481,7 +481,7 @@ export default function MobilityControlCenter() {
             label="Completed"
             value={
               loading
-                ? "—"
+                ? ", "
                 : overview?.metrics.rides.completed ??
                   0
             }
@@ -492,7 +492,7 @@ export default function MobilityControlCenter() {
             label="Recovery"
             value={
               loading
-                ? "—"
+                ? ", "
                 : overview?.metrics.orchestration
                     .recoveryRequired ??
                   0

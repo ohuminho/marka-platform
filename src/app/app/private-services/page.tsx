@@ -21,12 +21,12 @@ type Offer = {
 };
 
 function dateLabel(value: string) {
-  return new Intl.DateTimeFormat("pt-AO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("pt-PT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 const statusLabels: Record<string, string> = {
   PENDING: "A aguardar resposta",
-  ACCEPTED: "Aceitaste — aguarda escolha do cliente",
+  ACCEPTED: "Aceitaste, aguarda escolha do cliente",
   DECLINED: "Recusado",
   EXPIRED: "Convite expirado",
   SELECTED: "Foste seleccionado",
