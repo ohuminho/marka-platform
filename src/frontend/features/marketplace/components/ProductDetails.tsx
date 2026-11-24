@@ -4,6 +4,7 @@
 import {
   useEffect,
   useState,
+  useRef,
 } from "react";
 
 
@@ -72,6 +73,11 @@ export default function ProductDetails({
     useState("");
 
   const [contactText, setContactText] = useState(t.contactTemplate);
+  const defaultContactTextRef = useRef(t.contactTemplate);
+  useEffect(() => {
+    setContactText((current) => current === defaultContactTextRef.current ? t.contactTemplate : current);
+    defaultContactTextRef.current = t.contactTemplate;
+  }, [t.contactTemplate]);
   const [contacting, setContacting] = useState(false);
   const attributes = product?.attributes ?? {};
   const readGallery = (key: string): string[] => {
@@ -83,7 +89,7 @@ export default function ProductDetails({
   const photos = product ? [...new Set([product.image, ...readGallery("galleryImages")].filter((item): item is string => Boolean(item)))] : [];
   const videos = readGallery("galleryVideos");
   const unit = typeof attributes.unit === "string" ? attributes.unit : "";
-  const stockLabel = product && product.stock > 0 ? `${product.stock} ${t.unitsAvailable.replace("{count}", String(product.stock))}` : t.noStock;
+  const stockLabel = product && product.stock > 0 ? t.unitsAvailable.replace("{count}", String(product.stock)) : t.noStock;
 
 
 
@@ -228,7 +234,7 @@ export default function ProductDetails({
       if (!response.ok) throw new Error(data.message || t.addToCartFailed);
       window.location.assign(`/app/messages?conversationId=${encodeURIComponent(data.conversation.id)}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível contactar o vendedor.");
+      setMessage(error instanceof Error ? error.message : t.contactSellerFailed);
       setContacting(false);
     }
   }
