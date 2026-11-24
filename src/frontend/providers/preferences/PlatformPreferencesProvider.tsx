@@ -35,9 +35,12 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
     let active = true;
     const storedTheme = window.localStorage.getItem(THEME_KEY);
     const storedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
-    if (isTheme(storedTheme)) setThemeState(storedTheme);
-    if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
-    setHydrated(true);
+    queueMicrotask(() => {
+      if (!active) return;
+      if (isTheme(storedTheme)) setThemeState(storedTheme);
+      if (isLanguage(storedLanguage)) setLanguageState(storedLanguage);
+      setHydrated(true);
+    });
 
     const loadAccountLanguage = async (force = false) => {
       try {

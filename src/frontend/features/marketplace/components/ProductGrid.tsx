@@ -66,7 +66,7 @@ export default function ProductGrid() {
         if (verifiedOnly) params.set("verifiedOnly", "true");
         const response = await fetch("/api/marketplace/stores?" + params.toString(), { cache: "no-store" });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Não foi possível carregar as lojas.");
+        if (!response.ok) throw new Error(data.message || t.storesLoadFailed);
         if (!cancelled) setStores(Array.isArray(data.stores) ? data.stores as MarketplaceStore[] : []);
       } catch {
         if (!cancelled) setStores([]);
@@ -94,10 +94,10 @@ export default function ProductGrid() {
         });
         const data = await response.json() as MarketplaceProductsResponse | { message?: string };
         if (!response.ok) {
-          throw new Error("message" in data && data.message ? data.message : "Não foi possível carregar os produtos.");
+          throw new Error("message" in data && data.message ? data.message : t.productsLoadFailed);
         }
         if (!data || !("products" in data) || !Array.isArray(data.products)) {
-          throw new Error("A resposta do Marketplace é inválida.");
+          throw new Error(t.invalidMarketplaceResponse);
         }
         if (!cancelled) {
           setProducts(data.products);
@@ -106,7 +106,7 @@ export default function ProductGrid() {
       } catch (requestError) {
         if (!cancelled) {
           setProducts([]);
-          setError(requestError instanceof Error ? requestError.message : "Não foi possível carregar o Marketplace.");
+          setError(requestError instanceof Error ? requestError.message : t.marketplaceLoadFailed);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -120,9 +120,9 @@ export default function ProductGrid() {
     <div>
       <div className="flex flex-col gap-4 border-b border-[var(--theme-border)] pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Descobrir</p>
-          <h2 className="marka-editorial mt-1 text-3xl text-[var(--theme-text)]">Explore o Marketplace.</h2>
-          <p className="mt-2 text-sm text-[var(--theme-text-muted)]">Produtos, lojas e categorias com oferta ativa.</p>
+          <p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">{t.discover}</p>
+          <h2 className="marka-editorial mt-1 text-3xl text-[var(--theme-text)]">{t.exploreMarketplace}</h2>
+          <p className="mt-2 text-sm text-[var(--theme-text-muted)]">{t.activeOffers}</p>
         </div>
         <div className="w-full lg:max-w-md">
           <MarketplaceSearch onSearch={setSearch} />
@@ -130,7 +130,7 @@ export default function ProductGrid() {
       </div>
 
       {categories.length > 0 && (
-        <section className="mt-5" aria-label="Selector de categorias do Marketplace">
+        <section className="mt-5" aria-label={t.categories}>
           <button
             type="button"
             onClick={() => setCategoriesOpen((open) => !open)}
@@ -139,17 +139,17 @@ export default function ProductGrid() {
             className="flex w-full items-center justify-between gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-4 py-4 text-left transition hover:border-[var(--theme-accent)] sm:px-5"
           >
             <span className="min-w-0">
-              <span className="block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Filtrar ofertas</span>
+              <span className="block text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">{t.filterOffers}</span>
               <span className="mt-1 block truncate text-sm font-semibold text-[var(--theme-text)]">
-                {selectedCategory?.name ?? "Categorias"}
+                {selectedCategory?.name ?? t.categories}
               </span>
               <span className="mt-1 block text-xs text-[var(--theme-text-muted)]">
-                {selectedCategory ? "Categoria seleccionada" : `Escolha entre ${categories.length} categorias disponíveis`}
+                {selectedCategory ? t.selectedCategory : t.chooseCategories.replace("{count}", String(categories.length))}
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-3">
               <span className="hidden rounded-full border border-[var(--theme-border)] px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--theme-text-muted)] sm:inline">
-                {categories.length} categorias
+                {categories.length} {t.categoryCount}
               </span>
               <span aria-hidden="true" className={`text-xl text-[var(--theme-text-muted)] transition-transform ${categoriesOpen ? "rotate-180" : ""}`}>⌄</span>
             </span>
@@ -161,7 +161,7 @@ export default function ProductGrid() {
               className="mt-3 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:p-4"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">Todas as categorias</p>
+                <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--theme-text-faint)]">{t.allCategories}</p>
                 <button
                   type="button"
                   onClick={() => { setCategoryId(""); setCategoriesOpen(false); }}
@@ -198,16 +198,16 @@ export default function ProductGrid() {
 
       <section className="mt-8" aria-labelledby="marketplace-stores-title">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div><p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">Descobrir comerciantes</p><h2 id="marketplace-stores-title" className="marka-editorial mt-1 text-2xl text-[var(--theme-text)]">Lojas no Marketplace</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">Todas as lojas ativas são visíveis. O selo Verified distingue os vendedores que concluíram a verificação.</p></div>
-          <Link href="/app/vendor/products" className="text-xs font-semibold text-[var(--theme-text)] underline decoration-[var(--theme-border)] underline-offset-4">Criar a minha loja</Link>
+          <div><p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">{t.discoverMerchants}</p><h2 id="marketplace-stores-title" className="marka-editorial mt-1 text-2xl text-[var(--theme-text)]">{t.storesTitle}</h2><p className="mt-1 text-xs text-[var(--theme-text-muted)]">{t.storesVisible}</p></div>
+          <Link href="/app/vendor/products" className="text-xs font-semibold text-[var(--theme-text)] underline decoration-[var(--theme-border)] underline-offset-4">{t.createMyStore}</Link>
         </div>
         {stores.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {stores.map((store) => <Link key={store.id} href={"/loja/" + store.id} className="flex min-w-0 items-center gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 transition hover:border-[var(--theme-accent)]">
             {store.logo ? <img src={store.logo} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl border border-[var(--theme-border)] object-cover" /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--theme-background)] text-lg font-bold text-[var(--theme-text-muted)]">M</div>}
-            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[var(--theme-text)]">{store.name}</span><span className="mt-1 block truncate text-xs text-[var(--theme-text-muted)]">{store.owner.name}{store.location ? " · " + store.location : ""}</span><span className="mt-2 inline-flex rounded-full border border-[var(--theme-border)] px-2.5 py-1 text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-muted)]">{store.verified ? "MARKA Verified" : "Loja não verificada"}</span></span>
-            <span className="shrink-0 text-xs text-[var(--theme-text-faint)]">{store.productCount} ofertas</span>
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[var(--theme-text)]">{store.name}</span><span className="mt-1 block truncate text-xs text-[var(--theme-text-muted)]">{store.owner.name}{store.location ? " · " + store.location : ""}</span><span className="mt-2 inline-flex rounded-full border border-[var(--theme-border)] px-2.5 py-1 text-[9px] uppercase tracking-[0.12em] text-[var(--theme-text-muted)]">{store.verified ? "MARKA Verified" : t.notVerified}</span></span>
+            <span className="shrink-0 text-xs text-[var(--theme-text-faint)]">{store.productCount} {t.offersCount}</span>
           </Link>)}
-        </div> : <p className="mt-4 rounded-xl border border-dashed border-[var(--theme-border)] p-5 text-xs text-[var(--theme-text-muted)]">{verifiedOnly ? "Ainda não existem lojas verificadas para este filtro." : "Ainda não existem lojas públicas com este termo de pesquisa."}</p>}
+        </div> : <p className="mt-4 rounded-xl border border-dashed border-[var(--theme-border)] p-5 text-xs text-[var(--theme-text-muted)]">{verifiedOnly ? t.noVerifiedStores : t.noPublicStores}</p>}
       </section>
 
       <div id="marketplace-offers" />
@@ -222,10 +222,10 @@ export default function ProductGrid() {
         <div className="mt-10 overflow-hidden rounded-[1.5rem] border border-[var(--theme-border)] bg-[var(--theme-surface)] p-8 sm:p-12">
           <div className="max-w-xl">
             <p className="marka-kicker">MARKA MARKETPLACE</p>
-            <h3 className="marka-editorial mt-4 text-4xl text-[var(--theme-text)]">{categoryId ? "Ainda não há ofertas nesta categoria." : "A sua próxima descoberta começa aqui."}</h3>
+            <h3 className="marka-editorial mt-4 text-4xl text-[var(--theme-text)]">{categoryId ? t.noCategoryOffers : t.nextDiscovery}</h3>
             <p className="mt-4 text-sm leading-7 text-[var(--theme-text-muted)]">{t.noProducts}</p>
-            {categoryId && <button type="button" onClick={() => setCategoryId("")} className="mt-5 text-sm underline underline-offset-4">Ver todas as categorias</button>}
-            <div><Link href="/app/vendor/products" className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--theme-background)] transition hover:opacity-85">Abrir loja ou publicar uma oferta</Link></div>
+            {categoryId && <button type="button" onClick={() => setCategoryId("")} className="mt-5 text-sm underline underline-offset-4">{t.seeAllCategories}</button>}
+            <div><Link href="/app/vendor/products" className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--theme-background)] transition hover:opacity-85">{t.publishOffer}</Link></div>
           </div>
         </div>
       ) : (

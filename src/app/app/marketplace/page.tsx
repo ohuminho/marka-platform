@@ -24,17 +24,17 @@ export default function MarketplacePage() {
           <h1 className="marka-editorial mt-5 text-5xl leading-[0.98] text-[var(--theme-text)] lg:text-7xl">{t.marketplaceTitle}</h1>
           <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--theme-text-muted)] lg:text-base">{t.marketplaceSubtitle}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/app/vendor/products" className="inline-flex items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--theme-background)] transition hover:opacity-85">Abrir uma loja</Link>
-            <Link href="/app/vendor/products" className="inline-flex items-center justify-center rounded-full border border-[var(--theme-border)] px-6 py-3.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text)] transition hover:bg-[var(--theme-surface)]">Vender na MARKA</Link>
+            <Link href="/app/vendor/products" className="inline-flex items-center justify-center rounded-full bg-[var(--theme-text)] px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--theme-background)] transition hover:opacity-85">{t.openStore}</Link>
+            <Link href="/app/vendor/products" className="inline-flex items-center justify-center rounded-full border border-[var(--theme-border)] px-6 py-3.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--theme-text)] transition hover:bg-[var(--theme-surface)]">{t.sellOnMarka}</Link>
           </div>
         </div>
       </section>
 
       <section className="grid gap-5 border-b border-[var(--theme-border)] pb-8 sm:grid-cols-3">
         {[
-          ["Curated", "Seleção editorial"],
-          ["Verified", "Lojas verificadas"],
-          ["Local", "Experiências em Angola"],
+          [t.curated, t.curatedDetail],
+          [t.verified, t.verifiedStores],
+          [t.local, t.localDetail],
         ].map(([label, detail]) => (
           <div key={label} className="border-l border-[var(--theme-border)] pl-4">
             <p className="text-[9px] uppercase tracking-[0.22em] text-[var(--theme-text-faint)]">{label}</p>

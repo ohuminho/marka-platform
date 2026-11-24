@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
+import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
 export default function PublicProductPurchase({ productId, storeId }: { productId: string; storeId: string }) {
+  const { language } = usePlatformPreferences();
+  const t = usePlatformTranslation(language);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -19,10 +23,10 @@ export default function PublicProductPurchase({ productId, storeId }: { productI
       });
       const payload = await response.json().catch(() => null) as { message?: string } | null;
       if (response.status === 401) {
-        setMessage("Inicie sessão para continuar a compra.");
+        setMessage(t.signInToBuy);
         return;
       }
-      if (!response.ok) throw new Error(payload?.message || "Não foi possível adicionar o produto ao carrinho.");
+      if (!response.ok) throw new Error(payload?.message || t.addToCartFailed);
       try {
         if (window.localStorage.getItem("marka_growth_consent_v1") === "accepted") {
           let visitorId = window.localStorage.getItem("marka_growth_visitor_v1");
@@ -51,7 +55,7 @@ export default function PublicProductPurchase({ productId, storeId }: { productI
       }
       window.location.assign(`/app/cart?storeId=${encodeURIComponent(storeId)}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Ocorreu um erro. Tente novamente.");
+      setMessage(error instanceof Error ? error.message : t.tryAgain);
     } finally {
       setLoading(false);
     }
@@ -61,12 +65,12 @@ export default function PublicProductPurchase({ productId, storeId }: { productI
     <div>
       <button type="button" onClick={() => void addToCart()} disabled={loading}
         className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#f8dfaa] to-[#d9a947] px-8 text-sm font-bold text-[#17120a] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
-        {loading ? "A adicionar..." : "Adicionar ao carrinho →"}
+        {loading ? t.addingToCart : `${t.addToCart} →`}
       </button>
       {message && (
         <div role="status" className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/65">
           <span>{message}</span>
-          {message.includes("Inicie sessão") && <a href="/auth/login" className="font-semibold text-[#f2d18e] underline underline-offset-4">Entrar na MARKA</a>}
+          {message === t.signInToBuy && <a href="/auth/login" className="font-semibold text-[#f2d18e] underline underline-offset-4">{t.signIn}</a>}
         </div>
       )}
     </div>

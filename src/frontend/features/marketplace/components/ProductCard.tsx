@@ -14,14 +14,14 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
   const [adding, setAdding] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const canPurchase = product.status === "ACTIVE" && product.stock > 0;
-  const availabilityLabel = canPurchase ? "Disponível" : "Indisponível";
+  const availabilityLabel = canPurchase ? t.available : t.unavailable;
   const itemCondition = typeof product.attributes?.itemCondition === "string" ? product.attributes.itemCondition : null;
-  const itemConditionLabel = itemCondition === "USED" ? "Usado" : itemCondition === "REFURBISHED" ? "Recondicionado" : itemCondition === "NEW" ? "Novo" : null;
+  const itemConditionLabel = itemCondition === "USED" ? t.used : itemCondition === "REFURBISHED" ? t.refurbished : itemCondition === "NEW" ? t.new : null;
   const stockLabel = product.stock < 1
-    ? "Sem stock"
+    ? t.noStock
     : product.stock <= 3
-      ? `Últimas ${product.stock} unidades`
-      : `${product.stock} disponíveis`;
+      ? t.lastUnits.replace("{count}", String(product.stock))
+      : t.unitsAvailable.replace("{count}", String(product.stock));
 
   async function addToCart() {
     if (adding || product.status !== "ACTIVE" || product.stock < 1) return;
@@ -40,15 +40,15 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error("Inicie sessão para adicionar produtos ao carrinho.");
+          throw new Error(t.signInToAdd);
         }
-        throw new Error(data.message || "Não foi possível adicionar o produto.");
+        throw new Error(data.message || t.addFailed);
       }
 
       // Open the cart for this seller. Carts belonging to other stores stay intact.
       window.location.assign(`/app/cart?storeId=${encodeURIComponent(product.store.id)}`);
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Ocorreu um erro ao adicionar o produto.");
+      setFeedback(error instanceof Error ? error.message : t.addError);
       setAdding(false);
     }
   }
@@ -103,7 +103,7 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
           disabled={adding || !canPurchase}
           className="mt-4 w-full rounded-full bg-[var(--theme-text)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-background)] transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {adding ? "A adicionar..." : canPurchase ? "Adicionar ao carrinho" : "Indisponível"}
+          {adding ? t.adding : canPurchase ? t.addToCart : t.unavailable}
         </button>
       </div>
     </article>

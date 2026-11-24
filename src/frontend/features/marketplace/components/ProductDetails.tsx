@@ -4,10 +4,13 @@
 import {
   useEffect,
   useState,
+  useRef,
 } from "react";
 
 
 import PremiumCard from "@/design-system/components/cards/PremiumCard";
+import { usePlatformPreferences } from "@/frontend/providers/preferences/PlatformPreferencesProvider";
+import { usePlatformTranslation } from "@/frontend/providers/preferences/platform-i18n";
 
 
 import VendorTrustBadge from "./VendorTrustBadge";
@@ -36,6 +39,9 @@ export default function ProductDetails({
 
 }) {
 
+
+  const { language } = usePlatformPreferences();
+  const t = usePlatformTranslation(language);
 
   const [
     product,
@@ -66,7 +72,12 @@ export default function ProductDetails({
   ] =
     useState("");
 
-  const [contactText, setContactText] = useState("Olá! Tenho interesse neste produto. Pode dar-me mais informações?");
+  const [contactText, setContactText] = useState(t.contactTemplate);
+  const defaultContactTextRef = useRef(t.contactTemplate);
+  useEffect(() => {
+    setContactText((current) => current === defaultContactTextRef.current ? t.contactTemplate : current);
+    defaultContactTextRef.current = t.contactTemplate;
+  }, [t.contactTemplate]);
   const [contacting, setContacting] = useState(false);
   const attributes = product?.attributes ?? {};
   const readGallery = (key: string): string[] => {
@@ -78,7 +89,7 @@ export default function ProductDetails({
   const photos = product ? [...new Set([product.image, ...readGallery("galleryImages")].filter((item): item is string => Boolean(item)))] : [];
   const videos = readGallery("galleryVideos");
   const unit = typeof attributes.unit === "string" ? attributes.unit : "";
-  const stockLabel = product && product.stock > 0 ? `${product.stock} disponível(is)` : "Sem stock disponível";
+  const stockLabel = product && product.stock > 0 ? t.unitsAvailable.replace("{count}", String(product.stock)) : t.noStock;
 
 
 
@@ -167,7 +178,7 @@ export default function ProductDetails({
 
         throw new Error(
           data.message ||
-          "Unable to add product"
+          t.addToCartFailed
         );
 
 
@@ -176,7 +187,7 @@ export default function ProductDetails({
 
 
       setMessage(
-        "Added to cart successfully."
+        t.addedToCart
       );
 
 
@@ -190,7 +201,7 @@ export default function ProductDetails({
 
           ? error.message
 
-          : "Unable to add product"
+          : t.addToCartFailed
 
       );
 
@@ -220,10 +231,10 @@ export default function ProductDetails({
         body: JSON.stringify({ productId: product.id, message: contactText }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível contactar o vendedor.");
+      if (!response.ok) throw new Error(data.message || t.contactSellerFailed);
       window.location.assign(`/app/messages?conversationId=${encodeURIComponent(data.conversation.id)}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível contactar o vendedor.");
+      setMessage(error instanceof Error ? error.message : t.contactSellerFailed);
       setContacting(false);
     }
   }
@@ -234,7 +245,7 @@ export default function ProductDetails({
 
       <div className="text-[var(--theme-text)]/50">
 
-        Loading product...
+        {t.loadingProduct}
 
       </div>
 
@@ -250,7 +261,7 @@ export default function ProductDetails({
 
       <div className="text-[var(--theme-text)]/50">
 
-        Product not found.
+        {t.productNotFound}
 
       </div>
 
@@ -274,10 +285,10 @@ export default function ProductDetails({
 
         <div className="space-y-3">
           <div className="aspect-square rounded-2xl bg-[var(--theme-surface-strong)]/10 flex items-center justify-center overflow-hidden">
-            {photos[0] ? <img src={photos[0]} alt={product.name} className="h-full w-full rounded-2xl object-cover" /> : <span className="text-[var(--theme-text)]/40">Sem fotografia</span>}
+            {photos[0] ? <img src={photos[0]} alt={product.name} className="h-full w-full rounded-2xl object-cover" /> : <span className="text-[var(--theme-text)]/40">{t.noPhoto}</span>}
           </div>
           {photos.length > 1 && <div className="grid grid-cols-4 gap-2">{photos.slice(1).map((url,index)=><img key={url} src={url} alt={`${product.name} — fotografia ${index+2}`} className="aspect-square w-full rounded-xl border border-[var(--theme-border)] object-cover" />)}</div>}
-          {videos.length > 0 && <section className="space-y-3"><h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Vídeos e visita virtual</h2>{videos.map((url,index)=><video key={url} controls playsInline preload="metadata" className="w-full rounded-2xl bg-black" aria-label={`Vídeo ${index+1} de ${product.name}`}><source src={url} /></video>)}</section>}
+          {videos.length > 0 && <section className="space-y-3"><h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">{t.productVideos}</h2>{videos.map((url,index)=><video key={url} controls playsInline preload="metadata" className="w-full rounded-2xl bg-black" aria-label={`Vídeo ${index+1} de ${product.name}`}><source src={url} /></video>)}</section>}
         </div>
 
 
@@ -314,7 +325,7 @@ export default function ProductDetails({
           ">
 
             {product.description ??
-              "No description available."
+              t.noDescription
             }
 
           </p>
@@ -340,17 +351,17 @@ export default function ProductDetails({
           ">
 
             <p>
-              Store: {product.store.name}
+              {t.storeLabel}: {product.store.name}
             </p>
 
 
             <p>
-              Stock: {stockLabel}
+              {t.stockLabelText}: {stockLabel}
             </p>
 
 
             <p>
-              Status: {product.status}
+              {t.statusLabel}: {product.status}
             </p>
 
 
@@ -367,19 +378,19 @@ export default function ProductDetails({
           <ProductListingReport productId={product.id} />
 
           <div className="mt-8 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">Falar com o vendedor</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--theme-text)]/55">Esclareça dúvidas, confirme disponibilidade ou combine detalhes antes de comprar.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--theme-text)]">{t.contactSeller}</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--theme-text)]/55">{t.contactSellerHint}</p>
             <textarea
               value={contactText}
               onChange={(event) => setContactText(event.target.value)}
               maxLength={2000}
               rows={3}
-              aria-label="Mensagem para o vendedor"
+              aria-label={t.sellerMessage}
               className="mt-3 w-full resize-y rounded-xl border border-[var(--theme-border)] bg-[var(--theme-background)] p-3 text-sm text-[var(--theme-text)] outline-none focus:border-[var(--theme-accent)]"
             />
             <button type="button" onClick={contactSeller} disabled={contacting || contactText.trim().length < 2}
               className="mt-3 w-full rounded-full border border-[var(--theme-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--theme-text)] transition hover:bg-[var(--theme-surface-strong)] disabled:opacity-50">
-              {contacting ? "A abrir conversa..." : "Enviar mensagem ao vendedor"}
+              {contacting ? t.openingConversation : t.sendSellerMessage}
             </button>
           </div>
 
@@ -411,11 +422,11 @@ export default function ProductDetails({
 
                 ?
 
-                "Adding..."
+                t.addingToCart
 
                 :
 
-                "Add to Cart"
+                t.addToCart
             }
 
 
