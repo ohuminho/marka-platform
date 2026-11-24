@@ -43,7 +43,7 @@ export default function ExecutiveDashboard() {
 
   const formatMoney = (minor: string, currency: string) => {
     const value = Number(minor) / 100;
-    return `${currency} ${value.toLocaleString("pt-AO", {
+    return `${currency} ${value.toLocaleString("pt-PT", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -91,10 +91,10 @@ export default function ExecutiveDashboard() {
           </div>
 
           <div className="grid grid-cols-1 gap-px overflow-hidden border border-[var(--theme-border)] bg-[var(--theme-border)] sm:grid-cols-2 xl:grid-cols-4">
-            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Utilizadores ativos" value={metrics ? metrics.activeUsers.toLocaleString("pt-AO") : ", "} /></PremiumCard></FadeIn>
-            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Transações" value={metrics ? metrics.completedTransactions.toLocaleString("pt-AO") : ", "} /></PremiumCard></FadeIn>
+            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Utilizadores ativos" value={metrics ? metrics.activeUsers.toLocaleString("pt-PT") : ", "} /></PremiumCard></FadeIn>
+            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Transações" value={metrics ? metrics.completedTransactions.toLocaleString("pt-PT") : ", "} /></PremiumCard></FadeIn>
             <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Receita" value={metrics ? formatMoney(metrics.revenueMinor, metrics.revenueCurrency) : ", "} /></PremiumCard></FadeIn>
-            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Mercados" value={metrics ? metrics.activeMarkets.toLocaleString("pt-AO") : ", "} /></PremiumCard></FadeIn>
+            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Mercados" value={metrics ? metrics.activeMarkets.toLocaleString("pt-PT") : ", "} /></PremiumCard></FadeIn>
           </div>
         </section>
 
