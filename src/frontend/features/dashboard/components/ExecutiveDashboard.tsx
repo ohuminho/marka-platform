@@ -59,7 +59,7 @@ export default function ExecutiveDashboard() {
               Tudo o que importa,<br className="hidden sm:block" /> num só lugar.
             </h1>
             <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--theme-text-muted)] sm:text-base">
-              Olá, {displayName}. Esta é a tua visão central da experiência MARKA — comércio, mobilidade, serviços e infraestrutura financeira.
+              Olá, {displayName}. Esta é a tua visão central da experiência MARKA, comércio, mobilidade, serviços e infraestrutura financeira.
             </p>
           </div>
 
@@ -91,10 +91,10 @@ export default function ExecutiveDashboard() {
           </div>
 
           <div className="grid grid-cols-1 gap-px overflow-hidden border border-[var(--theme-border)] bg-[var(--theme-border)] sm:grid-cols-2 xl:grid-cols-4">
-            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Utilizadores ativos" value={metrics ? metrics.activeUsers.toLocaleString("pt-AO") : "—"} /></PremiumCard></FadeIn>
-            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Transações" value={metrics ? metrics.completedTransactions.toLocaleString("pt-AO") : "—"} /></PremiumCard></FadeIn>
-            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Receita" value={metrics ? formatMoney(metrics.revenueMinor, metrics.revenueCurrency) : "—"} /></PremiumCard></FadeIn>
-            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Mercados" value={metrics ? metrics.activeMarkets.toLocaleString("pt-AO") : "—"} /></PremiumCard></FadeIn>
+            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Utilizadores ativos" value={metrics ? metrics.activeUsers.toLocaleString("pt-AO") : ", "} /></PremiumCard></FadeIn>
+            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Transações" value={metrics ? metrics.completedTransactions.toLocaleString("pt-AO") : ", "} /></PremiumCard></FadeIn>
+            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Receita" value={metrics ? formatMoney(metrics.revenueMinor, metrics.revenueCurrency) : ", "} /></PremiumCard></FadeIn>
+            <FadeIn><PremiumCard className="rounded-none border-0 bg-[var(--theme-surface)]"><MetricDisplay label="Mercados" value={metrics ? metrics.activeMarkets.toLocaleString("pt-AO") : ", "} /></PremiumCard></FadeIn>
           </div>
         </section>
 
