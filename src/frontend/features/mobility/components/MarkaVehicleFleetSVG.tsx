@@ -22,22 +22,22 @@ export interface MarkaVehicleSvgProps {
 
 const SharedDefs: React.FC<{ idPrefix: string }> = ({ idPrefix }) => (
   <defs>
-    <linearGradient id={\`${idPrefix}-hull\`} x1="14" y1="16" x2="206" y2="74" gradientUnits="userSpaceOnUse">
+    <linearGradient id={`${idPrefix}-hull`} x1="14" y1="16" x2="206" y2="74" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stopColor="#3F3F46" />
       <stop offset="48%" stopColor="#141418" />
       <stop offset="100%" stopColor="#070709" />
     </linearGradient>
-    <linearGradient id={\`${idPrefix}-goldHull\`} x1="16" y1="18" x2="204" y2="70" gradientUnits="userSpaceOnUse">
+    <linearGradient id={`${idPrefix}-goldHull`} x1="16" y1="18" x2="204" y2="70" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stopColor="#27272A" />
       <stop offset="55%" stopColor="#121216" />
       <stop offset="100%" stopColor="#060608" />
     </linearGradient>
-    <linearGradient id={\`${idPrefix}-glass\`} x1="65" y1="18" x2="155" y2="42" gradientUnits="userSpaceOnUse">
+    <linearGradient id={`${idPrefix}-glass`} x1="65" y1="18" x2="155" y2="42" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stopColor="#F5C451" stopOpacity="0.34" />
       <stop offset="55%" stopColor="#27272A" stopOpacity="0.92" />
       <stop offset="100%" stopColor="#09090B" />
     </linearGradient>
-    <linearGradient id={\`${idPrefix}-tank\`} x1="16" y1="16" x2="136" y2="56" gradientUnits="userSpaceOnUse">
+    <linearGradient id={`${idPrefix}-tank`} x1="16" y1="16" x2="136" y2="56" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stopColor="#52525B" />
       <stop offset="45%" stopColor="#1C1C21" />
       <stop offset="100%" stopColor="#09090B" />
