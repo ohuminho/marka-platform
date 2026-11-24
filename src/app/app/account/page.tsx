@@ -74,7 +74,7 @@ function AccountContent({
   const [displayName, setDisplayName] = useState(user.profile?.displayName || user.name || "");
   const [phone, setPhone] = useState(user.profile?.phone || "");
   const [countryCode, setCountryCode] = useState(user.profile?.countryCode || "AO");
-  const [locale, setLocale] = useState(user.profile?.locale || "pt-AO");
+  const [locale, setLocale] = useState(user.profile?.locale || "pt-PT");
   const [timezone, setTimezone] = useState(user.profile?.timezone || "Africa/Luanda");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
