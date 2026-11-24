@@ -45,6 +45,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     addFailed:"Não foi possível adicionar o produto.", addError:"Ocorreu um erro ao adicionar o produto.",
     addToCart:"Adicionar ao carrinho", stockLabel:"Stock: {count}",
     storesLoadFailed:"Não foi possível carregar as lojas.", productsLoadFailed:"Não foi possível carregar os produtos.", invalidMarketplaceResponse:"A resposta do Marketplace é inválida.", marketplaceLoadFailed:"Não foi possível carregar o Marketplace.", 
+    contactTemplate:"Olá! Tenho interesse neste produto. Pode dar-me mais informações?", loadingProduct:"A carregar produto...", productNotFound:"Produto não encontrado.", noPhoto:"Sem fotografia", productVideos:"Vídeos e visita virtual", noDescription:"Sem descrição disponível.", storeLabel:"Loja", stockLabelText:"Stock", statusLabel:"Estado", contactSeller:"Falar com o vendedor", contactSellerHint:"Esclareça dúvidas, confirme disponibilidade ou combine detalhes antes de comprar.", sellerMessage:"Mensagem para o vendedor", openingConversation:"A abrir conversa...", sendSellerMessage:"Enviar mensagem ao vendedor", addingToCart:"A adicionar...", addedToCart:"Adicionado ao carrinho com sucesso.", addToCartFailed:"Não foi possível adicionar o produto.", signInToBuy:"Inicie sessão para continuar a compra.", signIn:"Entrar na MARKA", tryAgain:"Ocorreu um erro. Tente novamente.",
   },
   en: {
     openStore:"Open a store", sellOnMarka:"Sell on MARKA", curated:"Curated", curatedDetail:"Editorial selection",
@@ -64,6 +65,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     adding:"Adding...", signInToAdd:"Sign in to add products to your cart.",
     addFailed:"Could not add the product.", addError:"An error occurred while adding the product.",
     addToCart:"Add to cart", stockLabel:"Stock: {count}",
+    contactTemplate:"Hello! I am interested in this product. Could you share more information?", loadingProduct:"Loading product...", productNotFound:"Product not found.", noPhoto:"No photo", productVideos:"Videos and virtual tour", noDescription:"No description available.", storeLabel:"Store", stockLabelText:"Stock", statusLabel:"Status", contactSeller:"Contact the seller", contactSellerHint:"Ask questions, confirm availability or discuss details before buying.", sellerMessage:"Message to the seller", openingConversation:"Opening conversation...", sendSellerMessage:"Send message to seller", addingToCart:"Adding...", addedToCart:"Added to cart successfully.", addToCartFailed:"Could not add the product.", signInToBuy:"Sign in to continue shopping.", signIn:"Sign in to MARKA", tryAgain:"An error occurred. Please try again.",
   },
   fr: {
     openStore:"Ouvrir une boutique", sellOnMarka:"Vendre sur MARKA", curated:"Sélection", curatedDetail:"Sélection éditoriale",
@@ -83,6 +85,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     adding:"Ajout…", signInToAdd:"Connectez-vous pour ajouter des produits au panier.",
     addFailed:"Impossible d’ajouter le produit.", addError:"Une erreur est survenue lors de l’ajout.",
     addToCart:"Ajouter au panier", stockLabel:"Stock : {count}",
+    contactTemplate:"Bonjour ! Ce produit m’intéresse. Pouvez-vous me donner plus d’informations ?", loadingProduct:"Chargement du produit...", productNotFound:"Produit introuvable.", noPhoto:"Aucune photo", productVideos:"Vidéos et visite virtuelle", noDescription:"Aucune description disponible.", storeLabel:"Boutique", stockLabelText:"Stock", statusLabel:"État", contactSeller:"Contacter le vendeur", contactSellerHint:"Posez vos questions, confirmez la disponibilité ou discutez des détails avant l’achat.", sellerMessage:"Message au vendeur", openingConversation:"Ouverture de la conversation...", sendSellerMessage:"Envoyer un message au vendeur", addingToCart:"Ajout…", addedToCart:"Produit ajouté au panier.", addToCartFailed:"Impossible d’ajouter le produit.", signInToBuy:"Connectez-vous pour poursuivre vos achats.", signIn:"Se connecter à MARKA", tryAgain:"Une erreur est survenue. Réessayez.",
   },
   zh: {
     openStore:"开设商店", sellOnMarka:"在 MARKA 销售", curated:"精选", curatedDetail:"编辑精选",
@@ -102,6 +105,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     adding:"正在添加…", signInToAdd:"请登录后将商品加入购物车。",
     addFailed:"无法添加商品。", addError:"添加商品时发生错误。",
     addToCart:"加入购物车", stockLabel:"库存：{count}",
+    contactTemplate:"您好！我对这个商品感兴趣。可以提供更多信息吗？", loadingProduct:"正在加载商品…", productNotFound:"未找到商品。", noPhoto:"暂无照片", productVideos:"视频和虚拟参观", noDescription:"暂无描述。", storeLabel:"商店", stockLabelText:"库存", statusLabel:"状态", contactSeller:"联系卖家", contactSellerHint:"购买前可咨询问题、确认库存或沟通细节。", sellerMessage:"给卖家的消息", openingConversation:"正在打开对话…", sendSellerMessage:"发送消息给卖家", addingToCart:"正在添加…", addedToCart:"已成功加入购物车。", addToCartFailed:"无法添加商品。", signInToBuy:"请登录后继续购买。", signIn:"登录 MARKA", tryAgain:"发生错误，请重试。",
   },
   ar: {
     openStore:"افتح متجرًا", sellOnMarka:"بع على MARKA", curated:"مختار", curatedDetail:"اختيار تحريري",
@@ -121,6 +125,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     adding:"جارٍ الإضافة…", signInToAdd:"سجّل الدخول لإضافة المنتجات إلى السلة.",
     addFailed:"تعذرت إضافة المنتج.", addError:"حدث خطأ أثناء إضافة المنتج.",
     addToCart:"أضف إلى السلة", stockLabel:"المخزون: {count}",
+    contactTemplate:"مرحبًا! أنا مهتم بهذا المنتج. هل يمكنك تقديم مزيد من المعلومات؟", loadingProduct:"جارٍ تحميل المنتج...", productNotFound:"المنتج غير موجود.", noPhoto:"لا توجد صورة", productVideos:"مقاطع الفيديو والجولة الافتراضية", noDescription:"لا يوجد وصف متاح.", storeLabel:"المتجر", stockLabelText:"المخزون", statusLabel:"الحالة", contactSeller:"تواصل مع البائع", contactSellerHint:"اطرح الأسئلة أو أكد التوفر أو ناقش التفاصيل قبل الشراء.", sellerMessage:"رسالة إلى البائع", openingConversation:"جارٍ فتح المحادثة...", sendSellerMessage:"إرسال رسالة إلى البائع", addingToCart:"جارٍ الإضافة…", addedToCart:"تمت الإضافة إلى السلة بنجاح.", addToCartFailed:"تعذرت إضافة المنتج.", signInToBuy:"سجّل الدخول لمتابعة الشراء.", signIn:"تسجيل الدخول إلى MARKA", tryAgain:"حدث خطأ. حاول مرة أخرى.",
   },
   os: {
     openStore:"Opena shop", sellOnMarka:"Landula mo MARKA", curated:"Oshiwedha", curatedDetail:"Oshiwedha shomakanda",
@@ -139,6 +144,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     adding:"Tate tuu...", signInToAdd:"Inga mu account opo u tule product koshi cart.",
     addFailed:"Kape na oshikwashike shokutula product.", addError:"Oshikwashike sha holoka pa kutula product.",
     addToCart:"Tula koshi cart", stockLabel:"Stock: {count}",
+    contactTemplate:"Hello! I am interested in this product. Could you share more information?", loadingProduct:"Loading product...", productNotFound:"Product not found.", noPhoto:"No photo", productVideos:"Videos and virtual tour", noDescription:"No description available.", storeLabel:"Store", stockLabelText:"Stock", statusLabel:"Status", contactSeller:"Contact the seller", contactSellerHint:"Ask questions, confirm availability or discuss details before buying.", sellerMessage:"Message to the seller", openingConversation:"Opening conversation...", sendSellerMessage:"Send message to seller", addingToCart:"Adding...", addedToCart:"Added to cart successfully.", addToCartFailed:"Could not add the product.", signInToBuy:"Sign in to continue shopping.", signIn:"Sign in to MARKA", tryAgain:"An error occurred. Please try again.",
   },
 };
 
