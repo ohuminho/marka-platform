@@ -94,7 +94,7 @@ export class MarkaSupportEmailService {
 </html>`;
 
     const text = [
-      "MARKA — Comunicação oficial",
+      "MARKA, Comunicação oficial",
       "",
       `Olá, ${input.recipientName || "Cliente MARKA"}.`,
       input.title,
