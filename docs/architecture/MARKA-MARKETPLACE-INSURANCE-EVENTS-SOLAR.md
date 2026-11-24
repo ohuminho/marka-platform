@@ -6,9 +6,9 @@ This document defines the next marketplace verticals. The category seed change o
 
 ## Marketplace categories
 
-- **Seguros e proteção** — offers published by licensed insurers or duly authorized intermediaries.
-- **Eventos e bilhética** — event discovery, organizer pages, ticket inventory and admission.
-- **Energia solar e soluções energéticas** — solar panels, inverters, batteries, installation, maintenance and commercial/industrial energy solutions.
+- **Seguros e proteção**, offers published by licensed insurers or duly authorized intermediaries.
+- **Eventos e bilhética**, event discovery, organizer pages, ticket inventory and admission.
+- **Energia solar e soluções energéticas**, solar panels, inverters, batteries, installation, maintenance and commercial/industrial energy solutions.
 
 Categories remain additive and are seeded idempotently through the existing category seed. Do not replace or rename existing marketplace categories.
 
