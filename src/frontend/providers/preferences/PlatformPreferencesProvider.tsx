@@ -48,11 +48,10 @@ export function PlatformPreferencesProvider({ children }: { children: ReactNode 
     }).then(async (response) => {
       if (!response.ok) return;
       const payload = await response.json() as { language?: unknown };
-      if (active && !languageChangedByUser.current && isLanguage(
-        typeof payload.language === "string" ? payload.language : null
-      )) {
-        setLanguageState(payload.language);
-        window.localStorage.setItem(LANGUAGE_KEY, payload.language);
+      const serverLanguage = typeof payload.language === "string" ? payload.language : null;
+      if (active && !languageChangedByUser.current && isLanguage(serverLanguage)) {
+        setLanguageState(serverLanguage);
+        window.localStorage.setItem(LANGUAGE_KEY, serverLanguage);
       }
     }).catch(() => {
       // Guests and temporary network failures continue using the device preference.
