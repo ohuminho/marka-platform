@@ -34,7 +34,8 @@ export async function GET() {
       where: { userId },
       select: { locale: true },
     });
-    const parsed = languageSchema.safeParse(profile?.locale);
+    const normalizedLocale = profile?.locale?.trim().toLowerCase().split(/[-_]/)[0] ?? null;
+    const parsed = languageSchema.safeParse(normalizedLocale);
     return NextResponse.json(
       { language: parsed.success ? parsed.data : null, authenticated: true },
       { headers: NO_STORE },
