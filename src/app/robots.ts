@@ -8,6 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       disallow: ["/api/", "/app/"],
     },
     sitemap: "https://markaao.com/sitemap.xml",
-    host: "https://markaao.com",
+    host: "markaao.com",
   };
 }
