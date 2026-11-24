@@ -44,6 +44,7 @@ const marketplaceExtendedTranslations: Record<PlatformLanguage, Record<string, s
     adding:"A adicionar...", signInToAdd:"Inicie sessão para adicionar produtos ao carrinho.",
     addFailed:"Não foi possível adicionar o produto.", addError:"Ocorreu um erro ao adicionar o produto.",
     addToCart:"Adicionar ao carrinho", stockLabel:"Stock: {count}",
+    storesLoadFailed:"Não foi possível carregar as lojas.", productsLoadFailed:"Não foi possível carregar os produtos.", invalidMarketplaceResponse:"A resposta do Marketplace é inválida.", marketplaceLoadFailed:"Não foi possível carregar o Marketplace.", 
   },
   en: {
     openStore:"Open a store", sellOnMarka:"Sell on MARKA", curated:"Curated", curatedDetail:"Editorial selection",
