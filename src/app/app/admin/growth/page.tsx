@@ -33,11 +33,11 @@ type Analytics = {
 };
 
 function number(value: number): string {
-  return new Intl.NumberFormat("pt-AO").format(value);
+  return new Intl.NumberFormat("pt-PT").format(value);
 }
 
 function percentage(value: number | null): string {
-  return value === null ? ", " : new Intl.NumberFormat("pt-AO", { style: "percent", maximumFractionDigits: 1 }).format(value);
+  return value === null ? ", " : new Intl.NumberFormat("pt-PT", { style: "percent", maximumFractionDigits: 1 }).format(value);
 }
 
 async function fetchAnalytics(): Promise<Analytics> {
