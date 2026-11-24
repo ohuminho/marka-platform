@@ -254,8 +254,8 @@ export class VerificationDeliveryService
                     color:#b8b8b8;
                   "
                 >
-                  Confirm your email address to
-                  activate your MARKA account.
+                  Confirme o seu endereço de e-mail para
+                  ativar a sua conta MARKA.
                 </p>
 
                 <a
@@ -283,7 +283,7 @@ export class VerificationDeliveryService
                   "
                 >
                   Este link de confirmação expira em
-                  ${safeExpiresAt} UTC.
+                  ${safeExpiresAt} (hora de Luanda).
                 </p>
 
                 <p
@@ -294,8 +294,8 @@ export class VerificationDeliveryService
                     color:#666666;
                   "
                 >
-                  If you did not create this account,
-                  you can safely ignore this email.
+                  Se não criou esta conta, pode ignorar
+                  esta mensagem com segurança.
                 </p>
               </td>
             </tr>
@@ -308,7 +308,7 @@ export class VerificationDeliveryService
               color:#555555;
             "
           >
-            MARKA · Global Digital Economy
+            MARKA · Ecossistema Digital
           </p>
         </td>
       </tr>
