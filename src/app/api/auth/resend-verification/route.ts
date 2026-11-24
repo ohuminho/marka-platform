@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { reserveApiRequest } from "@/core/security/api-rate-limit";
+import { getTrustedClientIp } from "@/core/security/client-ip";
 
 import { prisma } from "@/database/client/prisma";
 import { VerificationService } from "@/core/auth/verification/verification.service";
@@ -32,20 +33,20 @@ export async function POST(
       });
     }
 
-    const clientIp =
-      request.headers.get("x-real-ip")?.trim() ||
-      request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+    const clientIp = getTrustedClientIp(request);
 
-    const ipQuota = await reserveApiRequest({
-      scope: "AUTH_RESEND_VERIFICATION_IP",
-      anonymousIdentity: clientIp || "verification-resend-unknown-ip",
-      windows: [{ limit: 8, windowMs: 60 * 60 * 1000 }],
-    });
-    if (!ipQuota.allowed) {
-      return Response.json(
-        { message: genericMessage, code: "VERIFICATION_RESEND_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
-        { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
-      );
+    if (clientIp) {
+      const ipQuota = await reserveApiRequest({
+        scope: "AUTH_RESEND_VERIFICATION_IP",
+        anonymousIdentity: clientIp,
+        windows: [{ limit: 8, windowMs: 60 * 60 * 1000 }],
+      });
+      if (!ipQuota.allowed) {
+        return Response.json(
+          { message: genericMessage, code: "VERIFICATION_RESEND_RATE_LIMITED", retryAfterSeconds: ipQuota.retryAfterSeconds },
+          { status: 429, headers: { "Retry-After": String(ipQuota.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     const emailQuota = await reserveApiRequest({
