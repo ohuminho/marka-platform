@@ -1,15 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import MarkaVehicleIllustration from "@/frontend/features/mobility/components/MarkaVehicleIllustration";
 
 export const metadata: Metadata = {
-  title: "MARKA — Descubra mais. Num só lugar.",
+  title: "MARKA — Comércio, mobilidade e logística",
   description:
-    "Conheça a MARKA: uma plataforma digital que aproxima pessoas, comércio, serviços e mobilidade em Angola.",
+    "Marketplace, mobilidade de passageiros e logística de carga numa única plataforma digital.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "MARKA — Descubra mais. Num só lugar.",
+    title: "MARKA — Comércio, mobilidade e logística",
     description:
-      "Uma plataforma digital que aproxima pessoas, negócios, serviços e mobilidade em Angola.",
+      "Descubra produtos, serviços, mobilidade e soluções de carga numa única plataforma.",
     url: "https://markaao.com",
     siteName: "MARKA",
     locale: "pt_AO",
@@ -17,34 +18,47 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MARKA — Descubra mais. Num só lugar.",
+    title: "MARKA — Comércio, mobilidade e logística",
     description:
-      "Comércio, serviços, negócios e mobilidade numa experiência simples.",
+      "Marketplace, mobilidade e logística numa experiência integrada.",
   },
 };
 
-const destinations = [
+const pillars = [
   {
-    eyebrow: "COMÉRCIO · SERVIÇOS · NEGÓCIOS",
-    title: "Marketplace",
+    title: "MARKA Marketplace",
     description:
-      "Descubra produtos, lojas, serviços, imóveis e oportunidades de negócio.",
+      "Lojas, agricultura, construção, máquinas, imobiliário, serviços, produtos novos e usados.",
     href: "/app/marketplace",
     action: "Explorar Marketplace",
-    image:
-      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1500&q=85",
-    imageAlt: "Espaço comercial contemporâneo",
   },
   {
-    eyebrow: "TÁXI · MOTO-TÁXI · TRANSPORTE",
-    title: "Mobility",
+    title: "MARKA Mobility",
     description:
-      "Peça uma viagem, organize um transporte ou encontre assistência na estrada.",
+      "Táxi, mototáxi e transporte executivo, com pedidos de viagem e acompanhamento.",
     href: "/app/mobility",
     action: "Abrir Mobility",
-    image:
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1500&q=85",
-    imageAlt: "Automóvel premium numa estrada",
+  },
+  {
+    title: "MARKA Logistics / Freight",
+    description:
+      "Transporte de carga, pickups, carrinhas, camiões, basculantes e fornecimento de água por volume.",
+    href: "/app/mobility/carga",
+    action: "Pedir carga ou cisterna",
+  },
+  {
+    title: "MARKA Ads",
+    description:
+      "Mais visibilidade para lojas, produtos e serviços através de espaços de promoção na plataforma.",
+    href: "/advertise",
+    action: "Conhecer publicidade",
+  },
+  {
+    title: "MARKA AI",
+    description:
+      "Assistência inteligente para orientar utilizadores e facilitar a descoberta de serviços e oportunidades.",
+    href: "/app/assistant",
+    action: "Conhecer MARKA AI",
   },
 ];
 
@@ -57,7 +71,7 @@ const organizationStructuredData = {
       url: "https://markaao.com",
       email: "info@markaao.com",
       description:
-        "Plataforma digital de comércio, serviços, negócios e mobilidade.",
+        "Plataforma digital de comércio, serviços, negócios, mobilidade e logística.",
       areaServed: { "@type": "Country", name: "Angola" },
       parentOrganization: {
         "@type": "Organization",
@@ -73,9 +87,9 @@ const organizationStructuredData = {
   ],
 };
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="min-h-screen overflow-hidden bg-[#090909] text-[#f5f1e8]">
+    <div className="min-h-screen bg-[#070709] text-zinc-100 selection:bg-[#F5C451] selection:text-black">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -83,309 +97,161 @@ export default function Home() {
         }}
       />
 
-      <header className="relative z-20 border-b border-white/[0.08] bg-[#090909]/85 backdrop-blur-xl">
-        <nav
-          aria-label="Navegação principal"
-          className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12"
-        >
-          <Link href="/" aria-label="MARKA — início" className="flex items-center gap-3">
-            <span className="text-[34px] font-semibold leading-none tracking-[-0.12em] text-[#d8bd83]">
-              M.
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070709]/85 backdrop-blur-2xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" aria-label="MARKA — início" className="flex items-center gap-2.5">
+            <span className="text-lg font-extrabold tracking-[0.22em] text-white">
+              MARKA<span className="text-[#F5C451]">.</span>
             </span>
-            <span className="text-[17px] font-semibold tracking-[0.19em] text-white">
-              MARKA
+            <span className="hidden rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#F5C451] sm:inline-block">
+              Angola · Global
             </span>
           </Link>
 
-          <div className="hidden items-center gap-9 md:flex">
-            <Link
-              href="/app/marketplace"
-              className="text-[13px] text-white/70 transition hover:text-white"
-            >
-              Marketplace
-            </Link>
-            <Link
-              href="/app/mobility"
-              className="text-[13px] text-white/70 transition hover:text-white"
-            >
-              Mobility
-            </Link>
-            <Link
-              href="/app/assistant"
-              className="text-[13px] text-white/70 transition hover:text-white"
-            >
-              MARKA AI
-            </Link>
-          </div>
+          <nav aria-label="Navegação principal" className="hidden items-center gap-7 text-xs font-medium text-zinc-400 md:flex">
+            <Link href="/app/marketplace" className="transition hover:text-white">Marketplace</Link>
+            <Link href="/app/mobility" className="transition hover:text-white">Mobility</Link>
+            <Link href="/app/mobility/carga" className="transition hover:text-white">Logistics & Carga</Link>
+            <Link href="/app/assistant" className="transition hover:text-white">MARKA AI</Link>
+          </nav>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/auth/login"
-              className="hidden px-3 py-2 text-[13px] text-white/75 transition hover:text-white sm:inline-flex"
-            >
+          <div className="flex items-center gap-2.5">
+            <Link href="/auth/login" className="hidden rounded-xl px-3 py-2 text-xs font-medium text-zinc-300 transition hover:text-white sm:inline-flex">
               Entrar
             </Link>
             <Link
-              href="/auth/login"
-              className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#d8bd83] px-5 text-[12px] font-semibold text-[#17130c] transition hover:bg-[#ead5a6]"
+              href="/app/mobility"
+              className="rounded-xl bg-gradient-to-r from-[#F5C451] to-[#D4AF37] px-4 py-2.5 text-xs font-extrabold text-black shadow-lg shadow-amber-500/15 transition hover:brightness-105"
             >
-              Criar conta
+              Abrir MARKA
             </Link>
           </div>
-        </nav>
+        </div>
       </header>
 
       <main>
-        <section
-          aria-labelledby="hero-title"
-          className="relative isolate flex min-h-[620px] items-center overflow-hidden sm:min-h-[690px]"
-        >
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 -z-20 bg-cover bg-center"
-            style={{
-              backgroundImage:
-                "url('https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=2200&q=85')",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(9,9,9,.96)_0%,rgba(9,9,9,.78)_48%,rgba(9,9,9,.34)_100%)]"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 -z-10 bg-gradient-to-t from-[#090909] via-transparent to-[#090909]/25"
-          />
+        <section aria-labelledby="hero-title" className="relative isolate overflow-hidden border-b border-white/5 py-16 sm:py-24">
+          <div aria-hidden="true" className="absolute -top-24 left-1/2 -z-10 h-72 w-[720px] -translate-x-1/2 rounded-full bg-amber-400/10 blur-[130px]" />
+          <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 sm:px-6 lg:grid-cols-12">
+            <div className="space-y-6 lg:col-span-7">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1 text-[11px] font-medium text-zinc-300">
+                <span className="h-2 w-2 rounded-full bg-[#F5C451]" />
+                Magestade Pura Digital · Plataforma tecnológica integrada
+              </div>
 
-          <div className="mx-auto w-full max-w-[1440px] px-5 py-24 sm:px-8 lg:px-12">
-            <div className="max-w-[780px]">
-              <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-[#d8bd83] sm:text-[11px]">
-                A plataforma que aproxima possibilidades
-              </p>
-              <h1
-                id="hero-title"
-                className="mt-7 max-w-[760px] text-balance text-[clamp(3.4rem,8vw,7rem)] font-medium leading-[0.98] tracking-[-0.075em] text-white"
-              >
-                Descubra mais.
-                <span className="mt-1 block font-normal text-[#d8bd83]">
-                  Num só lugar.
+              <h1 id="hero-title" className="max-w-4xl text-4xl font-extrabold leading-[1.06] tracking-tight text-white sm:text-5xl lg:text-6xl">
+                Comércio, mobilidade e logística num{" "}
+                <span className="bg-gradient-to-r from-white via-[#F5C451] to-[#C99A2E] bg-clip-text text-transparent">
+                  padrão global de excelência.
                 </span>
               </h1>
-              <p className="mt-7 max-w-[510px] text-[15px] leading-7 text-white/70 sm:text-[17px] sm:leading-8">
-                Do que procura ao que precisa. Explore comércio, serviços,
-                negócios e mobilidade numa experiência simples.
+
+              <p className="max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+                A MARKA aproxima pessoas, negócios e prestadores de serviços.
+                Descubra produtos, encontre opções de transporte e solicite
+                soluções de carga numa única experiência digital, construída
+                em Angola com ambição de expansão internacional.
               </p>
-              <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/app/marketplace"
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#d8bd83] px-7 text-[13px] font-semibold text-[#17130c] transition hover:bg-[#ead5a6]"
-                >
-                  Explorar MARKA <span aria-hidden="true" className="ml-3">→</span>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <Link href="/app/marketplace" className="rounded-2xl bg-gradient-to-r from-[#F5C451] via-[#E5B84B] to-[#C99A2E] px-6 py-3.5 text-xs font-extrabold tracking-wide text-black shadow-xl shadow-amber-500/20 transition hover:brightness-105 sm:text-sm">
+                  Explorar MARKA
                 </Link>
-                <Link
-                  href="/app/mobility"
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/30 bg-black/15 px-7 text-[13px] font-medium text-white transition hover:border-[#d8bd83] hover:text-[#ead5a6]"
-                >
-                  Conhecer Mobility
+                <Link href="/app/mobility" className="rounded-2xl border border-white/15 bg-white/[0.04] px-6 py-3.5 text-xs font-semibold text-white backdrop-blur-xl transition hover:border-amber-400/40 sm:text-sm">
+                  Solicitar mobilidade
+                </Link>
+                <Link href="/app/mobility/carga" className="rounded-2xl border border-white/15 bg-white/[0.04] px-6 py-3.5 text-xs font-semibold text-white backdrop-blur-xl transition hover:border-amber-400/40 sm:text-sm">
+                  Pedir carga ou cisterna
                 </Link>
               </div>
             </div>
-          </div>
 
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d8bd83]/50 to-transparent" />
+            <div className="lg:col-span-5">
+              <div className="space-y-4 rounded-3xl border border-amber-400/20 bg-zinc-950/80 p-5 shadow-2xl backdrop-blur-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#F5C451]">Frota & Logística MARKA</span>
+                  <span className="text-[11px] text-zinc-400">Ilustração vetorial SVG</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-black/45 p-3">
+                    <MarkaVehicleIllustration category="EXECUTIVE_SUV" className="mx-auto h-12 w-28" active />
+                    <p className="mt-1 text-center text-xs font-bold text-white">Executivo</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/45 p-3">
+                    <MarkaVehicleIllustration category="WATER_TANKER" className="mx-auto h-12 w-28" active />
+                    <p className="mt-1 text-center text-xs font-bold text-white">Cisterna</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/45 p-3">
+                    <MarkaVehicleIllustration category="LIGHT_TRUCK" className="mx-auto h-12 w-28" active />
+                    <p className="mt-1 text-center text-xs font-bold text-white">Dyna / Canter</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/45 p-3">
+                    <MarkaVehicleIllustration category="TIPPER_TRUCK" className="mx-auto h-12 w-28" active />
+                    <p className="mt-1 text-center text-xs font-bold text-white">Basculante</p>
+                  </div>
+                </div>
+                <p className="text-center text-[10px] text-zinc-500">
+                  Veículos e serviços disponibilizados por operadores parceiros.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
-        <section
-          aria-labelledby="destinations-title"
-          className="mx-auto max-w-[1440px] px-5 pb-24 pt-16 sm:px-8 sm:pt-20 lg:px-12 lg:pt-24"
-        >
-          <div className="mb-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#bda575]">
-                Explore
-              </p>
-              <h2
-                id="destinations-title"
-                className="mt-3 text-[32px] font-medium tracking-[-0.055em] text-white sm:text-[42px]"
-              >
-                Um ponto de partida.
-              </h2>
-            </div>
-            <p className="max-w-[360px] text-[13px] leading-6 text-white/50">
-              Escolha por onde quer começar. O resto fica simples.
-            </p>
+        <section aria-labelledby="pillars-title" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+          <div className="mb-10 max-w-2xl space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[#F5C451]">Arquitetura integrada</span>
+            <h2 id="pillars-title" className="text-2xl font-extrabold text-white sm:text-3xl">
+              Cinco pilares. Um único ecossistema.
+            </h2>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            {destinations.map((destination) => (
-              <article
-                key={destination.title}
-                className="group relative isolate flex min-h-[390px] overflow-hidden rounded-[22px] border border-white/[0.11] bg-[#151515] sm:min-h-[440px]"
-              >
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 -z-20 bg-cover bg-center transition duration-700 group-hover:scale-[1.035]"
-                  style={{ backgroundImage: `url('${destination.image}')` }}
-                />
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(7,7,7,.9)_0%,rgba(7,7,7,.64)_58%,rgba(7,7,7,.2)_100%)]"
-                />
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 -z-10 bg-gradient-to-t from-black/65 via-transparent to-black/10"
-                />
-                <div className="flex w-full flex-col justify-end p-7 sm:p-10">
-                  <p className="text-[9px] font-medium tracking-[0.24em] text-[#e0c995] sm:text-[10px]">
-                    {destination.eyebrow}
-                  </p>
-                  <h3 className="mt-4 text-[34px] font-medium tracking-[-0.055em] text-white sm:text-[42px]">
-                    {destination.title}
-                  </h3>
-                  <p className="mt-3 max-w-[390px] text-[13px] leading-6 text-white/70 sm:text-[14px]">
-                    {destination.description}
-                  </p>
-                  <Link
-                    href={destination.href}
-                    className="mt-7 inline-flex min-h-11 w-fit items-center gap-4 border-b border-[#d8bd83]/70 pb-1 text-[12px] font-medium text-[#ead5a6] transition hover:gap-6"
-                  >
-                    {destination.action}
-                    <span aria-hidden="true">→</span>
-                  </Link>
-                </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {pillars.map((pillar) => (
+              <article key={pillar.title} className="rounded-3xl border border-white/10 bg-zinc-950/75 p-6 backdrop-blur-xl transition hover:border-amber-400/35">
+                <h3 className="text-base font-bold text-white">{pillar.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-400 sm:text-sm">{pillar.description}</p>
+                <Link href={pillar.href} className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#F5C451] transition hover:gap-3">
+                  {pillar.action}<span aria-hidden="true">→</span>
+                </Link>
               </article>
             ))}
           </div>
         </section>
 
-        <section
-          aria-labelledby="purpose-title"
-          className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-28"
-        >
-          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#bda575]">
-                A nossa missão
-              </p>
-              <h2
-                id="purpose-title"
-                className="mt-4 max-w-[560px] text-[34px] font-medium leading-[1.08] tracking-[-0.06em] text-white sm:text-[48px]"
-              >
-                Mais oportunidades.
-                <span className="block text-[#d8bd83]">Menos distância.</span>
+        <section className="border-t border-white/10 bg-[#0B0B0E] py-12">
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 sm:px-6 lg:flex-row lg:items-center">
+            <div className="max-w-2xl space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#F5C451]">Magestade Pura Digital · Portfólio tecnológico</span>
+              <h2 className="text-lg font-bold text-white">
+                MARKA e ZION, marcas do portfólio da Magestade Pura Digital
               </h2>
-            </div>
-            <div className="max-w-[680px]">
-              <p className="text-[15px] leading-8 text-white/70 sm:text-[17px]">
-                Encontrar o que precisa, chegar a novos clientes ou organizar
-                uma deslocação ainda pode significar procurar em vários lugares.
-                A MARKA aproxima estas experiências numa única plataforma digital.
-                A nossa missão é reduzir a distância entre quem procura e quem
-                oferece, dando mais visibilidade aos negócios e tornando o acesso
-                a produtos, serviços e mobilidade mais simples.
+              <p className="text-xs leading-relaxed text-zinc-400">
+                Soluções digitais com propósitos distintos, desenvolvidas sob a
+                visão de longo prazo da Magestade Pura Digital.
               </p>
-              <div className="mt-9 grid gap-6 sm:grid-cols-2">
-                <div className="border-l border-[#d8bd83]/60 pl-5">
-                  <h3 className="text-[14px] font-semibold text-white">Para pessoas</h3>
-                  <p className="mt-2 text-[12px] leading-6 text-white/55">
-                    Descobrir produtos, encontrar serviços e aceder a opções de mobilidade.
-                  </p>
-                </div>
-                <div className="border-l border-[#d8bd83]/60 pl-5">
-                  <h3 className="text-[14px] font-semibold text-white">Para negócios</h3>
-                  <p className="mt-2 text-[12px] leading-6 text-white/55">
-                    Apresentar lojas, divulgar produtos e aproximar-se de novos clientes.
-                  </p>
-                </div>
-                <div className="border-l border-[#d8bd83]/60 pl-5">
-                  <h3 className="text-[14px] font-semibold text-white">Para prestadores</h3>
-                  <p className="mt-2 text-[12px] leading-6 text-white/55">
-                    Dar visibilidade aos seus serviços e encontrar novas oportunidades.
-                  </p>
-                </div>
-                <div className="border-l border-[#d8bd83]/60 pl-5">
-                  <h3 className="text-[14px] font-semibold text-white">Para operadores de mobilidade</h3>
-                  <p className="mt-2 text-[12px] leading-6 text-white/55">
-                    Ligar motoristas e proprietários de veículos a pedidos de transporte.
-                  </p>
-                </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl border border-amber-400/30 bg-[#070709] px-4 py-3">
+                <p className="text-xs font-extrabold text-white">MARKA</p>
+                <p className="mt-1 text-[10px] text-zinc-400">Comércio, mobilidade e carga</p>
               </div>
-              <p className="mt-9 border-t border-white/10 pt-6 text-[12px] leading-6 text-white/45">
-                Construída em Angola, com uma visão de longo prazo para o desenvolvimento
-                de soluções digitais relevantes em África.
-              </p>
+              <div className="rounded-2xl border border-white/10 bg-[#070709] px-4 py-3">
+                <p className="text-xs font-extrabold text-[#F5C451]">ZION</p>
+                <p className="mt-1 text-[10px] text-zinc-500">Ecossistema digital</p>
+              </div>
             </div>
-          </div>
-        </section>
-
-        <section
-          aria-labelledby="partners-title"
-          className="border-y border-white/[0.08] bg-[#10100f]"
-        >
-          <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-5 py-16 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12 lg:py-20">
-            <div className="max-w-[700px]">
-              <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-[#bda575]">
-                Crescemos através de boas ligações
-              </p>
-              <h2
-                id="partners-title"
-                className="mt-3 text-[30px] font-medium leading-tight tracking-[-0.055em] text-white sm:text-[40px]"
-              >
-                Vamos criar novas oportunidades juntos?
-              </h2>
-              <p className="mt-4 max-w-[620px] text-[14px] leading-7 text-white/60">
-                Procuramos comerciantes, prestadores de serviços, operadores de
-                mobilidade e organizações interessadas em construir relações
-                comerciais e parcerias com impacto. Se representa uma empresa
-                ou instituição, queremos conhecer a sua proposta.
-              </p>
-            </div>
-            <Link
-              href="/advertise"
-              className="inline-flex min-h-12 w-fit shrink-0 items-center justify-center rounded-full bg-[#d8bd83] px-7 text-[12px] font-semibold text-[#17130c] transition hover:bg-[#ead5a6]"
-            >
-              Explorar parcerias <span aria-hidden="true" className="ml-3">→</span>
-            </Link>
-          </div>
-        </section>
-
-        <section className="border-y border-white/[0.08] bg-white/[0.025]">
-          <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-12 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[#bda575]">
-                Inteligência integrada
-              </p>
-              <h2 className="mt-2 text-[22px] font-medium tracking-[-0.04em] text-white">
-                Precisa de orientação?
-              </h2>
-              <p className="mt-2 max-w-[520px] text-[13px] leading-6 text-white/55">
-                A MARKA AI ajuda-o a encontrar o caminho dentro da plataforma.
-              </p>
-            </div>
-            <Link
-              href="/app/assistant"
-              className="inline-flex min-h-11 w-fit items-center gap-3 rounded-full border border-white/20 px-6 text-[12px] font-medium text-white transition hover:border-[#d8bd83] hover:text-[#ead5a6]"
-            >
-              Conhecer MARKA AI <span aria-hidden="true">→</span>
-            </Link>
           </div>
         </section>
       </main>
 
-      <footer className="bg-[#090909]">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-6 px-5 py-9 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-12">
-          <Link href="/" className="text-[15px] font-semibold tracking-[0.19em] text-[#d8bd83]">
-            MARKA
-          </Link>
-          <div className="flex flex-wrap gap-x-7 gap-y-3 text-[11px] text-white/50">
-            <Link href="/app/marketplace" className="transition hover:text-white">Marketplace</Link>
-            <Link href="/app/mobility" className="transition hover:text-white">Mobility</Link>
-            <Link href="/advertise" className="transition hover:text-white">Parcerias</Link>
-            <a href="mailto:info@markaao.com" className="transition hover:text-white">Contacto</a>
+      <footer className="border-t border-white/10 bg-[#050507] py-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-xs text-zinc-500 sm:flex-row sm:px-6">
+          <p>MARKA · Powered By Magestade Pura Digital · <a href="https://markaao.com" className="transition hover:text-zinc-300">markaao.com</a></p>
+          <div className="flex items-center gap-5">
+            <Link href="/legal/privacy" className="hover:text-zinc-300">Privacidade</Link>
+            <Link href="/legal/mobility-driver" className="hover:text-zinc-300">Motoristas & Termos</Link>
           </div>
-          <p className="text-[10px] tracking-[0.04em] text-white/35">
-            Powered By Magestade Pura Digital
-          </p>
         </div>
       </footer>
     </div>
