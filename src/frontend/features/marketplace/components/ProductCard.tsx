@@ -79,7 +79,7 @@ export default function ProductCard({ product }: { product: MarketplaceProduct }
             <Link href={`/loja/${product.store.id}`} className="mt-1 block truncate text-xs text-[var(--theme-text-muted)] underline decoration-[var(--theme-border)] underline-offset-4 hover:text-[var(--theme-text)]">{product.store.name}</Link>
           </div>
           <p className="shrink-0 text-sm font-semibold text-[var(--theme-text)]">
-            {new Intl.NumberFormat(language === "pt" ? "pt-AO" : language, { style: "currency", currency }).format(product.price)}
+            {new Intl.NumberFormat(language === "pt" ? "pt-PT" : language, { style: "currency", currency }).format(product.price)}
           </p>
         </div>
 
