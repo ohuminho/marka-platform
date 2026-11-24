@@ -22,7 +22,7 @@ export default function LanguageSelector() {
         <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.7 2.5 4.1 5.5 4.1 9s-1.4 6.5-4.1 9c-2.7-2.5-4.1-6.5-4.1-9S9.3 5.5 12 3Z" />
       </svg>
       <span className="sr-only">{t.language}</span>
-      <select aria-label={t.language} value={language} onChange={(event) => setLanguage(event.target.value as PlatformLanguage)} className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent text-[0px] outline-none">
+      <select aria-label={t.language} value={language} onChange={(event) => setLanguage(event.target.value as PlatformLanguage)} className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0 outline-none">
         {languages.map((item) => <option key={item.value} value={item.value}>{item.label} — {item.name}</option>)}
       </select>
       <span className="pointer-events-none absolute -bottom-0.5 left-1/2 h-px w-2 -translate-x-1/2 bg-[var(--theme-accent)] opacity-0 transition-opacity group-focus-within:opacity-100" />
