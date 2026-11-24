@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 const siteUrl = "https://markaao.com";
 
@@ -23,3 +24,7 @@ export const metadata: Metadata = {
       "Explore oportunidades de publicidade e parceria no ecossistema MARKA.",
   },
 };
+
+export default function AdvertiseLayout({ children }: { children: ReactNode }) {
+  return children;
+}
