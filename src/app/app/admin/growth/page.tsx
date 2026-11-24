@@ -37,7 +37,7 @@ function number(value: number): string {
 }
 
 function percentage(value: number | null): string {
-  return value === null ? "—" : new Intl.NumberFormat("pt-AO", { style: "percent", maximumFractionDigits: 1 }).format(value);
+  return value === null ? ", " : new Intl.NumberFormat("pt-AO", { style: "percent", maximumFractionDigits: 1 }).format(value);
 }
 
 async function fetchAnalytics(): Promise<Analytics> {
@@ -96,7 +96,7 @@ function GrowthAnalyticsContent() {
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--theme-text)]/35">Administração · Growth intelligence</p>
           <h1 className="mt-2 text-3xl font-semibold text-[var(--theme-text)]">Analytics MARKA</h1>
-          <p className="mt-2 text-sm text-[var(--theme-text)]/50">Aquisição, actividade do Marketplace e utilização do AI Core — últimos 30 dias.</p>
+          <p className="mt-2 text-sm text-[var(--theme-text)]/50">Aquisição, actividade do Marketplace e utilização do AI Core, últimos 30 dias.</p>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/app/admin" className="text-xs text-[var(--theme-text)]/55 underline underline-offset-4">Admin Center</Link>
@@ -139,7 +139,7 @@ function GrowthAnalyticsContent() {
             <p className="mt-1 text-xs text-[var(--theme-text)]/40">Rácios de eventos, não utilizadores únicos.</p>
             <div className="mt-7 grid grid-cols-2 gap-4">
               <div><p className="text-[10px] uppercase tracking-[0.15em] text-[var(--theme-text)]/35">Produto → carrinho</p><p className="mt-2 text-2xl font-semibold text-[var(--theme-text)]">{percentage(data.funnel.productViewToCartEventRate)}</p></div>
-              <div><p className="text-[10px] uppercase tracking-[0.15em] text-[var(--theme-text)]/35">Carrinho → compra</p><p className="mt-2 text-2xl font-semibold text-[var(--theme-text)]">—</p></div>
+              <div><p className="text-[10px] uppercase tracking-[0.15em] text-[var(--theme-text)]/35">Carrinho → compra</p><p className="mt-2 text-2xl font-semibold text-[var(--theme-text)]">, </p></div>
             </div>
             <p className="mt-6 text-xs leading-5 text-[var(--theme-text)]/45">A compra só será apresentada quando o evento estiver ligado à confirmação efectiva do pagamento. Não contamos redireccionamentos como vendas.</p>
           </article>
