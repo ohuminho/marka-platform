@@ -50,7 +50,7 @@ function MessagesWorkspace() {
     try {
       const response = await fetch("/api/messages", { credentials: "include", cache: "no-store" });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível carregar as mensagens.");
+      if (!response.ok) throw new Error(data.message || t.loadMessagesFailed);
       const currentActorId = data.actorId ?? "";
       const marketplace = data.conversations ?? [];
       const contextual = (data.threads ?? []).map((thread: ContextThread) => {
@@ -61,10 +61,10 @@ function MessagesWorkspace() {
           id: thread.id,
           buyerId: customer?.userId ?? currentActorId,
           sellerId: other[0]?.userId ?? "",
-          buyer: { id: customer?.userId ?? currentActorId, name: customer?.user?.name ?? "Cliente" },
-          seller: { id: other[0]?.userId ?? "", name: otherNames.join(", ") || "Participantes" },
-          store: { id: thread.id, name: thread.contextType === "MOBILITY" ? "MARKA Mobility" : thread.contextType === "DELIVERY" ? "MARKA Delivery" : "MARKA Serviços Privados" },
-          product: { id: thread.contextId, name: thread.subject ?? "Comunicação" },
+          buyer: { id: customer?.userId ?? currentActorId, name: customer?.user?.name ?? t.client },
+          seller: { id: other[0]?.userId ?? "", name: otherNames.join(", ") || t.participants },
+          store: { id: thread.id, name: thread.contextType === "MOBILITY" ? t.markaMobility : thread.contextType === "DELIVERY" ? t.markaDelivery : t.privateServices },
+          product: { id: thread.contextId, name: thread.subject ?? t.communication },
           lastMessageAt: thread.lastMessageAt,
           messages: thread.messages ?? [],
           communicationThreadId: thread.id,
@@ -92,11 +92,11 @@ function MessagesWorkspace() {
         : `/api/messages/${encodeURIComponent(id)}`;
       const response = await fetch(endpoint, { credentials: "include", cache: "no-store" });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível abrir a conversa.");
+      if (!response.ok) throw new Error(data.message || t.openConversationFailed);
       setMessages(data.conversation?.messages ?? data.thread?.messages ?? []);
       setActorId(data.actorId ?? "");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao abrir conversa.");
+      setError(e instanceof Error ? e.message : t.loadConversationFailed);
     }
   }, [conversations]);
 
@@ -117,12 +117,12 @@ function MessagesWorkspace() {
         body: JSON.stringify({ messageId, message: editDraft.trim() }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível editar a mensagem.");
+      if (!response.ok) throw new Error(data.message || t.editMessageFailed);
       setMessages((current) => current.map((item) => item.id === messageId ? data.message : item));
       setEditingMessageId(""); setEditDraft("");
       await loadConversations();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao editar mensagem.");
+      setError(e instanceof Error ? e.message : t.editMessageError);
     } finally { setSavingEdit(false); }
   }
 
@@ -139,12 +139,12 @@ function MessagesWorkspace() {
         body: JSON.stringify({ message: draft.trim() }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Não foi possível enviar.");
+      if (!response.ok) throw new Error(data.message || t.sendMessageFailed);
       setMessages((current) => [...current, data.message]);
       setDraft("");
       await loadConversations();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao enviar mensagem.");
+      setError(e instanceof Error ? e.message : t.sendMessageError);
     } finally { setSending(false); }
   }
 
