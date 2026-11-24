@@ -28,7 +28,7 @@ interface FreightQuoteRequest {
 
 function money(value: number, currency: string) {
   try {
-    return new Intl.NumberFormat("pt-AO", {
+    return new Intl.NumberFormat("pt-PT", {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
