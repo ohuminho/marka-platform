@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "MARKA — African Digital Platform",
+    name: "MARKA, African Digital Platform",
     short_name: "MARKA",
     description:
       "Mobilidade, Marketplace e serviços empresariais numa única plataforma.",
