@@ -77,11 +77,11 @@ function MessagesWorkspace() {
       const requestedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conversationId") : null;
       setActiveId((current) => current || requestedId || merged[0]?.id || "");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao carregar mensagens.");
+      setError(e instanceof Error ? e.message : t.loadMessagesFailed);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadThread = useCallback(async (id: string) => {
     if (!id) { setMessages([]); return; }
@@ -214,5 +214,7 @@ function MessagesWorkspace() {
 }
 
 export default function MessagesPage() {
-  return <Suspense fallback={<div className="p-8 text-sm text-[var(--theme-text-muted)]">A carregar a caixa de entrada…</div>}><MessagesWorkspace /></Suspense>;
+  const { language } = usePlatformPreferences();
+  const t = useMessagesTranslation(language);
+  return <Suspense fallback={<div className="p-8 text-sm text-[var(--theme-text-muted)]">{t.loadingInbox}</div>}><MessagesWorkspace /></Suspense>;
 }
