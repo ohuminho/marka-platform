@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/database/client/prisma";
 
+// Generate the sitemap at request time so the catalog query uses runtime DATABASE_URL.
+// The build environment may intentionally not expose database credentials.
+export const dynamic = "force-dynamic";
+
 const baseUrl = "https://markaao.com";
 const MAX_DYNAMIC_URLS = 49_995;
 
@@ -12,6 +16,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/mobilidade`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}/advertise`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
   ];
+
+  // Preview deployments may intentionally omit production database credentials.
+  // Keep the public sitemap available without attempting Prisma initialization.
+  if (!process.env.DATABASE_URL) return routes;
 
   try {
     const products = await prisma.product.findMany({
