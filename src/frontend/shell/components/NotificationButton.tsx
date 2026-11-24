@@ -17,7 +17,7 @@ type NotificationItem = {
 function timeLabel(value: string, language: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  const locale = language === "pt" ? "pt-PT" : language === "en" ? "en-GB" : language;
+  const locale = language === "pt" || language === "os" ? "pt-PT" : language === "en" ? "en-GB" : language;
   return new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
