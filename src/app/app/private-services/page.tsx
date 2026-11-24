@@ -26,7 +26,7 @@ function dateLabel(value: string) {
 
 const statusLabels: Record<string, string> = {
   PENDING: "A aguardar resposta",
-  ACCEPTED: "Aceitaste — aguarda escolha do cliente",
+  ACCEPTED: "Aceitaste, aguarda escolha do cliente",
   DECLINED: "Recusado",
   EXPIRED: "Convite expirado",
   SELECTED: "Foste seleccionado",
