@@ -1,4 +1,4 @@
-# MARKA — Industrial Verticals, Vehicle Tracking Roadmap & Visual Standards
+# MARKA, Industrial Verticals, Vehicle Tracking Roadmap & Visual Standards
 
 **Status:** Product direction / implementation guardrails  
 **Scope:** MARKA Marketplace, Mobility, Cargo and future B2B services  
@@ -42,7 +42,7 @@ Do not charge manufacturers merely to exist on the platform before buyer demand 
 
 Do not build a full industrial ERP, accounting suite, inventory ledger or factory production-control system in this phase. Integrate with existing systems later. First validate discovery, RFQ/quotation, order confirmation, delivery and repeat purchase.
 
-## 3. Vehicle-owner GPS visibility — deferred, designed now
+## 3. Vehicle-owner GPS visibility, deferred, designed now
 
 Live GPS visibility for a vehicle owner is a valid future capability, but it should not be enabled as unrestricted permanent tracking.
 
@@ -77,7 +77,7 @@ All MARKA imagery must look premium, realistic and locally relevant:
 - Vehicle-owner live tracking remains explicitly out of scope until consent, permissions, retention and audit controls are implemented.
 - Vehicle imagery is category-correct, premium and free of third-party promotional branding.
 
-## 6. Catálogo multi-indústria e serviços — extensão do Marketplace existente
+## 6. Catálogo multi-indústria e serviços, extensão do Marketplace existente
 
 Esta expansão NÃO cria um produto separado chamado MARKA Business. O conceito já existente mantém-se: uma conta pode abrir uma loja como pessoa singular/individual ou como empresa. A mesma loja/catálogo suporta revendedor, fabricante, fábrica, distribuidor, grossista, agricultor, cooperativa ou prestador de serviços, através de categorias e atributos adequados. Não duplicar contas, lojas, catálogos, checkout ou sistemas de encomendas.
 
