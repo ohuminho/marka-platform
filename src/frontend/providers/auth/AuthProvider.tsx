@@ -150,6 +150,7 @@ export function AuthProvider({
         await response.json();
 
       setUser(data.user);
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("marka:auth-changed"));
       setSession(data.session);
       setOrganizations(
         Array.isArray(data.organizations)
@@ -263,6 +264,7 @@ export function AuthProvider({
             : [];
 
         setUser(data.user);
+        window.dispatchEvent(new Event("marka:auth-changed"));
         setSession(data.session);
         setOrganizations(
           nextOrganizations
