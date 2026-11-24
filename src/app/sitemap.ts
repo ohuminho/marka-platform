@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/database/client/prisma";
 
+// Generate the sitemap at request time so the catalog query uses runtime DATABASE_URL.
+// The build environment may intentionally not expose database credentials.
+export const dynamic = "force-dynamic";
+
 const baseUrl = "https://markaao.com";
 const MAX_DYNAMIC_URLS = 49_995;
 
