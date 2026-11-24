@@ -201,7 +201,7 @@ export default function ProductDetails({
 
           ? error.message
 
-          : "Unable to add product"
+          : t.addToCartFailed
 
       );
 
@@ -231,7 +231,7 @@ export default function ProductDetails({
         body: JSON.stringify({ productId: product.id, message: contactText }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || t.addToCartFailed);
+      if (!response.ok) throw new Error(data.message || t.contactSellerFailed);
       window.location.assign(`/app/messages?conversationId=${encodeURIComponent(data.conversation.id)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t.contactSellerFailed);
