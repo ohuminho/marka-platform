@@ -125,7 +125,7 @@ const organizationStructuredData = {
       name: "MARKA AO",
       alternateName: "MARKA",
       url: siteUrl,
-      inLanguage: "pt-AO",
+      inLanguage: "pt-PT",
       publisher: { "@id": `${siteUrl}/#organization` },
     },
     {
@@ -135,7 +135,7 @@ const organizationStructuredData = {
       name: "MARKA AO | Marketplace, Mobilidade e Logística em Angola",
       description:
         "Conheça a MARKA AO: marketplace, mobilidade de passageiros e logística de carga numa única plataforma digital.",
-      inLanguage: "pt-AO",
+      inLanguage: "pt-PT",
       isPartOf: { "@id": `${siteUrl}/#website` },
       about: { "@id": `${siteUrl}/#organization` },
     },
