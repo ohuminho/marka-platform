@@ -23,7 +23,7 @@ export default function ThemeSelector() {
         <path d="M12 2.8v2M12 19.2v2M21.2 12h-2M4.8 12h-2M18.5 5.5l-1.4 1.4M6.9 17.1l-1.4 1.4M18.5 18.5l-1.4-1.4M6.9 6.9 5.5 5.5" />
       </svg>
       <span className="sr-only">{t.theme}</span>
-      <select aria-label={t.theme} value={theme} onChange={(event) => setTheme(event.target.value as PlatformTheme)} className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent text-[0px] outline-none">
+      <select aria-label={t.theme} value={theme} onChange={(event) => setTheme(event.target.value as PlatformTheme)} className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0 outline-none">
         {themes.map((item) => <option key={item.value} value={item.value}>{item.labelKey ? t[item.labelKey] : item.label}</option>)}
       </select>
       <span className="pointer-events-none absolute -bottom-0.5 left-1/2 h-px w-2 -translate-x-1/2 bg-[var(--theme-accent)] opacity-0 transition-opacity group-focus-within:opacity-100" />
