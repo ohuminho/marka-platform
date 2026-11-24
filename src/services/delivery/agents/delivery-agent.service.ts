@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/database/client/prisma";
 import { assertDeliveryAgentAvailabilityChange } from "@/services/delivery/agents/delivery-agent-availability.policy";
 import { getDeliveryLocationCutoff } from "@/services/delivery/agents/delivery-agent-location.policy";
@@ -132,7 +133,7 @@ export class DeliveryAgentService {
     return prisma.$transaction(async (database) => {
       const agent = await database.deliveryAgent.findUnique({
         where: { id: agentId },
-        select: { id: true, status: true, organizationId: true, availability: true },
+        select: { id: true, userId: true, status: true, organizationId: true, availability: true },
       });
       if (!agent) throw new Error("DELIVERY_AGENT_NOT_FOUND");
 
@@ -154,40 +155,87 @@ export class DeliveryAgentService {
         throw new Error("DELIVERY_AGENT_HAS_ACTIVE_DELIVERY");
       }
 
-      return database.deliveryAgent.update({
+      const updated = await database.deliveryAgent.update({
         where: { id: agentId },
         data: { status, availability: activeDeliveries > 0 ? "BUSY" : "OFFLINE" },
       });
+
+      await this.syncDeliveryAgentRole(database, {
+        userId: agent.userId,
+        organizationId: agent.organizationId,
+      }, status);
+
+      return updated;
     });
   }
 
   async activate(agentId: string) {
-    return prisma.$transaction(async (database) => {
-      const agent = await database.deliveryAgent.findUnique({
-        where: { id: agentId },
-        select: { id: true, organizationId: true, availability: true },
-      });
-      if (!agent) throw new Error("DELIVERY_AGENT_NOT_FOUND");
+    return this.updateStatus(agentId, "ACTIVE");
+  }
 
-      const locked = await database.deliveryAgent.updateMany({
-        where: { id: agentId, organizationId: agent.organizationId, availability: agent.availability },
-        data: { availability: agent.availability },
-      });
-      if (locked.count !== 1) throw new Error("DELIVERY_AGENT_AVAILABILITY_CHANGED_RETRY");
-
-      const activeDeliveries = await database.dispatchRequest.count({
-        where: {
+  private async syncDeliveryAgentRole(
+    database: Prisma.TransactionClient,
+    agent: { userId: string; organizationId: string },
+    status: "PENDING" | "ACTIVE" | "SUSPENDED" | "BLOCKED" | "INACTIVE",
+  ) {
+    const role = await database.role.upsert({
+      where: {
+        organizationId_name: {
           organizationId: agent.organizationId,
-          serviceType: "DELIVERY",
-          status: "ACCEPTED",
-          acceptedAgentId: agentId,
+          name: "DELIVERY_AGENT",
+        },
+      },
+      update: { status: "ACTIVE" },
+      create: {
+        organizationId: agent.organizationId,
+        name: "DELIVERY_AGENT",
+        description: "MARKA marketplace delivery partner",
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    });
+
+    if (status === "ACTIVE") {
+      const permission = await database.permission.findUnique({
+        where: { action: "DELIVERY_AGENT_OPERATE" },
+        select: { id: true },
+      });
+      if (!permission) throw new Error("DELIVERY_AGENT_PERMISSION_NOT_CONFIGURED");
+
+      await database.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: role.id,
+            permissionId: permission.id,
+          },
+        },
+        update: {},
+        create: { roleId: role.id, permissionId: permission.id },
+      });
+      await database.userRole.upsert({
+        where: {
+          userId_roleId_organizationId: {
+            userId: agent.userId,
+            roleId: role.id,
+            organizationId: agent.organizationId,
+          },
+        },
+        update: {},
+        create: {
+          userId: agent.userId,
+          roleId: role.id,
+          organizationId: agent.organizationId,
         },
       });
+      return;
+    }
 
-      return database.deliveryAgent.update({
-        where: { id: agentId },
-        data: { status: "ACTIVE", availability: activeDeliveries > 0 ? "BUSY" : "OFFLINE" },
-      });
+    await database.userRole.deleteMany({
+      where: {
+        userId: agent.userId,
+        roleId: role.id,
+        organizationId: agent.organizationId,
+      },
     });
   }
 

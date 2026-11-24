@@ -10,17 +10,17 @@ export default function DeliveryAgentPage() {
           <RoleContextSummary />
           <header>
             <p className="marka-kicker">MARKA / DELIVERY</p>
-            <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)]">Delivery Agent Workspace</h1>
-            <p className="mt-2 text-sm text-[var(--theme-text)]/45">Operational entry point for delivery agents.</p>
+            <h1 className="marka-editorial mt-3 text-4xl text-[var(--theme-text)]">Área do estafeta</h1>
+            <p className="mt-2 text-sm text-[var(--theme-text)]/45">Área operacional dos estafetas.</p>
           </header>
           <div className="grid gap-4 md:grid-cols-2">
             <a href="/app/delivery-agent/offers" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6">
-              <p className="text-lg text-[var(--theme-text)]">Available Deliveries</p>
-              <p className="mt-2 text-sm text-[var(--theme-text)]/40">Review and accept delivery offers.</p>
+              <p className="text-lg text-[var(--theme-text)]">Ofertas de entrega</p>
+              <p className="mt-2 text-sm text-[var(--theme-text)]/40">Consultar e aceitar ofertas de entrega.</p>
             </a>
             <a href="/app/delivery-agent/deliveries" className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface-strong)]/[0.035] p-6">
-              <p className="text-lg text-[var(--theme-text)]">My Deliveries</p>
-              <p className="mt-2 text-sm text-[var(--theme-text)]/40">Operate assigned deliveries.</p>
+              <p className="text-lg text-[var(--theme-text)]">As minhas entregas</p>
+              <p className="mt-2 text-sm text-[var(--theme-text)]/40">Acompanhar e concluir entregas atribuídas.</p>
             </a>
           </div>
         </main>

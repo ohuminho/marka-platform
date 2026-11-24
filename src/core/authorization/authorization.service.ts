@@ -1,5 +1,11 @@
 import { prisma } from "@/database/client/prisma";
 
+export function getLegacyPrivilegedRoleName(
+  role: string | null | undefined,
+): "ADMIN" | "SUPER_ADMIN" | null {
+  return role === "ADMIN" || role === "SUPER_ADMIN" ? role : null;
+}
+
 export interface AuthorizationContext {
   userId: string;
   organizationId?: string;
@@ -70,49 +76,57 @@ export class AuthorizationService {
           membership.organizationId
       );
 
-    const userRoles =
-      await prisma.userRole.findMany({
+    const [userRoles, user] = await Promise.all([
+      prisma.userRole.findMany({
         where: {
           userId: context.userId,
-          organizationId: {
-            in: organizationIds,
-          },
-          role: {
-            status: "ACTIVE",
-          },
+          organizationId: { in: organizationIds },
+          role: { status: "ACTIVE" },
         },
         include: {
           role: {
             include: {
-              permissions: {
-                include: {
-                  permission: true,
-                },
-              },
+              permissions: { include: { permission: true } },
             },
           },
         },
-      });
+      }),
+      prisma.user.findUnique({
+        where: { id: context.userId },
+        select: { role: true },
+      }),
+    ]);
 
-    const roles = [
-      ...new Set(
-        userRoles.map(
-          (userRole) =>
-            userRole.role.name
-        )
-      ),
+    // Older privileged accounts were provisioned through User.role before
+    // UserRole became the canonical assignment table. Scope this fallback
+    // strictly to the platform organization.
+    const legacyRoleName = getLegacyPrivilegedRoleName(user?.role);
+    const legacyRoles = legacyRoleName
+      ? await prisma.role.findMany({
+          where: {
+            organizationId: { in: organizationIds },
+            organization: { is: { type: "PLATFORM" } },
+            name: legacyRoleName,
+            status: "ACTIVE",
+          },
+          include: {
+            permissions: { include: { permission: true } },
+          },
+        })
+      : [];
+
+    const assignedRoleIds = new Set(userRoles.map((userRole) => userRole.roleId));
+    const effectiveRoles = [
+      ...userRoles.map((userRole) => userRole.role),
+      ...legacyRoles.filter((role) => !assignedRoleIds.has(role.id)),
     ];
 
+    const roles = [...new Set(effectiveRoles.map((role) => role.name))];
     const permissions = [
       ...new Set(
-        userRoles.flatMap(
-          (userRole) =>
-            userRole.role.permissions.map(
-              (rolePermission) =>
-                rolePermission.permission
-                  .action
-            )
-        )
+        effectiveRoles.flatMap((role) =>
+          role.permissions.map((rolePermission) => rolePermission.permission.action),
+        ),
       ),
     ];
 

@@ -3,31 +3,12 @@ import {
   OrganizationType,
   RoleStatus,
 } from "@prisma/client";
+import { DefaultPermissions } from "../src/core/authorization/config/default-permissions";
+import { Permissions } from "../src/core/authorization/permissions.catalog";
 
 const prisma = new PrismaClient();
 
-const permissions = [
-  "USER_READ",
-  "USER_UPDATE",
-
-  "VENDOR_CREATE",
-  "VENDOR_UPDATE",
-
-  "PRODUCT_CREATE",
-  "PRODUCT_UPDATE",
-  "PRODUCT_DELETE",
-
-  "ORDER_CREATE",
-  "ORDER_MANAGE",
-
-  "PAYMENT_PROCESS",
-
-  "SETTLEMENT_PAYOUT_EXECUTE",
-  "SETTLEMENT_RECONCILIATION_EXECUTE",
-  "SETTLEMENT_RECONCILIATION_RESOLVE",
-
-  "ADMIN_ACCESS",
-];
+const permissions = DefaultPermissions;
 
 const roles = [
   {
@@ -41,6 +22,10 @@ const roles = [
   {
     name: "DRIVER",
     description: "MARKA Mobility driver partner pending operational approval",
+  },
+  {
+    name: "DELIVERY_AGENT",
+    description: "MARKA marketplace delivery partner",
   },
   {
     name: "ADMIN",
@@ -168,6 +153,8 @@ async function main() {
     );
   }
 
+  const roleRecords = new Map<string, { id: string }>();
+
   for (const roleDefinition of roles) {
     const role =
       await prisma.role.upsert({
@@ -200,33 +187,36 @@ async function main() {
         },
       });
 
-    const rolePermissions =
-      roleDefinition.name ===
-      "CUSTOMER"
-        ? [
-            "USER_READ",
-            "ORDER_CREATE",
-          ]
-        : roleDefinition.name ===
-            "VENDOR"
+    roleRecords.set(roleDefinition.name, role);
+
+    const rolePermissions: string[] =
+      roleDefinition.name === "CUSTOMER"
+        ? [Permissions.USER_READ, Permissions.ORDER_CREATE, Permissions.ORDER_READ]
+        : roleDefinition.name === "VENDOR"
           ? [
-              "USER_READ",
-              "USER_UPDATE",
-              "VENDOR_CREATE",
-              "VENDOR_UPDATE",
-              "PRODUCT_CREATE",
-              "PRODUCT_UPDATE",
-              "PRODUCT_DELETE",
-              "ORDER_MANAGE",
+              Permissions.USER_READ,
+              Permissions.USER_UPDATE,
+              Permissions.VENDOR_CREATE,
+              Permissions.VENDOR_UPDATE,
+              Permissions.VENDOR_MANAGE,
+              Permissions.PRODUCT_CREATE,
+              Permissions.PRODUCT_UPDATE,
+              Permissions.PRODUCT_DELETE,
+              Permissions.ORDER_READ,
+              Permissions.ORDER_MANAGE,
             ]
-          : roleDefinition.name ===
-              "ADMIN"
-            ? permissions.filter(
-                (permission) =>
-                  permission !==
-                  "ADMIN_ACCESS"
-              )
-            : permissions;
+          : roleDefinition.name === "DRIVER"
+            ? [Permissions.USER_READ, Permissions.ORDER_READ]
+            : roleDefinition.name === "DELIVERY_AGENT"
+              ? [Permissions.USER_READ, Permissions.ORDER_READ, Permissions.DELIVERY_AGENT_OPERATE]
+              : roleDefinition.name === "ADMIN"
+                ? permissions.filter(
+                    (permission) =>
+                      permission !== Permissions.ADMIN_ACCESS &&
+                      permission !== Permissions.SYSTEM_ADMIN &&
+                      permission !== Permissions.DELIVERY_AGENT_OPERATE,
+                  )
+                : permissions;
 
     for (const action of rolePermissions) {
       const permission =
@@ -251,6 +241,56 @@ async function main() {
           roleId: role.id,
           permissionId:
             permission.id,
+        },
+      });
+    }
+  }
+
+  // Reconcile legacy privileged account roles into the canonical UserRole table.
+  const privilegedUsers = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
+    select: { id: true, role: true },
+  });
+  for (const user of privilegedUsers) {
+    const role = roleRecords.get(user.role);
+    if (!role) continue;
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId_organizationId: {
+          userId: user.id,
+          roleId: role.id,
+          organizationId: organization.id,
+        },
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        roleId: role.id,
+        organizationId: organization.id,
+      },
+    });
+  }
+
+  const deliveryRole = roleRecords.get("DELIVERY_AGENT");
+  if (deliveryRole) {
+    const activeAgents = await prisma.deliveryAgent.findMany({
+      where: { organizationId: organization.id, status: "ACTIVE" },
+      select: { userId: true },
+    });
+    for (const agent of activeAgents) {
+      await prisma.userRole.upsert({
+        where: {
+          userId_roleId_organizationId: {
+            userId: agent.userId,
+            roleId: deliveryRole.id,
+            organizationId: organization.id,
+          },
+        },
+        update: {},
+        create: {
+          userId: agent.userId,
+          roleId: deliveryRole.id,
+          organizationId: organization.id,
         },
       });
     }
