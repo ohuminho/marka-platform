@@ -23,7 +23,7 @@ type Conversation = {
 };
 
 function stamp(value: string, language: string) {
-  const locale = language === "pt" || language === "os" ? "pt-AO" : language;
+  const locale = language === "pt" || language === "os" ? "pt-PT" : language === "en" ? "en-GB" : language;
   return new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
 
