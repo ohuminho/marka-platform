@@ -1,4 +1,4 @@
-# MARKA Mobility — server-side routing
+# MARKA Mobility, server-side routing
 
 ## Implemented adapter
 
