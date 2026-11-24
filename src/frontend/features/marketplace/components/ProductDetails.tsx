@@ -338,7 +338,7 @@ export default function ProductDetails({
             font-semibold
           ">
 
-            {new Intl.NumberFormat("pt-AO", { style: "currency", currency: product.currency || "AOA", maximumFractionDigits: 0 }).format(product.price)}{unit ? <span className="ml-2 text-base font-normal text-[var(--theme-text)]/60">/ {unit}</span> : null}
+            {new Intl.NumberFormat("pt-PT", { style: "currency", currency: product.currency || "AOA", maximumFractionDigits: 0 }).format(product.price)}{unit ? <span className="ml-2 text-base font-normal text-[var(--theme-text)]/60">/ {unit}</span> : null}
 
           </div>
 
