@@ -1,10 +1,10 @@
-# MARKA Mobility — Acordo de Adesão do Motorista Parceiro (RASCUNHO)
+# MARKA Mobility, Acordo de Adesão do Motorista Parceiro (RASCUNHO)
 
-**Estado:** minuta operacional para revisão jurídica em Angola — não publicar nem aceitar como versão final sem validação por advogado angolano e confronto com o texto integral do regulamento aprovado em 27 de outubro de 2026.
+**Estado:** minuta operacional para revisão jurídica em Angola, não publicar nem aceitar como versão final sem validação por advogado angolano e confronto com o texto integral do regulamento aprovado em 27 de outubro de 2026.
 
 **Versão:** 0.1 · **Território inicial:** República de Angola · **Moeda operacional:** Kwanza (AOA)
 
-> Este documento é uma minuta original de estrutura contratual. Usa temas comuns a contratos de plataformas de mobilidade — elegibilidade, documentação, independência, tarifas, segurança, dados, suspensão e recurso — como referência de desenho, não reproduz termos de terceiros. O enquadramento jurídico definitivo depende da legislação angolana vigente, do diploma específico de plataformas digitais e da natureza real da relação entre as partes.
+> Este documento é uma minuta original de estrutura contratual. Usa temas comuns a contratos de plataformas de mobilidade, elegibilidade, documentação, independência, tarifas, segurança, dados, suspensão e recurso, como referência de desenho, não reproduz termos de terceiros. O enquadramento jurídico definitivo depende da legislação angolana vigente, do diploma específico de plataformas digitais e da natureza real da relação entre as partes.
 
 ## 1. Partes e aceitação
 
