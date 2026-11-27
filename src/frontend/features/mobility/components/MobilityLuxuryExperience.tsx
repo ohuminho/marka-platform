@@ -132,6 +132,8 @@ export default function MobilityLuxuryExperience() {
   const organizationId = activeOrganization?.id;
 
   const [drawer, setDrawer] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "DIGITAL">("CASH");
   const [group, setGroup] = useState<Group>("EXECUTIVE");
   const [serviceType, setServiceType] = useState("TAXI");
   const [origin, setOrigin] = useState<MobilityMapPoint | null>(null);
@@ -619,7 +621,7 @@ export default function MobilityLuxuryExperience() {
     setCreating(true);
     const payload = {
       serviceType,
-      paymentMethod: "CASH",
+      paymentMethod,
       ...(serviceType !== "MOTO_TAXI" && passengers !== "" ? { passengerCount: passengers } : {}),
       currency: "AOA",
       pickupLatitude: origin.lat,
@@ -1153,16 +1155,16 @@ export default function MobilityLuxuryExperience() {
             <div className="mt-3 rounded-2xl border border-white/[.08] bg-black/20 p-3">
               <p className="mb-2 text-[9px] font-semibold uppercase tracking-[.16em] text-white/45">Forma de pagamento</p>
               <div className="grid grid-cols-2 gap-2">
-                <div aria-pressed="true" className="rounded-xl border border-[#E5B84B]/55 bg-[#E5B84B]/[.09] px-3 py-3 text-left">
+                <button type="button" aria-pressed={paymentMethod === "CASH"} onClick={() => setPaymentMethod("CASH")} className="rounded-xl border border-[#E5B84B]/55 bg-[#E5B84B]/[.09] px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E5B84B]">
                   <p className="text-[11px] font-bold text-[#F2CF78]">Dinheiro</p>
                   <p className="mt-1 text-[9px] leading-4 text-white/50">Paga directamente ao motorista no fim da viagem</p>
                   <span className="mt-2 inline-flex rounded-full bg-[#E5B84B]/15 px-2 py-1 text-[8px] font-semibold text-[#F2CF78]">Disponível</span>
-                </div>
-                <div aria-disabled="true" className="rounded-xl border border-white/[.08] bg-white/[.02] px-3 py-3 text-left opacity-60">
+                </button>
+                <button type="button" disabled aria-disabled="true" className="rounded-xl border border-white/[.08] bg-white/[.02] px-3 py-3 text-left opacity-60 cursor-not-allowed">
                   <p className="text-[11px] font-bold text-white/65">Eletrónico</p>
                   <p className="mt-1 text-[9px] leading-4 text-white/40">Pagamento integrado dentro da MARKA</p>
                   <span className="mt-2 inline-flex rounded-full border border-white/10 px-2 py-1 text-[8px] font-semibold text-white/45">Em integração</span>
-                </div>
+                </button>
               </div>
               <p className="mt-2 text-[9px] leading-4 text-white/35">O pagamento eletrónico só será activado quando o prestador confirmar a cobrança e a liquidação de forma segura.</p>
             </div>
