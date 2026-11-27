@@ -1,6 +1,11 @@
 name: MARKA Android TWA diagnostic build
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "android-twa/twa-manifest.json"
+      - ".github/workflows/android-twa-build.yml"
   workflow_dispatch:
 
 permissions:
