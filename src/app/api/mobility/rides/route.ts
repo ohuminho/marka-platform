@@ -49,6 +49,23 @@ export async function POST(
             .toUpperCase()
         : "AOA";
 
+    const paymentMethod =
+      typeof body?.paymentMethod === "string"
+        ? body.paymentMethod.trim().toUpperCase()
+        : "CASH";
+
+    // Digital collection must not be advertised as available until a licensed
+    // provider and a verified server-side confirmation webhook are configured.
+    if (paymentMethod !== "CASH") {
+      return NextResponse.json(
+        {
+          message: "O pagamento eletrónico ainda não está disponível nesta região. Escolha dinheiro, pago directamente ao motorista.",
+          code: "MOBILITY_DIGITAL_PAYMENT_NOT_CONFIGURED",
+        },
+        { status: 409 },
+      );
+    }
+
     const idempotencyKey =
       getIdempotencyKey(
         request,
@@ -230,6 +247,7 @@ export async function POST(
           },
           safetyMode,
           passengerCount,
+          paymentMethod,
         },
       }, idempotencyKey);
 
