@@ -24,13 +24,15 @@ The application ID is intended to be stable. Confirm it is available in the MARK
 
 ## PWA validation
 
-Run Bubblewrap's TWA quality validation against the production website:
+The GitHub Actions workflow `.github/workflows/android-twa-validation.yml` performs source-level checks for the PWA manifest, required icon files and SVG viewBoxes, the navigation-only offline fallback, and the offline page. The general MARKA CI separately runs lint, unit tests, and the Next.js production build.
+
+**Important:** the automated workflow does not run Bubblewrap's live-site validator, does not inspect the deployed website, and does not verify Digital Asset Links. After the production deployment is READY, run the additional TWA validation from an environment with Node.js, Java and the Android tooling installed:
 
 ```bash
 bubblewrap validate --url=https://markaao.com
 ```
 
-The GitHub Actions workflow `.github/workflows/android-twa-validation.yml` runs this validation on relevant pull requests and on changes to the Android/PWA configuration in `main`. Pull-request validation targets the Vercel preview; main-branch validation targets production.
+A remote PageSpeed/Google API quota or rate-limit response is not proof of a PWA defect; inspect the actual validation findings and retry when the external service permits.
 
 ## Generate the Android project
 
@@ -71,10 +73,11 @@ Use the App signing certificate fingerprint shown in Play Console when Play App 
 
 Do not submit to production until all of these are complete:
 
-1. Bubblewrap PWA quality validation passes against the release origin.
-2. Android project builds a signed AAB and the package ID is confirmed.
-3. Digital Asset Links is live and verified against the Play App Signing certificate.
-4. Physical-device QA covers login/session persistence, location permissions, maps, Mobility, Marketplace, deep links, back navigation, external links, uploads, notifications (if enabled), and small/large/foldable screens.
-5. Play Console listing, privacy policy, Data safety, content rating, target API, screenshots, and testing track requirements are complete.
+1. Source-level PWA checks and the general MARKA CI pass.
+2. Bubblewrap's live-site quality validation passes against the release origin.
+3. Android project builds a signed AAB and the package ID is confirmed.
+4. Digital Asset Links is live and verified against the Play App Signing certificate.
+5. Physical-device QA covers login/session persistence, location permissions, maps, Mobility, Marketplace, deep links, back navigation, external links, uploads, notifications (if enabled), and small/large/foldable screens.
+6. Play Console listing, privacy policy, Data safety, content rating, target API, screenshots, and testing track requirements are complete.
 
 This configuration and workflow are preparation, not a claim that an AAB has already been signed, tested on physical devices, or accepted by Google Play.
