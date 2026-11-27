@@ -881,8 +881,9 @@ export class MobilityCashSettlementService {
               ${statusFilter}
           )
         ORDER BY
-          "createdAt" ASC,
-          "id" ASC
+          "createdAt" DESC,
+          "id" DESC
+        LIMIT 50
       `;
 
     return obligations.map(
