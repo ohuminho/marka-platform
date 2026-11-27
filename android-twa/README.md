@@ -10,6 +10,7 @@ This directory contains the source configuration and release procedure for packa
 - Android application ID candidate: com.markaao.app
 - Packaging: Google Chrome Labs Bubblewrap (TWA)
 - Minimum Android API: 23 (Android 6.0)
+- Required target API for new Google Play submissions as of 31 August 2026: Android 16 / API 36
 - Web backend: existing MARKA production backend
 
 The application ID is intended to be stable. Confirm it is available in the MARKA Google Play developer account before the first Play Console upload; it cannot be changed after the app is published.
@@ -19,8 +20,10 @@ The application ID is intended to be stable. Confirm it is available in the MARK
 - Node.js 18 or newer
 - Java JDK 17
 - Android SDK / command-line tools
-- Bubblewrap CLI: `npm install --global @bubblewrap/cli`
+- Bubblewrap CLI pinned to a release with Android 16 / API 36 support: `npm install --global @bubblewrap/cli@1.27.0`
 - A protected Android signing keystore, stored outside Git
+
+Bubblewrap 1.25.0 introduced the template change to `targetSdkVersion 36`; 1.27.0 includes that change. Do not use an older Bubblewrap release for the Play build.
 
 ## PWA validation
 
@@ -49,7 +52,7 @@ During initialization, confirm:
 - Orientation: `default` (do not lock to portrait).
 - Signing key path and alias: use a protected key outside the repository.
 
-Review the generated `android-twa/twa-manifest.json` against the tracked baseline configuration in this directory before building. Do not overwrite the generated Android project with manual Gradle edits; use Bubblewrap's manifest and `update` command for supported changes.
+After generation, inspect `android-twa/app/build.gradle` and confirm `targetSdkVersion 36` and `compileSdkVersion 36`. Do not upload an AAB targeting API 35 or lower. Review the generated `android-twa/twa-manifest.json` against the tracked baseline configuration in this directory before building. Do not overwrite the generated Android project with manual Gradle edits; use Bubblewrap's manifest and `update` command for supported changes.
 
 ## Build and test
 
@@ -75,7 +78,7 @@ Do not submit to production until all of these are complete:
 
 1. Source-level PWA checks and the general MARKA CI pass.
 2. Bubblewrap's live-site quality validation passes against the release origin.
-3. Android project builds a signed AAB and the package ID is confirmed.
+3. Generated Android project targets API 36 and builds a signed AAB; the package ID is confirmed.
 4. Digital Asset Links is live and verified against the Play App Signing certificate.
 5. Physical-device QA covers login/session persistence, location permissions, maps, Mobility, Marketplace, deep links, back navigation, external links, uploads, notifications (if enabled), and small/large/foldable screens.
 6. Play Console listing, privacy policy, Data safety, content rating, target API, screenshots, and testing track requirements are complete.
