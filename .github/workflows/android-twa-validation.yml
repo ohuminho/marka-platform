@@ -25,15 +25,32 @@ concurrency:
 
 jobs:
   validate-pwa-for-twa:
-    name: Validate production PWA for Trusted Web Activity
+    name: Validate MARKA PWA for Trusted Web Activity
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli
-      - name: Validate MARKA production PWA
-        run: bubblewrap validate --url=https://markaao.com
+      - name: Configure non-interactive Android toolchain
+        run: bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+      - name: Validate MARKA PWA for TWA
+        env:
+          PR_PREVIEW_URL: https://marka-platform-git-feat-android-twa-play-store-setup-ohuminho.vercel.app
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            TARGET_URL="$PR_PREVIEW_URL"
+          else
+            TARGET_URL="https://markaao.com"
+          fi
+          bubblewrap validate --url="$TARGET_URL"
