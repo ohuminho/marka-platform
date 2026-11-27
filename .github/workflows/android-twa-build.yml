@@ -36,8 +36,7 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # The setup action defaults to the retired SDK "tools" package.
-      # Install only platform-tools here; API 36 components are installed below.
+      # Avoid the retired Android SDK "tools" package.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
@@ -47,8 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # setup-android already accepts SDK licenses; avoid a yes|sdkmanager
-          # pipeline, which exits with SIGPIPE once sdkmanager closes stdin.
+          # setup-android already accepts SDK licenses.
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Install pinned Bubblewrap CLI
@@ -58,7 +56,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+          # updateConfig calls the interactive first-run setup when config.json
+          # does not exist. Write the documented config directly for CI.
+          mkdir -p "$HOME/.bubblewrap"
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$ANDROID_HOME" > "$HOME/.bubblewrap/config.json"
+          # Bubblewrap 1.27 expects the SDK root to expose a tools/bin layout.
+          mkdir -p "$ANDROID_HOME/tools"
+          ln -sfn "$ANDROID_HOME/cmdline-tools/16.0/bin" "$ANDROID_HOME/tools/bin"
+          bubblewrap doctor
 
       - name: Generate Android project from tracked TWA manifest
         working-directory: android-twa
