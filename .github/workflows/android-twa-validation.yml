@@ -38,12 +38,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
       - name: Install Bubblewrap
         run: npm install --global @bubblewrap/cli
-      - name: Configure non-interactive Android toolchain
-        run: bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+      - name: Configure non-interactive Java runtime
+        run: bubblewrap updateConfig --jdkPath="$JAVA_HOME"
       - name: Validate MARKA PWA for TWA
         env:
           PR_PREVIEW_URL: https://marka-platform-git-feat-android-twa-play-store-setup-ohuminho.vercel.app
