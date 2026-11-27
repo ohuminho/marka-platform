@@ -6,6 +6,7 @@ import "./globals.css";
 
 import AppProvider from "@/frontend/providers/AppProvider";
 import PrivacyConsentGrowth from "@/frontend/components/PrivacyConsentGrowth";
+import ServiceWorkerRegistration from "@/frontend/components/ServiceWorkerRegistration";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,6 +79,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="pt-PT" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AppProvider>{children}</AppProvider>
+        <ServiceWorkerRegistration />
         <PrivacyConsentGrowth />
       </body>
     </html>

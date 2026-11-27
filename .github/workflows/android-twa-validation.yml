@@ -1,0 +1,66 @@
+name: MARKA Android TWA validation
+
+on:
+  pull_request:
+    paths:
+      - "src/app/manifest.ts"
+      - "public/marka-icon*.svg"
+      - "public/sw.js"
+      - "public/offline.html"
+      - "android-twa/**"
+      - ".github/workflows/android-twa-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/app/manifest.ts"
+      - "public/marka-icon*.svg"
+      - "public/sw.js"
+      - "public/offline.html"
+      - "android-twa/**"
+      - ".github/workflows/android-twa-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marka-android-twa-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-pwa-for-twa:
+    name: Validate MARKA PWA source requirements for TWA
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate manifest, icons, service worker and offline fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f src/app/manifest.ts
+          test -f public/marka-icon-192.svg
+          test -f public/marka-icon.svg
+          test -f public/marka-icon-maskable.svg
+          test -f public/sw.js
+          test -f public/offline.html
+
+          grep -q 'name: "MARKA, African Digital Platform"' src/app/manifest.ts
+          grep -q 'short_name: "MARKA"' src/app/manifest.ts
+          grep -q 'start_url: "/app"' src/app/manifest.ts
+          grep -q 'display: "standalone"' src/app/manifest.ts
+          grep -q 'purpose: "maskable"' src/app/manifest.ts
+
+          for icon in public/marka-icon-192.svg public/marka-icon.svg public/marka-icon-maskable.svg; do
+            grep -q '<svg' "$icon"
+            grep -Eq 'viewBox="0 0 [0-9]+ [0-9]+"' "$icon"
+          done
+
+          grep -q 'request.mode !== "navigate"' public/sw.js
+          grep -q 'fetch(request).catch' public/sw.js
+          grep -q 'OFFLINE_URL = "/offline.html"' public/sw.js
+          grep -q 'Sem ligação à internet' public/offline.html
+
+          echo "MARKA PWA source requirements passed."
+          echo "Runtime and production-build validation is covered by MARKA CI."

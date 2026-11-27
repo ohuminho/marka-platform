@@ -127,8 +127,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
 
   useEffect(() => {
     if (audience !== "driver" || !organizationId || authLoading) {
-      setDriverFinancials(null);
-      return;
+      const resetTimer = window.setTimeout(() => setDriverFinancials(null), 0);
+      return () => window.clearTimeout(resetTimer);
     }
     let mounted = true;
     const loadFinancials = async () => {

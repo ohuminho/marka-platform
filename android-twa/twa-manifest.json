@@ -1,0 +1,28 @@
+{
+  "packageId": "com.markaao.app",
+  "host": "markaao.com",
+  "name": "MARKA",
+  "launcherName": "MARKA",
+  "display": "standalone",
+  "themeColor": "#070707",
+  "themeColorDark": "#070707",
+  "navigationColor": "#070707",
+  "navigationColorDark": "#070707",
+  "backgroundColor": "#070707",
+  "enableNotifications": false,
+  "startUrl": "/app",
+  "iconUrl": "https://markaao.com/marka-icon.svg",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "marka"
+  },
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "minSdkVersion": 23,
+  "fallbackType": "customtabs",
+  "orientation": "default",
+  "fingerprints": [],
+  "webManifestUrl": "https://markaao.com/manifest.webmanifest",
+  "maskableIconUrl": "https://markaao.com/marka-icon-maskable.svg"
+}
