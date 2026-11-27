@@ -22,6 +22,13 @@ type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP"
 type RideOrchestration = { currentStep?: string | null; version?: number } | null;
 type RidePayload = { ride?: Ride | null; rides?: Ride[]; orchestration?: RideOrchestration; orchestrations?: Array<{ rideId: string; orchestration: RideOrchestration }>; message?: string };
 type AvailabilityPayload = { driver?: { status?: string; displayName?: string | null } | null; availability?: { status?: string } | null; status?: string; message?: string };
+type DriverFinancials = {
+  currency: string;
+  outstandingAmountMinor: string;
+  obligationsCount: number;
+  obligations: Array<{ id: string; rideId: string; grossFareMinor: string; commissionAmountMinor: string; settledAmountMinor: string; remainingAmountMinor: string; status: string; createdAt: string }>;
+  settlements: Array<{ id: string; obligationId: string; rideId: string; settlementReference: string; sourceReference: string; amountMinor: string; currency: string; createdAt: string }>;
+};
 const ACTIVE = ["REQUESTED", "SEARCHING", "MATCHED", "DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"];
 const STATUS: Record<string, string> = {
   REQUESTED: "Pedido recebido", SEARCHING: "A encontrar motorista", MATCHED: "Motorista identificado",
@@ -57,6 +64,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [driverAvailability, setDriverAvailability] = useState("OFFLINE");
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [driverFinancials, setDriverFinancials] = useState<DriverFinancials | null>(null);
+  const [driverFinancialsError, setDriverFinancialsError] = useState<string | null>(null);
   const [financialSetupLoading, setFinancialSetupLoading] = useState(false);
   const [financialSetupMessage, setFinancialSetupMessage] = useState<string | null>(null);
   const [financialSetupError, setFinancialSetupError] = useState<string | null>(null);
