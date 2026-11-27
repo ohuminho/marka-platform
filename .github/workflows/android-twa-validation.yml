@@ -29,47 +29,38 @@ concurrency:
 
 jobs:
   validate-pwa-for-twa:
-    name: Validate MARKA PWA endpoints for TWA
+    name: Validate MARKA PWA source requirements for TWA
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Validate deployed PWA resources
-        env:
-          PR_PREVIEW_URL: https://marka-platform-git-feat-android-twa-play-store-setup-ohuminho.vercel.app
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate manifest, icons, service worker and offline fallback
+        shell: bash
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-            BASE_URL="$PR_PREVIEW_URL"
-          else
-            BASE_URL="https://markaao.com"
-          fi
-          BASE_URL="${BASE_URL%/}"
-          echo "Checking deployed MARKA PWA at $BASE_URL"
+          test -f src/app/manifest.ts
+          test -f public/marka-icon-192.svg
+          test -f public/marka-icon.svg
+          test -f public/marka-icon-maskable.svg
+          test -f public/sw.js
+          test -f public/offline.html
 
-          curl --fail --silent --show-error "$BASE_URL/manifest.webmanifest" -o /tmp/manifest.json
-          node <<'NODE'
-          const fs = require('fs');
-          const manifest = JSON.parse(fs.readFileSync('/tmp/manifest.json', 'utf8'));
-          const required = ['name', 'short_name', 'start_url', 'display', 'icons'];
-          for (const key of required) {
-            if (!manifest[key]) throw new Error('Manifest missing required field: ' + key);
-          }
-          if (!Array.isArray(manifest.icons) || manifest.icons.length === 0) {
-            throw new Error('Manifest must define at least one icon');
-          }
-          for (const icon of manifest.icons) {
-            if (!icon.src || !icon.sizes || !icon.type) {
-              throw new Error('Manifest icon is missing src, sizes, or type');
-            }
-          }
-          console.log('Manifest structure OK:', manifest.name);
-          console.log('Icons declared:', manifest.icons.length);
-          NODE
+          grep -q 'name: "MARKA, African Digital Platform"' src/app/manifest.ts
+          grep -q 'short_name: "MARKA"' src/app/manifest.ts
+          grep -q 'start_url: "/app"' src/app/manifest.ts
+          grep -q 'display: "standalone"' src/app/manifest.ts
+          grep -q 'purpose: "maskable"' src/app/manifest.ts
 
-          for path in /marka-icon-192.svg /marka-icon.svg /marka-icon-maskable.svg /sw.js /offline.html; do
-            echo "Checking $path"
-            curl --fail --silent --show-error --output /dev/null "$BASE_URL$path"
+          for icon in public/marka-icon-192.svg public/marka-icon.svg public/marka-icon-maskable.svg; do
+            grep -q '<svg' "$icon"
+            grep -Eq 'viewBox="0 0 [0-9]+ [0-9]+"' "$icon"
           done
 
-          grep -q 'start_url' /tmp/manifest.json
-          echo "MARKA PWA endpoint validation passed."
+          grep -q 'request.mode !== "navigate"' public/sw.js
+          grep -q 'fetch(request).catch' public/sw.js
+          grep -q 'OFFLINE_URL = "/offline.html"' public/sw.js
+          grep -q 'Sem ligação à internet' public/offline.html
+
+          echo "MARKA PWA source requirements passed."
+          echo "Runtime and production-build validation is covered by MARKA CI."
