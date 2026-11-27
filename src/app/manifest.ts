@@ -17,14 +17,14 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "travel", "shopping"],
     icons: [
       {
-        src: "/marka-icon.svg",
-        sizes: "any",
+        src: "/marka-icon-192.svg",
+        sizes: "192x192",
         type: "image/svg+xml",
         purpose: "any",
       },
       {
         src: "/marka-icon.svg",
-        sizes: "any",
+        sizes: "512x512",
         type: "image/svg+xml",
         purpose: "maskable",
       },
