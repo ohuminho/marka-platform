@@ -22,5 +22,6 @@
   "minSdkVersion": 23,
   "fallbackType": "customtabs",
   "orientation": "default",
-  "fingerprints": []
+  "fingerprints": [],
+  "webManifestUrl": "https://markaao.com/manifest.webmanifest"
 }
