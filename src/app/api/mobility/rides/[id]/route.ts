@@ -635,12 +635,16 @@ export async function PATCH(
 
           safetyMode,
 
-          metadata:
-            isRecord(
-              body.metadata,
-            )
-              ? body.metadata
-              : undefined,
+          metadata: {
+            ...(isRecord(body.metadata) ? body.metadata : {}),
+            ...(lifecycleAction === "COMPLETE" && paymentMethod === "CASH"
+              ? {
+                  cashReceiptConfirmed: true,
+                  cashReceiptConfirmedAt: new Date().toISOString(),
+                  cashReceiptConfirmedBy: authentication.session.userId,
+                }
+              : {}),
+          },
 
           action:
             lifecycleAction,
