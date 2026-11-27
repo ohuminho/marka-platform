@@ -319,6 +319,17 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
 
   const performDriverAction = async () => {
     if (!ride || !organizationId || !driverAction || actionLoading) return;
+    if (driverAction.action === "COMPLETE") {
+      const selectedPaymentMethod = typeof ride.metadata?.paymentMethod === "string"
+        ? ride.metadata.paymentMethod.trim().toUpperCase()
+        : "CASH";
+      if (selectedPaymentMethod !== "CASH") {
+        setActionError("Esta viagem não está configurada para cobrança em dinheiro. A conclusão fica bloqueada até existir confirmação electrónica do prestador.");
+        return;
+      }
+      const cashConfirmed = window.confirm("Confirma que recebeu do passageiro o valor integral da viagem em dinheiro? Esta confirmação regista a sua responsabilidade pela cobrança e pela comissão MARKA.");
+      if (!cashConfirmed) return;
+    }
     if (driverAction.action === "COMPLETE" && !estimatedFareMinor) {
       setActionError("A tarifa validada desta viagem não está disponível. A conclusão foi bloqueada.");
       return;
@@ -335,7 +346,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
           ...(driverAction.action === "COMPLETE" ? {
             finalFareMinor: estimatedFareMinor,
             estimatedFareMinor,
-            paymentMethod: "CASH",
+            paymentMethod: typeof ride.metadata?.paymentMethod === "string" ? ride.metadata.paymentMethod : "CASH",
             paymentIdempotencyKey: actionKey + ":payment",
             settlementIdempotencyKey: actionKey + ":settlement",
             settlementCompletionIdempotencyKey: actionKey + ":settlement-complete",
