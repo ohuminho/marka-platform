@@ -36,8 +36,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # The setup action defaults to the retired SDK "tools" package.
+      # Install only platform-tools here; API 36 components are installed below.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android 16 SDK components
         shell: bash
