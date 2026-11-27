@@ -604,25 +604,6 @@ export async function PATCH(
             )
           : undefined;
 
-      if (
-        paymentMethod ===
-          "DIGITAL" &&
-        availableDigitalProceedsMinor ===
-          null
-      ) {
-        return NextResponse.json(
-          {
-            message:
-              "availableDigitalProceedsMinor must be a valid non-negative integer for DIGITAL payments.",
-            code:
-              "INVALID_DIGITAL_PROCEEDS",
-          },
-          {
-            status: 400,
-          },
-        );
-      }
-
       const result =
         await mobilityLifecycleService.execute({
           organizationId:
