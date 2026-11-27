@@ -525,6 +525,41 @@ export async function PATCH(
         );
       }
 
+      const ridePaymentMethod =
+        isRecord(ride.metadata) && typeof ride.metadata.paymentMethod === "string"
+          ? ride.metadata.paymentMethod.trim().toUpperCase()
+          : "CASH";
+
+      if (paymentMethod !== ridePaymentMethod) {
+        return NextResponse.json(
+          {
+            message: "O motorista não pode alterar a forma de pagamento escolhida pelo passageiro.",
+            code: "MOBILITY_PAYMENT_METHOD_MISMATCH",
+          },
+          { status: 409 },
+        );
+      }
+
+      if (paymentMethod === "DIGITAL") {
+        return NextResponse.json(
+          {
+            message: "O pagamento electrónico ainda não tem confirmação integrada. A viagem não pode ser fechada como paga sem confirmação do prestador.",
+            code: "MOBILITY_DIGITAL_PAYMENT_NOT_CONFIGURED",
+          },
+          { status: 409 },
+        );
+      }
+
+      if (paymentMethod === "CASH" && body.cashReceiptConfirmed !== true) {
+        return NextResponse.json(
+          {
+            message: "O motorista tem de confirmar explicitamente que recebeu o dinheiro do passageiro.",
+            code: "MOBILITY_CASH_RECEIPT_CONFIRMATION_REQUIRED",
+          },
+          { status: 400 },
+        );
+      }
+
       const paymentIdempotencyKey =
         typeof body.paymentIdempotencyKey ===
         "string"
