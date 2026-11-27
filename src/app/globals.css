@@ -77,7 +77,6 @@ select, option { color-scheme: dark; }
 
 html[dir="rtl"] { text-align: right; }
 
-
 .marka-editorial {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 400;
@@ -97,11 +96,9 @@ html[dir="rtl"] { text-align: right; }
   background: var(--theme-border);
 }
 
-
 .marka-mobility-map .maplibregl-ctrl-group{overflow:hidden;border:1px solid rgba(229,184,75,.22);border-radius:14px;background:rgba(20,20,23,.88);box-shadow:0 12px 36px rgba(0,0,0,.32);backdrop-filter:blur(16px)}
 .marka-mobility-map .maplibregl-ctrl button{filter:invert(1) sepia(.2)}
 .marka-mobility-map .maplibregl-ctrl-attrib{color:rgba(255,255,255,.48);background:rgba(9,9,11,.72);font-size:9px}
-.marka-mobility-map .maplibregl-ctrl-attrib a{color:#E5B84B}
 .marka-map-marker{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);border:2px solid rgba(255,255,255,.9);box-shadow:0 5px 20px rgba(0,0,0,.55)}
 .marka-map-marker>span{transform:rotate(45deg);font-size:11px;font-weight:900;color:#FFFFFF;text-shadow:0 1px 2px rgba(0,0,0,.35)}
 .marka-map-marker--pickup{background:#16A36A;border-color:#E8FFF2}
@@ -113,3 +110,93 @@ html[dir="rtl"] { text-align: right; }
 @keyframes marka-pulse{0%{transform:scale(.55);opacity:.9}100%{transform:scale(1.65);opacity:0}}
 @media(prefers-reduced-motion:reduce){.marka-route-pulse::before{animation:none}.marka-map-marker--driver{transition:none}}
 .marka-driver-marker{transition:transform .7s linear!important;}
+
+/* Responsive foundation: fluid viewport sizing, safe touch targets and no accidental page overflow. */
+html,
+body {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  overflow-x: clip;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid var(--theme-accent-strong);
+  outline-offset: 3px;
+}
+
+.marka-safe-area {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+/* Mobility bottom sheet adapts to compact and landscape phones without covering the whole map. */
+@media (max-width: 1023px) {
+  main.fixed.inset-0.z-40 > form {
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media (max-width: 380px) {
+  main.fixed.inset-0.z-40 > form {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+    border-top-left-radius: 1.25rem;
+    border-top-right-radius: 1.25rem;
+  }
+}
+
+@media (max-width: 1023px) and (max-height: 560px) and (orientation: landscape) {
+  main.fixed.inset-0.z-40 > form:has(button[aria-expanded="true"]) {
+    max-height: 84dvh !important;
+  }
+
+  main.fixed.inset-0.z-40 > form {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Respect OS accessibility settings and reduce costly motion on entry-level devices. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
