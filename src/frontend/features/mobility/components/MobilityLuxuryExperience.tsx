@@ -132,6 +132,8 @@ export default function MobilityLuxuryExperience() {
   const organizationId = activeOrganization?.id;
 
   const [drawer, setDrawer] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "DIGITAL">("CASH");
   const [group, setGroup] = useState<Group>("EXECUTIVE");
   const [serviceType, setServiceType] = useState("TAXI");
   const [origin, setOrigin] = useState<MobilityMapPoint | null>(null);
@@ -619,6 +621,7 @@ export default function MobilityLuxuryExperience() {
     setCreating(true);
     const payload = {
       serviceType,
+      paymentMethod,
       ...(serviceType !== "MOTO_TAXI" && passengers !== "" ? { passengerCount: passengers } : {}),
       currency: "AOA",
       pickupLatitude: origin.lat,
@@ -804,12 +807,17 @@ export default function MobilityLuxuryExperience() {
 
       <form
         onSubmit={submit}
-        className="absolute inset-x-0 bottom-0 z-20 mx-auto max-h-[64dvh] sm:max-h-[76dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[32px] border border-white/[.12] bg-[linear-gradient(160deg,rgba(29,29,32,.98),rgba(12,12,14,.985))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.72)] backdrop-blur-2xl sm:bottom-5 sm:rounded-[30px] sm:px-6"
+        className={"absolute inset-x-0 bottom-0 z-20 mx-auto w-full max-w-2xl rounded-t-[32px] border border-white/[.12] bg-[linear-gradient(160deg,rgba(29,29,32,.98),rgba(12,12,14,.985))] px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-28px_100px_rgba(0,0,0,.72)] backdrop-blur-2xl transition-[max-height] duration-300 ease-out sm:bottom-5 sm:rounded-[30px] sm:px-6 " + (sheetExpanded ? "max-h-[48dvh] sm:max-h-[72dvh] overflow-y-auto overscroll-contain" : "max-h-[132px] overflow-hidden")}
       >
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gradient-to-r from-white/15 via-[#E5B84B]/80 to-white/15" />
         <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] px-3 py-2.5">
           <div className="flex items-center gap-2.5"><span className="relative grid h-8 w-8 place-items-center rounded-full border border-[#E5B84B]/25 bg-[#E5B84B]/[.08] text-sm text-[#E5B84B]">✦<span className="absolute inset-0 animate-pulse rounded-full border border-[#E5B84B]/20" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#E5B84B]">MARKA Mobility</p><p className="mt-0.5 text-[10px] text-white/45">Uma viagem simples. Uma experiência superior.</p></div></div>
-          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[.06] px-2.5 py-1 text-[8px] font-semibold tracking-wide text-emerald-200/80">ANGOLA</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[.06] px-2.5 py-1 text-[8px] font-semibold tracking-wide text-emerald-200/80">ANGOLA</span>
+            <button type="button" onClick={() => setSheetExpanded((value) => !value)} aria-expanded={sheetExpanded} aria-label={sheetExpanded ? "Recolher painel para ver o mapa" : "Expandir painel de pedido"} className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[.05] text-sm text-white/75 transition hover:border-[#E5B84B]/35 hover:text-[#F2CF78]">
+              {sheetExpanded ? "⌄" : "⌃"}
+            </button>
+          </div>
         </div>
 
         {active ? (
@@ -1143,6 +1151,23 @@ export default function MobilityLuxuryExperience() {
                 />
               </div>
             )}
+
+            <div className="mt-3 rounded-2xl border border-white/[.08] bg-black/20 p-3">
+              <p className="mb-2 text-[9px] font-semibold uppercase tracking-[.16em] text-white/45">Forma de pagamento</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" aria-pressed={paymentMethod === "CASH"} onClick={() => setPaymentMethod("CASH")} className="rounded-xl border border-[#E5B84B]/55 bg-[#E5B84B]/[.09] px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E5B84B]">
+                  <p className="text-[11px] font-bold text-[#F2CF78]">Dinheiro</p>
+                  <p className="mt-1 text-[9px] leading-4 text-white/50">Paga directamente ao motorista no fim da viagem</p>
+                  <span className="mt-2 inline-flex rounded-full bg-[#E5B84B]/15 px-2 py-1 text-[8px] font-semibold text-[#F2CF78]">Disponível</span>
+                </button>
+                <button type="button" disabled aria-disabled="true" className="rounded-xl border border-white/[.08] bg-white/[.02] px-3 py-3 text-left opacity-60 cursor-not-allowed">
+                  <p className="text-[11px] font-bold text-white/65">Eletrónico</p>
+                  <p className="mt-1 text-[9px] leading-4 text-white/40">Pagamento integrado dentro da MARKA</p>
+                  <span className="mt-2 inline-flex rounded-full border border-white/10 px-2 py-1 text-[8px] font-semibold text-white/45">Em integração</span>
+                </button>
+              </div>
+              <p className="mt-2 text-[9px] leading-4 text-white/35">O pagamento eletrónico só será activado quando o prestador confirmar a cobrança e a liquidação de forma segura.</p>
+            </div>
 
             <div className="mt-3 flex items-center justify-between gap-3">
               <label htmlFor="marka-safety" className="text-[10px] text-white/50">Proteção da viagem</label>

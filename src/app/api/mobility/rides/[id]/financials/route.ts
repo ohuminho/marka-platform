@@ -207,6 +207,15 @@ export async function POST(
     }
 
     const metadata = isRecord(ride.metadata) ? ride.metadata : {};
+    const storedPaymentMethod = typeof metadata.paymentMethod === "string"
+      ? metadata.paymentMethod.trim().toUpperCase()
+      : "CASH";
+    if (storedPaymentMethod !== paymentMethod) {
+      return NextResponse.json(
+        { message: "A forma de pagamento não corresponde à opção registada no pedido da viagem.", code: "MOBILITY_PAYMENT_METHOD_MISMATCH" },
+        { status: 409 },
+      );
+    }
     const pricingSnapshot = isRecord(metadata.pricingSnapshot)
       ? metadata.pricingSnapshot
       : null;

@@ -22,6 +22,13 @@ type RideAction = "ACCEPT" | "DRIVER_ARRIVING" | "DRIVER_ARRIVED" | "START_TRIP"
 type RideOrchestration = { currentStep?: string | null; version?: number } | null;
 type RidePayload = { ride?: Ride | null; rides?: Ride[]; orchestration?: RideOrchestration; orchestrations?: Array<{ rideId: string; orchestration: RideOrchestration }>; message?: string };
 type AvailabilityPayload = { driver?: { status?: string; displayName?: string | null } | null; availability?: { status?: string } | null; status?: string; message?: string };
+type DriverFinancials = {
+  currency: string;
+  outstandingAmountMinor: string;
+  obligationsCount: number;
+  obligations: Array<{ id: string; rideId: string; grossFareMinor: string; commissionAmountMinor: string; settledAmountMinor: string; remainingAmountMinor: string; status: string; createdAt: string }>;
+  settlements: Array<{ id: string; obligationId: string; rideId: string; settlementReference: string; sourceReference: string; amountMinor: string; currency: string; createdAt: string }>;
+};
 const ACTIVE = ["REQUESTED", "SEARCHING", "MATCHED", "DRIVER_ASSIGNED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "TRIP_STARTED", "TRIP_IN_PROGRESS"];
 const STATUS: Record<string, string> = {
   REQUESTED: "Pedido recebido", SEARCHING: "A encontrar motorista", MATCHED: "Motorista identificado",
@@ -57,6 +64,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
   const [driverAvailability, setDriverAvailability] = useState("OFFLINE");
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [driverFinancials, setDriverFinancials] = useState<DriverFinancials | null>(null);
+  const [driverFinancialsError, setDriverFinancialsError] = useState<string | null>(null);
   const [financialSetupLoading, setFinancialSetupLoading] = useState(false);
   const [financialSetupMessage, setFinancialSetupMessage] = useState<string | null>(null);
   const [financialSetupError, setFinancialSetupError] = useState<string | null>(null);
@@ -115,6 +124,34 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
       window.clearInterval(timer);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (audience !== "driver" || !organizationId || authLoading) {
+      setDriverFinancials(null);
+      return;
+    }
+    let mounted = true;
+    const loadFinancials = async () => {
+      try {
+        const response = await fetch("/api/mobility/driver/financials", {
+          credentials: "include",
+          cache: "no-store",
+          headers: { "X-Organization-Id": organizationId },
+        });
+        const data = await response.json() as { financials?: DriverFinancials; message?: string };
+        if (!response.ok || !data.financials) throw new Error(data.message || "Não foi possível consultar as comissões.");
+        if (mounted) {
+          setDriverFinancials(data.financials);
+          setDriverFinancialsError(null);
+        }
+      } catch (failure) {
+        if (mounted) setDriverFinancialsError(failure instanceof Error ? failure.message : "Não foi possível consultar as comissões.");
+      }
+    };
+    void loadFinancials();
+    const timer = window.setInterval(() => { void loadFinancials(); }, 30000);
+    return () => { mounted = false; window.clearInterval(timer); };
+  }, [audience, organizationId, authLoading]);
 
   const driverRides = audience === "driver" ? (payload?.rides ?? (payload?.ride ? [payload.ride] : [])) : [];
   const selectedRide = driverRides.find((item) => item.id === selectedRideId) ?? null;
@@ -291,6 +328,17 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
 
   const performDriverAction = async () => {
     if (!ride || !organizationId || !driverAction || actionLoading) return;
+    if (driverAction.action === "COMPLETE") {
+      const selectedPaymentMethod = typeof ride.metadata?.paymentMethod === "string"
+        ? ride.metadata.paymentMethod.trim().toUpperCase()
+        : "CASH";
+      if (selectedPaymentMethod !== "CASH") {
+        setActionError("Esta viagem não está configurada para cobrança em dinheiro. A conclusão fica bloqueada até existir confirmação electrónica do prestador.");
+        return;
+      }
+      const cashConfirmed = window.confirm("Confirma que recebeu do passageiro o valor integral da viagem em dinheiro? Esta confirmação regista a sua responsabilidade pela cobrança e pela comissão MARKA.");
+      if (!cashConfirmed) return;
+    }
     if (driverAction.action === "COMPLETE" && !estimatedFareMinor) {
       setActionError("A tarifa validada desta viagem não está disponível. A conclusão foi bloqueada.");
       return;
@@ -307,7 +355,8 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
           ...(driverAction.action === "COMPLETE" ? {
             finalFareMinor: estimatedFareMinor,
             estimatedFareMinor,
-            paymentMethod: "CASH",
+            paymentMethod: typeof ride.metadata?.paymentMethod === "string" ? ride.metadata.paymentMethod : "CASH",
+            cashReceiptConfirmed: true,
             paymentIdempotencyKey: actionKey + ":payment",
             settlementIdempotencyKey: actionKey + ":settlement",
             settlementCompletionIdempotencyKey: actionKey + ":settlement-complete",
@@ -438,6 +487,32 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
               <p className="mt-1 truncate text-[10px] text-white/35">Destino: {item.dropoffAddress || "Destino registado"}</p>
             </button>)}
           </div>
+        </div>}
+        {audience === "driver" && <div className="rounded-2xl border border-[#e9bd58]/25 bg-gradient-to-br from-[#e9bd58]/[.08] to-transparent p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div><p className="text-[9px] font-semibold uppercase tracking-[.2em] text-[#e9bd58]">Finanças da Mobility</p><p className="mt-2 text-[10px] text-white/45">Comissões de viagens pagas directamente em dinheiro</p></div>
+            <span className="rounded-full border border-white/10 px-2 py-1 text-[8px] text-white/45">AOA</span>
+          </div>
+          <p className="mt-3 text-[9px] uppercase tracking-[.16em] text-white/35">Comissão por liquidar</p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-[#f0d58e] tabular-nums">{driverFinancials ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(Number(driverFinancials.outstandingAmountMinor) / 100) : "—"}</p>
+          <p className="mt-1 text-[10px] text-white/40">{driverFinancials ? driverFinancials.obligationsCount + " obrigação(ões) em aberto ou parcialmente pagas" : "A carregar o saldo…"}</p>
+          {driverFinancialsError && <p role="alert" className="mt-3 text-[10px] text-rose-200">{driverFinancialsError}</p>}
+          {driverFinancials && driverFinancials.obligations.length > 0 && <div className="mt-4 border-t border-white/[.08] pt-3">
+            <p className="text-[9px] font-semibold uppercase tracking-[.16em] text-white/45">Últimas comissões</p>
+            <div className="mt-2 space-y-2">
+              {driverFinancials.obligations.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 text-[10px]">
+                <div className="min-w-0"><p className="truncate text-white/70">Viagem {item.rideId.slice(0, 8).toUpperCase()}</p><p className="mt-0.5 text-[9px] text-white/35">{new Date(item.createdAt).toLocaleDateString("pt-PT")} · {item.status === "SETTLED" ? "Liquidada" : item.status === "PARTIALLY_SETTLED" ? "Parcial" : "Por liquidar"}</p></div>
+                <div className="shrink-0 text-right"><p className="font-semibold text-white/80">{new Intl.NumberFormat("pt-PT", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(Number(item.commissionAmountMinor) / 100)}</p><p className="text-[9px] text-white/35">Em falta: {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(Number(item.remainingAmountMinor) / 100)}</p></div>
+              </div>)}
+            </div>
+          </div>}
+          {driverFinancials && driverFinancials.settlements.length > 0 && <div className="mt-4 border-t border-white/[.08] pt-3">
+            <p className="text-[9px] font-semibold uppercase tracking-[.16em] text-white/45">Pagamentos de comissão registados</p>
+            <div className="mt-2 space-y-2">
+              {driverFinancials.settlements.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 text-[10px]"><div className="min-w-0"><p className="truncate text-white/70">{item.sourceReference}</p><p className="text-[9px] text-white/35">{new Date(item.createdAt).toLocaleDateString("pt-PT")}</p></div><strong className="shrink-0 text-emerald-200">{new Intl.NumberFormat("pt-PT", { style: "currency", currency: "AOA", maximumFractionDigits: 0 }).format(Number(item.amountMinor) / 100)}</strong></div>)}
+            </div>
+          </div>}
+          <p className="mt-3 border-t border-white/[.08] pt-3 text-[9px] leading-4 text-white/35">Este painel regista comissões e liquidações. Não é uma carteira MARKA nem representa fundos guardados pela plataforma.</p>
         </div>}
         {audience === "driver" && <div className="rounded-2xl border border-[#e9bd58]/25 bg-[#e9bd58]/[.045] p-5">
           <p className="text-[9px] font-semibold uppercase tracking-[.2em] text-[#e9bd58]">Estado operacional</p>
