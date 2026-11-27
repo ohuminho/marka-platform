@@ -23,5 +23,6 @@
   "fallbackType": "customtabs",
   "orientation": "default",
   "fingerprints": [],
-  "webManifestUrl": "https://markaao.com/manifest.webmanifest"
+  "webManifestUrl": "https://markaao.com/manifest.webmanifest",
+  "maskableIconUrl": "https://markaao.com/marka-icon-maskable.svg"
 }
