@@ -619,6 +619,7 @@ export default function MobilityLuxuryExperience() {
     setCreating(true);
     const payload = {
       serviceType,
+      paymentMethod: "CASH",
       ...(serviceType !== "MOTO_TAXI" && passengers !== "" ? { passengerCount: passengers } : {}),
       currency: "AOA",
       pickupLatitude: origin.lat,
@@ -1148,6 +1149,23 @@ export default function MobilityLuxuryExperience() {
                 />
               </div>
             )}
+
+            <div className="mt-3 rounded-2xl border border-white/[.08] bg-black/20 p-3">
+              <p className="mb-2 text-[9px] font-semibold uppercase tracking-[.16em] text-white/45">Forma de pagamento</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div aria-pressed="true" className="rounded-xl border border-[#E5B84B]/55 bg-[#E5B84B]/[.09] px-3 py-3 text-left">
+                  <p className="text-[11px] font-bold text-[#F2CF78]">Dinheiro</p>
+                  <p className="mt-1 text-[9px] leading-4 text-white/50">Paga directamente ao motorista no fim da viagem</p>
+                  <span className="mt-2 inline-flex rounded-full bg-[#E5B84B]/15 px-2 py-1 text-[8px] font-semibold text-[#F2CF78]">Disponível</span>
+                </div>
+                <div aria-disabled="true" className="rounded-xl border border-white/[.08] bg-white/[.02] px-3 py-3 text-left opacity-60">
+                  <p className="text-[11px] font-bold text-white/65">Eletrónico</p>
+                  <p className="mt-1 text-[9px] leading-4 text-white/40">Pagamento integrado dentro da MARKA</p>
+                  <span className="mt-2 inline-flex rounded-full border border-white/10 px-2 py-1 text-[8px] font-semibold text-white/45">Em integração</span>
+                </div>
+              </div>
+              <p className="mt-2 text-[9px] leading-4 text-white/35">O pagamento eletrónico só será activado quando o prestador confirmar a cobrança e a liquidação de forma segura.</p>
+            </div>
 
             <div className="mt-3 flex items-center justify-between gap-3">
               <label htmlFor="marka-safety" className="text-[10px] text-white/50">Proteção da viagem</label>
