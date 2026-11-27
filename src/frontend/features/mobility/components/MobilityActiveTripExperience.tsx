@@ -356,6 +356,7 @@ export default function MobilityActiveTripExperience({ audience }: { audience: A
             finalFareMinor: estimatedFareMinor,
             estimatedFareMinor,
             paymentMethod: typeof ride.metadata?.paymentMethod === "string" ? ride.metadata.paymentMethod : "CASH",
+            cashReceiptConfirmed: true,
             paymentIdempotencyKey: actionKey + ":payment",
             settlementIdempotencyKey: actionKey + ":settlement",
             settlementCompletionIdempotencyKey: actionKey + ":settlement-complete",
