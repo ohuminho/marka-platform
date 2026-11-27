@@ -1,0 +1,90 @@
+name: MARKA Android TWA diagnostic build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android-twa/twa-manifest.json"
+      - ".github/workflows/android-twa-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marka-android-twa-diagnostic
+  cancel-in-progress: true
+
+jobs:
+  build-unsigned:
+    name: Generate and build unsigned Android TWA
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 16 SDK components
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Install pinned Bubblewrap CLI
+        run: npm install --global @bubblewrap/cli@1.27.0
+
+      - name: Configure Bubblewrap toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+
+      - name: Generate Android project from tracked TWA manifest
+        working-directory: android-twa
+        shell: bash
+        run: |
+          set -euo pipefail
+          bubblewrap update --manifest=twa-manifest.json --skipVersionUpgrade
+          test -f app/build.gradle
+          grep -Eq 'targetSdkVersion[[:space:]]+36|targetSdk[[:space:]]+36' app/build.gradle
+          grep -Eq 'compileSdkVersion[[:space:]]+36|compileSdk[[:space:]]+36' app/build.gradle
+
+      - name: Build unsigned diagnostic APK and AAB
+        working-directory: android-twa
+        run: bubblewrap build --skipSigning --skipPwaValidation --manifest=twa-manifest.json
+
+      - name: Verify Android outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          find android-twa -type f \( -name '*.aab' -o -name '*.apk' \) -print
+          test -n "$(find android-twa -type f -name '*.aab' -print -quit)"
+          test -n "$(find android-twa -type f -name '*.apk' -print -quit)"
+
+      - name: Upload unsigned diagnostic artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: marka-android-unsigned-diagnostic
+          path: |
+            android-twa/**/*.aab
+            android-twa/**/*.apk
+            android-twa/*.aab
+            android-twa/*.apk
+          if-no-files-found: error
+          retention-days: 7
