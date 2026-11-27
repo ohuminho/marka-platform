@@ -10,21 +10,18 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/app",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
+    display_override: ["standalone", "minimal-ui", "browser"],
+    // Do not lock the app to portrait: phones, tablets, foldables and desktop
+    // windows must be free to rotate or resize.
+    orientation: "any",
     background_color: "#070707",
     theme_color: "#070707",
-    lang: "pt-PT",
+    lang: "pt-AO",
     categories: ["business", "travel", "shopping"],
     icons: [
       {
         src: "/marka-icon.svg",
-        sizes: "192x192",
-        type: "image/svg+xml",
-        purpose: "any",
-      },
-      {
-        src: "/marka-icon.svg",
-        sizes: "512x512",
+        sizes: "any",
         type: "image/svg+xml",
         purpose: "any",
       },
