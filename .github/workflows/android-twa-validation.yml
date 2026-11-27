@@ -1,0 +1,39 @@
+name: MARKA Android TWA validation
+
+on:
+  pull_request:
+    paths:
+      - "src/app/manifest.ts"
+      - "public/marka-icon*.svg"
+      - "android-twa/**"
+      - ".github/workflows/android-twa-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/app/manifest.ts"
+      - "public/marka-icon*.svg"
+      - "android-twa/**"
+      - ".github/workflows/android-twa-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marka-android-twa-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-pwa-for-twa:
+    name: Validate production PWA for Trusted Web Activity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Bubblewrap
+        run: npm install --global @bubblewrap/cli
+      - name: Validate MARKA production PWA
+        run: bubblewrap validate --url=https://markaao.com
