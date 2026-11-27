@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">MARKA</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#191919"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7D98F"/>
+      <stop offset=".52" stop-color="#E5B84B"/>
+      <stop offset="1" stop-color="#B98224"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="12" y="12" width="488" height="488" rx="102" fill="none" stroke="#E5B84B" stroke-opacity=".28" stroke-width="4"/>
+  <path d="M104 356V156h55l97 119 97-119h55v200h-62V250l-90 108-90-108v106z" fill="url(#gold)"/>
+</svg>
