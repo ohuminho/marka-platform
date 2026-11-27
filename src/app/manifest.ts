@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display_override: ["standalone", "minimal-ui"],
     background_color: "#070707",
     theme_color: "#070707",
-    lang: "pt-PT",
+    lang: "pt-AO",
     categories: ["business", "travel", "shopping"],
     icons: [
       {
@@ -24,6 +24,12 @@ export default function manifest(): MetadataRoute.Manifest {
       },
       {
         src: "/marka-icon.svg",
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any",
+      },
+      {
+        src: "/marka-icon-maskable.svg",
         sizes: "512x512",
         type: "image/svg+xml",
         purpose: "maskable",
